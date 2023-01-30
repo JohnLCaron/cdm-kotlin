@@ -11,7 +11,7 @@ interface Layout {
     operator fun hasNext(): Boolean
 
     /** Get the next chunk, not null if hasNext() is true.  */
-    operator fun next(): Chunk?
+    operator fun next(): Chunk
 
     /**
      * A chunk of data that is contiguous in both the source and destination.
@@ -31,6 +31,6 @@ interface Layout {
          *
          * @return starting element in the array (Note: elements, not bytes)
          */
-        val destElem: Long
+        val destElem: Long // LOOK why Long?
     }
 }

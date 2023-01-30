@@ -5,7 +5,6 @@ import sunya.cdm.api.Dimension
 import sunya.cdm.api.Group
 import sunya.cdm.api.Variable
 import sunya.cdm.iosp.Iosp
-import sunya.cdm.netcdf.ffm.*
 import sunya.cdm.netcdf.ffm.netcdf_h.*
 import sunya.cdm.netcdf3.*
 import sunya.cdm.netcdf3.N3header.Companion.getDataType
@@ -158,14 +157,14 @@ class NCheader(filename: String) {
 
             val vname: String = name_p.getUtf8String(0)
             val typeid = xtype_p[C_INT, 0]
-            val ndims = ndims_p[C_INT, 0].toInt()
-            val natts = natts_p[C_INT, 0].toInt()
+            val ndims = ndims_p[C_INT, 0]
+            val natts = natts_p[C_INT, 0]
             if (debug) println(" nc_inq_var $vname = $typeid $ndims $natts")
 
             // figure out the dimensions
             val dimIds = IntArray(ndims)
-            for (i in 0 until ndims) {
-                dimIds[i] = dimids_p.getAtIndex(C_INT, i.toLong())
+            for (idx in 0 until ndims) {
+                dimIds[idx] = dimids_p.getAtIndex(C_INT, idx.toLong())
             }
 
             // create the Variable

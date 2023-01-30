@@ -55,10 +55,11 @@ private val logger = KotlinLogging.logger("N3header")
 class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
   private val raf: OpenFile
+  private val root: Group.Builder
   private var unlimitedDimension: Dimension? = null
   private val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
+  private val valueCharset = StandardCharsets.UTF_8
 
-  // N3iosp needs access to these
   private var isStreaming = false
   private var isUnlimited = false
   var numrecs = 0 // number of records written
@@ -66,16 +67,13 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   var recStart = Int.MAX_VALUE.toLong() // where the record data starts TODO can it really be bigger than MAX_INTEGER ?
   var useLongOffset = false
   var nonRecordDataSize: Long = 0 // size of non-record variables
-  private val vars: MutableList<Vinfo> = ArrayList()
   var dataStart = Long.MAX_VALUE // where the data starts
 
-  private val valueCharset = StandardCharsets.UTF_8
-
   private val fileDimensions = mutableListOf<Dimension>()
-  private val unlimitedVariables = mutableListOf<Variable>() // vars that have the unlimited dimension
 
   init {
     this.raf = raf
+    this.root = root
     val actualSize: Long = raf.size
     nonRecordDataSize = 0 // length of non-record data
     recsize = 0 // length of single record
@@ -113,43 +111,27 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     if (nonRecordDataSize > 0) { // if there are non-record variables
       nonRecordDataSize -= dataStart
     }
+
+    val unlimitedVariables = root.variables.filter { it.isUnlimited() }
     if (unlimitedVariables.isEmpty()) { // if there are no record variables
       recStart = 0
     }
 
-    /* check for streaming file - numrecs must be calculated
-    // Example: TestDir.cdmUnitTestDir + "ft/station/madis2.nc"
-    if (isStreaming) {
-      val recordSpace = actualSize - recStart
-      numrecs = if (recsize == 0L) 0 else (recordSpace / recsize).toInt()
-
-      // set size of the unlimited dimension, reset the record variables
-      if (unlimitedDimension != null) {
-        unlimitedDimension = unlimitedDimension.toBuilder().setLength(numrecs).build()
-        root.replaceDimension(unlimitedDimension)
-        unlimitedVariables.forEach(Consumer<Variable.Builder<*>> { v: Variable.Builder<*> ->
-          v.replaceDimensionByName(
-            unlimitedDimension
-          )
-        })
-      }
-    }
-
-     */
-
     // Check if file affected by bug CDM-52 (netCDF-Java library used incorrect padding when
     // the file contained only one record variable and it was of type byte, char, or short).
-    /* Example TestDir.cdmLocalTestDataDir + "byteArrayRecordVarPaddingTest-bad.nc"
+    // Example TestDir.cdmLocalTestDataDir + "byteArrayRecordVarPaddingTest-bad.nc"
+    // Example /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc
+
     if (unlimitedVariables.size == 1) {
-      val uvar: Variable.Builder<*> = uvars[0]
-      val dtype: ArrayType = uvar.dataType
+      val uvar = unlimitedVariables[0]
+      val dtype = uvar.dataType
       if (dtype === CHAR || dtype === BYTE || dtype === SHORT) {
-        var vsize: Long = dtype.size.toLong() // works for all netcdf-3 data types
-        val dims: List<Dimension> = uvar.getDimensions()
+        var vsize = dtype.size // works for all netcdf-3 data types
+        val dims: List<Dimension> = uvar.dimensions
         for (curDim in dims) {
           if (!curDim.isUnlimited) vsize *= curDim.length
         }
-        val vinfo = uvar.spiObject as Vinfo
+        val vinfo = uvar.spObject as Vinfo
         if (vsize != vinfo.vsize) {
           logger.info(
             java.lang.String.format(
@@ -157,13 +139,12 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
               raf.location, vinfo.vsize, vsize
             )
           )
-          recsize = vsize
-          vinfo.vsize = vsize
+          recsize = vsize.toLong()
+          uvar.spObject = vinfo.copy(vsize = vsize)
         }
       }
     }
 
-     */
     if (debugHeaderSize) {
       println("  filePointer = ${filePos.pos} dataStart=$dataStart")
       println("  recStart = $recStart dataStart+nonRecordDataSize = ${dataStart + nonRecordDataSize}")
@@ -282,10 +263,9 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
         if (vsize.toLong() != calcVsize) debugOut.format(" *** readVsize $vsize != calcVsize $calcVsize\n")
       }
       //if (vsize < 0) { // when does this happen ?? streaming i think
-      //  vsize = (velems + padding(velems)) * dataType.size
+      //  vsize = (velems.toInt() + padding(velems)) * dataType.size
       //}
-      val vinfo = Vinfo(name, vsize.toUInt(), begin, isRecord, varAttsPos.toULong())
-      vars.add(vinfo)
+      val vinfo = Vinfo(name, vsize, begin, isRecord, varAttsPos.toULong())
       ncvarb.spObject = vinfo
 
       // track how big each record is
@@ -297,9 +277,6 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       }
       dataStart = Math.min(dataStart, begin)
       root.variables.add(ncvarb)
-      //if (ncvarb.isUnlimited) {
-      //  unlimitedVariables.add(ncvarb) // track record variables
-      //}
     }
   }
 
@@ -471,18 +448,14 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     else if (actual != calcSize)
       out.format(" actual size larger = $actual (${calcSize - actual} bytes extra) \n")
     out.format(String.format(String.format("%n  %20s____start_____size__unlim%n", "name")))
-    for (vinfo in vars) {
-      out.format(
-        String.format(
-          String.format(
-            "  %20s %8d %8d  %s %n",
+    for (vb in root.variables) {
+      val vinfo = vb.spObject as Vinfo
+      out.format("  %20s %8d %8d  %s %n",
             vinfo.name,
             vinfo.begin.toLong(),
             vinfo.vsize.toLong(),
             vinfo.isRecordVariable
           )
-        )
-      )
     }
   }
 
@@ -552,13 +525,13 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
    */
   data class Vinfo(
     val name: String,
-    val vsize: UInt,
+    val vsize: Int,
     val begin: Long,
     val isRecordVariable: Boolean,
     val attsPos: ULong
   )
 
 
-  fun getIosp() : Iosp = N3iosp(raf)
+  fun getIosp() : Iosp = N3iosp(raf, this)
 
 }

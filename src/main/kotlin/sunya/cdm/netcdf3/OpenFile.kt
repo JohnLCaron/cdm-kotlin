@@ -32,6 +32,17 @@ data class OpenFile(val location : String) {
         return nread
     }
 
+    @Throws(IOException::class)
+    fun readBytes(nbytes : Int, dst : ByteBuffer, dstPos : Int, state : OpenFileState) : Int {
+        val nread =  fileChannel.read(dst, state.pos)
+        if (nread != dst.capacity()) {
+            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location")
+        }
+        dst.flip()
+        state.pos += nread
+        return nread
+    }
+
     fun readBytes(dst : ByteArray, state : OpenFileState) : Int {
         return readBytes(ByteBuffer.wrap(dst), state)
     }

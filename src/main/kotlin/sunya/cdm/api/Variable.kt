@@ -8,12 +8,13 @@ data class Variable(
     val attributes: List<Attribute>,
     val spObject: Any?,
 ) {
-    val isUnlimited = dimensions.isNotEmpty() &&
-            dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
     val rank : Int = dimensions.size
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
     val nelems : Long = computeSize(this.shape)
     val elementSize = dataType.size
+
+    fun isUnlimited() = dimensions.isNotEmpty() &&
+            dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
     /////////////////////////////////////////////////////////////////////////////////////////
     fun computeSize(shape: IntArray?): Long {
@@ -57,6 +58,9 @@ data class Variable(
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
         var spObject: Any? = null
+
+        fun isUnlimited() = dimensions.isNotEmpty() &&
+                dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
         fun build(group : Group) : Variable {
             return Variable(group, name!!, dataType!!, dimensions, attributes, spObject)

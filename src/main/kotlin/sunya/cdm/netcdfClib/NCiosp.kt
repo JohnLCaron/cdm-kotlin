@@ -3,9 +3,7 @@ package sunya.cdm.netcdfClib
 import sunya.cdm.api.Section
 import sunya.cdm.api.Variable
 import sunya.cdm.iosp.*
-import sunya.cdm.netcdf.ffm.netcdf_h
 import sunya.cdm.netcdf.ffm.netcdf_h.*
-import java.lang.foreign.MemoryAddress.ofLong
 import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout
@@ -86,6 +84,18 @@ class NCiosp : Iosp {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
                     return ArrayInt(values, v2.shape)
+                }
+
+                NC_LONG() -> {
+                    // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
+                    val val_p = session.allocateArray(C_LONG, v2.nelems)
+                    checkErr("nc_get_vars_long",
+                        nc_get_vars_long(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = LongBuffer.allocate(v2.nelems.toInt())
+                    for (i in 0 until v2.nelems) {
+                        values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
+                    }
+                    return ArrayLong(values, v2.shape)
                 }
 
                 NC_SHORT() -> {

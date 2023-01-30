@@ -202,6 +202,13 @@ class IndexChunker(srcShape: IntArray, wantSection: Section?) {
             destElem += incr.toLong()
         }
 
+        fun set(from: Chunk) : Chunk {
+            this.srcElem = from.srcElem
+            this.nelems = from.nelems
+            this.destElem = from.destElem
+            return this
+        }
+
         override fun toString(): String {
             return " srcPos=$srcPos srcElem=$srcElem nelems=$nelems destElem=$destElem"
         }

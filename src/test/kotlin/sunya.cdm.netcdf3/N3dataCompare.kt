@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import sunya.cdm.api.DataType
 import sunya.cdm.api.Group
 import sunya.cdm.netcdfClib.NCheader
 import test.util.oldTestDir
@@ -14,6 +15,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 class N3dataCompare {
+    val debug = false
 
     companion object {
         @JvmStatic
@@ -26,21 +28,18 @@ class N3dataCompare {
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testSpecialChars.nc"),
                 )
-            return stream1
-            /* val stream2 =
+            val stream2 =
                 testFilesIn(oldTestDir + "formats/netcdf3")
                     .withRecursion()
                     .build()
 
             return Stream.of(stream1, stream2).flatMap { i -> i};
-
-             */
         }
     }
 
     @Test
     fun special() {
-        readN3data("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/nctest_64bit_offset.nc")
+        readN3data("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc")
     }
 
     @ParameterizedTest
@@ -53,7 +52,7 @@ class N3dataCompare {
         val root = rootb.build()
         val n3iosp = n3header.getIosp()
 
-        println(root.cdlString())
+        // println(root.cdlString())
 
         val ncheader = NCheader(filename)
         val rootClib = ncheader.rootGroup.build()
@@ -69,6 +68,9 @@ class N3dataCompare {
                 println("===============\n${ncvar.name}")
                 println("n3data = $n3data")
                 println("ncdata = $ncdata")
+            } else {
+                if (debug) println("${ncvar.name} ok")
+
             }
             //assertEquals(ncdata, n3data)
 //
