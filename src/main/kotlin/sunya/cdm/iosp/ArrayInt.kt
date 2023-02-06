@@ -4,6 +4,12 @@ import java.nio.IntBuffer
 
 class ArrayInt(val values : IntBuffer, val shape : IntArray) : ArrayTyped<Int>() {
 
+    override fun iterator(): Iterator<Int> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Int>() {
+        private var idx = 0
+        override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

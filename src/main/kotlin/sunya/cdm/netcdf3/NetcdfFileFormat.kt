@@ -1,5 +1,7 @@
 package sunya.cdm.netcdf3
 
+import sunya.cdm.iosp.OpenFile
+import sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
 
@@ -107,14 +109,14 @@ import java.nio.ByteOrder
  * http://cucis.ece.northwestern.edu/projects/PnetCDF/CDF-5.html.
  */
 
-/** Enumeration of the kinds of NetCDF file formats. NETCDF3_64BIT_DATA is not currently supported in this library.  */
+/** Enumeration of the kinds of NetCDF file formats. NC_FORMAT_64BIT_DATA is not currently supported in this library.  */
 enum class NetcdfFileFormat(private val version: Int, private val formatName: String) {
     INVALID(0, "Invalid"),  //
-    NETCDF3(1, "NetCDF-3"),  //
-    NETCDF3_64BIT_OFFSET(2, "netcdf-3 64bit-offset"),  //
-    NETCDF4(3, "NetCDF-4"),  // This is really just HDF-5, dont know yet if its written by netcdf4.
-    NETCDF4_CLASSIC(4, "netcdf-4 classic"),  // psuedo format I think
-    NETCDF3_64BIT_DATA(5, "netcdf-5");
+    NC_FORMAT_CLASSIC(1, "NetCDF-3"),  //
+    NC_FORMAT_64BIT_OFFSET(2, "netcdf-3 64bit-offset"),  //
+    NC_FORMAT_NETCDF4(3, "NetCDF-4"),  // This is really just HDF-5, dont know yet if its written by netcdf4.
+    NC_FORMAT_NETCDF4_CLASSIC(4, "netcdf-4 classic"),  // psuedo format I think
+    NC_FORMAT_64BIT_DATA(5, "netcdf-5");
 
     fun version(): Int {
         return version
@@ -125,15 +127,15 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
     }
 
     val isNetdf3format: Boolean
-        get() = this == NETCDF3 || this == NETCDF3_64BIT_OFFSET || this == NETCDF3_64BIT_DATA
+        get() = this == NC_FORMAT_CLASSIC || this == NC_FORMAT_64BIT_OFFSET || this == NC_FORMAT_64BIT_DATA
     val isNetdf4format: Boolean
-        get() = this == NETCDF4 || this == NETCDF4_CLASSIC
+        get() = this == NC_FORMAT_NETCDF4 || this == NC_FORMAT_NETCDF4_CLASSIC
     val isExtendedModel: Boolean
-        get() = this == NETCDF4 // || this == NCSTREAM;
+        get() = this == NC_FORMAT_NETCDF4 // || this == NCSTREAM;
     val isLargeFile: Boolean
-        get() = this == NETCDF3_64BIT_OFFSET
+        get() = this == NC_FORMAT_64BIT_OFFSET
     val isClassicModel: Boolean
-        get() = this == NETCDF3 || this == NETCDF3_64BIT_OFFSET || this == NETCDF4_CLASSIC || this == NETCDF3_64BIT_DATA
+        get() = this == NC_FORMAT_CLASSIC || this == NC_FORMAT_64BIT_OFFSET || this == NC_FORMAT_NETCDF4_CLASSIC || this == NC_FORMAT_64BIT_DATA
 
     companion object {
         // from PnetCDF project
@@ -170,12 +172,77 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
 
             // If this is not an HDF5 file, then the magic number is at position 0;
             // If it is an HDF5 file, then we need to search forward for it.
-            return if (memequal(CDF1HEAD, magic, CDF1HEAD.size)) NETCDF3
-                else if (memequal(CDF2HEAD, magic, CDF2HEAD.size)) NETCDF3_64BIT_OFFSET
-                else if (memequal(CDF5HEAD, magic, CDF5HEAD.size)) NETCDF3_64BIT_DATA
+            return if (memequal(CDF1HEAD, magic, CDF1HEAD.size)) NC_FORMAT_CLASSIC
+                else if (memequal(CDF2HEAD, magic, CDF2HEAD.size)) NC_FORMAT_64BIT_OFFSET
+                else if (memequal(CDF5HEAD, magic, CDF5HEAD.size)) NC_FORMAT_64BIT_DATA
                 else searchForwardHdf5(raf, magic)
         }
 
+        fun netcdfFormat(format : Int): NetcdfFileFormat {
+            return when (format) {
+                0 -> INVALID
+                1 -> NC_FORMAT_CLASSIC
+                2 -> NC_FORMAT_64BIT_OFFSET
+                3 -> NC_FORMAT_NETCDF4
+                4 -> NC_FORMAT_NETCDF4_CLASSIC
+                5 -> NC_FORMAT_64BIT_DATA
+                else -> throw RuntimeException("Unknown netcdfFormat $format")
+            }
+        }
+
+        fun netcdfFormatExtended(formatx : Int): String {
+            return when (formatx) {
+                0 -> "NC_FORMATX_UNDEFINED"
+                1 -> "NC_FORMATX_NC3"
+                2 -> "NC_FORMATX_NC_HDF5"
+                3 -> "NC_FORMATX_NC_HDF4"
+                4 -> "NC_FORMATX_PNETCDF"
+                5 -> "NC_FORMATX_DAP2"
+                6 -> "NC_FORMATX_DAP4"
+                8 -> "NC_FORMATX_UDF0"
+                9 -> "NC_FORMATX_UDF1"
+                10 -> "NC_FORMATX_NCZARR"
+                else -> throw RuntimeException("Unknown netcdfFormatExtended $formatx")
+                }
+        }
+
+        fun netcdfMode(mode : Int): String {
+            return buildString {
+                if (mode and 1 == 1) {
+                    append("NC_WRITE ")
+                }
+                if ((mode and 8) == 8) {
+                    append("NC_DISKLESS ")
+                }
+                if ((mode and 16) == 16) {
+                    append("NC_MMAP ")
+                }
+                if ((mode and 32) == 32) {
+                    append("NC_64BIT_DATA ")
+                }
+                if ((mode and 64) == 64) {
+                    append("NC_UDF0 ")
+                }
+                if ((mode and 128) == 128) {
+                    append("NC_UDF1 ")
+                }
+                if ((mode and 0x100) == 0x100) {
+                    append("NC_CLASSIC_MODEL ")
+                }
+                if ((mode and 0x200) == 0x200) {
+                    append("NC_64BIT_OFFSET ")
+                }
+                if ((mode and 0x1000) == 0x1000) {
+                    append("NC_NETCDF4 ")
+                }
+                if ((mode and 0x20000) == 0x20000) {
+                    append("NC_NOATTCREORD ")
+                }
+                if ((mode and 0x40000) == 0x40000) {
+                    append("NC_NODIMSCALE_ATTACH ")
+                }
+            }
+        }
 
         private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetcdfFileFormat {
             // For HDF5, we need to search forward on 512 block sizes
@@ -185,7 +252,7 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
                 if (raf.readBytes(magic, filePos) < MAGIC_NUMBER_LEN) {
                     format = INVALID
                 } else if (memequal(H5HEAD, magic, H5HEAD.size)) {
-                    format = NETCDF4
+                    format = NC_FORMAT_NETCDF4
                 } else {
                     filePos.pos = if (filePos.pos == 0L) 512 else 2 * filePos.pos
                 }

@@ -3,6 +3,13 @@ package sunya.cdm.iosp
 import java.nio.ByteBuffer
 
 class ArrayByte(val values : ByteBuffer, val shape : IntArray) : ArrayTyped<Byte>() {
+
+    override fun iterator(): Iterator<Byte> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Byte>() {
+        private var idx = 0
+        override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

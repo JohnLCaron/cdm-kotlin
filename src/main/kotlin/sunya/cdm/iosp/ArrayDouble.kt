@@ -3,6 +3,13 @@ package sunya.cdm.iosp
 import java.nio.DoubleBuffer
 
 class ArrayDouble(val values : DoubleBuffer, val shape : IntArray) : ArrayTyped<Double>() {
+
+    override fun iterator(): Iterator<Double> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Double>() {
+        private var idx = 0
+        override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
@@ -20,7 +27,6 @@ class ArrayDouble(val values : DoubleBuffer, val shape : IntArray) : ArrayTyped<
         result = 31 * result + shape.contentHashCode()
         return result
     }
-
 
     override fun toString(): String {
         return buildString {

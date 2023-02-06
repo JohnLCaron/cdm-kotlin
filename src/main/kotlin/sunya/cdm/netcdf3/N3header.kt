@@ -7,8 +7,8 @@ import java.util.*
 import mu.KotlinLogging
 import sunya.cdm.api.*
 import sunya.cdm.api.DataType.*
-import sunya.cdm.iosp.ArrayLong
-import sunya.cdm.iosp.Iosp
+import sunya.cdm.iosp.OpenFile
+import sunya.cdm.iosp.OpenFileState
 import java.nio.ByteOrder
 
 /*
@@ -51,10 +51,8 @@ import java.nio.ByteOrder
 
 private val logger = KotlinLogging.logger("N3header")
 
-/** Netcdf version 3 header. Read-only version using Builders for immutablility.  */
-class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
-
-  private val raf: OpenFile
+// Really a builder of the root Group.
+class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   private val root: Group.Builder
   private var unlimitedDimension: Dimension? = null
   private val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
@@ -72,7 +70,6 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   private val fileDimensions = mutableListOf<Dimension>()
 
   init {
-    this.raf = raf
     this.root = root
     val actualSize: Long = raf.size
     nonRecordDataSize = 0 // length of non-record data
@@ -472,7 +469,7 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     @Throws(IOException::class)
     fun isValidFile(raf: OpenFile): Boolean {
       return when (NetcdfFileFormat.findNetcdfFormatType(raf)) {
-        NetcdfFileFormat.NETCDF3, NetcdfFileFormat.NETCDF3_64BIT_OFFSET -> true
+        NetcdfFileFormat.NC_FORMAT_CLASSIC, NetcdfFileFormat.NC_FORMAT_64BIT_OFFSET -> true
         else -> false
       }
     }
@@ -502,18 +499,6 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
         else -> throw IllegalArgumentException("unknown type == $type")
       }
     }
-
-    fun getType(dataType: DataType): Int {
-      return when (dataType) {
-        BYTE -> 1
-        CHAR -> 2
-        SHORT -> 3
-        INT -> 4
-        FLOAT -> 5
-        DOUBLE -> 6
-        else -> throw IllegalArgumentException("unknown DataType == $dataType")
-      }
-    }
   }
 
 // variable info for reading/writing
@@ -530,8 +515,5 @@ class N3header(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     val isRecordVariable: Boolean,
     val attsPos: ULong
   )
-
-
-  fun getIosp() : Iosp = N3iosp(raf, this)
 
 }
