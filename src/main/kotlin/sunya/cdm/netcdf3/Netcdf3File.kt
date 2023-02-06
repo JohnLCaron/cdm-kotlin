@@ -1,6 +1,7 @@
 package sunya.cdm.netcdf3
 
 import sunya.cdm.api.DataType
+import sunya.cdm.api.Group
 import sunya.cdm.api.Section
 import sunya.cdm.api.Variable
 import sunya.cdm.iosp.*
@@ -8,7 +9,18 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class N3iosp(val raf : OpenFile, val header : N3header) : Iosp {
+class Netcdf3File(val filename : String) : Iosp {
+    private val raf : OpenFile = OpenFile(filename)
+    private val header : N3header
+    private val rootGroup : Group
+
+    init {
+        val rootBuilder = Group.Builder("")
+        header = N3header(raf, rootBuilder, null)
+        rootGroup = rootBuilder.build(null)
+    }
+
+    override fun rootGroup() = rootGroup
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         TODO("Not yet implemented")

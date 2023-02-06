@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import sunya.cdm.api.Group
+import sunya.cdm.iosp.OpenFile
 
 class N3readTest {
 
@@ -31,9 +32,8 @@ class N3readTest {
     fun readN3data(filename : String, expect : String) {
         println("=================")
         println(filename)
-        val rootb = Group.Builder()
-        val ncheader = N3header(OpenFile(filename), rootb, null)
-        val root = rootb.build()
+        val ncfile = Netcdf3File(filename)
+        val root = ncfile.rootGroup()
         println("actual = ${root.cdlString()}")
         //println("expect = $expect")
 

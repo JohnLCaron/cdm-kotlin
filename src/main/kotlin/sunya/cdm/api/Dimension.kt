@@ -4,9 +4,9 @@ data class Dimension(val name : String, val length : Int, val isUnlimited : Bool
 
     constructor(name : String, len : Int) : this(name, len, false)
 
-    fun cdlString() : String {
-        return if (isUnlimited) "  $name = UNLIMITED;   // ($length currently)"
-        else "  $name = $length;"
+    fun cdlString(indent : Indent = Indent(2)) : String {
+        return if (isUnlimited) "${indent}$name = UNLIMITED;   // ($length currently)"
+        else "${indent}$name = $length;"
     }
 
 }

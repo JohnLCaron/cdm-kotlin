@@ -1,4 +1,4 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 import sunya.cdm.api.Range
 import sunya.cdm.api.Section

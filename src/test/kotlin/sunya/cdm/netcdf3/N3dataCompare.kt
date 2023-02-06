@@ -4,15 +4,15 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import sunya.cdm.api.DataType
 import sunya.cdm.api.Group
+import sunya.cdm.iosp.OpenFile
 import sunya.cdm.netcdfClib.NCheader
+import sunya.cdm.netcdfClib.NetcdfClibFile
 import test.util.oldTestDir
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 class N3dataCompare {
     val debug = false
@@ -47,23 +47,19 @@ class N3dataCompare {
     fun readN3data(filename : String) {
         println("=================")
         println(filename)
-        val rootb = Group.Builder()
-        val n3header = N3header(OpenFile(filename), rootb, null)
-        val root = rootb.build()
-        val n3iosp = n3header.getIosp()
-
+        val n3file = Netcdf3File(filename)
+        val root = n3file.rootGroup()
         // println(root.cdlString())
 
-        val ncheader = NCheader(filename)
-        val rootClib = ncheader.rootGroup.build()
-        val nciosp = ncheader.getIosp()
+        val ncfile = NetcdfClibFile(filename)
+        val rootClib = ncfile.rootGroup()
 
         val n3vars = root.variables
         val ncvars = rootClib.variables
         n3vars.forEach { n3var ->
-            val n3data = n3iosp.readArrayData(n3var)
+            val n3data = n3file.readArrayData(n3var)
             val ncvar = ncvars.find { it.name == n3var.name }
-            val ncdata = nciosp.readArrayData(ncvar!!)
+            val ncdata = n3file.readArrayData(ncvar!!)
             if (ncdata != n3data) {
                 println("===============\n${ncvar.name}")
                 println("n3data = $n3data")

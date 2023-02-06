@@ -1,4 +1,4 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 import java.io.EOFException
 import java.io.File
@@ -7,6 +7,8 @@ import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 data class OpenFile(val location : String) {
     val fileChannel : FileChannel
@@ -33,18 +35,47 @@ data class OpenFile(val location : String) {
     }
 
     @Throws(IOException::class)
-    fun readBytes(nbytes : Int, dst : ByteBuffer, dstPos : Int, state : OpenFileState) : Int {
+    fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
+        dst.position(dstPos)
+        dst.limit(dstPos + nbytes)
         val nread =  fileChannel.read(dst, state.pos)
-        if (nread != dst.capacity()) {
+        if (nread != nbytes) {
             throw EOFException("Tried to read past EOF at pos ${state.pos} location $location")
         }
-        dst.flip()
         state.pos += nread
         return nread
     }
 
+    fun readByteBuffer(state : OpenFileState, nelems : Int): ByteBuffer {
+        val dst = ByteBuffer.allocate(nelems)
+        require (readBytes(dst, state) == nelems)
+        dst.order(state.byteOrder)
+        return dst
+    }
+
     fun readBytes(dst : ByteArray, state : OpenFileState) : Int {
         return readBytes(ByteBuffer.wrap(dst), state)
+    }
+
+    fun readByte(state : OpenFileState): Byte {
+        val dst = ByteBuffer.allocate(1)
+        readBytes(dst, state)
+        dst.order(state.byteOrder)
+        return dst.get(0)
+    }
+
+    fun readDouble(state : OpenFileState): Double {
+        val dst = ByteBuffer.allocate(8)
+        readBytes(dst, state)
+        dst.order(state.byteOrder)
+        return dst.getDouble(0)
+    }
+
+    fun readFloat(state : OpenFileState): Float {
+        val dst = ByteBuffer.allocate(4)
+        readBytes(dst, state)
+        dst.order(state.byteOrder)
+        return dst.getFloat(0)
     }
 
     fun readInt(state : OpenFileState): Int {
@@ -61,20 +92,6 @@ data class OpenFile(val location : String) {
         return dst.getLong(0)
     }
 
-    fun readFloat(state : OpenFileState): Float {
-        val dst = ByteBuffer.allocate(4)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getFloat(0)
-    }
-
-    fun readDouble(state : OpenFileState): Double {
-        val dst = ByteBuffer.allocate(8)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getDouble(0)
-    }
-
     fun readShort(state : OpenFileState): Short {
         val dst = ByteBuffer.allocate(2)
         readBytes(dst, state)
@@ -82,11 +99,14 @@ data class OpenFile(val location : String) {
         return dst.getShort(0)
     }
 
-    fun readByteBuffer(state : OpenFileState, nelems : Int): ByteBuffer {
-        val dst = ByteBuffer.allocate(nelems)
-        require (readBytes(dst, state) == nelems)
-        dst.order(state.byteOrder)
-        return dst
+    fun readString(state : OpenFileState, nbytes : Int): String {
+        return readString(state, nbytes, StandardCharsets.UTF_8)
+    }
+
+    fun readString(state : OpenFileState, nbytes : Int, charset : Charset): String {
+        val dst = ByteBuffer.allocate(nbytes)
+        readBytes(dst, state)
+        return String(dst.array(), charset)
     }
 
     fun readArrayByte(state : OpenFileState, nelems : Int): Array<Byte> {
@@ -121,4 +141,9 @@ data class OpenFile(val location : String) {
 
 }
 
-data class OpenFileState(var pos : Long, var byteOrder : ByteOrder)
+data class OpenFileState(var pos : Long, var byteOrder : ByteOrder) {
+    fun incr(addit : Long) : OpenFileState {
+        this.pos += addit
+        return this
+    }
+}

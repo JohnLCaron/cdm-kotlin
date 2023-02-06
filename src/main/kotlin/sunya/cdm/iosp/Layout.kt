@@ -1,4 +1,4 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 interface Layout {
     /** Get total number of elements in the wanted subset.  */
@@ -19,7 +19,7 @@ interface Layout {
      * (or) Write nelems to file at filePos, from array at startElem.
      */
     interface Chunk {
-        /** Get the position in source where to read or write: eg "file position"  */
+        /** Get the byte position in source where to read or write: eg "file position"  */
         val srcPos: Long
 
         /** Get number of elements to transfer contiguously (Note: elements, not bytes)  */

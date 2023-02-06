@@ -1,7 +1,7 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 import sunya.cdm.api.Section
-import sunya.cdm.netcdf3.IndexLong.Companion.computeSize
+import sunya.cdm.iosp.IndexLong.Companion.computeSize
 import kotlin.math.min
 
 /**
@@ -14,7 +14,8 @@ import kotlin.math.min
  * @param srcShape shape of the entire data array. must have rank &gt; 0
  * @param wantSection the wanted section of data
 */
-class LayoutRegularSegmented(startPos: Long, elemSize: Int, recSize: Long, srcShape: IntArray, wantSection: Section?) : Layout {
+class LayoutRegularSegmented(startPos: Long, elemSize: Int, recSize: Long, srcShape: IntArray, wantSection: Section?) :
+    Layout {
     override val totalNelems: Long
     private val innerNelems: Long
     private val startPos: Long

@@ -1,13 +1,13 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 import sunya.cdm.api.Section
 
 class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSection: Section?) : Layout {
     private val chunker: IndexChunker
-    private val startPos // starting position
-            : Long
-    override val elemSize // size of each element
-            : Int
+    private val startPos : Long // starting position
+
+    override val elemSize : Int // size of each element
+
 
     /**
      * Constructor.

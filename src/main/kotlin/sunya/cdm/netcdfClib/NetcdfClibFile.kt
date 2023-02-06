@@ -1,5 +1,6 @@
 package sunya.cdm.netcdfClib
 
+import sunya.cdm.api.Group
 import sunya.cdm.api.Section
 import sunya.cdm.api.Variable
 import sunya.cdm.iosp.*
@@ -11,7 +12,11 @@ import java.lang.foreign.ValueLayout.JAVA_INT
 import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.nio.*
 
-class NCiosp : Iosp {
+class NetcdfClibFile(val filename : String) : Iosp {
+    private val header : NCheader = NCheader(filename)
+    private val rootGroup : Group = header.rootGroup.build(null)
+
+    override fun rootGroup() = rootGroup
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>  {
         TODO("Not yet implemented")

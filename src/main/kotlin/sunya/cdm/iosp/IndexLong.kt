@@ -1,4 +1,4 @@
-package sunya.cdm.netcdf3
+package sunya.cdm.iosp
 
 /** Uses longs for indexing, otherwise similar to dev.ucdm.array.Index  */
 class IndexLong {

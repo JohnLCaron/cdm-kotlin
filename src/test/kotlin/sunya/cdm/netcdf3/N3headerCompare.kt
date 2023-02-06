@@ -5,6 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import sunya.cdm.api.Group
+import sunya.cdm.iosp.OpenFile
 import sunya.cdm.netcdfClib.NCheader
 import test.util.oldTestDir
 import test.util.testFilesIn
@@ -44,14 +45,13 @@ class N3headerCompare {
     fun readN3header(filename : String) {
         println("=================")
         println(filename)
-        val rootb = Group.Builder()
-        val ncheader = N3header(OpenFile(filename), rootb, null)
-        val root = rootb.build()
+        val ncfile = Netcdf3File(filename)
+        val root = ncfile.rootGroup()
         //println(root.cdlString())
         //println("________")
 
         val headerClib = NCheader(filename)
-        val rootClib = headerClib.rootGroup.build()
+        val rootClib = headerClib.rootGroup.build(null)
 
         //println("actual = $root")
         //println("expect = $expect")

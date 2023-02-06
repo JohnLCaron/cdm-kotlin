@@ -4,9 +4,9 @@ data class Attribute(val name : String, val dataType : DataType, val values : Li
 
     constructor(name : String, svalue : String) : this(name, DataType.STRING, List<String>(1) { svalue})
 
-    fun cdlString() : String {
+    fun cdlString(indent : Indent = Indent(2)) : String {
         return buildString {
-            append(":$name = ")
+            append("${indent}:$name = ")
             values.forEachIndexed { idx, it ->
                 if (idx != 0) {
                     append(", ")

@@ -9,6 +9,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import sunya.cdm.api.Group
+import sunya.cdm.iosp.OpenFile
 
 class N3headerTest {
 
@@ -379,11 +380,10 @@ class N3headerTest {
     fun readN3header(filename : String, expect : String) {
         println("=================")
         println(filename)
-        val rootb = Group.Builder()
-        val ncheader = N3header(OpenFile(filename), rootb, null)
-        val root = rootb.build()
-        //println("actual = $root")
-        //println("expect = $expect")
+        val ncfile = Netcdf3File(filename)
+        val root = ncfile.rootGroup()
+         println("actual = $root")
+        println("expect = $expect")
 
         assertEquals(expect, root.toString())
         assertTrue(root.toString().contains(expect))

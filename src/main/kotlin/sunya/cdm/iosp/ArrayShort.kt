@@ -3,6 +3,13 @@ package sunya.cdm.iosp
 import java.nio.ShortBuffer
 
 class ArrayShort(val values : ShortBuffer, val shape : IntArray) : ArrayTyped<Short>() {
+
+    override fun iterator(): Iterator<Short> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Short>() {
+        private var idx = 0
+        override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
