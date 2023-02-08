@@ -106,7 +106,7 @@ data class OpenFile(val location : String) {
     fun readString(state : OpenFileState, nbytes : Int, charset : Charset): String {
         val dst = ByteBuffer.allocate(nbytes)
         readBytes(dst, state)
-        return String(dst.array(), charset)
+        return makeStringZ(dst.array(), charset)
     }
 
     fun readArrayByte(state : OpenFileState, nelems : Int): Array<Byte> {
@@ -146,4 +146,11 @@ data class OpenFileState(var pos : Long, var byteOrder : ByteOrder) {
         this.pos += addit
         return this
     }
+}
+
+// terminate at a zero
+fun makeStringZ(bb : ByteArray, charset : Charset): String {
+    var count = 0
+    while (count < bb.size && bb[count].toInt() != 0) count++
+    return String(bb, 0, count, charset)
 }

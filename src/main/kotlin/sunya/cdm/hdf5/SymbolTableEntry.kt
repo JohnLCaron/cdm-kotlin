@@ -40,12 +40,14 @@ internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry
     }
 
     return SymbolTableEntry(
-        rootEntry.getLong("linkNameOffset"), // LOOK what about rootEntry.linkNameOffset.getLong()) ?
+        rootEntry.getLong("linkNameOffset"), // LOOK what about rootEntry.linkNameOffset.getLong()) sizeOffsets = Int ???
         rootEntry.getLong("objectHeaderAddress"),
+        rootEntry.getInt("cacheType"),
         btreeAddress,
         nameHeapAddress,
         linkOffset,
         isSymbolicLink,
+        rootEntry.dataSize(),
     )
 }
 
@@ -53,8 +55,14 @@ internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry
 internal data class SymbolTableEntry(
     val nameOffset: Long,
     val objectHeaderAddress: Long,
+    val cacheType : Int,
     val btreeAddress: Long?,
     val nameHeapAddress: Long?,
     val linkOffset: Int?,
     val isSymbolicLink: Boolean,
-)
+    val dataSize : Int, // nbytes on disk
+) {
+    init {
+        require(dataSize == 32 || dataSize == 40) // sanity check
+    }
+}

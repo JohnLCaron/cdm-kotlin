@@ -5,7 +5,10 @@ import sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 import java.util.*
+
+private const val debugHeap = false
 
 internal class H5heap(val header: H5builder) {
     val raf = header.raf
@@ -18,7 +21,7 @@ internal class H5heap(val header: H5builder) {
         for (i in 0 until nelems) {
             val reference = refArray[i]
             val name = header.getDataObjectName(reference)
-            result[i] = name ?: java.lang.Long.toString(reference)
+            result.add(name ?: java.lang.Long.toString(reference))
         }
         return result
     }
@@ -199,5 +202,41 @@ internal class H5heap(val header: H5builder) {
             }
         }
     } // GlobalHeap
-
 }
+
+// level 1D
+internal class LocalHeap(header : H5builder, address: Long) {
+    var size: Int
+    var freelistOffset: Long
+    var dataAddress: Long
+    var heap: ByteBuffer
+    var version: Byte
+
+    init {
+        // header information is in le byte order
+        val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
+
+        // header
+        val magic: String = header.raf.readString(state,4)
+        check(magic == "HEAP") { "$magic should equal HEAP" }
+        version = header.raf.readByte(state)
+        state.pos += 3
+        size = header.readLength(state).toInt()
+        freelistOffset = header.readLength(state)
+        dataAddress = header.readOffset(state)
+
+        // data
+        state.pos = header.getFileOffset(dataAddress)
+        heap = header.raf.readByteBuffer(state, size)
+        val hsize: Int = 8 + 2 * header.sizeLengths + header.sizeOffsets
+        if (debugHeap) {
+            println("LocalHeap hsize = $hsize")
+        }
+    }
+
+    fun getStringAt(offset: Int): String {
+        var count = 0
+        while (heap[offset + count].toInt() != 0) count++
+        return String(heap.array(), offset, count, StandardCharsets.UTF_8)
+    }
+} // LocalHeap

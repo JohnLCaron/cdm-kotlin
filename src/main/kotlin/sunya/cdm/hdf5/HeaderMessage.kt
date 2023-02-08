@@ -5,6 +5,7 @@ import sunya.cdm.hdf5.FilterType.Companion.fromId
 import sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.util.*
 
 private val debugContinuation = false
@@ -12,26 +13,26 @@ internal val debugMessage = false
 
 // type safe enum
 enum class MessageType(val uname: String, val num: Int) {
-        NIL("NIL", 0),
-        Dataspace("SimpleDataspace", 1),
-        LinkInfo("GroupNew", 2),
-        Datatype("Datatype", 3),
-        FillValueOld("FillValueOld", 4),
-        FillValue("FillValue", 5),
-        Link("Link", 6),
-        ExternalDataFiles("ExternalDataFiles", 7), // not supported
-        Layout("Layout", 8),
-        GroupInfo("GroupInfo", 10),
-        FilterPipeline("FilterPipeline", 11),
-        Attribute("Attribute", 12),
-        Comment("Comment", 13),
-        LastModifiedOld("LastModifiedOld", 14),
-        SharedObject("SharedObject", 15),
-        ObjectHeaderContinuation("Continuation", 16),
-        SymbolTable("Group", 17),
-        LastModified("LastModified", 18),
-        AttributeInfo("AttributeInfo", 21),
-        ObjectReferenceCount("ObjectReferenceCount", 22),
+    NIL("NIL", 0),
+    Dataspace("SimpleDataspace", 1),
+    LinkInfo("GroupNew", 2),
+    Datatype("Datatype", 3),
+    FillValueOld("FillValueOld", 4),
+    FillValue("FillValue", 5),
+    Link("Link", 6),
+    ExternalDataFiles("ExternalDataFiles", 7), // not supported
+    Layout("Layout", 8),
+    GroupInfo("GroupInfo", 10),
+    FilterPipeline("FilterPipeline", 11),
+    Attribute("Attribute", 12),
+    Comment("Comment", 13),
+    LastModifiedOld("LastModifiedOld", 14),
+    SharedObject("SharedObject", 15),
+    ObjectHeaderContinuation("Continuation", 16),
+    SymbolTable("Group", 17),
+    LastModified("LastModified", 18),
+    AttributeInfo("AttributeInfo", 21),
+    ObjectReferenceCount("ObjectReferenceCount", 22),
     ;
 
     override fun toString(): String {
@@ -119,8 +120,8 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
     val startPos = state.pos
     val mtype: MessageType?
     val flags: Int
-    val headerSize : Int
-    val messageSize : Int
+    val headerSize: Int
+    val messageSize: Int
     if (version == 1) {
         val rawdata1 =
             structdsl("HeaderMessage1", raf, state) {
@@ -132,6 +133,10 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         if (debugMessage) rawdata1.show()
 
         mtype = MessageType.byNumber(rawdata1.getShort("type").toInt())
+        if (mtype == null) {
+            println("Unknoen mtype = ${rawdata1.getShort("type")}")
+            return null
+        }
         flags = rawdata1.getByte("flags").toInt()
         messageSize = rawdata1.getShort("size").toInt()
         headerSize = rawdata1.dataSize()
@@ -166,18 +171,22 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.NIL -> {
             null
         }
+
         MessageType.Dataspace -> this.readDataspaceMessage(state) // 1
         MessageType.LinkInfo -> this.readLinkInfoMessage(state) // 2
         MessageType.Datatype -> this.readDatatypeMessage(state) // 3
         MessageType.FillValueOld -> this.readFillValueOldMessage(state) // 4
-        MessageType.FillValue-> this.readFillValueMessage(state) // 5
-        MessageType.Link -> this.readLinkMessage(state) // 5
+        MessageType.FillValue -> this.readFillValueMessage(state) // 5
+        MessageType.Link -> this.readLinkMessage(state) // 6
         MessageType.Layout -> this.readDataLayoutMessage(state) // 8
-        MessageType.GroupInfo -> this.readGroupInfoMessage(state) // 10
+        MessageType.GroupInfo -> null // this.readGroupInfoMessage(state) // 10
         MessageType.FilterPipeline -> this.readFilterPipelineMessage(state) // 11
-        MessageType.Attribute -> this.readAttributeMessage(state) // 11
+        MessageType.Attribute -> this.readAttributeMessage(state) // 12
+        MessageType.LastModifiedOld -> null // 14
+        MessageType.SharedObject -> null // 15
         MessageType.ObjectHeaderContinuation -> this.readContinueMessage(state) // 16
         MessageType.SymbolTable -> this.readSymbolTableMessage(state) // 17
+        MessageType.LastModified -> null // 18
         MessageType.AttributeInfo -> this.readAttributeInfoMessage(state) // 21
         else -> throw RuntimeException("Unimplemented message type = $mtype")
     }
@@ -212,7 +221,7 @@ fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
             fld("type", 1)
             array("dims", sizeLengths, "rank")
             if (flags and 1 != 0) {
-              array("maxsize", sizeLengths, "rank")
+                array("maxsize", sizeLengths, "rank")
             }
             if (version == 1 && (flags and 2 != 0)) {
                 array("permute", sizeLengths, "rank")
@@ -232,11 +241,11 @@ fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
     )
 }
 
-enum class DataspaceType(val num : Int) {
+enum class DataspaceType(val num: Int) {
     Scalar(0), Simple(1), Null(2);
 
     companion object {
-        fun of(num: Int) : DataspaceType {
+        fun of(num: Int): DataspaceType {
             return when (num) {
                 0 -> Scalar
                 1 -> Simple
@@ -247,8 +256,9 @@ enum class DataspaceType(val num : Int) {
     }
 }
 
+// LOOK do we want to support isUnlimited = mds.maxLength.get(0) == -1
 data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : HeaderMessage(MessageType.Dataspace) {
-    fun rank() : Int = dims.size
+    fun rank(): Int = dims.size
 }
 
 ////////////////////////////////////////// 2 IV.A.2.c. The Link Info Message
@@ -273,10 +283,15 @@ fun H5builder.readLinkInfoMessage(state: OpenFileState): LinkInfoMessage {
     return LinkInfoMessage(
         rawdata.getLong("fractalHeapAddress"),
         rawdata.getLong("v2BtreeAddress"),
+        if ((flags and 2) != 0) rawdata.getLong("v2BtreeAddressCreationOrder") else null,
     )
 }
 
-data class LinkInfoMessage(val fractalHeapAddress: Long, val v2BtreeAddress: Long) : HeaderMessage(MessageType.LinkInfo)
+data class LinkInfoMessage(
+    val fractalHeapAddress: Long,
+    val v2BtreeAddress: Long,
+    val v2BtreeAddressCreationOrder: Long?
+) : HeaderMessage(MessageType.LinkInfo)
 
 ////////////////////////////////////////// 4
 @Throws(IOException::class)
@@ -339,7 +354,7 @@ data class FillValueMessage(val hasFillVakue: Boolean, val size: Int?, val value
 fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
     val version = raf.readByte(state)
     val flags = raf.readByte(state).toInt()
-    val vsize =  variableSizeFactor(flags and 3)
+    val vsize = variableSizeFactor(flags and 3)
     state.incr(-2)
 
     val rawdata =
@@ -378,10 +393,12 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
                 val len = raf.readShort(state)
                 raf.readString(state, len.toInt())
             }
+
             64 -> {
                 val len = raf.readShort(state)
                 raf.readString(state, len.toInt()) // actually 2 strings - see docs
             }
+
             else -> {
                 throw RuntimeException("Unknown link type")
             }
@@ -399,7 +416,7 @@ open class LinkMessage(val linkType: Int, val linkName: String) : HeaderMessage(
 open class LinkSoft(linkType: Int, linkName: String, val linkInfo: String) : LinkMessage(linkType, linkName)
 open class LinkHard(linkType: Int, linkName: String, val linkAddress: Long) : LinkMessage(linkType, linkName)
 
-////////////////////////////////////////// 10
+////////////////////////////////////////// 10 NOT USED
 
 @Throws(IOException::class)
 fun H5builder.readGroupInfoMessage(state: OpenFileState): GroupInfoMessage {
@@ -428,7 +445,8 @@ fun H5builder.readGroupInfoMessage(state: OpenFileState): GroupInfoMessage {
     )
 }
 
-data class GroupInfoMessage(val estNumEntries: Short?, val estLengthEntryName: Short?) : HeaderMessage(MessageType.GroupInfo)
+data class GroupInfoMessage(val estNumEntries: Short?, val estLengthEntryName: Short?) :
+    HeaderMessage(MessageType.GroupInfo)
 
 ////////////////////////////////////////// 11
 // Message Type 11/0xB "Data Storage - Filter Pipeline" : apply a filter to the "data stream"
@@ -486,7 +504,7 @@ enum class FilterType(val id: Int) {
     }
 }
 
-data class Filter(val filterType: FilterType, val name : String, val clientValues :IntArray)
+data class Filter(val filterType: FilterType, val name: String, val clientValues: IntArray)
 
 data class FilterPipelineMessage(val filters: List<Filter>) : HeaderMessage(MessageType.FilterPipeline)
 
@@ -512,13 +530,14 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
         }
     if (debugMessage) rawdata.show()
 
-    val name = rawdata.getString("name")
+    val name = rawdata.getString("name") // this has terminating zero removed
     if (version == 1) {
-        state.pos += padding(name.length, 8) // LOOK ??
+        // use the full width to decide on padding
+        state.pos += padding(rawdata.getByte("nameLength").toInt(), 8)
     }
 
     // read the datatype
-    val mdt : DatatypeMessage
+    val mdt: DatatypeMessage
     val isShared = flags and 1 != 0
     if (isShared) {
         throw java.lang.RuntimeException("getSharedDataObject not implemented")
@@ -541,7 +560,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     }
 
     val dataPos = state.pos // note this is absolute position (no offset needed)
-    val size : Int = 0 // LOOK where does this come from
+    val size: Int = 0 // LOOK where does this come from
     state.pos += size
 
     return AttributeMessage(
@@ -552,12 +571,12 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     )
 }
 
-data class AttributeMessage(val name: String, val mdt: DatatypeMessage, val mds : DataspaceMessage, val dataPos : Long)
-    : HeaderMessage(MessageType.Attribute) {
-        fun show() {
-            println("${mdt.type} $name ${mds.dims.contentToString()} ${mds.type}")
-        }
+data class AttributeMessage(val name: String, val mdt: DatatypeMessage, val mds: DataspaceMessage, val dataPos: Long) :
+    HeaderMessage(MessageType.Attribute) {
+    fun show() {
+        println("${mdt.type} $name ${mds.dims.contentToString()} ${mds.type}")
     }
+}
 
 
 ////////////////////////////////////////// 16
@@ -596,9 +615,13 @@ fun H5builder.readSymbolTableMessage(state: OpenFileState): SymbolTableMessage {
     )
 }
 
-data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) : HeaderMessage(MessageType.SymbolTable)
+// localHeapAddress aka nameHeapAddress
+data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) :
+    HeaderMessage(MessageType.SymbolTable)
 
-////////////////////////////////////////// 10
+////////////////////////////////////////// 21
+// This message stores information about the attributes on an object,
+// such as the location of the attribute storage when the attributes are stored “densely”.
 
 @Throws(IOException::class)
 fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessage {
@@ -622,11 +645,49 @@ fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessa
     if (debugMessage) rawdata.show()
 
     return AttributeInfoMessage(
-        rawdata.getLong("fractalHeapAddress"),
+        readAttributesFromInfoMessage(
+            rawdata.getLong("fractalHeapAddress"),
+            rawdata.getLong("attributeNameBtreeAddress"),
+            if (flags and 2 != 0) rawdata.getLong("attributeOrderBtreeAddress") else null,
+        )
     )
 }
 
-data class AttributeInfoMessage(val fractalHeapAddress: Long) : HeaderMessage(MessageType.GroupInfo)
+data class AttributeInfoMessage(val attributes: List<AttributeMessage>) : HeaderMessage(MessageType.AttributeInfo)
+
+private fun H5builder.readAttributesFromInfoMessage(
+    fractalHeapAddress: Long,
+    attributeNameBtreeAddress: Long,
+    attributeOrderBtreeAddress: Long?
+): List<AttributeMessage> {
+
+    val btreeAddress: Long = attributeOrderBtreeAddress ?: attributeNameBtreeAddress
+    if (btreeAddress < 0 || fractalHeapAddress < 0) return emptyList()
+    val btree = BTree2(this, "AttributeInfoMessage", btreeAddress)
+    val fractalHeap = FractalHeap(this, "AttributeInfoMessage", fractalHeapAddress, memTracker)
+
+    val list = mutableListOf<AttributeMessage>()
+    for (e in btree.entryList) {
+        var heapId: ByteArray
+        heapId = when (btree.btreeType) {
+            8 -> (e.record as BTree2.Record8).heapId
+            9 -> (e.record as BTree2.Record9).heapId
+            else -> continue
+        }
+
+        // the heapId points to an Attribute Message in the fractal Heap
+        val fractalHeapId = fractalHeap.getFractalHeapId(heapId)
+        val state = OpenFileState(fractalHeapId.getPos(), ByteOrder.LITTLE_ENDIAN)
+        if (state.pos > 0) {
+            val attMessage = this.readAttributeMessage(state)
+            list.add(attMessage)
+            if (debugBtree2) {
+                println("    attMessage=${attMessage}")
+            }
+        }
+    }
+    return list
+}
 
 
 

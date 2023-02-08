@@ -1,9 +1,7 @@
 package sunya.cdm.hdf5
 
 import mu.KotlinLogging
-import org.slf4j.LoggerFactory
 import sunya.cdm.api.*
-import sunya.cdm.dsl.StructDsl
 import sunya.cdm.dsl.structdsl
 import sunya.cdm.iosp.*
 import java.io.IOException
@@ -14,8 +12,7 @@ import java.util.*
 
 private val debugStart = true
 private val debugTracker = true
-private val debugSuperblock = false
-private val logger = KotlinLogging.logger("H5builder")
+private val debugSuperblock = true
 
 /**
  * Build the rootGroup for an HD5 file.
@@ -35,20 +32,14 @@ class H5builder(val raf: OpenFile,
     val memTracker = MemTracker(raf.size)
 
     var isNetcdf4 = false
-    private var h5rootGroup : H5Group? = null
-    internal val hashGroups = mutableMapOf<Long, H5Group>()
+    private val h5rootGroup : H5Group
+    internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>()
 
-    // private val symlinkMap = mutableMapOf<String, H5objects.DataObjectFacade>()
+    internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val addressMap = mutableMapOf<Long, DataObject>()
 
     init {
-        read()
-    }
-
-    // Public for debugging
-    @Throws(IOException::class)
-    fun read() {
-        // find the superblock - no limits on how far into the file
+        // search for the superblock - no limits on how far into the file
         val state = OpenFileState(0L, ByteOrder.LITTLE_ENDIAN)
         var filePos = 0L
         while (filePos < raf.size - 8L) {
@@ -57,47 +48,49 @@ class H5builder(val raf: OpenFile,
             if (testForMagic.contentEquals(magicHeader)) {
                 break
             }
-            filePos = if (filePos  == 0L) 512 else 2 * filePos
+            filePos = if (filePos == 0L) 512 else 2 * filePos
         }
         val superblockStart = filePos
         if (debugStart) {
-            println("H5builder opened file found'${magicHeader.contentToString()}' at pos $superblockStart")
+            println("H5builder opened file ${raf.location} at pos $superblockStart")
         }
         if (debugTracker) memTracker.add("header", 0, superblockStart)
         this.baseAddress = superblockStart
 
-        // superblock version
-        val version = raf.readByte(state).toInt()
-        if (version < 2) {
-            readSuperBlock01dsl(superblockStart, state, version)
+        val rootGroupBuilder : H5GroupBuilder
+        val superBlockVersion = raf.readByte(state).toInt()
+        if (superBlockVersion < 2) {
+            rootGroupBuilder = readSuperBlock01dsl(superblockStart, state, superBlockVersion)
             // state.pos = superblockStart + 9
-        //}
-        //if (version < 2) { // 0 and 1
-        //    readSuperBlock01(superblockStart, version, state)
-        } else if (version < 4) { // 2 and 3
-            readSuperBlock23(superblockStart, version, state)
+            //}
+            //if (version < 2) { // 0 and 1
+            //    readSuperBlock01(superblockStart, version, state)
+        } else if (superBlockVersion < 4) { // 2 and 3
+            rootGroupBuilder = readSuperBlock23(superblockStart, state, superBlockVersion)
         } else {
-            throw IOException("Unknown superblock version= $version")
+            throw IOException("Unknown superblock version= $superBlockVersion")
         }
 
-        val cdmRoot = this.buildCdm(h5rootGroup!!)
-        println(" cdmRoot = \n{\n${cdmRoot.cdlString()}}")
+        // now look for symbolic links TODO this doesnt work??
+        replaceSymbolicLinks(rootGroupBuilder)
 
+        // build tree of H5groups
+        h5rootGroup = rootGroupBuilder.build()
+        // convert into CDM
+        val cdmRoot = this.buildCdm(h5rootGroup)
+        println(" cdmRoot = {\n${cdmRoot.cdlString()}}")
 
-            /* now look for symbolic links TODO this doesnt work
-            replaceSymbolicLinks(h5rootGroup)
-
-            // recursively run through all the dataObjects and add them to the ncfile
-            val allSharedDimensions = makeNetcdfGroup(root, h5rootGroup)
-            if (allSharedDimensions) isNetcdf4 = true
-            if (debugTracker) {
-                val f = Formatter()
-                memTracker.report(f)
-                println(f.toString())
-            } */
+        /* recursively run through all the dataObjects and add them to the ncfile
+        val allSharedDimensions = makeNetcdfGroup(root, h5rootGroup)
+        if (allSharedDimensions) isNetcdf4 = true
+        if (debugTracker) {
+            val f = Formatter()
+            memTracker.report(f)
+            println(f.toString())
+        } */
     }
 
-    private fun readSuperBlock01dsl(superblockStart : Long, state : OpenFileState, version : Int) : StructDsl {
+    private fun readSuperBlock01dsl(superblockStart : Long, state : OpenFileState, version : Int) : H5GroupBuilder {
         // have to cheat a bit
         state.pos = superblockStart + 13
         this.sizeOffsets = raf.readByte(state).toInt()
@@ -146,90 +139,13 @@ class H5builder(val raf: OpenFile,
 
         // extract the root group object, recursively read all objects
         val rootSymbolTableEntry = this.readSymbolTable(state)
-        val dobj = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")
+        val rootObject = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")
 
-        this.h5rootGroup = this.readH5Group(dobj).build()
-
-        return superblock01
-    }
-
-    fun address() = 8
-
-    @Throws(IOException::class)
-    private fun readSuperBlock01(superblockStart: Long, version: Byte, state : OpenFileState) {
-        val versionFSS = raf.readByte(state)
-        val versionGroup = raf.readByte(state)
-        raf.readByte(state) // skip 1 byte
-        val versionSHMF = raf.readByte(state)
-        if (debugStart) {
-            println("readSuperBlock version = $version")
-            println(" versionFSS= $versionFSS versionGroup= $versionGroup versionSHMF= $versionSHMF")
-        }
-
-        sizeOffsets = raf.readByte(state).toInt()
-        isOffsetLong = (sizeOffsets == 8)
-        sizeHeapId = 8 + sizeOffsets
-        sizeLengths = raf.readByte(state).toInt()
-        isLengthLong = (sizeLengths == 8)
-        raf.readByte(state) // skip 1 byte
-        if (debugStart) {
-            println(" sizeOffsets= $sizeOffsets sizeLengths= $sizeLengths")
-            println(" isLengthLong= $isLengthLong isOffsetLong= $isOffsetLong")
-        }
-
-        val btreeLeafNodeSize = raf.readShort(state) // Group Leaf Node K
-        val btreeInternalNodeSize = raf.readShort(state) // Group Internal Node K
-        if (debugStart) {
-            println(" btreeLeafNodeSize= $btreeLeafNodeSize btreeInternalNodeSize= $btreeInternalNodeSize")
-        }
-        val fileFlags = raf.readInt(state) // This field is unused and should be ignored.
-
-        if (version.toInt() == 1) {
-            val storageInternalNodeSize = raf.readShort(state) // Indexed Storage Internal Node K
-            raf.readShort(state) // skip
-        }
-        
-        baseAddress = readOffset(state)
-        val heapAddress = readOffset(state)
-        var eofAddress = readOffset(state)
-        val driverBlockAddress = readOffset(state)
-        if (baseAddress != superblockStart) {
-            baseAddress = superblockStart
-            eofAddress += superblockStart
-            if (debugStart) {
-                println(" baseAddress set to superblockStart")
-            }
-        }
-        if (debugStart) {
-            println(" baseAddress= 0x${java.lang.Long.toHexString(baseAddress)}")
-            println(" global free space heap Address= 0x${java.lang.Long.toHexString(heapAddress)}")
-            println(" eof Address=$eofAddress")
-            println(" raf length= ${raf.size}")
-            println(" driver BlockAddress= 0x${java.lang.Long.toHexString(driverBlockAddress)}")
-            println("")
-        }
-        if (debugTracker) memTracker.add("superblock", superblockStart, state.pos)
-
-        // look for file truncation
-        val fileSize: Long = raf.size
-        if (fileSize < eofAddress) throw IOException(
-            "File is truncated should be= " + eofAddress + " actual = " + fileSize + "%nlocation= " + state.pos
-        )
-
-        /* next comes the root object's SymbolTableEntry
-        // extract the root group object, recursively read all objects
-        val rootEntry = SymbolTableEntry(state)
-
-        // extract the root group object, recursively read all objects
-        val rootObjectAddress: Long = rootEntry.getObjectAddress()
-        val f = DataObjectFacade(null, "", rootObjectAddress)
-        h5rootGroup = H5Group(f)
-
-         */
+        return this.readH5Group(DataObjectFacade(null, "root").setDataObject(rootObject))!!
     }
 
     @Throws(IOException::class)
-    private fun readSuperBlock23(superblockStart: Long, version: Int, state : OpenFileState) {
+    private fun readSuperBlock23(superblockStart: Long,  state : OpenFileState, version: Int) : H5GroupBuilder  {
         if (debugStart) {
             println("readSuperBlock version = $version")
         }
@@ -273,9 +189,9 @@ class H5builder(val raf: OpenFile,
             throw IOException("File is truncated should be= $eofAddress actual = $fileSize")
         }
 
-        /* val f = DataObjectFacade(null, "", rootObjectAddress)
-        h5rootGroup =  H5Group(f)
-         */
+        val rootObject = this.getDataObject(rootObjectAddress, "root")
+        val facade = DataObjectFacade(null, "root").setDataObject( rootObject)
+        return this.readH5Group(facade)!!
     }
 
     //////////////////////////////////////////////////////////////
@@ -295,7 +211,7 @@ class H5builder(val raf: OpenFile,
             logger.error("getDataObjectName cant find dataObject id= $objId")
             null
         } else {
-            dobj.who
+            dobj.name
         }
     }
 
@@ -313,7 +229,7 @@ class H5builder(val raf: OpenFile,
         // find it
         var dobj = addressMap[address]
         if (dobj != null) {
-            if (dobj.who == null && name != null) dobj.who = name
+            if (dobj.name == null && name != null) dobj.name = name
             return dobj
         }
         // if (name == null) return null; // ??
@@ -1893,19 +1809,21 @@ class H5builder(val raf: OpenFile,
         return dobj
     }
 
+     */
+
     //////////////////////////////////////////////////////////////
     // utilities
+
     fun makeIntFromBytes(bb: ByteArray, start: Int, n: Int): Int {
         var result = 0
         for (i in start + n - 1 downTo start) {
             result = result shl 8
-            val b = bb[i]
+            val b = bb[i].toInt()
             result += if ((b < 0)) b + 256 else b
         }
         return result
     }
 
-     */
 
     fun getFileOffset(address: Long): Long {
         return baseAddress + address
@@ -1923,7 +1841,7 @@ class H5builder(val raf: OpenFile,
 
     // size of data depends on "maximum possible number"
     @Throws(IOException::class)
-    fun readVariableSizeMax(state : OpenFileState, maxNumber: Int): Long {
+    fun readVariableSizeMax(state : OpenFileState, maxNumber: Long): Long {
         val size: Int = this.getNumBytesFromMax(maxNumber)
         return this.readVariableSizeUnsigned(state, size)
     }
@@ -1981,10 +1899,10 @@ class H5builder(val raf: OpenFile,
     }
 
     // size of data depends on "maximum possible number"
-    fun getNumBytesFromMax(maxNumber: Int): Int {
+    fun getNumBytesFromMax(maxNumber: Long): Int {
         var maxn = maxNumber
         var size = 0
-        while (maxn != 0) {
+        while (maxn != 0L) {
             size++
             maxn = maxNumber ushr 8 // right shift with zero extension
         }
@@ -2056,7 +1974,7 @@ class H5builder(val raf: OpenFile,
      */
 
     companion object {
-        private val log = LoggerFactory.getLogger(H5builder::class.java)
+        private val logger = KotlinLogging.logger("H5builder")
 
         // special attribute names in HDF5
         val HDF5_CLASS = "CLASS"

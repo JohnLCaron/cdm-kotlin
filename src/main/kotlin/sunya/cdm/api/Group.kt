@@ -49,6 +49,15 @@ class Group(val name : String,
             dimensions.add(dim)
         }
 
+        // return true if did not exist and was added
+        fun addDimensionIfNotExists(dim: Dimension): Boolean {
+            if ( dimensions.find {it.name == dim.name } != null) {
+                return false
+            }
+            addDimension(dim)
+            return true
+        }
+
         fun addAttribute(att: Attribute) {
             attributes.add(att)
         }
