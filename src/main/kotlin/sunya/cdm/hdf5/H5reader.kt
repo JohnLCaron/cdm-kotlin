@@ -2,7 +2,6 @@ package sunya.cdm.hdf5
 
 import sunya.cdm.api.DataType
 import sunya.cdm.api.Section
-import sunya.cdm.api.StructureData
 import sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -20,7 +19,7 @@ class H5reader(val header: H5builder) {
             raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem.toInt(), layout.elemSize * chunk.nelems)
         }
 
-        return when (dataType.primitiveClass) {
+        val result = when (dataType.primitiveClass) {
             Byte::class.java -> ArrayByte(bb, shape)
             Short::class.java -> ArrayShort(bb.asShortBuffer(), shape)
             Int::class.java -> ArrayInt(bb.asIntBuffer(), shape)
@@ -29,6 +28,11 @@ class H5reader(val header: H5builder) {
             Long::class.java -> ArrayLong(bb.asLongBuffer(), shape)
             else -> throw IllegalStateException("unimplemented type= $dataType")
         }
+        // convert to array of Strings by reducing rank by 1
+        if (dataType == DataType.CHAR) {
+            return (result as ArrayByte).makeStringsFromBytes()
+        }
+
         /*
         else if (dataType.primitiveClass == StructureData::class.java) {
             val recsize: Int = layout.getElemSize()
@@ -51,5 +55,6 @@ class H5reader(val header: H5builder) {
             }
             return sb.toString()
             */
+        return result
     }
 }

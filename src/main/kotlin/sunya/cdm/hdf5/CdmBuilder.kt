@@ -1,31 +1,43 @@
 package sunya.cdm.hdf5
 
-import sunya.cdm.api.Attribute
-import sunya.cdm.api.DataType
-import sunya.cdm.api.Group
-import sunya.cdm.api.Section
-import sunya.cdm.iosp.Layout
-import sunya.cdm.iosp.LayoutRegular
-import sunya.cdm.iosp.OpenFileState
+import sunya.cdm.api.*
+import sunya.cdm.iosp.*
 import java.nio.ByteOrder
 
 internal fun H5builder.buildCdm(h5root : H5Group) : Group {
-    return buildGroup(h5root, null)
+    return buildGroup(h5root).build(null)
 }
 
-internal fun H5builder.buildGroup(group5 : H5Group, parent: Group?) : Group {
+internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     val builder = Group.Builder(group5.name)
     for (att5 in group5.attributes()) {
         println("${att5.show()}")
         builder.addAttribute(buildAttribute(att5))
     }
-    return builder.build(parent)
+    for (v5 in group5.variables) {
+        builder.addVariable(buildVariable(v5))
+    }
+    for (nested5 in group5.nestedGroups) {
+        builder.addGroup(buildGroup(nested5))
+    }
+    return builder
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     val h5type = H5Type(att5.mdt)
     val values = this.readAttributeData(att5, h5type, h5type.dataType)
-    return Attribute(att5.name,  h5type.dataType, values)
+    val useType = if (h5type.dataType == DataType.CHAR) DataType.STRING else h5type.dataType
+    return Attribute(att5.name,  useType, values)
+}
+
+internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
+    val builder = Variable.Builder()
+    builder.name = v5.name
+    builder.dataType = v5.dataType()
+    for (v5 in v5.attributes()) {
+        builder.attributes.add(buildAttribute(v5))
+    }
+    return builder
 }
 
 // read non-Structure attribute values without creating a Variable
@@ -108,7 +120,7 @@ private fun H5builder.readAttributeData(
     var elemSize: Int = dataType.size
     var endian: ByteOrder? = h5type.endian
     if (h5type.hdfType === Datatype5.Time) { // time
-        readDtype = h5type.dataType!!
+        readDtype = h5type.dataType
         elemSize = readDtype.size
     } else if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
@@ -121,7 +133,7 @@ private fun H5builder.readAttributeData(
         elemSize = h5type.elemSize
     } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
         val baseInfo = h5type.base!!
-        readDtype = baseInfo.dataType!!
+        readDtype = baseInfo.dataType
         elemSize = readDtype.size
         endian = baseInfo.endian
     }
@@ -131,6 +143,7 @@ private fun H5builder.readAttributeData(
 
     //     fun readData(state: OpenFileState, layout: Layout, dataType: DataType, shape : IntArray): ArrayTyped<*> {
     val dataArray = h5reader.readData(state, layout, dataType, shape)
+
     /*
     if (dataType === DataType.OPAQUE) {
         dataArray = pdata as Array<*>

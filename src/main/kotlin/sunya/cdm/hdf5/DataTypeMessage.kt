@@ -97,7 +97,8 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
         0 -> {
             val bitOffset = raf.readShort(state)
             val bitPrecision = raf.readShort(state)
-            require(bitOffset.toInt() == 0 && bitPrecision % 8 == 0) // LOOK supposed to support packing ??
+            //require(bitOffset.toInt() == 0 && bitPrecision % 8 == 0)
+            //    {"bitOffset $bitOffset should be 0, bitPrecision $bitPrecision should be multiple of 8"}
             val endian = if (flags1 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
             val unsigned = (flags1 and 8 == 0)
             return DatatypeFixed(elemSize, endian, unsigned)
@@ -223,7 +224,7 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: 
         raf.readInt(state) // always 4 bytes
     } else {
         // var length of bytes, stupid
-        this.readVariableSizeMax(state, elemSize).toInt()
+        this.readVariableSizeMax(state, elemSize.toLong()).toInt()
     }
 
     // LOOK ignore these, because replicated in mdt? or in a seperate dataspace message ?

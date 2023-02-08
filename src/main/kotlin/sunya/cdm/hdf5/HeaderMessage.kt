@@ -132,6 +132,10 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         if (debugMessage) rawdata1.show()
 
         mtype = MessageType.byNumber(rawdata1.getShort("type").toInt())
+        if (mtype == null) {
+            println("Unknoen mtype = ${rawdata1.getShort("type")}")
+            return null
+        }
         flags = rawdata1.getByte("flags").toInt()
         messageSize = rawdata1.getShort("size").toInt()
         headerSize = rawdata1.dataSize()
@@ -176,8 +180,11 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.GroupInfo -> this.readGroupInfoMessage(state) // 10
         MessageType.FilterPipeline -> this.readFilterPipelineMessage(state) // 11
         MessageType.Attribute -> this.readAttributeMessage(state) // 11
+        MessageType.LastModifiedOld -> null // 14
+        MessageType.SharedObject -> null // 15
         MessageType.ObjectHeaderContinuation -> this.readContinueMessage(state) // 16
         MessageType.SymbolTable -> this.readSymbolTableMessage(state) // 17
+        MessageType.LastModified -> null // 18
         MessageType.AttributeInfo -> this.readAttributeInfoMessage(state) // 21
         else -> throw RuntimeException("Unimplemented message type = $mtype")
     }
@@ -273,10 +280,12 @@ fun H5builder.readLinkInfoMessage(state: OpenFileState): LinkInfoMessage {
     return LinkInfoMessage(
         rawdata.getLong("fractalHeapAddress"),
         rawdata.getLong("v2BtreeAddress"),
+        if ((flags and 2) != 0) rawdata.getLong("v2BtreeAddressCreationOrder") else null,
     )
 }
 
-data class LinkInfoMessage(val fractalHeapAddress: Long, val v2BtreeAddress: Long) : HeaderMessage(MessageType.LinkInfo)
+data class LinkInfoMessage(val fractalHeapAddress: Long, val v2BtreeAddress: Long, val v2BtreeAddressCreationOrder: Long?)
+    : HeaderMessage(MessageType.LinkInfo)
 
 ////////////////////////////////////////// 4
 @Throws(IOException::class)
@@ -512,9 +521,10 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
         }
     if (debugMessage) rawdata.show()
 
-    val name = rawdata.getString("name")
+    val name = rawdata.getString("name") // this has terminating zero removed
     if (version == 1) {
-        state.pos += padding(name.length, 8) // LOOK ??
+        // use the full width to decide on padding
+        state.pos += padding(rawdata.getByte("nameLength").toInt(), 8)
     }
 
     // read the datatype
@@ -596,6 +606,7 @@ fun H5builder.readSymbolTableMessage(state: OpenFileState): SymbolTableMessage {
     )
 }
 
+// localHeapAddress aka nameHeapAddress
 data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) : HeaderMessage(MessageType.SymbolTable)
 
 ////////////////////////////////////////// 10

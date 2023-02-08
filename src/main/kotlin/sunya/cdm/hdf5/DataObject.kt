@@ -8,19 +8,24 @@ import java.util.*
 // "Data Object Header" Level 2A
 @Throws(IOException::class)
 fun H5builder.readDataObject(address: Long, name: String) : DataObject {
+    println("readDataObject $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
     val messages = mutableListOf<HeaderMessage>()
 
     var version = raf.readByte(state)
     if (version.toInt() == 1) { // Level 2A1 (first part, before the messages)
-        raf.readByte(state) // skip byte
+        state.pos += 1 // skip byte
         val nmess = raf.readShort(state).toInt()
         val objectReferenceCount: Int = raf.readInt(state)
         // This value specifies the number of bytes of header message data following this length field that contain
         // object header messages for this object header. This value does not include the size of object header
         // continuation blocks for this object elsewhere in the file.
         val objectHeaderSize: Int = raf.readInt(state)
+        // Header messages are aligned on 8-byte boundaries for version 1 object headers.
+        // LOOK not well documented
+        state.pos += 4
+
         val count = this.readMessagesVersion1(state, nmess, objectHeaderSize, messages)
         if (count != nmess) {
             println("  expected $nmess, read $count messages")
@@ -37,8 +42,8 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
         if (!testForMagic.contentEquals("HDR".toByteArray())) {
             throw IllegalStateException("DataObject doesnt start with OHDR")
         }
-        version = raf.readByte(state)
-        val flags = raf.readByte(state).toInt() // data object header flags (version 2)
+        version = raf.readByte(state) // better be 2
+        val flags = raf.readByte(state).toInt()
         if (((flags shr 5) and 1) == 1) {
             val accessTime: Int = raf.readInt(state)
             val modTime: Int = raf.readInt(state)
@@ -83,8 +88,7 @@ class DataObject(
                 MessageType.FilterPipeline -> mfp = mess as FilterPipelineMessage
                 MessageType.Attribute -> attributes.add(mess as AttributeMessage)
                 // LOOK MessageType.AttributeInfo -> processAttributeInfoMessage(mess.messData as MessageAttributeInfo)
-                else -> println("MessageType ${mess.mtype} not implemented")
-                // else -> throw RuntimeException("MessageType ${mess.mtype} not implemented")
+                else -> { /* noop */ }
             }
         }
     }
