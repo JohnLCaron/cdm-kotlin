@@ -8,7 +8,7 @@ import java.util.*
 // "Data Object Header" Level 2A
 @Throws(IOException::class)
 fun H5builder.readDataObject(address: Long, name: String) : DataObject {
-    println("readDataObject $name")
+    println("readDataObject= $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
     val messages = mutableListOf<HeaderMessage>()
@@ -27,13 +27,13 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
         state.pos += 4
 
         val count = this.readMessagesVersion1(state, nmess, objectHeaderSize, messages)
-        if (count != nmess) {
+        /* if (count != nmess) {
             println("  expected $nmess, read $count messages")
         }
         if (state.pos != startPos + objectHeaderSize) {
             println("  set expected pos ${startPos + objectHeaderSize}, actual ${state.pos}")
             state.pos = startPos + objectHeaderSize
-        }
+        } */
         return DataObject(address, name, messages)
         
     } else { // level 2A2 (first part, before the messages)
@@ -67,7 +67,6 @@ class DataObject(
     var name: String?, // may be null, may not be unique
     val messages : List<HeaderMessage>
 ) {
-    var who : String? = null
     var groupMessage: SymbolTableMessage? = null
     var groupNewMessage: LinkInfoMessage? = null
     var mdt: DatatypeMessage? = null
@@ -87,7 +86,7 @@ class DataObject(
                 MessageType.Layout -> mdl = mess as DataLayoutMessage
                 MessageType.FilterPipeline -> mfp = mess as FilterPipelineMessage
                 MessageType.Attribute -> attributes.add(mess as AttributeMessage)
-                // LOOK MessageType.AttributeInfo -> processAttributeInfoMessage(mess.messData as MessageAttributeInfo)
+                MessageType.AttributeInfo -> attributes.addAll((mess as AttributeInfoMessage).attributes)
                 else -> { /* noop */ }
             }
         }

@@ -88,9 +88,9 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
     val tandv = raf.readByte(state).toInt()
     val type = tandv and 0xf // lower 4 bits
     val version = tandv and 0xf0 shr 4 // upper 4 bits
+    val flags0 = raf.readByte(state).toInt()
     val flags1 = raf.readByte(state).toInt()
     val flags2 = raf.readByte(state).toInt()
-    val flags3 = raf.readByte(state).toInt()
     val elemSize = raf.readInt(state)
 
     when (type) {
@@ -99,8 +99,8 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             val bitPrecision = raf.readShort(state)
             //require(bitOffset.toInt() == 0 && bitPrecision % 8 == 0)
             //    {"bitOffset $bitOffset should be 0, bitPrecision $bitPrecision should be multiple of 8"}
-            val endian = if (flags1 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
-            val unsigned = (flags1 and 8 == 0)
+            val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
+            val unsigned = (flags0 and 8 == 0)
             return DatatypeFixed(elemSize, endian, unsigned)
         }
 
@@ -113,15 +113,15 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             val manLocation = raf.readByte(state)
             val manSize = raf.readByte(state)
             val expBias = raf.readInt(state)
-            val endian = if (flags1 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
-            val unsigned = (flags1 and 8 == 0)
+            val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
+            val unsigned = (flags0 and 8 == 0)
             return DatatypeFloating(elemSize, endian)
         }
 
         2 -> {
             // LOOK no units, worthless, assume its integral
             val bitPrecision = raf.readInt(state)
-            val endian = if (flags1 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
+            val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
             return DatatypeTime(elemSize, endian)
         }
 
@@ -135,21 +135,21 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
         4 -> {
             val bitOffset = raf.readShort(state)
             val bitPrecision = raf.readShort(state)
-            val endian = if (flags1 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
-            val unsigned = (flags1 and 8 == 0)
+            val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
+            val unsigned = (flags0 and 8 == 0)
             // LOOK bitOffset, bitPrecision, to support packing ??
             return DatatypeBitField(elemSize, endian, unsigned, bitOffset, bitPrecision)
         }
 
         5 -> {
-            val len = flags1
+            val len = flags0
             val desc = raf.readString(state, len)
             return DatatypeOpaque(elemSize, desc)
         }
 
         6 -> {
             // compound
-            val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags2)
+            val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags0)
             val members = mutableListOf<StructureMember>()
             for (i in 0 until nmembers) {
                 members.add(this.readStructureMember(state, version, elemSize))
@@ -158,12 +158,12 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
         }
 
         7 -> {
-            val referenceType = flags1 and 0xf
+            val referenceType = flags0 and 0xf
             return DatatypeReference(elemSize, referenceType)
         }
 
         8 -> {
-            val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags2)
+            val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags0)
             val base = this.readDatatypeMessage(state)
 
             // read the enum names
@@ -186,7 +186,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
         }
 
         9 -> {
-            val isVString = flags1 and 0xf == 1
+            val isVString = flags0 and 0xf == 1
             val base = this.readDatatypeMessage(state)
             // TODO padding and charset
 

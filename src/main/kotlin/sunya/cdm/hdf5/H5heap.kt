@@ -21,7 +21,7 @@ internal class H5heap(val header: H5builder) {
         for (i in 0 until nelems) {
             val reference = refArray[i]
             val name = header.getDataObjectName(reference)
-            result[i] = name ?: java.lang.Long.toString(reference)
+            result.add(name ?: java.lang.Long.toString(reference))
         }
         return result
     }

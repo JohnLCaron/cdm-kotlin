@@ -29,15 +29,15 @@ class H5headerTest {
                     .withRecursion()
                     .build()
 
-            // return stream1
-            // return Stream.of(stream1, stream2).flatMap { i -> i };
-            return stream2
+            return stream1
+            //return Stream.of(stream1, stream2).flatMap { i -> i };
+            //return stream2
         }
     }
 
     @Test
     fun special() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_1.nc")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dimScales.h5")
     }
 
     @ParameterizedTest

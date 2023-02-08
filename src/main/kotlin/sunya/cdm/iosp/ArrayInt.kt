@@ -35,6 +35,4 @@ class ArrayInt(val values : IntBuffer, val shape : IntArray) : ArrayTyped<Int>()
             append("\n")
         }
     }
-
-
 }

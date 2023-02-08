@@ -168,13 +168,11 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
     var address: Long? = null
     var dataObject: DataObject? = null
     var group: H5GroupBuilder? = null
+    var linkName: String? = null
 
     var isGroup = false
     var isVariable = false
     var isTypedef = false
-
-    // or a link
-    var linkName: String? = null
 
     fun setLinkName(header : H5builder, linkName : String) : DataObjectFacade {
         this.linkName = linkName
@@ -215,8 +213,6 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
         return "DataObjectFacade(parent=${parent?.name}, name='$name', address=$address, dataObject=${dataObject?.name}, " +
                 "group=$group, isGroup=$isGroup, isVariable=$isVariable, isTypedef=$isTypedef, linkName=$linkName)"
     }
-
-
 }
 
 internal class H5GroupBuilder(
@@ -272,10 +268,17 @@ internal class H5GroupBuilder(
 internal class H5Variable(val dataObject: DataObject) {
     val mdt : DatatypeMessage = dataObject.mdt!!
     val mdl : DataLayoutMessage = dataObject.mdl!!
-    val name = dataObject.name
+    val mds : DataspaceMessage = dataObject.mds!!
+    val name = dataObject.name!!
     val h5type = H5Type(mdt)
 
-    fun attributes() : Iterable<AttributeMessage> = dataObject.attributes
+    // used in CdmBuilder
+    var is2DCoordinate = false
+    var hasNetcdfDimensions = false
+    var dimList: String? = null // list of dimension names for this variable
+    var isVariable = true
+
+    fun attributes() : MutableIterable<AttributeMessage> = dataObject.attributes
     fun dataType() = h5type.dataType
 }
 

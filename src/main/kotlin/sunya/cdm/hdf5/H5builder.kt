@@ -52,7 +52,7 @@ class H5builder(val raf: OpenFile,
         }
         val superblockStart = filePos
         if (debugStart) {
-            println("H5builder opened file found'${magicHeader.contentToString()}' at pos $superblockStart")
+            println("H5builder opened file ${raf.location} at pos $superblockStart")
         }
         if (debugTracker) memTracker.add("header", 0, superblockStart)
         this.baseAddress = superblockStart
@@ -66,7 +66,7 @@ class H5builder(val raf: OpenFile,
             //if (version < 2) { // 0 and 1
             //    readSuperBlock01(superblockStart, version, state)
         } else if (superBlockVersion < 4) { // 2 and 3
-            rootGroupBuilder = readSuperBlock23(superblockStart, superBlockVersion, state)
+            rootGroupBuilder = readSuperBlock23(superblockStart, state, superBlockVersion)
         } else {
             throw IOException("Unknown superblock version= $superBlockVersion")
         }
@@ -144,83 +144,8 @@ class H5builder(val raf: OpenFile,
         return this.readH5Group(DataObjectFacade(null, "root").setDataObject(rootObject))!!
     }
 
-    fun address() = 8
-
     @Throws(IOException::class)
-    private fun readSuperBlock01(superblockStart: Long, version: Byte, state : OpenFileState) {
-        val versionFSS = raf.readByte(state)
-        val versionGroup = raf.readByte(state)
-        raf.readByte(state) // skip 1 byte
-        val versionSHMF = raf.readByte(state)
-        if (debugStart) {
-            println("readSuperBlock version = $version")
-            println(" versionFSS= $versionFSS versionGroup= $versionGroup versionSHMF= $versionSHMF")
-        }
-
-        sizeOffsets = raf.readByte(state).toInt()
-        isOffsetLong = (sizeOffsets == 8)
-        sizeHeapId = 8 + sizeOffsets
-        sizeLengths = raf.readByte(state).toInt()
-        isLengthLong = (sizeLengths == 8)
-        raf.readByte(state) // skip 1 byte
-        if (debugStart) {
-            println(" sizeOffsets= $sizeOffsets sizeLengths= $sizeLengths")
-            println(" isLengthLong= $isLengthLong isOffsetLong= $isOffsetLong")
-        }
-
-        val btreeLeafNodeSize = raf.readShort(state) // Group Leaf Node K
-        val btreeInternalNodeSize = raf.readShort(state) // Group Internal Node K
-        if (debugStart) {
-            println(" btreeLeafNodeSize= $btreeLeafNodeSize btreeInternalNodeSize= $btreeInternalNodeSize")
-        }
-        val fileFlags = raf.readInt(state) // This field is unused and should be ignored.
-
-        if (version.toInt() == 1) {
-            val storageInternalNodeSize = raf.readShort(state) // Indexed Storage Internal Node K
-            raf.readShort(state) // skip
-        }
-
-        baseAddress = readOffset(state)
-        val heapAddress = readOffset(state)
-        var eofAddress = readOffset(state)
-        val driverBlockAddress = readOffset(state)
-        if (baseAddress != superblockStart) {
-            baseAddress = superblockStart
-            eofAddress += superblockStart
-            if (debugStart) {
-                println(" baseAddress set to superblockStart")
-            }
-        }
-        if (debugStart) {
-            println(" baseAddress= 0x${java.lang.Long.toHexString(baseAddress)}")
-            println(" global free space heap Address= 0x${java.lang.Long.toHexString(heapAddress)}")
-            println(" eof Address=$eofAddress")
-            println(" raf length= ${raf.size}")
-            println(" driver BlockAddress= 0x${java.lang.Long.toHexString(driverBlockAddress)}")
-            println("")
-        }
-        if (debugTracker) memTracker.add("superblock", superblockStart, state.pos)
-
-        // look for file truncation
-        val fileSize: Long = raf.size
-        if (fileSize < eofAddress) throw IOException(
-            "File is truncated should be= " + eofAddress + " actual = " + fileSize + "%nlocation= " + state.pos
-        )
-
-        /* next comes the root object's SymbolTableEntry
-        // extract the root group object, recursively read all objects
-        val rootEntry = SymbolTableEntry(state)
-
-        // extract the root group object, recursively read all objects
-        val rootObjectAddress: Long = rootEntry.getObjectAddress()
-        val f = DataObjectFacade(null, "", rootObjectAddress)
-        h5rootGroup = H5Group(f)
-
-         */
-    }
-
-    @Throws(IOException::class)
-    private fun readSuperBlock23(superblockStart: Long, version: Int, state : OpenFileState) : H5GroupBuilder {
+    private fun readSuperBlock23(superblockStart: Long,  state : OpenFileState, version: Int) : H5GroupBuilder  {
         if (debugStart) {
             println("readSuperBlock version = $version")
         }
@@ -264,15 +189,9 @@ class H5builder(val raf: OpenFile,
             throw IOException("File is truncated should be= $eofAddress actual = $fileSize")
         }
 
-        // LOOK wrong for version 2
-        // extract the root group object, recursively read all objects
-        val rootSymbolTableEntry = this.readSymbolTable(state)
-        val rootObject = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")
-        return this.readH5Group(DataObjectFacade(null, "root").setDataObject(rootObject))!!
-
-        /* val f = DataObjectFacade(null, "", rootObjectAddress)
-        h5rootGroup =  H5Group(f)
-         */
+        val rootObject = this.getDataObject(rootObjectAddress, "root")
+        val facade = DataObjectFacade(null, "root").setDataObject( rootObject)
+        return this.readH5Group(facade)!!
     }
 
     //////////////////////////////////////////////////////////////
@@ -292,7 +211,7 @@ class H5builder(val raf: OpenFile,
             logger.error("getDataObjectName cant find dataObject id= $objId")
             null
         } else {
-            dobj.who
+            dobj.name
         }
     }
 
@@ -310,7 +229,7 @@ class H5builder(val raf: OpenFile,
         // find it
         var dobj = addressMap[address]
         if (dobj != null) {
-            if (dobj.who == null && name != null) dobj.who = name
+            if (dobj.name == null && name != null) dobj.name = name
             return dobj
         }
         // if (name == null) return null; // ??

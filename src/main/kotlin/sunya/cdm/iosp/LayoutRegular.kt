@@ -19,6 +19,8 @@ class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSecti
      * @throws InvalidRangeException if ranges are misformed
      */
     init {
+        if (elemSize <= 0)
+            println("HEY")
         require(startPos >= 0)
         require(elemSize > 0)
         this.startPos = startPos
