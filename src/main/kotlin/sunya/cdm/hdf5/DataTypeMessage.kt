@@ -34,7 +34,7 @@ enum class Datatype5(val num : Int) {
  * @param elemSize The size of a datatype element in bytes.
  */
 open class DatatypeMessage(val type: Datatype5, val elemSize: Int, val endian: ByteOrder?) :
-    HeaderMessage(MessageType.Datatype) {
+    MessageHeader(MessageType.Datatype) {
     open fun unsigned() = false
     open fun endian() = endian?: ByteOrder.LITTLE_ENDIAN
 }
@@ -55,10 +55,10 @@ class DatatypeBitField(elemSize: Int, endian: ByteOrder, unsigned: Boolean, val 
 
 class DatatypeOpaque(elemSize: Int, val desc: String) : DatatypeMessage(Datatype5.Opaque, elemSize, null)
 
-class DatatypeCompound(elemSize: Int, val members: List<StructureMember>) :
+class DatatypeCompound(elemSize: Int, val members: List<StructureMember5>) :
     DatatypeMessage(Datatype5.Compound, elemSize, null)
 
-class StructureMember(val name: String, val offset: Int, val mdt: DatatypeMessage)
+class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessage)
 
 /**
  * @param elemSize dunno, maybe size of offset in field? maybe ignored?
@@ -150,7 +150,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
         6 -> {
             // compound
             val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags0)
-            val members = mutableListOf<StructureMember>()
+            val members = mutableListOf<StructureMember5>()
             for (i in 0 until nmembers) {
                 members.add(this.readStructureMember(state, version, elemSize))
             }
@@ -216,7 +216,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
 }
 
 @Throws(IOException::class)
-fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: Int): StructureMember {
+fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: Int): StructureMember5 {
     // dont know how long it is, read until 0 terminated and then (if version < 8) pad to 8 bytes
     val pad = if (version < 3) 8 else 0
     val name = this.readStringZ(state, pad)
@@ -229,15 +229,12 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: 
 
     // LOOK ignore these, because replicated in mdt? or in a seperate dataspace message ?
     if (version == 1) {
-        val rank = raf.readByte(state)
-        state.pos += 3
-        val permute = raf.readInt(state)
-        val dims = raf.readArrayInt(state, 4)
+        state.pos += 28
     }
 
     val mdt = this.readDatatypeMessage(state)
 
-    return StructureMember(name, offset, mdt)
+    return StructureMember5(name, offset, mdt)
 }
 
 // read a zero terminated string

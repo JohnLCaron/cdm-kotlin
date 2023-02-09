@@ -54,7 +54,7 @@ fun H5builder.readMessagesVersion1(
     state: OpenFileState,
     nmess: Int,
     dataSize: Int,
-    messages: MutableList<HeaderMessage>
+    messages: MutableList<MessageHeader>
 ): Int {
     val posLimit = state.pos + dataSize
     var count = 0
@@ -82,7 +82,7 @@ fun H5builder.readMessagesVersion2(
     state: OpenFileState,
     dataSize: Long,
     creationOrderPresent: Boolean,
-    messages: MutableList<HeaderMessage>,
+    messages: MutableList<MessageHeader>,
 ): Int {
     val startPos = state.pos
     val posLimit = state.pos + dataSize - 3
@@ -116,7 +116,7 @@ fun H5builder.readMessagesVersion2(
 }
 
 @Throws(IOException::class)
-fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationOrder: Boolean): HeaderMessage? {
+fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationOrder: Boolean): MessageHeader? {
     val startPos = state.pos
     val mtype: MessageType?
     val flags: Int
@@ -182,8 +182,9 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.GroupInfo -> null // this.readGroupInfoMessage(state) // 10
         MessageType.FilterPipeline -> this.readFilterPipelineMessage(state) // 11
         MessageType.Attribute -> this.readAttributeMessage(state) // 12
+        MessageType.Comment -> this.readCommentMessage(state) // 13
         MessageType.LastModifiedOld -> null // 14
-        MessageType.SharedObject -> null // 15
+        // MessageType.SharedObject -> this.readSharedMessage(state) // 15 get exception if its used
         MessageType.ObjectHeaderContinuation -> this.readContinueMessage(state) // 16
         MessageType.SymbolTable -> this.readSymbolTableMessage(state) // 17
         MessageType.LastModified -> null // 18
@@ -199,8 +200,8 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
 
 
 // Header Message: Level 2A1 and 2A2 (part of Data Object)
-open class HeaderMessage(val mtype: MessageType) : Comparable<HeaderMessage> {
-    override operator fun compareTo(other: HeaderMessage): Int =
+open class MessageHeader(val mtype: MessageType) : Comparable<MessageHeader> {
+    override operator fun compareTo(other: MessageHeader): Int =
         compareValuesBy(this, other, { it.mtype.num }, { other.mtype.num })
 }
 
@@ -257,7 +258,7 @@ enum class DataspaceType(val num: Int) {
 }
 
 // LOOK do we want to support isUnlimited = mds.maxLength.get(0) == -1
-data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : HeaderMessage(MessageType.Dataspace) {
+data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : MessageHeader(MessageType.Dataspace) {
     fun rank(): Int = dims.size
 }
 
@@ -291,7 +292,7 @@ data class LinkInfoMessage(
     val fractalHeapAddress: Long,
     val v2BtreeAddress: Long,
     val v2BtreeAddressCreationOrder: Long?
-) : HeaderMessage(MessageType.LinkInfo)
+) : MessageHeader(MessageType.LinkInfo)
 
 ////////////////////////////////////////// 4
 @Throws(IOException::class)
@@ -309,7 +310,7 @@ fun H5builder.readFillValueOldMessage(state: OpenFileState): FillValueOldMessage
     )
 }
 
-data class FillValueOldMessage(val size: Int, val value: ByteBuffer) : HeaderMessage(MessageType.FillValueOld)
+data class FillValueOldMessage(val size: Int, val value: ByteBuffer) : MessageHeader(MessageType.FillValueOld)
 
 ////////////////////////////////////////// 5
 @Throws(IOException::class)
@@ -347,7 +348,7 @@ fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
 }
 
 data class FillValueMessage(val hasFillVakue: Boolean, val size: Int?, val value: ByteBuffer?) :
-    HeaderMessage(MessageType.FillValue)
+    MessageHeader(MessageType.FillValue)
 
 ////////////////////////////////////////// 6
 @Throws(IOException::class)
@@ -412,7 +413,7 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
     )
 }
 
-open class LinkMessage(val linkType: Int, val linkName: String) : HeaderMessage(MessageType.Link)
+open class LinkMessage(val linkType: Int, val linkName: String) : MessageHeader(MessageType.Link)
 open class LinkSoft(linkType: Int, linkName: String, val linkInfo: String) : LinkMessage(linkType, linkName)
 open class LinkHard(linkType: Int, linkName: String, val linkAddress: Long) : LinkMessage(linkType, linkName)
 
@@ -446,7 +447,7 @@ fun H5builder.readGroupInfoMessage(state: OpenFileState): GroupInfoMessage {
 }
 
 data class GroupInfoMessage(val estNumEntries: Short?, val estLengthEntryName: Short?) :
-    HeaderMessage(MessageType.GroupInfo)
+    MessageHeader(MessageType.GroupInfo)
 
 ////////////////////////////////////////// 11
 // Message Type 11/0xB "Data Storage - Filter Pipeline" : apply a filter to the "data stream"
@@ -506,7 +507,7 @@ enum class FilterType(val id: Int) {
 
 data class Filter(val filterType: FilterType, val name: String, val clientValues: IntArray)
 
-data class FilterPipelineMessage(val filters: List<Filter>) : HeaderMessage(MessageType.FilterPipeline)
+data class FilterPipelineMessage(val filters: List<Filter>) : MessageHeader(MessageType.FilterPipeline)
 
 ///////////////////////////////////////////// 12/0xC "Attribute" : define an Attribute
 
@@ -572,11 +573,52 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 }
 
 data class AttributeMessage(val name: String, val mdt: DatatypeMessage, val mds: DataspaceMessage, val dataPos: Long) :
-    HeaderMessage(MessageType.Attribute) {
+    MessageHeader(MessageType.Attribute) {
     fun show() {
         println("${mdt.type} $name ${mds.dims.contentToString()} ${mds.type}")
     }
 }
+
+////////////////////////////////////////// 13
+// The object comment is designed to be a short description of an object.
+@Throws(IOException::class)
+fun H5builder.readCommentMessage(state: OpenFileState): CommonMessage {
+    val comment = readStringZ(state)
+    return CommonMessage(comment)
+}
+
+/**
+ * @param address of the master table for shared object header message indexes.
+ * @param nindices number of indices in the master table.
+ */
+data class CommonMessage(val comment: String) : MessageHeader(MessageType.Comment)
+
+////////////////////////////////////////// 15
+// This message is used to locate the table of shared object header message (SOHM) indexes. Each index consists of
+// information to find the shared messages from either the heap or object header.
+// This message is only found in the superblock extension.
+// This points to the shared object header message table (Level 1I - Shared Object Header Message Table)
+@Throws(IOException::class)
+fun H5builder.readSharedMessage(state: OpenFileState): SharedMessage {
+    val rawdata =
+        structdsl("SharedMessage", raf, state) {
+            fld("version", 1)
+            fld("address", sizeOffsets)
+            fld("nindices", 1)
+        }
+    if (debugMessage) rawdata.show()
+
+    return SharedMessage(
+        rawdata.getLong("address"),
+        rawdata.getLong("nindices").toInt(),
+    )
+}
+
+/**
+ * @param address of the master table for shared object header message indexes.
+ * @param nindices number of indices in the master table.
+ */
+data class SharedMessage(val address: Long, val nindices: Int) : MessageHeader(MessageType.SharedObject)
 
 
 ////////////////////////////////////////// 16
@@ -595,7 +637,7 @@ fun H5builder.readContinueMessage(state: OpenFileState): ContinueMessage {
     )
 }
 
-data class ContinueMessage(val offset: Long, val length: Long) : HeaderMessage(MessageType.ObjectHeaderContinuation)
+data class ContinueMessage(val offset: Long, val length: Long) : MessageHeader(MessageType.ObjectHeaderContinuation)
 
 //////
 
@@ -617,7 +659,7 @@ fun H5builder.readSymbolTableMessage(state: OpenFileState): SymbolTableMessage {
 
 // localHeapAddress aka nameHeapAddress
 data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) :
-    HeaderMessage(MessageType.SymbolTable)
+    MessageHeader(MessageType.SymbolTable)
 
 ////////////////////////////////////////// 21
 // This message stores information about the attributes on an object,
@@ -653,7 +695,7 @@ fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessa
     )
 }
 
-data class AttributeInfoMessage(val attributes: List<AttributeMessage>) : HeaderMessage(MessageType.AttributeInfo)
+data class AttributeInfoMessage(val attributes: List<AttributeMessage>) : MessageHeader(MessageType.AttributeInfo)
 
 private fun H5builder.readAttributesFromInfoMessage(
     fractalHeapAddress: Long,

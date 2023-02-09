@@ -93,7 +93,7 @@ enum class LayoutClass(val num : Int) {
     }
 }
 
-open class DataLayoutMessage(layoutClassNum: Int)  : HeaderMessage(MessageType.Layout) {
+open class DataLayoutMessage(layoutClassNum: Int)  : MessageHeader(MessageType.Layout) {
     val layoutClass = LayoutClass.of(layoutClassNum)
 }
 

@@ -1,5 +1,6 @@
 package sunya.cdm.hdf5
 
+import sunya.cdm.dsl.structdsl
 import sunya.cdm.iosp.OpenFile
 import sunya.cdm.iosp.OpenFileState
 import java.io.IOException
@@ -8,8 +9,6 @@ import java.util.*
 
 /**
  * // Level 1A2
- *
- * These are used for symbols, not data i think. Version 1 is H5builder.GroupBTree.
  *
  * Version 2 B-trees are "traditional" B-trees, with one major difference. Instead of just using a simple pointer
  * (or address in the file) to a child of an internal node, the pointer to the child node contains two additional

@@ -246,7 +246,7 @@ internal fun H5builder.findSharedDimensions(g: Group.Builder, h5group: H5Group, 
                     h5variable.dimList = sbuff.toString()
                     h5variable.hasNetcdfDimensions = true
                     if (debugDimensionScales) {
-                        println("Found dimList '${h5variable.dimList}' for group '${g.name}' matt={$matt}")
+                        println("Found dimList '${h5variable.dimList}' for var '${h5variable.name}' dataType = ${h5variable.dataType()} matt={$matt}")
                     }
                     if (!includeOriginalAttributes) iter.remove()
                 }

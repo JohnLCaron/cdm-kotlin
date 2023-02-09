@@ -1,24 +1,23 @@
 package sunya.cdm.hdf5
 
-import sunya.cdm.iosp.OpenFile
+import sunya.cdm.dsl.structdsl
 import sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
 
-// Level 1A
-// this just reads in all the entries into a list
-internal class GroupBTree(val header : H5builder, val owner: String, address: Long) {
+// Level 1A1 - Version 1 B-trees
+internal class Btree1(val header : H5builder, val owner: String, address: Long) {
     val raf = header.raf
     var wantType = 0
     private val sentries: MutableList<SymbolTableEntry> = ArrayList() // list of type SymbolTableEntry
 
     init {
-        val entryList: MutableList<GroupBTree.Entry> = ArrayList<GroupBTree.Entry>()
+        val entryList = mutableListOf<Btree1.Entry>()
         readAllEntries(address, entryList)
 
         // now convert the entries to SymbolTableEntry
         for (e in entryList) {
-            val node = GroupNode(e.address)
+            val node = SymbolTableNode(e.address)
             sentries.addAll(node.symbols)
         }
     }
@@ -28,7 +27,7 @@ internal class GroupBTree(val header : H5builder, val owner: String, address: Lo
 
     // recursively read all entries, place them in order in list
     @Throws(IOException::class)
-    fun readAllEntries(address: Long, entryList: MutableList<GroupBTree.Entry>) {
+    fun readAllEntries(address: Long, entryList: MutableList<Btree1.Entry>) {
         val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
         val magic: String = raf.readString(state, 4)
         check(magic == "TREE") { "BtreeGroup doesnt start with TREE" }
@@ -41,7 +40,7 @@ internal class GroupBTree(val header : H5builder, val owner: String, address: Lo
         val rightAddress: Long = header.readOffset(state)
 
         // read all entries in this Btree "Node"
-        val myEntries: MutableList<GroupBTree.Entry> = ArrayList<GroupBTree.Entry>()
+        val myEntries: MutableList<Btree1.Entry> = ArrayList<Btree1.Entry>()
         for (i in 0 until nentries) {
             myEntries.add(Entry(state))
         }
@@ -63,8 +62,8 @@ internal class GroupBTree(val header : H5builder, val owner: String, address: Lo
         }
     }
 
-    // level 1B
-    internal inner class GroupNode(val address: Long) {
+    // level 1B Group Symbol Table Nodes
+    internal inner class SymbolTableNode(val address: Long) {
         var version: Byte
         var nentries: Short
         val symbols: MutableList<SymbolTableEntry> = ArrayList() // SymbolTableEntry
@@ -92,3 +91,68 @@ internal class GroupBTree(val header : H5builder, val owner: String, address: Lo
         }
     }
 } // GroupBTree
+
+// Level 1C - Symbol Table Entry
+internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry {
+    val rootEntry =
+        structdsl("SymbolTableEntry", raf, state) {
+            fld("linkNameOffset", sizeOffsets)
+            fld("objectHeaderAddress", sizeOffsets)
+            fld("cacheType", 4)
+            skip(4)
+            fld("scratchPad", 16)
+            overlay("scratchPad", 0, "btreeAddress")
+            overlay("scratchPad", sizeOffsets, "nameHeapAddress")
+        }
+    if (debugGroup) rootEntry.show()
+
+    // may be btree or symbolic link
+    var btreeAddress : Long? = null
+    var nameHeapAddress : Long? = null
+    var linkOffset : Int? = null
+    var isSymbolicLink = false
+    when (rootEntry.getInt("cacheType")) {
+        0 -> {
+            // no-op
+        }
+        1 -> {
+            btreeAddress = rootEntry.getLong("btreeAddress")
+            nameHeapAddress = rootEntry.getLong("nameHeapAddress")
+        }
+        2 -> {
+            linkOffset = rootEntry.getInt("scratchPad")
+            isSymbolicLink = true
+        }
+        else -> {
+            throw IllegalArgumentException("SymbolTableEntry has unknown cacheType '${rootEntry.getInt("cacheType")}")
+        }
+    }
+
+    return SymbolTableEntry(
+        rootEntry.getLong("linkNameOffset"), // LOOK what about rootEntry.linkNameOffset.getLong()) sizeOffsets = Int ???
+        rootEntry.getLong("objectHeaderAddress"),
+        rootEntry.getInt("cacheType"),
+        btreeAddress,
+        nameHeapAddress,
+        linkOffset,
+        isSymbolicLink,
+        rootEntry.dataSize(),
+    )
+}
+
+// aka Group Entry "level 1C"
+internal data class SymbolTableEntry(
+    val nameOffset: Long,
+    val objectHeaderAddress: Long,
+    val cacheType : Int,
+    val btreeAddress: Long?,
+    val nameHeapAddress: Long?,
+    val linkOffset: Int?,
+    val isSymbolicLink: Boolean,
+    val dataSize : Int, // nbytes on disk
+) {
+    init {
+        require(dataSize == 32 || dataSize == 40) // sanity check
+    }
+}
+
