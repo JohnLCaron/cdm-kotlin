@@ -60,7 +60,7 @@ class H5reader(val header: H5builder) {
     }
 
     @Throws(IOException::class)
-    fun readStructureData(state: OpenFileState, layout: Layout, dataType: DataType, shape : IntArray, members : StructureMembers): ArrayTyped<*> {
+    fun readStructureData(state: OpenFileState, layout: Layout, shape : IntArray, members : StructureMembers): ArrayStructureData {
         val sizeBytes = Section(shape).computeSize().toInt() * layout.elemSize
         val bb = ByteBuffer.allocate(sizeBytes)
         while (layout.hasNext()) {
@@ -68,33 +68,43 @@ class H5reader(val header: H5builder) {
             state.pos = chunk.srcPos
             raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem.toInt(), layout.elemSize * chunk.nelems)
         }
+        val sdataArray =  ArrayStructureData(bb, layout.elemSize, shape, members)
 
-        return ArrayStructureData(bb, layout.elemSize, shape, members)
+        // convert reference fields
+        for (member in members) {
+            val member5 = member as H5StructureMember
+            val mdt = member5.mdt
+            if (mdt.type == Datatype5.Reference) {
+                val reference = mdt as DatatypeReference
+                for (sdata in sdataArray) {
+
+                }
+            }
+        }
+
+        return sdataArray
     }
 }
 
 internal fun H5builder.readAttributeData(
     matt: AttributeMessage,
     h5type: H5Type,
-    dataType: DataType
 ): List<*> {
     // Vlens
     if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(matt, h5type, dataType)
+        return readVlenData(matt, h5type)
     }
 
     if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(matt, h5type, dataType)
+        return readCompoundData(matt, h5type)
     }
 
     var shape: IntArray = matt.mds.dims
 
-    var readDtype: DataType = dataType
+    var readDtype: DataType = h5type.dataType
     var endian: ByteOrder = h5type.endian
 
-    if (h5type.hdfType === Datatype5.Time) { // time
-        readDtype = h5type.dataType
-    } else if (h5type.hdfType == Datatype5.String) { // char
+    if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
             val newShape = IntArray(shape.size + 1)
             System.arraycopy(shape, 0, newShape, 0, shape.size)
@@ -103,7 +113,7 @@ internal fun H5builder.readAttributeData(
         }
 
     } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
-        val baseInfo = h5type.base!!
+        val baseInfo = h5type.base
         readDtype = baseInfo.dataType
         endian = baseInfo.endian
     }
@@ -111,9 +121,8 @@ internal fun H5builder.readAttributeData(
     val state = OpenFileState(0, endian)
     val layout: Layout = LayoutRegular(matt.dataPos, h5type.elemSize, shape, Section(shape))
 
-    //     fun readData(state: OpenFileState, layout: Layout, dataType: DataType, shape : IntArray): ArrayTyped<*> {
     val h5reader = H5reader(this)
-    val dataArray = h5reader.readData(state, layout, h5type.dataType, shape)
+    val dataArray = h5reader.readData(state, layout, readDtype, shape)
 
     /*
     if (dataType === DataType.OPAQUE) {
@@ -146,7 +155,7 @@ internal fun H5builder.readAttributeData(
     return dataArray.toList()
 }
 
-internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type, dataType: DataType) : List<*> {
+internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) : List<*> {
     val shape: IntArray = matt.mds.dims
     val state = OpenFileState(0, h5type.endian)
     val layout: Layout = LayoutRegular(matt.dataPos, h5type.elemSize, shape, Section(shape))
@@ -154,16 +163,19 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type, 
     val compoundType = matt.mdt as DatatypeCompound
     val ms = compoundType.members.map { sm5  ->
         val memberType = H5Type(sm5.mdt)
-        StructureMember(sm5.name, memberType.dataType, sm5.offset, 1)
+        H5StructureMember(sm5.name, memberType.dataType, sm5.offset, 1, sm5.mdt)
     }
     val members = StructureMembers(ms)
 
     val h5reader = H5reader(this)
-    val dataArray = h5reader.readStructureData(state, layout, h5type.dataType, shape, members)
-    return dataArray.toList()
+    val sdataArray = h5reader.readStructureData(state, layout, shape, members)
+    return sdataArray.toList()
 }
 
-internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type, dataType: DataType) : List<*> {
+internal class H5StructureMember(name: String, dataType : DataType, offset: Int, nelems : Int, val mdt: DatatypeMessage)
+    : StructureMember(name, dataType, offset, nelems)
+
+internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : List<*> {
     val shape: IntArray = matt.mds.dims
     val layout2 = LayoutRegular(matt.dataPos, matt.mdt.elemSize, shape, Section(shape))
     val h5heap = H5heap(this)
@@ -186,7 +198,7 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type, data
     // Vlen (non-String)
     else {
         var endian: ByteOrder? = h5type.endian
-        var readType: DataType = dataType
+        var readType: DataType = h5type.dataType
         if (h5type.base.hdfType == Datatype5.Reference) { // reference
             readType = DataType.LONG
             endian = ByteOrder.LITTLE_ENDIAN // apparently always LE

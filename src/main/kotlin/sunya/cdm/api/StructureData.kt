@@ -13,9 +13,11 @@ data class StructureData(val bb : ByteBuffer, val offset: Int, val members : Str
     }
 }
 
-data class StructureMembers(val members : List<StructureMember>)
+data class StructureMembers(val members : List<StructureMember>) : Iterable<StructureMember> {
+    override fun iterator(): Iterator<StructureMember> = members.iterator()
+}
 
-data class StructureMember(val name: String, val dataType : DataType, val offset: Int, val nelems : Int) {
+open class StructureMember(val name: String, val dataType : DataType, val offset: Int, val nelems : Int) {
 
     fun value(sdata : StructureData) : String {
         val bb = sdata.bb
@@ -28,4 +30,5 @@ data class StructureMember(val name: String, val dataType : DataType, val offset
             else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8)
         }
     }
+
 }

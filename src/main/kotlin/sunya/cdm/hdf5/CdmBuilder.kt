@@ -32,7 +32,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     val h5type = H5Type(att5.mdt)
-    val values = this.readAttributeData(att5, h5type, h5type.dataType)
+    val values = this.readAttributeData(att5, h5type)
     val useType = if (h5type.dataType == DataType.CHAR) DataType.STRING else h5type.dataType
     return Attribute(att5.name,  useType, values)
 }
