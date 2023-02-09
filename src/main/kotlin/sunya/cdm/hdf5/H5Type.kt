@@ -9,49 +9,34 @@ private val logger = KotlinLogging.logger("H5Type")
 private val defaultDataType = DataType.STRING
 
 internal class H5Type(mdt: DatatypeMessage) {
-    val hdfType: Datatype5
-    val elemSize: Int
-    var dataType: DataType = defaultDataType
+    val hdfType: Datatype5 = mdt.type
+    val elemSize: Int = mdt.elemSize
+    var base: H5Type = this // only different for vlen, enum, array
     var endian: ByteOrder = mdt.endian()
     var unsigned = false
-    var isVString = false // is it a vlen string
-    var isVlen = false // vlen but not string
-    var base: H5Type? = null // vlen, enum
+    var dataType: DataType = getNCtype(hdfType, elemSize, unsigned)
+
+    var isVString = false // is a vlen string
+    var isVlen = false // is a vlen but not string
 
     init {
-        hdfType = mdt.type
-        elemSize = mdt.elemSize
         if (hdfType == Datatype5.Fixed) { // int, long, short, byte
             unsigned = (mdt as DatatypeFixed).unsigned
             dataType = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.Floating) { // floats, doubles
-            dataType = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.Time) { // time
-            dataType = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.String) { // fixed length strings map to CHAR. String is used for Vlen type = 1.
-            // LOOK when elem length = 1, there is a problem with dimensionality.
-            //   eg char cr(2); has a storage_size of [1,1].
-            dataType = getNCtype(hdfType, elemSize, unsigned)
         } else if (hdfType == Datatype5.BitField) { // bit field
-            dataType = getNCtype(hdfType, elemSize, true)
-        } else if (hdfType == Datatype5.Opaque) { // opaque
-            dataType = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.Compound) { // structure
+            unsigned = true
             dataType = getNCtype(hdfType, elemSize, unsigned)
         } else if (hdfType == Datatype5.Reference) { // reference
-            // TODO - should get the object, and change type to whatever it is (?)
+            // TODO - could get the object, and change type to whatever it is (?)
             endian = ByteOrder.LITTLE_ENDIAN
-            dataType = DataType.LONG // file offset of the referenced object
         } else if (hdfType == Datatype5.Enumerated) { // enums
-            dataType = getNCtype(hdfType, elemSize, unsigned)
             endian = (mdt as DatatypeEnum).base.endian()
             base = H5Type(mdt.base)
         } else if (hdfType == Datatype5.Vlen) { // variable length array
             val vlenMdt = mdt as DatatypeVlen
             isVString = vlenMdt.isVString
             isVlen = !vlenMdt.isVString
-            base = H5Type(vlenMdt.base)
-            // LOOK maybe make DataType.VLEN, maps to Sequence of baseType ??
+            base = H5Type(vlenMdt.base) // LOOK maybe make DataType.VLEN, maps to Sequence of baseType ??
             if (vlenMdt.isVString) {
                 dataType = DataType.STRING
             } else {
@@ -61,8 +46,10 @@ internal class H5Type(mdt: DatatypeMessage) {
             }
         } else if (hdfType == Datatype5.Array) { // array : used for structure members
             val arrayMdt = mdt as DatatypeArray
+            base = H5Type(arrayMdt.base)
             endian = arrayMdt.base.endian()
-            dataType = getNCtype(arrayMdt.base.type, arrayMdt.base.elemSize, arrayMdt.base.unsigned())
+            unsigned = arrayMdt.base.unsigned()
+            dataType = getNCtype(arrayMdt.base.type, arrayMdt.base.elemSize, unsigned)
             if (arrayMdt.base.type == Datatype5.Vlen) {
                 val vlenMdt = arrayMdt.base as DatatypeVlen
                 if (vlenMdt.isVString) {
@@ -89,7 +76,6 @@ internal class H5Type(mdt: DatatypeMessage) {
    * 10 Array
    */
     private fun getNCtype(hdfType: Datatype5, size: Int, unsigned: Boolean): DataType {
-        // TODO not translating all of them !
         return when (hdfType) {
             Datatype5.Fixed, Datatype5.BitField, Datatype5.Time ->
                 when (size) {

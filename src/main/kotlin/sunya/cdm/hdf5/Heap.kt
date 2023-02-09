@@ -142,7 +142,7 @@ internal class H5heap(val header: H5builder) {
         }
     } // HeapIdentifier
 
-    // level 1E
+    // level 1E Global Heap
     inner class GlobalHeap(address: Long) {
         private val version: Byte
         private val sizeBytes: Int
@@ -204,7 +204,7 @@ internal class H5heap(val header: H5builder) {
     } // GlobalHeap
 }
 
-// level 1D
+// Level 1D - Local Heaps
 internal class LocalHeap(header : H5builder, address: Long) {
     var size: Int
     var freelistOffset: Long

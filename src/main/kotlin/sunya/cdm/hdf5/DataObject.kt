@@ -11,7 +11,7 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
     println("readDataObject= $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
-    val messages = mutableListOf<HeaderMessage>()
+    val messages = mutableListOf<MessageHeader>()
 
     var version = raf.readByte(state)
     if (version.toInt() == 1) { // Level 2A1 (first part, before the messages)
@@ -65,7 +65,7 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
 class DataObject(
     val address : Long, // aka object id : obviously unique
     var name: String?, // may be null, may not be unique
-    val messages : List<HeaderMessage>
+    val messages : List<MessageHeader>
 ) {
     var groupMessage: SymbolTableMessage? = null
     var groupNewMessage: LinkInfoMessage? = null
@@ -77,7 +77,7 @@ class DataObject(
     
     init {
         // look for group or a datatype/dataspace/layout message
-        for (mess: HeaderMessage in messages) {
+        for (mess: MessageHeader in messages) {
             when (mess.mtype) {
                 MessageType.SymbolTable -> groupMessage = mess as SymbolTableMessage
                 MessageType.LinkInfo -> groupNewMessage = mess as LinkInfoMessage
