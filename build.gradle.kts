@@ -12,6 +12,7 @@ repositories {
 }
 
 dependencies {
+    implementation(libs.guava)
     implementation(libs.microutils.logging)
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
