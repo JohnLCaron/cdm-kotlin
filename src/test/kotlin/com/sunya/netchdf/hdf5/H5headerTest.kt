@@ -9,13 +9,12 @@ import java.util.*
 import java.util.stream.Stream
 
 class H5headerTest {
-    val debug = false
 
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream1 = Stream.of(
-                //sb1
+                // sb1
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/string_attrs.nc4"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attstr.h5"),
                 // sb2
@@ -52,6 +51,7 @@ class H5headerTest {
     @Test
     fun fractalHeap() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_atomic_types.nc")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/testCFGridWriter.nc4")
     }
 
     @Test
@@ -60,8 +60,13 @@ class H5headerTest {
     }
 
     @Test
-    fun problem() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/testCFGridWriter.nc4")
+    fun vlenAttribute() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
+    }
+
+    @Test
+    fun opaqueAttribute() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4")
     }
 
     @ParameterizedTest

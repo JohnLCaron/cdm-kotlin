@@ -14,7 +14,7 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
     val messages = mutableListOf<MessageHeader>()
 
     var version = raf.readByte(state)
-    if (version.toInt() == 1) { // Level 2A1 (first part, before the messages)
+    if (version.toInt() == 1) { // IV.A.1.a. Version 1 Data Object Header Prefix
         state.pos += 1 // skip byte
         val nmess = raf.readShort(state).toInt()
         val objectReferenceCount: Int = raf.readInt(state)
@@ -36,7 +36,7 @@ fun H5builder.readDataObject(address: Long, name: String) : DataObject {
         } */
         return DataObject(address, name, messages)
         
-    } else { // level 2A2 (first part, before the messages)
+    } else { // IV.A.1.b. Version 2 Data Object Header Prefix
         // first byte was already read
         val testForMagic = raf.readByteBuffer(state, 3).array()
         if (!testForMagic.contentEquals("HDR".toByteArray())) {

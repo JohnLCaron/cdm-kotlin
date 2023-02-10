@@ -123,7 +123,7 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
     val flags: Int
     val headerSize: Int
     val messageSize: Int
-    if (version == 1) {
+    if (version == 1) { //  Level 2A1 Version 1 Data Object Header Prefix - Common Header Message fields
         val rawdata1 =
             structdsl("HeaderMessage1", raf, state) {
                 fld("type", 2)
@@ -135,21 +135,14 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
 
         mtype = MessageType.byNumber(rawdata1.getShort("type").toInt())
         if (mtype == null) {
-            println("Unknoen mtype = ${rawdata1.getShort("type")}")
+            println("Unknown mtype = ${rawdata1.getShort("type")}")
             return null
         }
         flags = rawdata1.getByte("flags").toInt()
         messageSize = rawdata1.getShort("size").toInt()
         headerSize = rawdata1.dataSize()
 
-        /* if (flags and 2 != 0) { // shared
-            messData = getSharedDataObject(mtype).mdt // a shared datatype, eg enums
-            return header_length + size // can we return a MessageDataType?
-        }
-
-         */
-
-    } else {
+    } else { // Level 2A1 Version 2 Data Object Header Prefix - Common Header Message fields
         val rawdata2 =
             structdsl("HeaderMessage2", raf, state) {
                 fld("type", 1)
@@ -164,8 +157,16 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         flags = rawdata2.getByte("flags").toInt()
         messageSize = rawdata2.getShort("size").toInt()
         headerSize = rawdata2.dataSize()
+    }
 
-        // ignoring the gap and the checksum
+    // 	If set, the message is shared and stored in another location than the object header.
+    // 	The Header Message Data field contains a Shared Message (described in the Data Object Header Messages
+    // 	section below) and the Size of Header Message Data field contains the size of that Shared Message.
+    if (flags and 2 != 0) { // shared
+        // LOOK could be other shared objects besides datatype ??
+        val mdt = getSharedDataObject(state, mtype!!).mdt // a shared datatype, eg enums
+        state.pos = startPos + messageSize + headerSize
+        return mdt
     }
 
     val result = when (mtype) {
@@ -185,7 +186,7 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.Attribute -> this.readAttributeMessage(state) // 12
         MessageType.Comment -> this.readCommentMessage(state) // 13
         MessageType.LastModifiedOld -> null // 14
-        // MessageType.SharedObject -> this.readSharedMessage(state) // 15 get exception if its used
+        MessageType.SharedObject -> this.readSharedMessage(state) // 15 get exception if its used
         MessageType.ObjectHeaderContinuation -> this.readContinueMessage(state) // 16
         MessageType.SymbolTable -> this.readSymbolTableMessage(state) // 17
         MessageType.LastModified -> null // 18
@@ -193,6 +194,8 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.ObjectReferenceCount -> null // 22
         else -> throw RuntimeException("Unimplemented message type = $mtype")
     }
+
+    // ignoring version 2 gap and the checksum, so we need to set position explicitly, nor rely on the raf.pos to be correct
 
     println(" done Message ${mtype} pos = ${state.pos} expect ${startPos + messageSize + headerSize}")
     // heres where we get the position right, no matter what
@@ -543,8 +546,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     val mdt: DatatypeMessage
     val isShared = flags and 1 != 0
     if (isShared) {
-        throw java.lang.RuntimeException("getSharedDataObject not implemented")
-        // mdt = getSharedDataObject(MessageType.Datatype).mdt
+        mdt = getSharedDataObject(state, MessageType.Datatype).mdt!!
     } else {
         val startPos = state.pos
         mdt = this.readDatatypeMessage(state)
@@ -688,7 +690,6 @@ fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessa
             }
         }
     if (debugMessage) rawdata.show()
-    rawdata.show()
 
     return AttributeInfoMessage(
         readAttributesFromInfoMessage(
