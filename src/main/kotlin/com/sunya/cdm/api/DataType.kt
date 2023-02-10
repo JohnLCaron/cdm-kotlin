@@ -2,6 +2,7 @@ package com.sunya.cdm.api
 
 import com.sunya.cdm.iosp.StructureData
 import java.math.BigInteger
+import java.nio.ByteBuffer
 import java.util.*
 
 /** Type-safe enumeration of data types.
@@ -29,13 +30,8 @@ enum class DataType(val cdlName: String, val size: Int, val primitiveClass: Clas
     //// object types are variable length; inside a structure, they have 32 bit indices onto a heap
     STRING( "string", 4, String::class.java, false),  // compact storage of heterogeneous fields
     STRUCTURE("Structure", 0, StructureData::class.java, false),  // Iterator<StructureData>
-    SEQUENCE(
-        "Sequence",
-        4,
-        StructureData::class.java,
-        false
-    ),  // Array<Array<Byte>>, an array of variable length byte arrays
-    OPAQUE( "opaque", 4, Array::class.java, false);
+    SEQUENCE("Sequence", 4, StructureData::class.java, false),
+    OPAQUE( "opaque", 4, ByteBuffer::class.java, false);
     
     override fun toString(): String {
         return toNcml()

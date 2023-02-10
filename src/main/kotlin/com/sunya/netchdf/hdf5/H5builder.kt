@@ -1,9 +1,9 @@
 package com.sunya.netchdf.hdf5
 
-import mu.KotlinLogging
 import com.sunya.cdm.api.*
 import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.*
+import mu.KotlinLogging
 import java.io.IOException
 import java.nio.*
 import java.nio.charset.Charset
@@ -1896,7 +1896,7 @@ class H5builder(val raf: OpenFile,
     @Throws(IOException::class)
     private fun readVariableSizeN(state : OpenFileState, nbytes : Int): Long {
         val ch = IntArray(nbytes)
-        // LOOK for (i in 0 until nbytes) ch[i] = raf.read()
+        for (i in 0 until nbytes) ch[i] = raf.readByte(state).toInt()
         var result = ch[nbytes - 1].toLong()
         for (i in nbytes - 2 downTo 0) {
             result = result shl 8

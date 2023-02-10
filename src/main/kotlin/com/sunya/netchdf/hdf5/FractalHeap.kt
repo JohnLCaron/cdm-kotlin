@@ -435,8 +435,7 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
             for (i in 0 until doublingTable.tableWidth) {
                 val directBlock = DataBlock()
                 iblock.add(directBlock)
-                directBlock.address =
-                    h5.readOffset(state) // This field is the address of the child direct block. The size of the
+                directBlock.address = h5.readOffset(state) // This field is the address of the child direct block. The size of the
                 // [uncompressed] direct block can be computed by its offset in the
                 // heap's linear address space.
                 if (hasFilter) {

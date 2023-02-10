@@ -26,6 +26,7 @@ class H5reader(val header: H5builder) {
             Float::class.java -> ArrayFloat(bb.asFloatBuffer(), shape)
             Double::class.java -> ArrayDouble(bb.asDoubleBuffer(), shape)
             Long::class.java -> ArrayLong(bb.asLongBuffer(), shape)
+            ByteBuffer::class.java -> ArrayByte(bb, shape)
             else -> throw IllegalStateException("unimplemented type= $dataType")
         }
         // convert to array of Strings by reducing rank by 1
@@ -203,27 +204,21 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : Li
             return refsList
         }
 
-        throw RuntimeException("vlen not implemented")
+        // throw RuntimeException("vlen not implemented")
 
-        /* general case is to read an array of vlen objects
-        // each vlen generates an Array - so return ArrayObject of Array
-        val size = layout2.totalNelems as Int
-        val vlenStorage: StorageMutable<Array<String>> = ArrayVlen.createStorage(readType, size, null)
+        // general case is to read an array of vlen objects
+        // each vlen generates an Array, have to combine them
+        val result = mutableListOf<Array<*>>()
         var count = 0
         while (layout2.hasNext()) {
-            val chunk: Layout.Chunk = layout2.next() ?: continue
-            for (i in 0 until chunk.getNelems()) {
-                val address: Long = chunk.getSrcPos() + layout2.getElemSize() * i
-                val vlenArray: Array<*> = getHeapDataArray(address, readType, endian)
-                if (vinfo.typeInfo.base.hdfType === 7) {
-                    vlenStorage.setPrimitiveArray(count, h5iosp.convertReferenceArray(vlenArray as Array<Long?>))
-                } else {
-                    vlenStorage.setPrimitiveArray(count, vlenArray)
-                }
+            val chunk: Layout.Chunk = layout2.next()
+            for (i in 0 until chunk.nelems) {
+                val address: Long = chunk.srcPos + layout2.elemSize * i
+                val vlenArray = h5heap.getHeapDataArray(address, readType, endian)
+                result.add(vlenArray)
                 count++
             }
         }
-        return ArrayVlen.createFromStorage(readType, shape, vlenStorage)
-        */
+        return result
     } // vlen case
 }
