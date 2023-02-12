@@ -3,11 +3,11 @@ package com.sunya.netchdf.hdf5
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
-import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LABELS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
+import com.sunya.netchdf.netcdf4.Netcdf4
 import java.io.IOException
 
 internal val includeOriginalAttributes = false
@@ -28,6 +28,15 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     group5.nestedGroups.forEach { groupb.addGroup( buildGroup( it )) }
 
+    if (strict) {
+        val iter = groupb.attributes.iterator()
+        while(iter.hasNext()) {
+            if (iter.next().name == Netcdf4.NCPROPERTIES) {
+                iter.remove()
+            }
+        }
+    }
+
     return groupb
 }
 
@@ -45,11 +54,13 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
 
     if (v5.dimList != null) {
         v5.dimList!!.split(" ").forEach { dimName ->
-            val dim = group5.dimMap[dimName]
+            val dim = group5.findDimension(dimName)
             if (dim != null) {
                 builder.dimensions.add(dim)
             }
         }
+    } else if (v5.mds.dims.size > 0) {
+        v5.mds.dims.forEach{builder.dimensions.add(Dimension(it))}
     }
 
     for (att5 in v5.attributes()) {
@@ -152,7 +163,7 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
         val value: String = att.values[0] as String
         if (value == HDF5_DIMENSION_SCALE && h5variable.mds.rank() > 0) {
             // create a dimension - always use the first dataspace length
-            h5variable.dimList = addDimension(
+            h5variable.dimList = addSharedDimension(
                 g,
                 h5group,
                 h5variable.name,
@@ -172,7 +183,7 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
 }
 
 // add a dimension, return its name
-private fun addDimension(
+private fun addSharedDimension(
     parent: Group.Builder,
     h5group: H5Group,
     name: String,
@@ -182,7 +193,7 @@ private fun addDimension(
     val dimName = name.substringAfterLast('/')
     var d = h5group.dimMap[dimName] // first look in current group
     if (d == null) { // create if not found
-        d = Dimension(name, length, isUnlimited)
+        d = Dimension(name, length, isUnlimited, true)
         h5group.dimMap[dimName] = d
         h5group.dimList.add(d)
         parent.addDimension(d)
@@ -287,7 +298,7 @@ internal fun H5builder.findSharedDimensions(g: Group.Builder, h5group: H5Group, 
                 }
             }
 
-            HDF5_DIMENSION_LABELS,
+            // HDF5_DIMENSION_LABELS,
             HDF5_REFERENCE_LIST -> removeAtts.add(matt)
         }
     }

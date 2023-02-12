@@ -1,8 +1,6 @@
 package com.sunya.netchdf.netcdfClib
 
-import com.sunya.cdm.api.Group
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdf.ffm.netcdf_h.*
 import java.lang.foreign.MemoryLayout
@@ -12,11 +10,14 @@ import java.lang.foreign.ValueLayout.JAVA_INT
 import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.nio.*
 
-class NetcdfClibFile(val filename : String) : Iosp {
+class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
     private val header : NCheader = NCheader(filename)
     private val rootGroup : Group = header.rootGroup.build(null)
 
     override fun rootGroup() = rootGroup
+    override fun location() = filename
+    override fun cdl() = cdl(this)
+    override fun cdlStrict() = cdlStrict(this)
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>  {
         TODO("Not yet implemented")

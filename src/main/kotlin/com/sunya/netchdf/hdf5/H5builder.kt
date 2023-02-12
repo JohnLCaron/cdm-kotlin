@@ -19,9 +19,9 @@ private val debugSuperblock = false
  * @param valueCharset used when reading HDF5 header.
  */
 class H5builder(val raf: OpenFile,
-                val root: Group.Builder,
+                val strict : Boolean,
                 val valueCharset: Charset = StandardCharsets.UTF_8,
-                val debugOut: Formatter? = null) {
+) {
     
     private var baseAddress: Long = 0 // may be offset for arbitrary metadata
     var sizeOffsets: Int = 0
@@ -37,6 +37,8 @@ class H5builder(val raf: OpenFile,
 
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val addressMap = mutableMapOf<Long, DataObject>()
+
+    val cdmRoot : Group
 
     init {
         // search for the superblock - no limits on how far into the file
@@ -77,8 +79,8 @@ class H5builder(val raf: OpenFile,
         // build tree of H5groups
         h5rootGroup = rootGroupBuilder.build()
         // convert into CDM
-        val cdmRoot = this.buildCdm(h5rootGroup)
-        println(" cdmRoot = {\n${cdmRoot.cdlString()}}")
+        this.cdmRoot = this.buildCdm(h5rootGroup)
+        // println(" cdmRoot = {\n${cdmRoot.cdlString()}}")
 
         /* recursively run through all the dataObjects and add them to the ncfile
         val allSharedDimensions = makeNetcdfGroup(root, h5rootGroup)
@@ -89,7 +91,6 @@ class H5builder(val raf: OpenFile,
             println(f.toString())
         } */
     }
-
     private fun readSuperBlock01dsl(superblockStart : Long, state : OpenFileState, version : Int) : H5GroupBuilder {
         // have to cheat a bit
         state.pos = superblockStart + 13

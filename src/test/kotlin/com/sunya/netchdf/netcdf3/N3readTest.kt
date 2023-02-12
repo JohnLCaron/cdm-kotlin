@@ -32,7 +32,7 @@ class N3readTest {
         println(filename)
         val ncfile = Netcdf3File(filename)
         val root = ncfile.rootGroup()
-        println("actual = ${root.cdlString()}")
+        println("actual = ${ncfile.cdl()}")
         //println("expect = $expect")
 
         assertEquals(expect, root.toString())

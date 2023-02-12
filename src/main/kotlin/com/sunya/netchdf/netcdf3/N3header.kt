@@ -188,7 +188,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
       var dim: Dimension
       if (len == 0) {
-        dim = Dimension(name, numrecs, true)
+        dim = Dimension(name, numrecs, true, true)
         unlimitedDimension = dim
       } else {
         dim = Dimension(name, len)
@@ -299,7 +299,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   }
 
   @Throws(IOException::class)
-  private fun readAttributes(atts: MutableList<com.sunya.cdm.api.Attribute>, debugOut: Formatter?): Int {
+  private fun readAttributes(atts: MutableList<Attribute>, debugOut: Formatter?): Int {
     var natts = 0
     val magic: Int = raf.readInt(filePos)
     if (magic == 0) {
@@ -313,17 +313,17 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       debugOut?.format("***att $i pos= ${filePos.pos}\n")
       val name = readString()
       val type: Int = raf.readInt(filePos)
-      var att: com.sunya.cdm.api.Attribute?
+      var att: Attribute?
       if (type == 2) { // CHAR
         debugOut?.format(" begin read String val pos= ${filePos.pos}\n")
         val value = readString(valueCharset)
         debugOut?.format(" end read String val pos= ${filePos.pos}\n")
-        att = com.sunya.cdm.api.Attribute(name, value)
+        att = Attribute(name, value)
       } else {
         debugOut?.format(" begin read val ${filePos.pos}\n")
         val nelems: Int = raf.readInt(filePos)
         val dtype: DataType = getDataType(type)
-        val builder = com.sunya.cdm.api.Attribute.Builder()
+        val builder = Attribute.Builder()
         builder.name = name
         builder.dataType = dtype
         if (nelems > 0) {
@@ -340,7 +340,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   }
 
   @Throws(IOException::class)
-  fun readAttributeArray(type: DataType, nelems: Int, attBuilder: com.sunya.cdm.api.Attribute.Builder): Int {
+  fun readAttributeArray(type: DataType, nelems: Int, attBuilder: Attribute.Builder): Int {
     when (type) {
       CHAR, BYTE -> {
         attBuilder.values = raf.readArrayByte(filePos, nelems).asList()

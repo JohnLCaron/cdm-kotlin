@@ -37,7 +37,7 @@ cd /home/snake/install/jextract-19/bin
 
 fun main(args: Array<String>) {
     val h = NCheader("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc")
-    if (debug) println(h.rootGroup.build(null).cdlString())
+    if (debug) println(h.rootGroup.build(null).cdl())
 }
 
 // Really a builder of the root Group.
@@ -78,10 +78,12 @@ class NCheader(val filename: String) {
         if (debugFormat) println(" nc_inq_format_extended = ${netcdfFormatExtended(this.formatx)} " +
                 "mode = 0x${java.lang.Long.toHexString(this.mode.toLong())} ${netcdfMode(this.mode)}")
 
-        if (debugFormat) println(" nc_inq_libvers = ${nc_inq_libvers().getUtf8String(0)}")
+        val version = nc_inq_libvers().getUtf8String(0)
+        if (debugFormat) println(" nc_inq_libvers = $version")
 
         // read root group
         readGroup(session, Group4(ncid, rootGroup, null))
+        // rootGroup.addAttribute(Attribute(Netcdf4.NCPROPERTIES, version))
     }
 
     private fun readGroup(session: MemorySession, g4: Group4) {
@@ -173,9 +175,14 @@ class NCheader(val filename: String) {
             val isUnlimited = udimIds.contains(dimId)
             if (debug) println(" nc_inq_dim $dimId = $dimName $dimLength $isUnlimited")
 
-            val dimension = Dimension(dimName, dimLength.toInt(), isUnlimited)
-            g4.gb.addDimension(dimension)
-            g4.dimHash[dimId] = dimension
+            if (dimName.startsWith("phony_dim_")) {
+                val dimension = Dimension(dimLength.toInt())
+                g4.dimHash[dimId] = dimension
+            } else {
+                val dimension = Dimension(dimName, dimLength.toInt()) // LOOK not using unlimited
+                g4.gb.addDimension(dimension)
+                g4.dimHash[dimId] = dimension
+            }
         }
     }
 
@@ -659,7 +666,7 @@ class NCheader(val filename: String) {
                 } else if (userType.typeClass == NC_OPAQUE()) {
                     return DataType.OPAQUE
                 } else if (userType.typeClass == NC_VLEN()) {
-                    return DataType.STRUCTURE // LOOK
+                    return DataType.SEQUENCE
                 } else if (userType.typeClass == NC_COMPOUND()) {
                     return DataType.STRUCTURE
                 } else {

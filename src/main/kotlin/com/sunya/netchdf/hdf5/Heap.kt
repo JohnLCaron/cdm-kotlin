@@ -62,7 +62,7 @@ internal class H5heap(val header: H5builder) {
     fun readHeapString(heapIdAddress: Long): String? {
         val heapId = this.readHeapIdentifier(heapIdAddress)
         if (heapId.isEmpty()) {
-            return H5builder.NULL_STRING_VALUE
+            return null // H5builder.NULL_STRING_VALUE
         }
         val ho: GlobalHeap.HeapObject = heapId.getHeapObject()
             ?: throw IllegalStateException("Cant find Heap Object,heapId=$heapId")

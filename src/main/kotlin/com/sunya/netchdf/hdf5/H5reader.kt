@@ -13,25 +13,31 @@ class H5reader(val header: H5builder) {
     fun readData(state: OpenFileState, layout: Layout, dataType: DataType, shape : IntArray): ArrayTyped<*> {
         val sizeBytes = Section(shape).computeSize().toInt() * layout.elemSize
         val bb = ByteBuffer.allocate(sizeBytes)
+        bb.order(state.byteOrder)
         while (layout.hasNext()) {
             val chunk: Layout.Chunk = layout.next()
             state.pos = chunk.srcPos
             raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem.toInt(), layout.elemSize * chunk.nelems)
         }
+        bb.position(0)
 
-        val result = when (dataType.primitiveClass) {
-            Byte::class.java -> ArrayByte(bb, shape)
-            Short::class.java -> ArrayShort(bb.asShortBuffer(), shape)
-            Int::class.java -> ArrayInt(bb.asIntBuffer(), shape)
-            Float::class.java -> ArrayFloat(bb.asFloatBuffer(), shape)
-            Double::class.java -> ArrayDouble(bb.asDoubleBuffer(), shape)
-            Long::class.java -> ArrayLong(bb.asLongBuffer(), shape)
-            ByteBuffer::class.java -> ArrayByte(bb, shape)
+        val result = when (dataType) {
+            DataType.BYTE -> ArrayByte(bb, shape)
+            DataType.CHAR, DataType.UBYTE, DataType.ENUM1 -> ArrayUByte(bb, shape)
+            DataType.SHORT -> ArrayShort(bb.asShortBuffer(), shape)
+            DataType.USHORT, DataType.ENUM2 -> ArrayUShort(bb.asShortBuffer(), shape)
+            DataType.INT, DataType.ENUM4 -> ArrayInt(bb.asIntBuffer(), shape)
+            DataType.UINT -> ArrayUInt(bb.asIntBuffer(), shape)
+            DataType.FLOAT -> ArrayFloat(bb.asFloatBuffer(), shape)
+            DataType.DOUBLE -> ArrayDouble(bb.asDoubleBuffer(), shape)
+            DataType.LONG -> ArrayLong(bb.asLongBuffer(), shape)
+            DataType.ULONG -> ArrayULong(bb.asLongBuffer(), shape)
+            DataType.OPAQUE -> ArrayByte(bb, shape)
             else -> throw IllegalStateException("unimplemented type= $dataType")
         }
         // convert to array of Strings by reducing rank by 1
         if (dataType == DataType.CHAR) {
-            return (result as ArrayByte).makeStringsFromBytes()
+            return (result as ArrayUByte).makeStringsFromBytes()
         }
 
         /*
@@ -69,6 +75,7 @@ class H5reader(val header: H5builder) {
             state.pos = chunk.srcPos
             raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem.toInt(), layout.elemSize * chunk.nelems)
         }
+        bb.position(0)
         return ArrayStructureData(bb, layout.elemSize, shape, members)
     }
 }
@@ -172,7 +179,7 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : Li
             for (i in 0 until chunk.nelems) {
                 val address: Long = chunk.srcPos + layout2.elemSize * i
                 val sval = h5heap.readHeapString(address)
-                sarray.add(sval?: "failed")
+                if (sval != null) sarray.add(sval)
             }
         }
         return sarray

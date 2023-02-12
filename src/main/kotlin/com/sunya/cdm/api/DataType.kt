@@ -44,10 +44,13 @@ enum class DataType(val cdlName: String, val size: Int, val primitiveClass: Clas
 
     val isString : Boolean
         get() = (this == STRING) || (this == CHAR)
-    
+
     val isNumeric: Boolean
         get() = (this == FLOAT) || (this == DOUBLE) || isIntegral
-    
+
+    val isUnsigned: Boolean
+        get() = (this == UBYTE) || (this == USHORT) || (this == UINT) || (this == ULONG)
+
     val isIntegral: Boolean
         get() = ((this == BYTE) || (this == INT) || (this == SHORT) || (this == LONG)
                 || (this == UBYTE) || (this == UINT) || (this == USHORT)

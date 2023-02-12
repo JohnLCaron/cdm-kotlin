@@ -29,7 +29,7 @@ enum class MessageType(val uname: String, val num: Int) {
     LastModifiedOld("LastModifiedOld", 14),
     SharedObject("SharedObject", 15),
     ObjectHeaderContinuation("Continuation", 16),
-    SymbolTable("Group", 17),
+    SymbolTable("SymbolTable", 17),
     LastModified("LastModified", 18),
     AttributeInfo("AttributeInfo", 21),
     ObjectReferenceCount("ObjectReferenceCount", 22),
@@ -268,6 +268,7 @@ data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : Messa
 }
 
 ////////////////////////////////////////// 2 IV.A.2.c. The Link Info Message
+
 @Throws(IOException::class)
 fun H5builder.readLinkInfoMessage(state: OpenFileState): LinkInfoMessage {
     val flags = raf.readByte(state.copy().incr(1)).toInt()
@@ -356,6 +357,11 @@ data class FillValueMessage(val hasFillVakue: Boolean, val size: Int?, val value
     MessageHeader(MessageType.FillValue)
 
 ////////////////////////////////////////// 6
+// This message encodes the information for a link in a group’s object header, when the group is storing
+// its links “compactly”, or in the group’s fractal heap, when the group is storing its links “densely”.
+// A group is storing its links compactly when the fractal heap address in the Link Info Message is set to
+// the “undefined address” value.
+
 @Throws(IOException::class)
 fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
     val version = raf.readByte(state)
@@ -409,6 +415,12 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
                 throw RuntimeException("Unknown link type")
             }
         }
+
+    // CreationOrder field - not currently used
+    // This 64-bit value is an index of the link’s creation time within the group. Values start at 0 when
+    // the group is created an increment by one for each link added to the group. Removing a link from a
+    // group does not change existing links’ creation order field.
+    // Hmm are we supposed to sort by creation order ??
 
     if (debugGroup) println(" LinkSoft $linkName $linkInfo")
     return LinkSoft(
