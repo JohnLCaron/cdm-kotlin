@@ -5,6 +5,13 @@ import java.io.IOException
 import java.nio.ByteOrder
 
 //// Message Type 3 : "Datatype"
+// The datatype message defines the datatype for each element of a dataset or a common datatype for sharing between
+// multiple datasets. A datatype can describe an atomic type like a fixed- or floating-point type or more complex types
+// like a C struct (compound datatype), array (array datatype), or C++ vector (variable-length datatype).
+//
+// Datatype messages that are part of a dataset object do not describe how elements are related to one another;
+// the dataspace message is used for that purpose. Datatype messages that are part of a committed datatype (formerly
+// named datatype) message describe a common datatype that can be shared by multiple datasets in the file.
 
 enum class Datatype5(val num : Int) {
     Fixed(0), Floating(1), Time(2), String(3), BitField(4), Opaque(5),
@@ -37,11 +44,18 @@ open class DatatypeMessage(val type: Datatype5, val elemSize: Int, val endian: B
     MessageHeader(MessageType.Datatype) {
     open fun unsigned() = false
     open fun endian() = endian?: ByteOrder.LITTLE_ENDIAN
+
+    override fun show() : String {
+        return "$type"
+    }
 }
 
 open class DatatypeFixed(elemSize: Int, endian: ByteOrder, val unsigned: Boolean) :
     DatatypeMessage(Datatype5.Fixed, elemSize, endian) {
     override fun unsigned() = unsigned
+    override fun show() : String {
+        return "$type elemSize=$elemSize"
+    }
 }
 
 class DatatypeFloating(elemSize: Int, endian: ByteOrder) : DatatypeMessage(Datatype5.Floating, elemSize, endian)
@@ -56,9 +70,13 @@ class DatatypeBitField(elemSize: Int, endian: ByteOrder, unsigned: Boolean, val 
 class DatatypeOpaque(elemSize: Int, val desc: String) : DatatypeMessage(Datatype5.Opaque, elemSize, null)
 
 class DatatypeCompound(elemSize: Int, val members: List<StructureMember5>) :
-    DatatypeMessage(Datatype5.Compound, elemSize, null)
+    DatatypeMessage(Datatype5.Compound, elemSize, null) {
+    override fun show() : String {
+        return "$type elemSize=$elemSize"
+    }
+}
 
-// LOOK is all we have is a mdt, must be a scalar ?? Or could be an array?
+// LOOK if all we have is a mdt, must be a scalar ?? Or could be an array?
 class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessage)
 
 /**
@@ -73,14 +91,34 @@ class DatatypeEnum(
     elemSize: Int,
     val base: DatatypeMessage,
     val names: List<String>,
-    nums: List<Int>
-) : DatatypeMessage(Datatype5.Enumerated, elemSize, null)
+    val nums: List<Int>
+) : DatatypeMessage(Datatype5.Enumerated, elemSize, null) {
+
+    val valueMap = lazy {
+        require(names.size == nums.size)
+        val values = mutableMapOf<Int, String>()
+        nums.onEachIndexed{idx, num -> values[num] = names[idx]}
+        values
+    }
+
+    override fun show() : String {
+        return "$type n=${names.size} base=(${base.show()})"
+    }
+}
 
 class DatatypeVlen(elemSize: Int, val base: DatatypeMessage, val isVString: Boolean) :
-    DatatypeMessage(Datatype5.Vlen, elemSize, null)
+    DatatypeMessage(Datatype5.Vlen, elemSize, null) {
+    override fun show() : String {
+        return "$type elemSize=$elemSize base=(${base.show()}) isVString=$isVString"
+    }
+}
 
 class DatatypeArray(elemSize: Int, val base: DatatypeMessage, val dims: IntArray) :
-    DatatypeMessage(Datatype5.Array, elemSize, null)
+    DatatypeMessage(Datatype5.Array, elemSize, null) {
+    override fun show() : String {
+        return "$type elemSize=$elemSize base=(${base.show()}) dims=${dims.contentToString()}"
+    }
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

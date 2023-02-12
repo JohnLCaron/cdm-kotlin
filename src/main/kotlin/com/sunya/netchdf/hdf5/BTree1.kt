@@ -6,13 +6,13 @@ import java.io.IOException
 import java.nio.ByteOrder
 
 // Level 1A1 - Version 1 B-trees
-internal class Btree1(val header : com.sunya.netchdf.hdf5.H5builder, val owner: String, address: Long) {
+internal class Btree1(val header : H5builder, val owner: String, address: Long) {
     val raf = header.raf
     var wantType = 0
-    private val sentries: MutableList<com.sunya.netchdf.hdf5.SymbolTableEntry> = ArrayList() // list of type SymbolTableEntry
+    private val sentries: MutableList<SymbolTableEntry> = ArrayList() // list of type SymbolTableEntry
 
     init {
-        val entryList = mutableListOf<com.sunya.netchdf.hdf5.Btree1.Entry>()
+        val entryList = mutableListOf<Btree1.Entry>()
         readAllEntries(address, entryList)
 
         // now convert the entries to SymbolTableEntry
@@ -22,25 +22,27 @@ internal class Btree1(val header : com.sunya.netchdf.hdf5.H5builder, val owner: 
         }
     }
 
-    val symbolTableEntries: List<com.sunya.netchdf.hdf5.SymbolTableEntry>
+    val symbolTableEntries: List<SymbolTableEntry>
         get() = sentries
 
     // recursively read all entries, place them in order in list
     @Throws(IOException::class)
-    fun readAllEntries(address: Long, entryList: MutableList<com.sunya.netchdf.hdf5.Btree1.Entry>) {
+    fun readAllEntries(address: Long, entryList: MutableList<Btree1.Entry>) {
         val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
         val magic: String = raf.readString(state, 4)
         check(magic == "TREE") { "BtreeGroup doesnt start with TREE" }
+
         val type = raf.readByte(state).toInt()
         val level = raf.readByte(state).toInt()
         val nentries = raf.readShort(state)
         check(type == wantType) { "BtreeGroup must be type $wantType" }
+
         val size = 8 + 2 * header.sizeOffsets + nentries * (header.sizeOffsets + header.sizeLengths)
         val leftAddress: Long = header.readOffset(state)
         val rightAddress: Long = header.readOffset(state)
 
         // read all entries in this Btree "Node"
-        val myEntries: MutableList<com.sunya.netchdf.hdf5.Btree1.Entry> = ArrayList<com.sunya.netchdf.hdf5.Btree1.Entry>()
+        val myEntries = mutableListOf<Btree1.Entry>()
         for (i in 0 until nentries) {
             myEntries.add(Entry(state))
         }
@@ -66,7 +68,7 @@ internal class Btree1(val header : com.sunya.netchdf.hdf5.H5builder, val owner: 
     internal inner class SymbolTableNode(val address: Long) {
         var version: Byte
         var nentries: Short
-        val symbols: MutableList<com.sunya.netchdf.hdf5.SymbolTableEntry> = ArrayList() // SymbolTableEntry
+        val symbols: MutableList<SymbolTableEntry> = ArrayList() // SymbolTableEntry
 
         init {
             val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
@@ -78,6 +80,7 @@ internal class Btree1(val header : com.sunya.netchdf.hdf5.H5builder, val owner: 
             raf.readByte(state) // skip byte
             nentries = raf.readShort(state)
             var posEntry = state.pos
+
             for (i in 0 until nentries) {
                 val entry = header.readSymbolTable(state)
                 posEntry += entry.dataSize
@@ -93,7 +96,7 @@ internal class Btree1(val header : com.sunya.netchdf.hdf5.H5builder, val owner: 
 } // GroupBTree
 
 // Level 1C - Symbol Table Entry
-internal fun com.sunya.netchdf.hdf5.H5builder.readSymbolTable(state : OpenFileState) : com.sunya.netchdf.hdf5.SymbolTableEntry {
+internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry {
     val rootEntry =
         structdsl("SymbolTableEntry", raf, state) {
             fld("linkNameOffset", sizeOffsets)
@@ -104,7 +107,7 @@ internal fun com.sunya.netchdf.hdf5.H5builder.readSymbolTable(state : OpenFileSt
             overlay("scratchPad", 0, "btreeAddress")
             overlay("scratchPad", sizeOffsets, "nameHeapAddress")
         }
-    if (com.sunya.netchdf.hdf5.debugGroup) rootEntry.show()
+    if (debugGroup) rootEntry.show()
 
     // may be btree or symbolic link
     var btreeAddress : Long? = null
@@ -128,7 +131,7 @@ internal fun com.sunya.netchdf.hdf5.H5builder.readSymbolTable(state : OpenFileSt
         }
     }
 
-    return com.sunya.netchdf.hdf5.SymbolTableEntry(
+    return SymbolTableEntry(
         rootEntry.getLong("linkNameOffset"), // LOOK what about rootEntry.linkNameOffset.getLong()) sizeOffsets = Int ???
         rootEntry.getLong("objectHeaderAddress"),
         rootEntry.getInt("cacheType"),

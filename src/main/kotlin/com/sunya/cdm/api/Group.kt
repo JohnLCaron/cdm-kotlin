@@ -3,6 +3,7 @@ package com.sunya.cdm.api
 class Group(val name : String,
             val dimensions : List<Dimension>,
             val attributes : List<Attribute>,
+            val typedefs : List<Typedef>,
             variableBuilders : List<Variable.Builder>,
             groupBuilders : List<Group.Builder>,
             val parent: Group?
@@ -18,6 +19,7 @@ class Group(val name : String,
     class Builder(val name : String) {
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
+        val typedefs = mutableListOf<Typedef>()
         val variables = mutableListOf<Variable.Builder>()
         val groups = mutableListOf<Group.Builder>()
 
@@ -47,7 +49,7 @@ class Group(val name : String,
         }
 
         fun build(parent : Group?) : Group {
-            return Group(name, dimensions, attributes, variables, groups, parent)
+            return Group(name, dimensions, attributes, typedefs, variables, groups, parent)
         }
     }
 }

@@ -5,6 +5,7 @@ import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.reflect.KClass
 
 class H5reader(val header: H5builder) {
     val raf = header.raf
@@ -32,7 +33,7 @@ class H5reader(val header: H5builder) {
             DataType.DOUBLE -> ArrayDouble(bb.asDoubleBuffer(), shape)
             DataType.LONG -> ArrayLong(bb.asLongBuffer(), shape)
             DataType.ULONG -> ArrayULong(bb.asLongBuffer(), shape)
-            DataType.OPAQUE -> ArrayByte(bb, shape)
+            DataType.OPAQUE -> ArrayOpaque(bb, shape)
             else -> throw IllegalStateException("unimplemented type= $dataType")
         }
         // convert to array of Strings by reducing rank by 1
@@ -120,7 +121,27 @@ internal fun H5builder.readAttributeData(
     val h5reader = H5reader(this)
     val dataArray = h5reader.readData(state, layout, readDtype, shape)
 
+    // convert attributes to enum strings
+    if (h5type.hdfType == Datatype5.Enumerated) {
+        // hopefully this is shared and not replicated
+        val enumMsg = matt.mdt as DatatypeEnum
+        return convertEnums(enumMsg.valueMap.value, dataArray)
+    }
+
     return dataArray.toList()
+}
+
+internal fun convertEnums(map: Map<Int, String>, values: ArrayTyped<*>): List<String> {
+    val wtf : KClass<out ArrayTyped<*>> = values::class // LOOK is there something simpler ?
+    return values.map {
+        val num = when (wtf.simpleName) {
+           "ArrayUByte" ->  (it as UByte).toInt()
+           "ArrayUShort" ->  (it as UShort).toInt()
+           "ArrayUInt" ->  (it as UInt).toInt()
+            else -> RuntimeException("unknown ${wtf.simpleName}")
+        }
+        map[num] ?: "Unknown enum number=$it"
+    }
 }
 
 internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) : List<*> {
@@ -214,15 +235,19 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : Li
         // throw RuntimeException("vlen not implemented")
 
         // general case is to read an array of vlen objects
-        // each vlen generates an Array, have to combine them
-        val result = mutableListOf<Array<*>>()
+        // each vlen generates an Array, have to flatten them
+        val result = mutableListOf<Any>()
         var count = 0
         while (layout2.hasNext()) {
             val chunk: Layout.Chunk = layout2.next()
             for (i in 0 until chunk.nelems) {
                 val address: Long = chunk.srcPos + layout2.elemSize * i
                 val vlenArray = h5heap.getHeapDataArray(address, readType, endian)
-                result.add(vlenArray)
+                vlenArray.forEach{
+                    if (it != null) {
+                        result.add(it)
+                    }
+                }
                 count++
             }
         }

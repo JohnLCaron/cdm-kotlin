@@ -201,9 +201,7 @@ internal class LocalHeap(header : H5builder, address: Long) {
     var version: Byte
 
     init {
-        // header information is in le byte order
         val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
-
         // header
         val magic: String = header.raf.readString(state,4)
         check(magic == "HEAP") { "$magic should equal HEAP" }

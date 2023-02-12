@@ -156,7 +156,7 @@ internal fun H5builder.replaceSymbolicLinks(groupb: H5GroupBuilder) {
             } else { // replace
                 objList[count] = link
             }
-            if (debugSoftLink) {
+            if (debugFlow) {
                 println("  Found symbolic link=${dof.linkName}")
             }
         }
@@ -204,6 +204,7 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
         } else if (local.mdt!!.type == Datatype5.Enumerated) {
             isTypedef = true
         } else {
+            // see /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4 = opaque typedef
             println("WARNING Unknown DataObjectFacade = ${this}")
         }
     }
@@ -254,8 +255,6 @@ internal class H5GroupBuilder(
             } else if (nested.isTypedef) {
                 typedefs.add(H5Typedef(nested.dataObject!!))
 
-            } else {
-                println("unknown nestedObject $nested")
             }
         }
 
@@ -289,7 +288,7 @@ internal class H5Typedef(val dataObject: DataObject) {
 
     init {
         if (dataObject.mdt!!.type != Datatype5.Enumerated) {
-            println("HEY")
+            throw RuntimeException("H5Typedef ${dataObject.mdt!!.type}")
         }
         require(dataObject.mdt != null && dataObject.mdl == null)
         require(dataObject.mdt!!.type == Datatype5.Enumerated)

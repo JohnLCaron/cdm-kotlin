@@ -10,7 +10,7 @@ data class Attribute(val name : String, val dataType : DataType, val values : Li
     class Builder {
         var name : String? = null
         var dataType : DataType? = null
-        var values :List<*>? = null
+        var values : List<*>? = null
 
         fun setName(name : String) : Attribute.Builder {
             this.name = name
