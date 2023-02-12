@@ -1,10 +1,12 @@
 package com.sunya.netchdf.netcdf3
 
+import com.sunya.cdm.api.Netcdf
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NCheader
+import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import test.util.oldTestDir
 import test.util.testFilesIn
 import java.util.*
@@ -43,18 +45,14 @@ class N3headerCompare {
     fun readN3header(filename : String) {
         println("=================")
         println(filename)
-        val ncfile = Netcdf3File(filename)
-        val root = ncfile.rootGroup()
-        //println(root.cdlString())
-        //println("________")
+        val n3file = Netcdf3File(filename)
 
-        val headerClib = NCheader(filename)
-        val rootClib = headerClib.rootGroup.build(null)
+        val ncfile : Netcdf = NetcdfClibFile(filename)
 
         //println("actual = $root")
         //println("expect = $expect")
 
-        assertEquals(rootClib.cdlString(), root.cdlString())
+        assertEquals(ncfile.cdl(), n3file.cdl())
         // println(rootClib.cdlString())
     }
 

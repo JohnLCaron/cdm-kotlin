@@ -36,14 +36,18 @@ class N4dataTest {
         // readN4data("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_groups.nc")
     }
 
+
+    @Test
+    fun problem() {
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readN4data(filename: String) {
         println("=================")
         println(filename)
         val ncfile = NetcdfClibFile(filename)
-        val rootClib = ncfile.rootGroup()
-        println(rootClib.cdlString())
+        println(ncfile.cdl())
         /*
         val ncvars = rootClib.variables
         ncvars.forEach { n4var ->

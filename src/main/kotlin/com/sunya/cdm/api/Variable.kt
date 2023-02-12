@@ -31,27 +31,6 @@ data class Variable(
         return product
     }
 
-    fun cdlString(indent : Indent = Indent(2)) : String {
-        return buildString {
-            append("${indent}${dataType.cdlName} $name")
-            if (dimensions.isNotEmpty()) {
-                append("(")
-                dimensions.forEachIndexed { idx, it ->
-                    if (idx > 0) append(", ")
-                    append(it.name + "=" + it.length)
-                }
-                append(")")
-            }
-            append(";")
-            if (attributes.isNotEmpty()) {
-                append("\n")
-                attributes.forEach { append("${it.cdlString(indent.incrNew())}\n") }
-            } else {
-                append("\n")
-            }
-        }
-    }
-
     class Builder {
         var name : String? = null
         var dataType : DataType? = null

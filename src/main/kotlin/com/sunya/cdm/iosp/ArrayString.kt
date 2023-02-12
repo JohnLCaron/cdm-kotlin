@@ -19,7 +19,7 @@ class ArrayString(val values : Array<String>, val shape : IntArray) : ArrayTyped
  * If there is a null (zero) value in the array, the String will end there.
  * The null is not returned as part of the String.
  */
-fun ArrayByte.makeStringFromBytes(): String {
+fun ArrayUByte.makeStringFromBytes(): String {
     var count = 0
     for (c in this) {
         if (c.toInt() == 0) {
@@ -33,7 +33,7 @@ fun ArrayByte.makeStringFromBytes(): String {
         if (c.toInt() == 0) {
             break
         }
-        carr[idx++] = c
+        carr[idx++] = c.toByte()
     }
     return String(carr, StandardCharsets.UTF_8)
 }
@@ -45,7 +45,7 @@ fun ArrayByte.makeStringFromBytes(): String {
  *
  * @return Array of Strings of rank - 1.
  */
-fun ArrayByte.makeStringsFromBytes(): ArrayString {
+fun ArrayUByte.makeStringsFromBytes(): ArrayString {
     val rank = shape.size
     if (rank < 2) {
         return ArrayString(arrayOf(makeStringFromBytes()), intArrayOf(1))
