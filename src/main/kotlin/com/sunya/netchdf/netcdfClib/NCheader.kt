@@ -222,7 +222,7 @@ class NCheader(val filename: String) {
             // create the Variable
             val vb = Variable.Builder()
             vb.name = vname
-            vb.dataType = getDataType(typeid)
+            vb.datatype = getDatatype(typeid)
             vb.dimensions.addAll(g4.makeDimList(dimIds))
             vb.spObject = Vinfo(g4, varid, typeid)
 
@@ -254,16 +254,16 @@ class NCheader(val filename: String) {
             val attName: String = name_p.getUtf8String(0)
             val attType = type_p[C_INT, 0]
             val attLength = size_p[C_LONG, 0]
-            val dataType = getDataType(attType)
-            if (debug) println("  nc_inq_att $grpid $varid = $attName $dataType nelems=$attLength")
+            val datatype = getDatatype(attType)
+            if (debug) println("  nc_inq_att $grpid $varid = $attName $datatype nelems=$attLength")
 
             val userType = userTypes[attType]
             if (userType != null) {
                 result.add(readUserAttributeValues(session, grpid, varid, attName, userType, attLength))
             } else {
-                val attb = Attribute.Builder().setName(attName).setDataType(dataType)
+                val attb = Attribute.Builder().setName(attName).setDatatype(datatype)
                 if (attLength > 0) {
-                    attb.values = readAttributeValues(session, grpid, varid, attName, dataType, attLength)
+                    attb.values = readAttributeValues(session, grpid, varid, attName, datatype, attLength)
                 }
                 result.add(attb)
             }
@@ -272,10 +272,10 @@ class NCheader(val filename: String) {
         return result
     }
 
-    fun readAttributeValues(session: MemorySession, grpid : Int, varid : Int, attname : String, dataType : DataType, nelems : Long) : List<Any> {
+    fun readAttributeValues(session: MemorySession, grpid : Int, varid : Int, attname : String, datatype : Datatype, nelems : Long) : List<Any> {
         val name_p: MemorySegment = session.allocateUtf8String(attname)
-        when (dataType) {
-            DataType.BYTE -> {
+        when (datatype) {
+            Datatype.BYTE -> {
                 val val_p = session.allocate(nelems) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_schar", nc_get_att_schar(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Byte>()
@@ -286,7 +286,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.UBYTE -> {
+            Datatype.UBYTE -> {
                 val val_p = session.allocate(nelems) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_uchar", nc_get_att_uchar(grpid, varid, name_p, val_p))
                 val result = mutableListOf<UByte>()
@@ -297,14 +297,14 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.CHAR -> {
+            Datatype.CHAR -> {
                 val val_p = session.allocate(nelems+1) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_text", nc_get_att_text(grpid, varid, name_p, val_p))
                 val text: String = val_p.getUtf8String(0)
                 return listOf(text)
             }
 
-            DataType.DOUBLE -> {
+            Datatype.DOUBLE -> {
                 val val_p = session.allocateArray(C_DOUBLE, nelems)
                 checkErr("nc_get_att_double", nc_get_att_double(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Double>()
@@ -314,7 +314,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.FLOAT -> {
+            Datatype.FLOAT -> {
                 val val_p = session.allocateArray(C_FLOAT, nelems)
                 checkErr("nc_get_att_float", nc_get_att_float(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Float>()
@@ -324,7 +324,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.INT -> {
+            Datatype.INT -> {
                 val val_p = session.allocateArray(C_INT, nelems)
                 checkErr("nc_get_att_int", nc_get_att_int(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Int>()
@@ -334,7 +334,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.UINT -> {
+            Datatype.UINT -> {
                 val val_p = session.allocateArray(C_INT, nelems)
                 checkErr("nc_get_att_uint", nc_get_att_uint(grpid, varid, name_p, val_p))
                 val result = mutableListOf<UInt>()
@@ -344,7 +344,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.LONG -> {
+            Datatype.LONG -> {
                 val val_p = session.allocateArray(ValueLayout.JAVA_LONG as MemoryLayout, nelems)
                 checkErr("nc_get_att_longlong", nc_get_att_longlong(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Long>()
@@ -354,7 +354,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.ULONG -> {
+            Datatype.ULONG -> {
                 val val_p = session.allocateArray(ValueLayout.JAVA_LONG as MemoryLayout, nelems)
                 checkErr("nc_get_att_ulonglong", nc_get_att_ulonglong(grpid, varid, name_p, val_p))
                 val result = mutableListOf<ULong>()
@@ -364,7 +364,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.SHORT -> {
+            Datatype.SHORT -> {
                 val val_p = session.allocateArray(C_SHORT, nelems)
                 checkErr("nc_get_att_short", nc_get_att_short(grpid, varid, name_p, val_p))
                 val result = mutableListOf<Short>()
@@ -374,7 +374,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.USHORT -> {
+            Datatype.USHORT -> {
                 val val_p = session.allocateArray(C_SHORT, nelems)
                 checkErr("nc_get_att_ushort", nc_get_att_ushort(grpid, varid, name_p, val_p))
                 val result = mutableListOf<UShort>()
@@ -384,7 +384,7 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            DataType.STRING -> {
+            Datatype.STRING -> {
                 val strings_p : MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
                 /* for (i in 0 until nelems) {
                     // Allocate a string off-heap, then store a pointer to it
@@ -406,11 +406,11 @@ class NCheader(val filename: String) {
                 return result
             }
 
-            else -> throw RuntimeException("Unsupported attribute data type == $dataType")
+            else -> throw RuntimeException("Unsupported attribute data type == $datatype")
         }
     }
 
-    internal class ConvertedType internal constructor(val dt: DataType) {
+    internal class ConvertedType internal constructor(val dt: Datatype) {
         var isVlen = false
     }
 
@@ -435,27 +435,27 @@ class NCheader(val filename: String) {
 
     internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int)
 
-    fun getDataType(type: Int): DataType {
+    fun getDatatype(type: Int): Datatype {
         when (type) {
-            NC_BYTE() -> return DataType.BYTE
-            NC_CHAR() -> return DataType.CHAR
-            NC_SHORT()-> return DataType.SHORT
-            NC_INT() -> return DataType.INT
-            NC_FLOAT() -> return DataType.FLOAT
-            NC_DOUBLE() -> return DataType.DOUBLE
-            NC_UBYTE() -> return DataType.UBYTE
-            NC_USHORT() -> return DataType.USHORT
-            NC_UINT() -> return DataType.UINT
-            NC_INT64() -> return DataType.LONG
-            NC_UINT64() -> return DataType.ULONG
-            NC_STRING() -> return DataType.STRING
+            NC_BYTE() -> return Datatype.BYTE
+            NC_CHAR() -> return Datatype.CHAR
+            NC_SHORT()-> return Datatype.SHORT
+            NC_INT() -> return Datatype.INT
+            NC_FLOAT() -> return Datatype.FLOAT
+            NC_DOUBLE() -> return Datatype.DOUBLE
+            NC_UBYTE() -> return Datatype.UBYTE
+            NC_USHORT() -> return Datatype.USHORT
+            NC_UINT() -> return Datatype.UINT
+            NC_INT64() -> return Datatype.LONG
+            NC_UINT64() -> return Datatype.ULONG
+            NC_STRING() -> return Datatype.STRING
             else -> {
                 val userType: UserType = userTypes[type] ?: throw RuntimeException("Unsupported attribute data type == $type")
                 return when (userType.typeClass) {
                     NC_ENUM() -> userType.enumBaseType
-                    NC_OPAQUE() -> DataType.OPAQUE
-                    NC_VLEN() -> DataType.SEQUENCE
-                    NC_COMPOUND() -> DataType.STRUCTURE
+                    NC_OPAQUE() -> Datatype.OPAQUE
+                    NC_VLEN() -> Datatype.VLEN
+                    NC_COMPOUND() -> Datatype.COMPOUND
                     else -> throw RuntimeException("Unsupported attribute data type == $type")
                 }
             }

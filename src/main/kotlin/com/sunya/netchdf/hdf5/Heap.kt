@@ -18,38 +18,34 @@ internal class H5heap(val header: H5builder) {
      * Fetch a Vlen data array.
      *
      * @param globalHeapIdAddress address of the heapId, used to get the String out of the heap
-     * @param dataType type of data
+     * @param datatype type of data
      * @param endian byteOrder of the data (0 = BE, 1 = LE)
      * @return the Array read from the heap
      * @throws IOException on read error
      */
     @Throws(IOException::class)
-    fun getHeapDataArray(globalHeapIdAddress: Long, dataType: DataType, endian: ByteOrder?): Array<*> {
+    fun getHeapDataArray(globalHeapIdAddress: Long, datatype: Datatype, endian: ByteOrder?): Array<*> {
         val heapId: HeapIdentifier = readHeapIdentifier(globalHeapIdAddress)
-        return getHeapDataArray(heapId, dataType, endian)
+        return getHeapDataArray(heapId, datatype, endian)
     }
 
     @Throws(IOException::class)
-    fun getHeapDataArray(heapId: HeapIdentifier, dataType: DataType, endian: ByteOrder?): Array<*> {
+    fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype, endian: ByteOrder?): Array<*> {
         val ho = heapId.getHeapObject()
             ?: throw IllegalStateException("Illegal Heap address, HeapObject = $heapId")
 
-        val state = OpenFileState(ho.dataPos, endian?: ByteOrder.nativeOrder())
-        if (DataType.FLOAT === dataType) {
-            return raf.readArrayFloat(state, heapId.nelems)
-        } else if (DataType.DOUBLE === dataType) {
-            return raf.readArrayDouble(state, heapId.nelems)
-        } else if (dataType.primitiveClass == Byte::class.java) {
-            return raf.readArrayByte(state, heapId.nelems)
-        } else if (dataType.primitiveClass == Short::class.java) {
-            return raf.readArrayShort(state, heapId.nelems)
-        } else if (dataType.primitiveClass== Int::class.java) {
-            return raf.readArrayInt(state, heapId.nelems)
-        } else if (dataType.primitiveClass== Long::class.java) {
-            return raf.readArrayLong(state, heapId.nelems)
+        val state = OpenFileState(ho.dataPos, endian ?: ByteOrder.nativeOrder())
+        return when (datatype) {
+            Datatype.FLOAT -> raf.readArrayFloat(state, heapId.nelems)
+            Datatype.DOUBLE -> raf.readArrayDouble(state, heapId.nelems)
+            Datatype.BYTE -> raf.readArrayByte(state, heapId.nelems)
+            Datatype.SHORT -> raf.readArrayShort(state, heapId.nelems)
+            Datatype.INT -> raf.readArrayInt(state, heapId.nelems)
+            Datatype.LONG -> raf.readArrayLong(state, heapId.nelems)
+            else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
         }
-        throw UnsupportedOperationException("getHeapDataAsArray dataType=$dataType")
     }
+
 
     /**
      * Fetch a String from the heap.

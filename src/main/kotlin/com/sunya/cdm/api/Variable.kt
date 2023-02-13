@@ -3,15 +3,15 @@ package com.sunya.cdm.api
 data class Variable(
     val group : Group,
     val name: String,
-    val dataType: DataType,
+    val datatype: Datatype,
     val dimensions: List<Dimension>,
-    val attributes: List<com.sunya.cdm.api.Attribute>,
+    val attributes: List<Attribute>,
     val spObject: Any?,
 ) {
     val rank : Int = dimensions.size
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
     val nelems : Long = computeSize(this.shape)
-    val elementSize = dataType.size
+    val elementSize = datatype.size
 
     fun isUnlimited() = dimensions.isNotEmpty() &&
             dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
@@ -33,16 +33,16 @@ data class Variable(
 
     class Builder {
         var name : String? = null
-        var dataType : DataType? = null
+        var datatype : Datatype? = null
         val dimensions = mutableListOf<Dimension>()
-        val attributes = mutableListOf<com.sunya.cdm.api.Attribute>()
+        val attributes = mutableListOf<Attribute>()
         var spObject: Any? = null
 
         fun isUnlimited() = dimensions.isNotEmpty() &&
                 dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
         fun build(group : Group) : Variable {
-            return Variable(group, name!!, dataType!!, dimensions, attributes, spObject)
+            return Variable(group, name!!, datatype!!, dimensions, attributes, spObject)
         }
     }
 }

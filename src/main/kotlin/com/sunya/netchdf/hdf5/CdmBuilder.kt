@@ -9,6 +9,7 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.netcdf4.Netcdf4
 import java.io.IOException
+import java.lang.RuntimeException
 
 internal val includeOriginalAttributes = false
 internal val debugDimensionScales = true
@@ -22,7 +23,11 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     makeDimensions(groupb, group5)
 
-    group5.typedefs.forEach { groupb.typedefs.add(buildTypedef( it )) }
+    group5.typedefs.forEach {
+        val typedef = buildTypedef( it )
+        this.typedefMap[it.address] = typedef
+        groupb.typedefs.add(typedef)
+    }
 
     group5.attributes().forEach { groupb.addAttribute( buildAttribute( it )) }
 
@@ -43,26 +48,41 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
-    val h5type = H5Type(att5.mdt)
+    val typedef = this.typedefMap[att5.mdt.address]
+    val h5type = H5Type(att5.mdt, typedef)
     val values = this.readAttributeData(att5, h5type)
-    val useType = if (h5type.dataType == DataType.CHAR) DataType.STRING else h5type.dataType
+    val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     return Attribute(att5.name, useType, values)
 }
 
-internal fun buildTypedef(typedef5 : H5Typedef) : EnumTypedef {
-    require(typedef5.enumMessage.names.size == typedef5.enumMessage.nums.size)
+internal fun buildTypedef(typedef5: H5Typedef): Typedef {
+    return when (typedef5.kind) {
+        TypedefKind.Enum -> {
+            val mess = typedef5.enumMessage!!
+            require(mess.names.size == mess.nums.size)
+            val values = mutableMapOf<Int, String>()
+            mess.nums.onEachIndexed { idx, num -> values[num] = mess.names[idx] }
+            val h5type = H5Type(mess.base)
+            EnumTypedef(typedef5.dataObject.name!!, h5type.datatype, values)
+        }
 
-    val values = mutableMapOf<Int, String>()
-    typedef5.enumMessage.nums.onEachIndexed{idx, num -> values[num] = typedef5.enumMessage.names[idx]}
+        TypedefKind.Vlen -> {
+            val mess = typedef5.vlenMessage!!
+            val name = "${typedef5.dataObject.name!!}"
+            val h5type = H5Type(mess.base)
+            VlenTypedef(name, h5type.datatype)
+        }
 
-    val h5type = H5Type(typedef5.enumMessage.base)
-    return EnumTypedef(typedef5.dataObject.name!!, h5type.dataType, values)
+        else -> throw RuntimeException()
+    }
 }
 
 internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variable.Builder {
     val builder = Variable.Builder()
     builder.name = v5.name
-    builder.dataType = v5.dataType()
+    val typedef = this.typedefMap[v5.mdt.address]
+    val h5type = H5Type(v5.mdt, typedef)
+    builder.datatype = h5type.datatype
 
     if (v5.dimList != null) {
         v5.dimList!!.split(" ").forEach { dimName ->

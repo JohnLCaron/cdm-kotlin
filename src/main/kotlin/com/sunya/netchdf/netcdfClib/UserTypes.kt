@@ -1,7 +1,7 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.Attribute
-import com.sunya.cdm.api.DataType
+import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.EnumTypedef
 import com.sunya.cdm.api.Group
 import com.sunya.cdm.iosp.*
@@ -110,7 +110,8 @@ internal fun NCheader.readUserAttributeValues(session: MemorySession, grpid: Int
 internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
                                         userType: UserType
 ): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDataType(DataType.SEQUENCE)
+    val baseType = getDatatype(userType.baseTypeid)
+    val attb = Attribute.Builder().setName(attname).setDatatype(Datatype.VLEN)
 
     // fetch nelems of nc_vlen_t struct
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
@@ -123,8 +124,8 @@ internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, vari
         total += nc_vlen_t.getLength(vlen_p, index)
     }
 
-    val dataType = getDataType(userType.baseTypeid)
-    if (dataType == DataType.FLOAT) {
+    val datatype = getDatatype(userType.baseTypeid)
+    if (datatype == Datatype.FLOAT) {
         val parray = mutableListOf<Float>()
         for (elem in 0 until nelems) {
             val count = nc_vlen_t.getLength(vlen_p, elem)
@@ -143,7 +144,7 @@ internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, vari
 @Throws(IOException::class)
 private fun readOpaqueAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long, userType: UserType
 ): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDataType(DataType.OPAQUE)
+    val attb = Attribute.Builder().setName(attname).setDatatype(Datatype.OPAQUE)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val val_p = session.allocate(nelems * userType.size)
@@ -159,7 +160,7 @@ private fun readOpaqueAttValues(session: MemorySession, grpid: Int, varid: Int, 
 
 @Throws(IOException::class)
 private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long, userType: UserType): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDataType(userType.enumBaseType)
+    val attb = Attribute.Builder().setName(attname).setDatatype(userType.enumBaseType)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val val_p = session.allocate(nelems)
@@ -173,9 +174,9 @@ private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid
     val map = userType.enumTypdef!!.values
     for (i in 0 until nelems.toInt()) {
         val num = when (userType.enumBasePrimitiveType) {
-            DataType.UBYTE -> bb.get(i).toUByte().toInt()
-            DataType.USHORT -> bb.getShort(i).toUShort().toInt()
-            DataType.UINT -> bb.getInt(i)
+            Datatype.UBYTE -> bb.get(i).toUByte().toInt()
+            Datatype.USHORT -> bb.getShort(i).toUShort().toInt()
+            Datatype.UINT -> bb.getInt(i)
             else -> throw RuntimeException("convertEnums unknown type = ${userType.enumBasePrimitiveType}")
         }
         val s = map[num] ?: throw RuntimeException("convertEnums unknown num = ${num}")
@@ -211,14 +212,14 @@ internal class UserType(session: MemorySession,
         return this
     }
 
-    val enumBaseType: DataType
+    val enumBaseType: Datatype
         get() {
             // set the enum's basetype
             if (baseTypeid in 1..NC_MAX_ATOMIC_TYPE()) {
                 val cdmtype = when (baseTypeid) {
-                    NC_CHAR(), NC_UBYTE(), NC_BYTE() -> DataType.ENUM1
-                    NC_USHORT(), NC_SHORT() -> DataType.ENUM2
-                    NC_UINT(), NC_INT() -> DataType.ENUM4
+                    NC_CHAR(), NC_UBYTE(), NC_BYTE() -> Datatype.ENUM1
+                    NC_USHORT(), NC_SHORT() -> Datatype.ENUM2
+                    NC_UINT(), NC_INT() -> Datatype.ENUM4
                     else -> throw RuntimeException("enumBaseType illegal = $baseTypeid")
                 }
                 return cdmtype
@@ -226,14 +227,14 @@ internal class UserType(session: MemorySession,
             throw RuntimeException("enumBaseType illegal = $baseTypeid")
         }
 
-    val enumBasePrimitiveType: DataType
+    val enumBasePrimitiveType: Datatype
         get() {
             // set the enum's basetype
             if (baseTypeid in 1..NC_MAX_ATOMIC_TYPE()) {
                 val cdmtype = when (baseTypeid) {
-                    NC_CHAR(), NC_UBYTE(), NC_BYTE() -> DataType.UBYTE
-                    NC_USHORT(), NC_SHORT() -> DataType.USHORT
-                    NC_UINT(), NC_INT() -> DataType.UINT
+                    NC_CHAR(), NC_UBYTE(), NC_BYTE() -> Datatype.UBYTE
+                    NC_USHORT(), NC_SHORT() -> Datatype.USHORT
+                    NC_UINT(), NC_INT() -> Datatype.UINT
                     else -> throw RuntimeException("enumBaseType illegal = $baseTypeid")
                 }
                 return cdmtype

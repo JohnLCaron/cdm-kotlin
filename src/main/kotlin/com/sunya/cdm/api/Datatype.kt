@@ -7,9 +7,9 @@ import java.util.*
  * @param size Size in bytes of one element of this data type, Strings = 0, Structures = 1
  * @param primitiveClass The primitive class type, inverse of forPrimitiveClass()
  * @param signed only needed for integral types
- * @param base used for ENUM, VLEN
+ * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  */
-data class Datatype(val cdlName: String, val size: Int, val base : Datatype? = null) {
+data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null) {
 
     companion object {
         val BYTE = Datatype("byte", 1)
@@ -24,10 +24,9 @@ data class Datatype(val cdlName: String, val size: Int, val base : Datatype? = n
         val UINT = Datatype("uint", 4)
         val ULONG = Datatype("uint64", 8)
 
-        val ENUM = Datatype("enum", 4)
-        val ENUM1 = Datatype("ubyte enum", 1, UBYTE)
-        val ENUM2 = Datatype("ushort enum", 2, USHORT)
-        val ENUM4 = Datatype("uint enum", 4, UINT)
+        val ENUM1 = Datatype("ubyte enum", 1)
+        val ENUM2 = Datatype("ushort enum", 2)
+        val ENUM4 = Datatype("uint enum", 4)
 
         //// object types are variable length; inside a structure, they have 32 bit indices onto a heap
         val STRING = Datatype("string", 4)
@@ -35,7 +34,7 @@ data class Datatype(val cdlName: String, val size: Int, val base : Datatype? = n
         val OPAQUE = Datatype("opaque", 4)
         val VLEN = Datatype("vlen", 4)
     }
-    
+
     override fun toString(): String {
         return cdlName
     }
@@ -72,6 +71,23 @@ data class Datatype(val cdlName: String, val size: Int, val base : Datatype? = n
         }
     }
 
-    fun withBase(base: Datatype) : Datatype = this.copy(base = base)
+    fun withTypedef(typedef : Typedef) : Datatype = this.copy(typedef = typedef)
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Datatype
+
+        if (cdlName != other.cdlName) return false
+        if (size != other.size) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = cdlName.hashCode()
+        result = 31 * result + size
+        return result
+    }
 
 }

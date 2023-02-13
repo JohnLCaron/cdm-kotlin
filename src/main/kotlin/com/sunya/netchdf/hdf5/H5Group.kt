@@ -1,6 +1,9 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.DataType
+import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Dimension
+import com.sunya.cdm.api.TypedefKind
 import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
@@ -196,12 +199,13 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
         }
         val local = dataObject!!
         if (local.groupMessage != null || local.groupNewMessage != null) {
+            // has a group message
             isGroup = true
         } else if (local.mdt != null && local.mdl != null) {
+            // has a Datatype and a DataLayout message
             isVariable = true
-        //} else if (local.mdt!!.type == Datatype5.Opaque) {
-        //    isVariable = true
-        } else if (local.mdt!!.type == Datatype5.Enumerated) {
+        } else if (local.mdt != null) {
+            // has only a Datatype
             isTypedef = true
         } else {
             // see /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4 = opaque typedef
@@ -222,8 +226,6 @@ internal class H5GroupBuilder(
     val dataObject: DataObject,
     val nestedObjects : MutableList<DataObjectFacade> = mutableListOf()
 ) {
-    val dimMap = mutableMapOf<String, Dimension>()
-    val dimList = mutableListOf<Dimension>() // need to track dimension order
     val nestedGroupsBuilders = mutableListOf<H5GroupBuilder>()
 
 
@@ -249,12 +251,12 @@ internal class H5GroupBuilder(
 
                 // if it has a Datatype and a StorageLayout, then its a Variable
             } else if (nested.isVariable) {
-                variables.add(H5Variable(nested.dataObject!!))
+                variables.add(H5Variable(header, nested.dataObject!!))
 
                 // if it has only a Datatype, its a Typedef
             } else if (nested.isTypedef) {
-                typedefs.add(H5Typedef(nested.dataObject!!))
-
+                val typedef = H5Typedef(nested.dataObject!!)
+                typedefs.add(typedef)
             }
         }
 
@@ -265,12 +267,11 @@ internal class H5GroupBuilder(
     }
 }
 
-internal class H5Variable(val dataObject: DataObject) {
+internal class H5Variable(val header : H5builder, val dataObject: DataObject) {
     val mdt : DatatypeMessage = dataObject.mdt!!
     val mdl : DataLayoutMessage = dataObject.mdl!!
     val mds : DataspaceMessage = dataObject.mds!!
     val name = dataObject.name!!
-    val h5type = H5Type(mdt)
 
     // used in CdmBuilder
     var is2DCoordinate = false
@@ -279,20 +280,43 @@ internal class H5Variable(val dataObject: DataObject) {
     var isVariable = true
 
     fun attributes() : MutableIterable<AttributeMessage> = dataObject.attributes
-    fun dataType() = h5type.dataType
     fun removeAtt(att : AttributeMessage) = dataObject.attributes.remove(att)
 }
 
 internal class H5Typedef(val dataObject: DataObject) {
-    val enumMessage : DatatypeEnum
+    var enumMessage : DatatypeEnum? = null
+    var vlenMessage : DatatypeVlen? = null
+    var opaqueMessage : DatatypeOpaque? = null
+    var compoundMessage : DatatypeCompound? = null
+
+    val kind : TypedefKind
+    val address : Long
 
     init {
-        if (dataObject.mdt!!.type != Datatype5.Enumerated) {
-            throw RuntimeException("H5Typedef ${dataObject.mdt!!.type}")
-        }
         require(dataObject.mdt != null && dataObject.mdl == null)
-        require(dataObject.mdt!!.type == Datatype5.Enumerated)
-        this.enumMessage = (dataObject.mdt!!) as DatatypeEnum
+        address = dataObject.mdt!!.address
+
+        when (dataObject.mdt!!.type) {
+            Datatype5.Enumerated -> {
+                this.enumMessage = (dataObject.mdt!!) as DatatypeEnum
+                kind = TypedefKind.Enum
+            }
+            Datatype5.Vlen -> {
+                this.vlenMessage = (dataObject.mdt!!) as DatatypeVlen
+                kind = TypedefKind.Vlen
+            }
+            Datatype5.Opaque -> {
+                this.opaqueMessage = (dataObject.mdt!!) as DatatypeOpaque
+                kind = TypedefKind.Opaque
+            }
+            Datatype5.Compound -> {
+                this.compoundMessage = (dataObject.mdt!!) as DatatypeCompound
+                kind = TypedefKind.Compound
+            }
+            else -> {
+                kind = TypedefKind.Unknown
+            }
+        }
     }
 }
 

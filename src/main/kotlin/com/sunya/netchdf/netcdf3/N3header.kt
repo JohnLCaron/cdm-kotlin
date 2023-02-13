@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets
 import java.util.*
 import mu.KotlinLogging
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.DataType.*
+import com.sunya.cdm.api.Datatype.*
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import java.nio.ByteOrder
@@ -121,8 +121,8 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
     if (unlimitedVariables.size == 1) {
       val uvar = unlimitedVariables[0]
-      val dtype = uvar.dataType
-      if (dtype === CHAR || dtype === BYTE || dtype === SHORT) {
+      val dtype = uvar.datatype
+      if (dtype == Datatype.CHAR || dtype == Datatype.BYTE || dtype == Datatype.SHORT) {
         var vsize = dtype.size // works for all netcdf-3 data types
         val dims: List<Dimension> = uvar.dimensions
         for (curDim in dims) {
@@ -246,8 +246,8 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
       // data type
       val type: Int = raf.readInt(filePos)
-      val dataType = getDataType(type)
-      ncvarb.dataType = dataType
+      val datatype = getDatatype(type)
+      ncvarb.datatype = datatype
 
       // size and beginning data position in file
       val vsize = raf.readInt(filePos)
@@ -256,11 +256,11 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
         debugOut.format(
           " name= $name type=$type vsize=$vsize velems=$velems begin=$begin isRecord=$isRecord attsPos=$varAttsPos\n"
         )
-        val calcVsize: Long = (velems + padding(velems)) * dataType.size
+        val calcVsize: Long = (velems + padding(velems)) * datatype.size
         if (vsize.toLong() != calcVsize) debugOut.format(" *** readVsize $vsize != calcVsize $calcVsize\n")
       }
       //if (vsize < 0) { // when does this happen ?? streaming i think
-      //  vsize = (velems.toInt() + padding(velems)) * dataType.size
+      //  vsize = (velems.toInt() + padding(velems)) * datatype.size
       //}
       val vinfo = Vinfo(name, vsize, begin, isRecord, varAttsPos.toULong())
       ncvarb.spObject = vinfo
@@ -322,10 +322,10 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       } else {
         debugOut?.format(" begin read val ${filePos.pos}\n")
         val nelems: Int = raf.readInt(filePos)
-        val dtype: DataType = getDataType(type)
+        val dtype: Datatype = getDatatype(type)
         val builder = Attribute.Builder()
         builder.name = name
-        builder.dataType = dtype
+        builder.datatype = dtype
         if (nelems > 0) {
           val nbytes = readAttributeArray(dtype, nelems, builder)
           skipToBoundary(nbytes)
@@ -340,34 +340,34 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   }
 
   @Throws(IOException::class)
-  fun readAttributeArray(type: DataType, nelems: Int, attBuilder: Attribute.Builder): Int {
+  fun readAttributeArray(type: Datatype, nelems: Int, attBuilder: Attribute.Builder): Int {
     when (type) {
-      CHAR, BYTE -> {
+      Datatype.CHAR, Datatype.BYTE -> {
         attBuilder.values = raf.readArrayByte(filePos, nelems).asList()
         return nelems
       }
 
-      SHORT -> {
+      Datatype.SHORT -> {
         attBuilder.values = raf.readArrayShort(filePos, nelems).asList()
         return 2 * nelems
       }
 
-      INT -> {
+      Datatype.INT -> {
         attBuilder.values = raf.readArrayInt(filePos, nelems).asList()
         return 4 * nelems
       }
 
-      FLOAT -> {
+      Datatype.FLOAT -> {
         attBuilder.values = raf.readArrayFloat(filePos, nelems).asList()
         return 4 * nelems
       }
 
-      DOUBLE -> {
+      Datatype.DOUBLE -> {
         attBuilder.values = raf.readArrayDouble(filePos, nelems).asList()
         return 8 * nelems
       }
 
-      LONG -> {
+      Datatype.LONG -> {
         attBuilder.values = raf.readArrayLong(filePos, nelems).asList()
         return 8 * nelems
       }
@@ -488,14 +488,14 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       return pad
     }
 
-    fun getDataType(type: Int): DataType {
+    fun getDatatype(type: Int): Datatype {
       return when (type) {
-        1 -> BYTE
-        2 -> CHAR
-        3 -> SHORT
-        4 -> INT
-        5 -> FLOAT
-        6 -> DOUBLE
+        1 -> Datatype.BYTE
+        2 -> Datatype.CHAR
+        3 -> Datatype.SHORT
+        4 -> Datatype.INT
+        5 -> Datatype.FLOAT
+        6 -> Datatype.DOUBLE
         else -> throw IllegalArgumentException("unknown type == $type")
       }
     }

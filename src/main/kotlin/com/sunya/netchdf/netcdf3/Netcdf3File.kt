@@ -44,28 +44,28 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
         val values = raf.readByteBuffer(filePos, nbytes.toInt())
 
-        when (v2.dataType) {
-            DataType.CHAR, DataType.BYTE -> {
+        when (v2.datatype) {
+            Datatype.CHAR, Datatype.BYTE -> {
                 return ArrayByte(values, v2.shape)
             }
 
-            DataType.SHORT -> {
+            Datatype.SHORT -> {
                 return ArrayShort(values.asShortBuffer(), v2.shape)
             }
 
-            DataType.INT -> {
+            Datatype.INT -> {
                 return ArrayInt(values.asIntBuffer(), v2.shape)
             }
 
-            DataType.FLOAT -> {
+            Datatype.FLOAT -> {
                 return ArrayFloat(values.asFloatBuffer(), v2.shape)
             }
 
-            DataType.DOUBLE -> {
+            Datatype.DOUBLE -> {
                 return ArrayDouble(values.asDoubleBuffer(), v2.shape)
             }
 
-            DataType.LONG -> {
+            Datatype.LONG -> {
                 return ArrayLong(values.asLongBuffer(), v2.shape)
             }
             else -> throw IllegalArgumentException()
@@ -80,8 +80,8 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
         val values = ByteBuffer.allocate( nbytes.toInt())
 
-        when (v2.dataType) {
-            DataType.CHAR, DataType.BYTE -> {
+        when (v2.datatype) {
+            Datatype.CHAR, Datatype.BYTE -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos
@@ -93,7 +93,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             }
 
 
-            DataType.DOUBLE, DataType.LONG -> {
+            Datatype.DOUBLE, Datatype.LONG -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos
@@ -101,11 +101,11 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem.toInt(),8 * chunk.nelems);
                 }
-                return if (v2.dataType == DataType.LONG) ArrayLong(values.asLongBuffer(), v2.shape) else
+                return if (v2.datatype == Datatype.LONG) ArrayLong(values.asLongBuffer(), v2.shape) else
                     ArrayDouble(values.asDoubleBuffer(), v2.shape)
             }
 
-            DataType.FLOAT, DataType.INT -> {
+            Datatype.FLOAT, Datatype.INT -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos
@@ -113,11 +113,11 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem.toInt(),4 * chunk.nelems);
                 }
-                return if (v2.dataType == DataType.INT) ArrayInt(values.asIntBuffer(), v2.shape) else
+                return if (v2.datatype == Datatype.INT) ArrayInt(values.asIntBuffer(), v2.shape) else
                     ArrayFloat(values.asFloatBuffer(), v2.shape)
             }
 
-            DataType.SHORT-> {
+            Datatype.SHORT-> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos
@@ -128,7 +128,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                 return ArrayShort(values.asShortBuffer(), v2.shape)
             }
 
-            else -> throw IllegalArgumentException("dataType ${v2.dataType}")
+            else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }
 }

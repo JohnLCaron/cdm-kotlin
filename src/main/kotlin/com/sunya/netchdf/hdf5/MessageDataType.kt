@@ -40,7 +40,7 @@ enum class Datatype5(val num : Int) {
 /**
  * @param elemSize The size of a datatype element in bytes.
  */
-open class DatatypeMessage(val type: Datatype5, val elemSize: Int, val endian: ByteOrder?) :
+open class DatatypeMessage(val address : Long, val type: Datatype5, val elemSize: Int, val endian: ByteOrder?) :
     MessageHeader(MessageType.Datatype) {
     open fun unsigned() = false
     open fun endian() = endian?: ByteOrder.LITTLE_ENDIAN
@@ -50,27 +50,27 @@ open class DatatypeMessage(val type: Datatype5, val elemSize: Int, val endian: B
     }
 }
 
-open class DatatypeFixed(elemSize: Int, endian: ByteOrder, val unsigned: Boolean) :
-    DatatypeMessage(Datatype5.Fixed, elemSize, endian) {
+open class DatatypeFixed(address : Long, elemSize: Int, endian: ByteOrder, val unsigned: Boolean) :
+    DatatypeMessage(address, Datatype5.Fixed, elemSize, endian) {
     override fun unsigned() = unsigned
     override fun show() : String {
         return "$type elemSize=$elemSize"
     }
 }
 
-class DatatypeFloating(elemSize: Int, endian: ByteOrder) : DatatypeMessage(Datatype5.Floating, elemSize, endian)
+class DatatypeFloating(address : Long, elemSize: Int, endian: ByteOrder) : DatatypeMessage(address, Datatype5.Floating, elemSize, endian)
 
-class DatatypeTime(elemSize: Int, endian: ByteOrder) : DatatypeMessage(Datatype5.Time, elemSize, endian)
+class DatatypeTime(address : Long, elemSize: Int, endian: ByteOrder) : DatatypeMessage(address, Datatype5.Time, elemSize, endian)
 
-class DatatypeString(elemSize: Int) : DatatypeMessage(Datatype5.String, elemSize, null)
+class DatatypeString(address : Long, elemSize: Int) : DatatypeMessage(address, Datatype5.String, elemSize, null)
 
-class DatatypeBitField(elemSize: Int, endian: ByteOrder, unsigned: Boolean, val bitOffset : Short,
-                       val bitPrecision : Short) : DatatypeFixed(elemSize, endian, unsigned)
+class DatatypeBitField(address : Long, elemSize: Int, endian: ByteOrder, unsigned: Boolean, val bitOffset : Short,
+                       val bitPrecision : Short) : DatatypeFixed(address, elemSize, endian, unsigned)
 
-class DatatypeOpaque(elemSize: Int, val desc: String) : DatatypeMessage(Datatype5.Opaque, elemSize, null)
+class DatatypeOpaque(address : Long, elemSize: Int, val desc: String) : DatatypeMessage(address, Datatype5.Opaque, elemSize, null)
 
-class DatatypeCompound(elemSize: Int, val members: List<StructureMember5>) :
-    DatatypeMessage(Datatype5.Compound, elemSize, null) {
+class DatatypeCompound(address : Long, elemSize: Int, val members: List<StructureMember5>) :
+    DatatypeMessage(address, Datatype5.Compound, elemSize, null) {
     override fun show() : String {
         return "$type elemSize=$elemSize"
     }
@@ -85,14 +85,15 @@ class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessa
  *  0) Object Reference: A reference to another object in this HDF5 file.
  *  1) Dataset Region Reference: A reference to a region within a dataset in this HDF5 file.
  */
-class DatatypeReference(elemSize: Int, val referenceType: Int) : DatatypeMessage(Datatype5.Reference, elemSize, null)
+class DatatypeReference(address : Long, elemSize: Int, val referenceType: Int) : DatatypeMessage(address, Datatype5.Reference, elemSize, null)
 
 class DatatypeEnum(
+    address : Long,
     elemSize: Int,
     val base: DatatypeMessage,
     val names: List<String>,
     val nums: List<Int>
-) : DatatypeMessage(Datatype5.Enumerated, elemSize, null) {
+) : DatatypeMessage(address, Datatype5.Enumerated, elemSize, null) {
 
     val valueMap = lazy {
         require(names.size == nums.size)
@@ -106,15 +107,15 @@ class DatatypeEnum(
     }
 }
 
-class DatatypeVlen(elemSize: Int, val base: DatatypeMessage, val isVString: Boolean) :
-    DatatypeMessage(Datatype5.Vlen, elemSize, null) {
+class DatatypeVlen(address : Long, elemSize: Int, val base: DatatypeMessage, val isVString: Boolean) :
+    DatatypeMessage(address, Datatype5.Vlen, elemSize, null) {
     override fun show() : String {
         return "$type elemSize=$elemSize base=(${base.show()}) isVString=$isVString"
     }
 }
 
-class DatatypeArray(elemSize: Int, val base: DatatypeMessage, val dims: IntArray) :
-    DatatypeMessage(Datatype5.Array, elemSize, null) {
+class DatatypeArray(address : Long, elemSize: Int, val base: DatatypeMessage, val dims: IntArray) :
+    DatatypeMessage(address, Datatype5.Array, elemSize, null) {
     override fun show() : String {
         return "$type elemSize=$elemSize base=(${base.show()}) dims=${dims.contentToString()}"
     }
@@ -124,6 +125,7 @@ class DatatypeArray(elemSize: Int, val base: DatatypeMessage, val dims: IntArray
 
 @Throws(IOException::class)
 fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
+    val address = state.pos
     val tandv = raf.readByte(state).toInt()
     val type = tandv and 0xf // lower 4 bits
     val version = tandv and 0xf0 shr 4 // upper 4 bits
@@ -140,7 +142,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             //    {"bitOffset $bitOffset should be 0, bitPrecision $bitPrecision should be multiple of 8"}
             val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
             val unsigned = (flags0 and 8 == 0)
-            return DatatypeFixed(elemSize, endian, unsigned)
+            return DatatypeFixed(address, elemSize, endian, unsigned)
         }
 
         1 -> {
@@ -154,21 +156,21 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             val expBias = raf.readInt(state)
             val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
             val unsigned = (flags0 and 8 == 0)
-            return DatatypeFloating(elemSize, endian)
+            return DatatypeFloating(address, elemSize, endian)
         }
 
         2 -> {
             // LOOK no units, worthless, assume its integral
             val bitPrecision = raf.readInt(state)
             val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
-            return DatatypeTime(elemSize, endian)
+            return DatatypeTime(address, elemSize, endian)
         }
 
         3 -> {
             // could also store padding type and character set.
             // padding : always check for zero termination.
             // character set, ASCII < UTF8, so always use UTF8
-            return DatatypeString(elemSize)
+            return DatatypeString(address, elemSize)
         }
 
         4 -> {
@@ -177,13 +179,13 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             val endian = if (flags0 and 1 == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
             val unsigned = (flags0 and 8 == 0)
             // LOOK bitOffset, bitPrecision, to support packing ??
-            return DatatypeBitField(elemSize, endian, unsigned, bitOffset, bitPrecision)
+            return DatatypeBitField(address, elemSize, endian, unsigned, bitOffset, bitPrecision)
         }
 
         5 -> {
             val len = flags0
             val desc = raf.readString(state, len)
-            return DatatypeOpaque(elemSize, desc)
+            return DatatypeOpaque(address, elemSize, desc)
         }
 
         6 -> {
@@ -193,12 +195,12 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             for (i in 0 until nmembers) {
                 members.add(this.readStructureMember(state, version, elemSize))
             }
-            return DatatypeCompound(elemSize, members)
+            return DatatypeCompound(address, elemSize, members)
         }
 
         7 -> {
             val referenceType = flags0 and 0xf
-            return DatatypeReference(elemSize, referenceType)
+            return DatatypeReference(address, elemSize, referenceType)
         }
 
         8 -> {
@@ -221,7 +223,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             // LOOK since we've switched to tstate, the state position isnt updated. but we can igmore since this is the
             //  last field in the message
 
-            return DatatypeEnum(elemSize, base, enumNames, enumNums)
+            return DatatypeEnum(address, elemSize, base, enumNames, enumNums)
         }
 
         9 -> {
@@ -229,7 +231,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             val base = this.readDatatypeMessage(state)
             // TODO padding and charset
 
-            return DatatypeVlen(elemSize, base, isVString)
+            return DatatypeVlen(address, elemSize, base, isVString)
         }
 
         10 -> {
@@ -247,7 +249,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             }
 
             val base = this.readDatatypeMessage(state)
-            return DatatypeArray(elemSize, base, dim)
+            return DatatypeArray(address, elemSize, base, dim)
         }
 
         else -> throw RuntimeException("Unimplemented Datatype = $type")

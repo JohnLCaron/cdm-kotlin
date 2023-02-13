@@ -3,6 +3,9 @@ package com.sunya.netchdf.hdf5
 import com.sunya.cdm.api.*
 import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.*
+import com.sunya.cdm.util.unsignedByteToShort
+import com.sunya.cdm.util.unsignedIntToLong
+import com.sunya.cdm.util.unsignedShortToInt
 import mu.KotlinLogging
 import java.io.IOException
 import java.nio.*
@@ -33,10 +36,11 @@ class H5builder(val raf: OpenFile,
 
     var isNetcdf4 = false
     private val h5rootGroup : H5Group
-    internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>()
-
+    
+    internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
-    private val dataObjectMap = mutableMapOf<Long, DataObject>()
+    private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
+    internal val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
 
     val cdmRoot : Group
 
@@ -302,12 +306,12 @@ class H5builder(val raf: OpenFile,
     fun readVariableSizeUnsigned(state : OpenFileState, size: Int): Long {
         val vv: Long
         if (size == 1) {
-            vv = DataType.unsignedByteToShort(raf.readByte(state)).toLong()
+            vv = unsignedByteToShort(raf.readByte(state)).toLong()
         } else if (size == 2) {
             val s = raf.readShort(state)
-            vv = DataType.unsignedShortToInt(s).toLong()
+            vv = unsignedShortToInt(s).toLong()
         } else if (size == 4) {
-            vv = DataType.unsignedIntToLong(raf.readInt(state))
+            vv = unsignedIntToLong(raf.readInt(state))
         } else if (size == 8) {
             vv = raf.readLong(state)
         } else {
