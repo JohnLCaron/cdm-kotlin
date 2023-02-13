@@ -36,7 +36,7 @@ class H5builder(val raf: OpenFile,
 
     var isNetcdf4 = false
     private val h5rootGroup : H5Group
-    
+
     internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
