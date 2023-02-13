@@ -5,12 +5,13 @@ import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.reflect.KClass
 
 class H5reader(val header: H5builder) {
     val raf = header.raf
 
     @Throws(IOException::class)
-    fun readData(state: OpenFileState, layout: Layout, dataType: DataType, shape : IntArray): ArrayTyped<*> {
+    fun readData(state: OpenFileState, layout: Layout, datatype: Datatype, shape : IntArray): ArrayTyped<*> {
         val sizeBytes = Section(shape).computeSize().toInt() * layout.elemSize
         val bb = ByteBuffer.allocate(sizeBytes)
         bb.order(state.byteOrder)
@@ -21,27 +22,27 @@ class H5reader(val header: H5builder) {
         }
         bb.position(0)
 
-        val result = when (dataType) {
-            DataType.BYTE -> ArrayByte(bb, shape)
-            DataType.CHAR, DataType.UBYTE, DataType.ENUM1 -> ArrayUByte(bb, shape)
-            DataType.SHORT -> ArrayShort(bb.asShortBuffer(), shape)
-            DataType.USHORT, DataType.ENUM2 -> ArrayUShort(bb.asShortBuffer(), shape)
-            DataType.INT, DataType.ENUM4 -> ArrayInt(bb.asIntBuffer(), shape)
-            DataType.UINT -> ArrayUInt(bb.asIntBuffer(), shape)
-            DataType.FLOAT -> ArrayFloat(bb.asFloatBuffer(), shape)
-            DataType.DOUBLE -> ArrayDouble(bb.asDoubleBuffer(), shape)
-            DataType.LONG -> ArrayLong(bb.asLongBuffer(), shape)
-            DataType.ULONG -> ArrayULong(bb.asLongBuffer(), shape)
-            DataType.OPAQUE -> ArrayByte(bb, shape)
-            else -> throw IllegalStateException("unimplemented type= $dataType")
+        val result = when (datatype) {
+            Datatype.BYTE -> ArrayByte(bb, shape)
+            Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(bb, shape)
+            Datatype.SHORT -> ArrayShort(bb.asShortBuffer(), shape)
+            Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(bb.asShortBuffer(), shape)
+            Datatype.INT, Datatype.ENUM4 -> ArrayInt(bb.asIntBuffer(), shape)
+            Datatype.UINT -> ArrayUInt(bb.asIntBuffer(), shape)
+            Datatype.FLOAT -> ArrayFloat(bb.asFloatBuffer(), shape)
+            Datatype.DOUBLE -> ArrayDouble(bb.asDoubleBuffer(), shape)
+            Datatype.LONG -> ArrayLong(bb.asLongBuffer(), shape)
+            Datatype.ULONG -> ArrayULong(bb.asLongBuffer(), shape)
+            Datatype.OPAQUE -> ArrayOpaque(bb, shape)
+            else -> throw IllegalStateException("unimplemented type= $datatype")
         }
         // convert to array of Strings by reducing rank by 1
-        if (dataType == DataType.CHAR) {
+        if (datatype == Datatype.CHAR) {
             return (result as ArrayUByte).makeStringsFromBytes()
         }
 
         /*
-        else if (dataType.primitiveClass == StructureData::class.java) {
+        else if (datatype.primitiveClass == StructureData::class.java) {
             val recsize: Int = layout.getElemSize()
             while (layout.hasNext()) {
                 val chunk: Layout.Chunk = layout.next()
@@ -50,7 +51,7 @@ class H5reader(val header: H5builder) {
                 raf.readFully(pa, chunk.destElem * recsize, chunk.nelems * recsize)
             }
             return pa
-        } else if (dataType.primitiveClass == String::class.java) {
+        } else if (datatype.primitiveClass == String::class.java) {
             val size = layout.getTotalNelems() as Int
             val elemSize: Int = layout.getElemSize()
             val sb = StringBuilder(size)
@@ -95,7 +96,7 @@ internal fun H5builder.readAttributeData(
 
     var shape: IntArray = matt.mds.dims
 
-    var readDtype: DataType = h5type.dataType
+    var readDtype: Datatype = h5type.datatype
     var endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
@@ -110,7 +111,7 @@ internal fun H5builder.readAttributeData(
 
     } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
         val baseInfo = h5type.base!!
-        readDtype = baseInfo.dataType
+        readDtype = baseInfo.datatype
         endian = baseInfo.endian
     }
 
@@ -120,7 +121,27 @@ internal fun H5builder.readAttributeData(
     val h5reader = H5reader(this)
     val dataArray = h5reader.readData(state, layout, readDtype, shape)
 
+    // convert attributes to enum strings
+    if (h5type.hdfType == Datatype5.Enumerated) {
+        // hopefully this is shared and not replicated
+        val enumMsg = matt.mdt as DatatypeEnum
+        return convertEnums(enumMsg.valueMap.value, dataArray)
+    }
+
     return dataArray.toList()
+}
+
+internal fun convertEnums(map: Map<Int, String>, values: ArrayTyped<*>): List<String> {
+    val wtf : KClass<out ArrayTyped<*>> = values::class // LOOK is there something simpler ?
+    return values.map {
+        val num = when (wtf.simpleName) {
+           "ArrayUByte" ->  (it as UByte).toInt()
+           "ArrayUShort" ->  (it as UShort).toInt()
+           "ArrayUInt" ->  (it as UInt).toInt()
+            else -> RuntimeException("unknown ${wtf.simpleName}")
+        }
+        map[num] ?: "Unknown enum number=$it"
+    }
 }
 
 internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) : List<*> {
@@ -141,7 +162,7 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) 
             { it -> (this@readCompoundData).convertReferenceToDataObjectName(it) }
         else null
 
-        H5StructureMember(sm5.name, memberType.dataType, sm5.offset, nelems, memberType.hdfType, lamda)
+        H5StructureMember(sm5.name, memberType.datatype, sm5.offset, nelems, memberType.hdfType, lamda)
     }
     val members = StructureMembers(ms)
 
@@ -150,9 +171,9 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) 
     return sdataArray.toList()
 }
 
-internal class H5StructureMember(name: String, dataType : DataType, offset: Int, nelems : Int,
+internal class H5StructureMember(name: String, datatype : Datatype, offset: Int, nelems : Int,
                                  val hdfType: Datatype5, val lamda: ((Long) -> String)?)
-    : StructureMember(name, dataType, offset, nelems) {
+    : StructureMember(name, datatype, offset, nelems) {
 
     override fun value(sdata : StructureData) : Any {
         if (hdfType == Datatype5.Reference && lamda != null) {
@@ -188,9 +209,9 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : Li
     // Vlen (non-String)
     else {
         var endian: ByteOrder? = h5type.endian
-        var readType: DataType = h5type.dataType
+        var readType: Datatype = h5type.datatype
         if (h5type.base!!.hdfType == Datatype5.Reference) { // reference
-            readType = DataType.LONG
+            readType = Datatype.LONG
             endian = ByteOrder.LITTLE_ENDIAN // apparently always LE
         }
 
@@ -214,15 +235,19 @@ internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : Li
         // throw RuntimeException("vlen not implemented")
 
         // general case is to read an array of vlen objects
-        // each vlen generates an Array, have to combine them
-        val result = mutableListOf<Array<*>>()
+        // each vlen generates an Array, have to flatten them
+        val result = mutableListOf<Any>()
         var count = 0
         while (layout2.hasNext()) {
             val chunk: Layout.Chunk = layout2.next()
             for (i in 0 until chunk.nelems) {
                 val address: Long = chunk.srcPos + layout2.elemSize * i
                 val vlenArray = h5heap.getHeapDataArray(address, readType, endian)
-                result.add(vlenArray)
+                vlenArray.forEach{
+                    if (it != null) {
+                        result.add(it)
+                    }
+                }
                 count++
             }
         }

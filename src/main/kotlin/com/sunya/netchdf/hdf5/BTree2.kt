@@ -1,6 +1,5 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
@@ -107,14 +106,16 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
                 entries[i]!!.record = readRecord(state, btreeType.toInt())
             }
             entries[nrecords.toInt()] = Entry2()
+
             val maxNumRecords = nodeSize / recordSize // guessing
             val maxNumRecordsPlusDesc = nodeSize / recordSize // guessing
             for (i in 0 until nrecords + 1) {
                 val e = entries[i]
                 e!!.childAddress = h5.readOffset(state)
                 e.nrecords = h5.readVariableSizeUnsigned(state,1) // readVariableSizeMax(maxNumRecords);
-                if (depth > 1) e.totNrecords =
-                    h5.readVariableSizeUnsigned(state,2) // readVariableSizeMax(maxNumRecordsPlusDesc);
+                if (depth > 1) {
+                    e.totNrecords = h5.readVariableSizeUnsigned(state, 2)
+                } // readVariableSizeMax(maxNumRecordsPlusDesc);
                 if (debugBtree2) debugOut.println(
                     " BTree2 entry childAddress=" + e.childAddress + " nrecords=" + e.nrecords + " totNrecords="
                             + e.totNrecords
@@ -136,8 +137,9 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
                     val leaf = LeafNode(e.childAddress, nrecs.toShort())
                     leaf.addEntries(entryList)
                 }
-                if (e.record != null) // last one is null
+                if (e.record != null) { // last one is null
                     entryList.add(e)
+                }
             }
         }
     }
@@ -156,6 +158,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
             val nodeType = raf.readByte(state).toInt()
             check(nodeType == btreeType)
             if (debugBtree2) debugOut.println("   BTree2 LeafNode version=$version type=$nodeType nrecords=$nrecords")
+
             for (i in 0 until nrecords) {
                 val entry = Entry2()
                 entry.record = readRecord(state, btreeType.toInt())

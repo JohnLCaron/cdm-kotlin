@@ -14,7 +14,7 @@ fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): Da
         val heapId = raf.readLong(state)
         // LOOK Message stored in file’s shared object header message heap (a shared message).
         //   the 8-byte fractal heap ID for the message in the file’s shared object header message heap.
-        //   umm, where is the shared object header message heap?
+        //   I think this points into table located by a SharedMessage
         throw UnsupportedOperationException("****SHARED MESSAGE type = $mtype heapId = $heapId")
     } else {
         // The address of the object header containing the message to be shared

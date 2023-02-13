@@ -9,6 +9,7 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.netcdf4.Netcdf4
 import java.io.IOException
+import java.lang.RuntimeException
 
 internal val includeOriginalAttributes = false
 internal val debugDimensionScales = true
@@ -21,6 +22,12 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     val groupb = Group.Builder(group5.name)
 
     makeDimensions(groupb, group5)
+
+    group5.typedefs.forEach {
+        val typedef = buildTypedef( it )
+        this.typedefMap[it.address] = typedef
+        groupb.typedefs.add(typedef)
+    }
 
     group5.attributes().forEach { groupb.addAttribute( buildAttribute( it )) }
 
@@ -41,16 +48,41 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
-    val h5type = H5Type(att5.mdt)
+    val typedef = this.typedefMap[att5.mdt.address]
+    val h5type = H5Type(att5.mdt, typedef)
     val values = this.readAttributeData(att5, h5type)
-    val useType = if (h5type.dataType == DataType.CHAR) DataType.STRING else h5type.dataType
+    val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     return Attribute(att5.name, useType, values)
+}
+
+internal fun buildTypedef(typedef5: H5Typedef): Typedef {
+    return when (typedef5.kind) {
+        TypedefKind.Enum -> {
+            val mess = typedef5.enumMessage!!
+            require(mess.names.size == mess.nums.size)
+            val values = mutableMapOf<Int, String>()
+            mess.nums.onEachIndexed { idx, num -> values[num] = mess.names[idx] }
+            val h5type = H5Type(mess.base)
+            EnumTypedef(typedef5.dataObject.name!!, h5type.datatype, values)
+        }
+
+        TypedefKind.Vlen -> {
+            val mess = typedef5.vlenMessage!!
+            val name = "${typedef5.dataObject.name!!}"
+            val h5type = H5Type(mess.base)
+            VlenTypedef(name, h5type.datatype)
+        }
+
+        else -> throw RuntimeException()
+    }
 }
 
 internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variable.Builder {
     val builder = Variable.Builder()
     builder.name = v5.name
-    builder.dataType = v5.dataType()
+    val typedef = this.typedefMap[v5.mdt.address]
+    val h5type = H5Type(v5.mdt, typedef)
+    builder.datatype = h5type.datatype
 
     if (v5.dimList != null) {
         v5.dimList!!.split(" ").forEach { dimName ->
@@ -143,7 +175,7 @@ internal fun H5builder.makeDimensions(parentGroup: Group.Builder, h5group: H5Gro
     h5group.variables.filter { it.is2DCoordinate }.forEach { findDimensionScales2D(h5group, it) }
 
     // 3. use DIMENSION_LIST to assign dimensions to other variables.
-    h5group.variables.forEach { findSharedDimensions(parentGroup, h5group, it) }
+    h5group.variables.forEach { findSharedDimensions(it) }
 
     for (d in h5group.dimList) {
         parentGroup.addDimensionIfNotExists(d)
@@ -192,7 +224,7 @@ private fun addSharedDimension(
 ): String {
     val dimName = name.substringAfterLast('/')
     var d = h5group.dimMap[dimName] // first look in current group
-    if (d == null) { // create if not found
+    if (d == null) { // create if not exist
         d = Dimension(name, length, isUnlimited, true)
         h5group.dimMap[dimName] = d
         h5group.dimList.add(d)
@@ -255,7 +287,7 @@ internal fun H5builder.findDimensionScales2D(h5group: H5Group, h5variable: H5Var
 // return true if this variable is compatible with netcdf4 data model
 // LOOK WTF ??
 @Throws(IOException::class)
-internal fun H5builder.findSharedDimensions(g: Group.Builder, h5group: H5Group, h5variable: H5Variable): Boolean {
+internal fun H5builder.findSharedDimensions(h5variable: H5Variable): Boolean {
 
     val removeAtts = mutableListOf<AttributeMessage>()
     h5variable.attributes().forEach { matt ->
@@ -294,7 +326,7 @@ internal fun H5builder.findSharedDimensions(g: Group.Builder, h5group: H5Group, 
                 }
                 removeAtts.add(matt)
                 if (debugDimensionScales) {
-                    println("Found $value")
+                    println("Found $HDF5_DIMENSION_NAME='$value'")
                 }
             }
 
@@ -308,25 +340,5 @@ internal fun H5builder.findSharedDimensions(g: Group.Builder, h5group: H5Group, 
 
     return h5variable.hasNetcdfDimensions || h5variable.mds.rank() == 0
 }
-
-/* look for unlimited dimensions without dimension scale - must get length from the variable
-internal fun H5builder.extendDimension(parent: Group.Builder, h5group: H5Group, name: String, length: Int): String {
-    val pos = name.lastIndexOf('/')
-    val dimName = if (pos >= 0) name.substring(pos + 1) else name
-    var d = h5group.dimMap[dimName] // first look in current group
-    if (d == null) {
-        d = parent.findDimension(dimName).orElse(null) // then look in parent groups
-    }
-    if (d != null) {
-        if (d.isUnlimited && length > d.length) {
-            parent.replaceDimension(d.toBuilder().setLength(length).build())
-        }
-        check(!d.isUnlimited || length != d.length) { "extendDimension: DimScale has different length than dimension it references dimScale=$dimName" }
-        return d.name
-    }
-    return dimName
-}
-
- */
 
 

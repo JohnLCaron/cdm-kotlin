@@ -6,6 +6,21 @@ import java.io.IOException
 import java.nio.ByteBuffer
 
 // Message Type 8 "Data Storage Layout" : regular (contiguous), chunked, or compact (stored with the message)
+// The Data Layout message describes how the elements of a multi-dimensional array are stored in the HDF5 file.
+// Four types of data layout are supported:
+//  Contiguous: The array is stored in one contiguous area of the file. This layout requires that the size of the array
+//     be constant: data manipulations such as chunking, compression, checksums, or encryption are not permitted.
+//     The message stores the total storage size of the array. The offset of an element from the beginning of the
+//     storage area is computed as in a C array.
+//  Chunked: The array domain is regularly decomposed into chunks, and each chunk is allocated and stored separately.
+//     This layout supports arbitrary element traversals, compression, encryption, and checksums (these features are
+//     described in other messages). The message stores the size of a chunk instead of the size of the entire array;
+//     the storage size of the entire array can be calculated by traversing the chunk index that stores the chunk addresses.
+//  Compact: The array is stored in one contiguous block as part of this object header message.
+//  Virtual: This is only supported for version 4 of the Data Layout message. The message stores information that is
+//     used to locate the global heap collection containing the Virtual Dataset (VDS) mapping information. The mapping
+//     associates the VDS to the source dataset elements that are stored across a collection of HDF5 files.
+
 @Throws(IOException::class)
 fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
     val tstate = state.copy()
@@ -95,6 +110,10 @@ enum class LayoutClass(val num : Int) {
 
 open class DataLayoutMessage(layoutClassNum: Int)  : MessageHeader(MessageType.Layout) {
     val layoutClass = LayoutClass.of(layoutClassNum)
+
+    override fun show() : String {
+        return "class=$layoutClass"
+    }
 }
 
 data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer?) : DataLayoutMessage(0)

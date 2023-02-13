@@ -14,6 +14,9 @@ public class nc_vlen_t {
     public static MemoryLayout $LAYOUT() {
         return nc_vlen_t.$struct$LAYOUT;
     }
+    public static MemoryLayout VlenLayout() {
+        return nc_vlen_t.$struct$LAYOUT;
+    }
     static final VarHandle len$VH = $struct$LAYOUT.varHandle(MemoryLayout.PathElement.groupElement("len"));
     public static VarHandle len$VH() {
         return nc_vlen_t.len$VH;
@@ -21,12 +24,17 @@ public class nc_vlen_t {
     public static long len$get(MemorySegment seg) {
         return (long)nc_vlen_t.len$VH.get(seg);
     }
+
     public static void len$set( MemorySegment seg, long x) {
         nc_vlen_t.len$VH.set(seg, x);
     }
     public static long len$get(MemorySegment seg, long index) {
         return (long)nc_vlen_t.len$VH.get(seg.asSlice(index*sizeof()));
     }
+    public static long getLength(MemorySegment seg, long index) {
+        return (long)nc_vlen_t.len$VH.get(seg.asSlice(index*sizeof()));
+    }
+
     public static void len$set(MemorySegment seg, long index, long x) {
         nc_vlen_t.len$VH.set(seg.asSlice(index*sizeof()), x);
     }
@@ -37,12 +45,17 @@ public class nc_vlen_t {
     public static MemoryAddress p$get(MemorySegment seg) {
         return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg);
     }
+
     public static void p$set( MemorySegment seg, MemoryAddress x) {
         nc_vlen_t.p$VH.set(seg, x);
     }
     public static MemoryAddress p$get(MemorySegment seg, long index) {
         return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg.asSlice(index*sizeof()));
     }
+    public static MemoryAddress getAddress(MemorySegment seg, long index) {
+        return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg.asSlice(index*sizeof()));
+    }
+
     public static void p$set(MemorySegment seg, long index, MemoryAddress x) {
         nc_vlen_t.p$VH.set(seg.asSlice(index*sizeof()), x);
     }

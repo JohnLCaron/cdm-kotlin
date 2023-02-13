@@ -143,6 +143,25 @@ group: solar_system {
         )
     }
 
+    @Test
+    fun test_enum_type() {
+        readN4header(
+            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc",
+"""netcdf test_enum_type {
+types:
+  ubyte enum cloud_class_t {Clear = 0, Cumulonimbus = 1, Stratus = 2, 
+      Stratocumulus = 3, Cumulus = 4, Altostratus = 5, Nimbostratus = 6, 
+      Altocumulus = 7, Cirrostratus = 8, Cirrocumulus = 9, Cirrus = 10, 
+      Missing = 255} ;
+dimensions:
+	station = 5 ;
+variables:
+	cloud_class_t primary_cloud(station) ;
+		cloud_class_t primary_cloud:_FillValue = Missing ;
+}"""
+        )
+    }
+
 
     fun readN4header(filename : String, expect : String) {
         println("=================")

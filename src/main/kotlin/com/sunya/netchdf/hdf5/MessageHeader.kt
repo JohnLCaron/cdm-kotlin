@@ -29,7 +29,7 @@ enum class MessageType(val uname: String, val num: Int) {
     LastModifiedOld("LastModifiedOld", 14),
     SharedObject("SharedObject", 15),
     ObjectHeaderContinuation("Continuation", 16),
-    SymbolTable("SymbolTable", 17),
+    SymbolTable("OldGroup", 17),
     LastModified("LastModified", 18),
     AttributeInfo("AttributeInfo", 21),
     ObjectReferenceCount("ObjectReferenceCount", 22),
@@ -85,7 +85,6 @@ fun H5builder.readMessagesVersion2(
     creationOrderPresent: Boolean,
     messages: MutableList<MessageHeader>,
 ): Int {
-    val startPos = state.pos
     val posLimit = state.pos + dataSize - 3
 
     while (state.pos < posLimit) {
@@ -165,6 +164,9 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
     if (flags and 2 != 0) { // shared
         // LOOK could be other shared objects besides datatype ??
         val mdt = getSharedDataObject(state, mtype!!).mdt // a shared datatype, eg enums
+        if (debugFlow) {
+            println(" shared Message ${mtype}  ${mdt?.show()}")
+        }
         state.pos = startPos + messageSize + headerSize
         return mdt
     }
@@ -186,18 +188,22 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.Attribute -> this.readAttributeMessage(state) // 12
         MessageType.Comment -> this.readCommentMessage(state) // 13
         MessageType.LastModifiedOld -> null // 14
-        MessageType.SharedObject -> this.readSharedMessage(state) // 15 get exception if its used
+        MessageType.SharedObject -> this.readSharedMessage(state) // 15
         MessageType.ObjectHeaderContinuation -> this.readContinueMessage(state) // 16
         MessageType.SymbolTable -> this.readSymbolTableMessage(state) // 17
         MessageType.LastModified -> null // 18
         MessageType.AttributeInfo -> this.readAttributeInfoMessage(state) // 21
-        MessageType.ObjectReferenceCount -> null // 22
+        MessageType.ObjectReferenceCount -> this.readReferenceCountMessage(state) // 22
         else -> throw RuntimeException("Unimplemented message type = $mtype")
     }
-
     // ignoring version 2 gap and the checksum, so we need to set position explicitly, nor rely on the raf.pos to be correct
 
-    println(" done Message ${mtype} pos = ${state.pos} expect ${startPos + messageSize + headerSize}")
+    if (debugFlow) {
+        println(" read Message ${mtype}  ${result?.show()}")
+    }
+    if (debugMessage) {
+        println(" done Message ${mtype} pos = ${state.pos} expect ${startPos + messageSize + headerSize}")
+    }
     // heres where we get the position right, no matter what
     state.pos = startPos + messageSize + headerSize
     return result
@@ -208,9 +214,16 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
 open class MessageHeader(val mtype: MessageType) : Comparable<MessageHeader> {
     override operator fun compareTo(other: MessageHeader): Int =
         compareValuesBy(this, other, { it.mtype.num }, { other.mtype.num })
+    open fun show() : String {
+        return "$mtype"
+    }
 }
 
 ////////////////////////////////////////// 1 IV.A.2.b. The Dataspace Message
+// The dataspace message describes the number of dimensions (in other words, “rank”) and size of each dimension
+// that the data object has. This message is only used for datasets which have a simple, rectilinear, array-like layout;
+// datasets requiring a more complex layout are not yet supported.
+
 @Throws(IOException::class)
 fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
     val version = raf.readByte(state).toInt()
@@ -265,9 +278,15 @@ enum class DataspaceType(val num: Int) {
 // LOOK do we want to support isUnlimited = mds.maxLength.get(0) == -1
 data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : MessageHeader(MessageType.Dataspace) {
     fun rank(): Int = dims.size
+
+    override fun show() : String {
+        return "${type} ${dims.contentToString()}"
+    }
 }
 
 ////////////////////////////////////////// 2 IV.A.2.c. The Link Info Message
+// The link info message tracks variable information about the current state of the links for a “new style” group’s behavior.
+// Variable information will be stored in this message and constant information will be stored in the Group Info message.
 
 @Throws(IOException::class)
 fun H5builder.readLinkInfoMessage(state: OpenFileState): LinkInfoMessage {
@@ -298,9 +317,22 @@ data class LinkInfoMessage(
     val fractalHeapAddress: Long,
     val v2BtreeAddress: Long,
     val v2BtreeAddressCreationOrder: Long?
-) : MessageHeader(MessageType.LinkInfo)
+) : MessageHeader(MessageType.LinkInfo) {
+    override fun show() : String {
+        return "has CreationOrder ${v2BtreeAddressCreationOrder != null}"
+    }
+}
 
-////////////////////////////////////////// 4
+////////////////////////////////////////// 4 IV.A.2.e. The Data Storage - Fill Value (Old) Message
+// The fill value message stores a single data value which is returned to the application when an uninitialized data
+// element is read from a dataset. The fill value is interpreted with the same datatype as the dataset.
+// If no fill value message is present then a fill value of all zero bytes is assumed.
+//
+// This fill value message is deprecated in favor of the “new” fill value message (Message Type 0x0005) and is only
+// written to the file for forward compatibility with versions of the HDF5 Library before the 1.6.0 version.
+// Additionally, it only appears for datasets with a user-defined fill value (as opposed to the library default fill
+// value or an explicitly set “undefined” fill value).
+
 @Throws(IOException::class)
 fun H5builder.readFillValueOldMessage(state: OpenFileState): FillValueOldMessage {
     val rawdata =
@@ -318,7 +350,10 @@ fun H5builder.readFillValueOldMessage(state: OpenFileState): FillValueOldMessage
 
 data class FillValueOldMessage(val size: Int, val value: ByteBuffer) : MessageHeader(MessageType.FillValueOld)
 
-////////////////////////////////////////// 5
+////////////////////////////////////////// 5 IV.A.2.f. The Data Storage - Fill Value Message
+// The fill value message stores a single data value which is returned to the application when an uninitialized data
+// element is read from a dataset. The fill value is interpreted with the same datatype as the dataset.
+
 @Throws(IOException::class)
 fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
     val version = raf.readByte(state).toInt()
@@ -348,15 +383,18 @@ fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
 
     return FillValueMessage(
         false,
-        null,
+        0,
         null,
     )
 }
 
-data class FillValueMessage(val hasFillVakue: Boolean, val size: Int?, val value: ByteBuffer?) :
-    MessageHeader(MessageType.FillValue)
+data class FillValueMessage(val hasFillValue: Boolean, val size: Int, val value: ByteBuffer?) : MessageHeader(MessageType.FillValue) {
+    override fun show() : String {
+        return "has hasFillValue=${hasFillValue}"
+    }
+}
 
-////////////////////////////////////////// 6
+////////////////////////////////////////// 6 IV.A.2.g. The Link Message
 // This message encodes the information for a link in a group’s object header, when the group is storing
 // its links “compactly”, or in the group’s fractal heap, when the group is storing its links “densely”.
 // A group is storing its links compactly when the fractal heap address in the Link Info Message is set to
@@ -430,7 +468,16 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
     )
 }
 
-open class LinkMessage(val linkType: Int, val linkName: String) : MessageHeader(MessageType.Link)
+open class LinkMessage(val linkType: Int, val linkName: String) : MessageHeader(MessageType.Link) {
+    override fun show() : String {
+        val typen = when (linkType) {
+            0 -> "hard"
+            1 -> "soft"
+            else -> linkType.toString()
+        }
+        return "type=$typen name=$linkName"
+    }
+}
 open class LinkSoft(linkType: Int, linkName: String, val linkInfo: String) : LinkMessage(linkType, linkName)
 open class LinkHard(linkType: Int, linkName: String, val linkAddress: Long) : LinkMessage(linkType, linkName)
 
@@ -468,6 +515,12 @@ data class GroupInfoMessage(val estNumEntries: Short?, val estLengthEntryName: S
 
 ////////////////////////////////////////// 11
 // Message Type 11/0xB "Data Storage - Filter Pipeline" : apply a filter to the "data stream"
+// This message describes the filter pipeline which should be applied to the data stream by providing filter identification numbers, flags, a name, and client data.
+//
+// This message may be present in the object headers of both dataset and group objects. For datasets, it specifies the
+// filters to apply to raw data. For groups, it specifies the filters to apply to the group’s fractal heap. Currently,
+// only datasets using chunked data storage use the filter pipeline on their raw data.
+
 @Throws(IOException::class)
 fun H5builder.readFilterPipelineMessage(state: OpenFileState): FilterPipelineMessage {
     val version: Byte = raf.readByte(state)
@@ -524,9 +577,23 @@ enum class FilterType(val id: Int) {
 
 data class Filter(val filterType: FilterType, val name: String, val clientValues: IntArray)
 
-data class FilterPipelineMessage(val filters: List<Filter>) : MessageHeader(MessageType.FilterPipeline)
+data class FilterPipelineMessage(val filters: List<Filter>) : MessageHeader(MessageType.FilterPipeline) {
+    override fun show() : String {
+        return filters.map { "${it.filterType} ${it.name}, "}.joinToString()
+    }
+}
 
 ///////////////////////////////////////////// 12/0xC "Attribute" : define an Attribute
+// The Attribute message is used to store objects in the HDF5 file which are used as attributes, or “metadata” about
+// the current object. An attribute is a small dataset; it has a name, a datatype, a dataspace, and raw data.
+// Since attributes are stored in the object header, they should be relatively small (in other words, less than 64KB).
+// They can be associated with any type of object which has an object header (groups, datasets, or committed (named) datatypes).
+//
+// In 1.8.x versions of the library, attributes can be larger than 64KB. See the “Special Issues” section of the
+// Attributes chapter in the HDF5 User’s Guide for more information.
+//
+// Note: Attributes on an object must have unique names: the HDF5 Library currently enforces this by causing the
+// creation of an attribute with a duplicate name to fail. Attributes on different objects may have the same name, however.
 
 @Throws(IOException::class)
 fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
@@ -591,13 +658,14 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 data class AttributeMessage(val name: String, val mdt: DatatypeMessage, val mds: DataspaceMessage, val dataPos: Long) :
     MessageHeader(MessageType.Attribute) {
 
-    fun show() {
-        println("${mdt.type} $name ${mds.dims.contentToString()} ${mds.type}")
+    override fun show() : String {
+        return "name=$name type=(${mdt.show()}) dims=${mds.dims.contentToString()}"
     }
 }
 
 ////////////////////////////////////////// 13
-// The object comment is designed to be a short description of an object.
+// The object comment is a short description of an object.
+
 @Throws(IOException::class)
 fun H5builder.readCommentMessage(state: OpenFileState): CommonMessage {
     val comment = readStringZ(state)
@@ -608,19 +676,24 @@ fun H5builder.readCommentMessage(state: OpenFileState): CommonMessage {
  * @param address of the master table for shared object header message indexes.
  * @param nindices number of indices in the master table.
  */
-data class CommonMessage(val comment: String) : MessageHeader(MessageType.Comment)
+data class CommonMessage(val comment: String) : MessageHeader(MessageType.Comment) {
+    override fun show() : String {
+        return "${comment}"
+    }
+}
 
 ////////////////////////////////////////// 15
 // This message is used to locate the table of shared object header message (SOHM) indexes. Each index consists of
 // information to find the shared messages from either the heap or object header.
 // This message is only found in the superblock extension.
-// This points to the shared object header message table (Level 1I - Shared Object Header Message Table)
+// I think this is what the shared objects reference (see SharedObjects)
+
 @Throws(IOException::class)
 fun H5builder.readSharedMessage(state: OpenFileState): SharedMessage {
     val rawdata =
         structdsl("SharedMessage", raf, state) {
             fld("version", 1)
-            fld("address", sizeOffsets)
+            fld("address", sizeOffsets) //
             fld("nindices", 1)
         }
     if (debugMessage) rawdata.show()
@@ -635,10 +708,16 @@ fun H5builder.readSharedMessage(state: OpenFileState): SharedMessage {
  * @param address of the master table for shared object header message indexes.
  * @param nindices number of indices in the master table.
  */
-data class SharedMessage(val address: Long, val nindices: Int) : MessageHeader(MessageType.SharedObject)
-
+data class SharedMessage(val address: Long, val nindices: Int) : MessageHeader(MessageType.SharedObject) {
+    override fun show() : String {
+        return "address = $address nindices = $nindices"
+    }
+}
 
 ////////////////////////////////////////// 16
+// The object header continuation is the location in the file of a block containing more header messages for the current
+// data object. This can be used when header blocks become too large or are likely to change over time.
+
 @Throws(IOException::class)
 fun H5builder.readContinueMessage(state: OpenFileState): ContinueMessage {
     val rawdata =
@@ -654,11 +733,18 @@ fun H5builder.readContinueMessage(state: OpenFileState): ContinueMessage {
     )
 }
 
-data class ContinueMessage(val offset: Long, val length: Long) : MessageHeader(MessageType.ObjectHeaderContinuation)
+data class ContinueMessage(val offset: Long, val length: Long) : MessageHeader(MessageType.ObjectHeaderContinuation) {
+    override fun show() : String {
+        return "offset = $offset length = $length"
+    }
+}
 
 //////
 
 ////////////////////////////////////////// 17
+// Each “old style” group has a v1 B-tree and a local heap for storing symbol table entries, which are located with this message.
+// only one of these for the group, its where the shared messages live (I think)
+
 @Throws(IOException::class)
 fun H5builder.readSymbolTableMessage(state: OpenFileState): SymbolTableMessage {
     val rawdata =
@@ -675,12 +761,15 @@ fun H5builder.readSymbolTableMessage(state: OpenFileState): SymbolTableMessage {
 }
 
 // localHeapAddress aka nameHeapAddress
-data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) :
-    MessageHeader(MessageType.SymbolTable)
+data class SymbolTableMessage(val btreeAddress: Long, val localHeapAddress: Long) : MessageHeader(MessageType.SymbolTable) {
+    override fun show() : String {
+        return "btreeAddress = $btreeAddress localHeapAddress = $localHeapAddress"
+    }
+}
 
 ////////////////////////////////////////// 21
-// This message stores information about the attributes on an object,
-// such as the location of the attribute storage when the attributes are stored “densely”.
+// This stores arbitrary more attributes in a fractal heap; we eagerly read them all into this
+// message and add to the data object.
 
 @Throws(IOException::class)
 fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessage {
@@ -712,7 +801,11 @@ fun H5builder.readAttributeInfoMessage(state: OpenFileState): AttributeInfoMessa
     )
 }
 
-data class AttributeInfoMessage(val attributes: List<AttributeMessage>) : MessageHeader(MessageType.AttributeInfo)
+data class AttributeInfoMessage(val attributes: List<AttributeMessage>) : MessageHeader(MessageType.AttributeInfo) {
+    override fun show() : String {
+        return "nattributes = ${attributes.size}"
+    }
+}
 
 private fun H5builder.readAttributesFromInfoMessage(
     fractalHeapAddress: Long,
@@ -740,12 +833,36 @@ private fun H5builder.readAttributesFromInfoMessage(
         if (state.pos > 0) {
             val attMessage = this.readAttributeMessage(state)
             list.add(attMessage)
-            if (debugBtree2) {
-                println("    attMessage=${attMessage}")
+            if (debugFlow) {
+                println("    read attMessage=${attMessage}")
             }
         }
     }
     return list
+}
+
+////////////////////////////////////////// 22
+// This message stores the number of hard links (in groups or objects) pointing to an object: in other words, its reference count.
+
+@Throws(IOException::class)
+fun H5builder.readReferenceCountMessage(state: OpenFileState): ReferenceCountMessage {
+    val rawdata =
+        structdsl("ReferenceCountMessage", raf, state) {
+            fld("version", 1)
+            fld("referenceCount", 4)
+        }
+    if (debugMessage) rawdata.show()
+
+    return ReferenceCountMessage(
+        rawdata.getInt("referenceCount"),
+    )
+}
+
+// localHeapAddress aka nameHeapAddress
+data class ReferenceCountMessage(val referenceCount: Int) : MessageHeader(MessageType.ObjectReferenceCount) {
+    override fun show() : String {
+        return "referenceCount = $referenceCount"
+    }
 }
 
 

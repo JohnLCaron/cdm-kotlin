@@ -35,8 +35,8 @@ class H5headerCompare {
                     .withRecursion()
                     .build()
 
-            // return stream1
-            return Stream.of(stream1, stream2, stream3).flatMap { i -> i };
+            return stream1
+            // return Stream.of(stream1, stream2, stream3).flatMap { i -> i };
             //return stream2
         }
     }
@@ -88,7 +88,7 @@ variables:
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc")
     }
     /*
-    netcdf test_enum_type {
+netcdf test_enum_type {
 types:
   ubyte enum cloud_class_t {Clear = 0, Cumulonimbus = 1, Stratus = 2,
       Stratocumulus = 3, Cumulus = 4, Altostratus = 5, Nimbostratus = 6,
@@ -162,7 +162,7 @@ variables:
         println("=================")
         println(filename)
         val h5file = Hdf5File(filename, true)
-        println("h5file = ${h5file.cdl()}")
+        println("\nh5file = ${h5file.cdl()}")
 
         val ncfile : Netcdf = NetcdfClibFile(filename)
         println("ncfile = ${ncfile.cdl()}")
