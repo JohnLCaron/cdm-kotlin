@@ -45,15 +45,14 @@ class N3headerCompare {
     fun readN3header(filename : String) {
         println("=================")
         println(filename)
-        val n3file = Netcdf3File(filename)
-
-        val ncfile : Netcdf = NetcdfClibFile(filename)
-
-        //println("actual = $root")
-        //println("expect = $expect")
-
-        assertEquals(ncfile.cdl(), n3file.cdl())
-        // println(rootClib.cdlString())
+        Netcdf3File(filename).use { n3file ->
+            NetcdfClibFile(filename).use { ncfile ->
+                //println("actual = $root")
+                //println("expect = $expect")
+                assertEquals(ncfile.cdl(), n3file.cdl())
+                // println(rootClib.cdlString())
+            }
+        }
     }
 
 }

@@ -254,9 +254,15 @@ fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
         rawdata.getByte("type").toInt()
     }
 
+    val isUnlimited = if (flags and 1 != 0) {
+        val maxsize = rawdata.getIntArray("maxsize")
+        maxsize.size > 0 && maxsize[0] < 0 // set maxsize to -1 when unlimited
+    } else false
+
     return DataspaceMessage(
         DataspaceType.of(type),
         rawdata.getIntArray("dims"),
+        isUnlimited,
     )
 }
 
@@ -275,12 +281,13 @@ enum class DataspaceType(val num: Int) {
     }
 }
 
-// LOOK do we want to support isUnlimited = mds.maxLength.get(0) == -1
-data class DataspaceMessage(val type: DataspaceType, val dims: IntArray) : MessageHeader(MessageType.Dataspace) {
+data class DataspaceMessage(val type: DataspaceType, val dims: IntArray, val isUnlimited : Boolean)
+    : MessageHeader(MessageType.Dataspace) {
+
     fun rank(): Int = dims.size
 
     override fun show() : String {
-        return "${type} ${dims.contentToString()}"
+        return "${type} ${dims.contentToString()} isUnlimited=$isUnlimited"
     }
 }
 

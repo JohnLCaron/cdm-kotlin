@@ -66,11 +66,12 @@ class N3dataCompare {
 
             }
             //assertEquals(ncdata, n3data)
-//
         }
 
         assertEquals(ncfile.cdl(), n3file.cdl())
         // println(rootClib.cdlString())
+        n3file.close()
+        ncfile.close()
     }
 
 }

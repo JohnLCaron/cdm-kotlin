@@ -9,12 +9,11 @@ import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout
+import java.lang.foreign.ValueLayout.ADDRESS
 import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
-
-import com.sunya.cdm.iosp.ArrayStructureData.StructureData
 
 
 private val debugUserTypes = true
@@ -258,19 +257,23 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
             println("HEY")
         }
 
-        members.filter { it.datatype == Datatype.STRING }.forEach {
-            // probably an address in the heap ??
-            //val wtf = it.value(sdata) as Long
-            //println("wtf $wtf")
-            //lval = ucar.nc2.jni.netcdf.Nc4reader.getNativeAddr(pos, nc4bytes)
-            //val p = Pointer(lval)
-            //val strval: String = p.getString(0, CDM.UTF8)
+        members.filter { it.datatype == Datatype.STRING }.forEach { member ->
+            sdataArray.forEach { sdata ->
+                val address = val_p.get(ADDRESS, (sdata.offset + member.offset).toLong())
+                val sval: String = address.getUtf8String(0)
+                sdata.putOnHeap(member, sval)
+            }
         }
 
     }
 
     attb.values = sdataArray.toList()
     return attb
+}
+
+
+fun getNativeAddr(buf: ByteBuffer, pos: Int): Long {
+    return if (true) buf.getLong(pos) else buf.getInt(pos).toLong()
 }
 
 ////////////////////////////////////////////////////////////////

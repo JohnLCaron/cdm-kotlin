@@ -88,8 +88,12 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     builder.name = v5.name
     val typedef = this.findTypedef(v5.mdt.address, v5.mdt.hashCode())
     val h5type = H5Type(v5.mdt, typedef)
+    // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
     // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     builder.datatype = h5type.datatype
+    if (h5type.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
+        builder.datatype = Datatype.STRING
+    }
 
     if (v5.dimList != null) {
         v5.dimList!!.split(" ").forEach { dimName ->
@@ -216,7 +220,7 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
                 h5group,
                 h5variable.name,
                 h5variable.mds.dims[0],
-                false // LOOK support isUnlimited?
+                h5variable.mds.isUnlimited
             )
             h5variable.hasNetcdfDimensions = true
             if (!includeOriginalAttributes) {

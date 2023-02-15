@@ -25,15 +25,14 @@ class ArrayStructureData(val bb : ByteBuffer, val sizeElem : Int, val shape : In
 
     private val heap by lazy { mutableMapOf<Int, Any>() }
     private var heapIndex = 0
-    fun putHeap(offset : Int, value: Any): Int {
+    fun putOnHeap(offset : Int, value: Any): Int {
         heap[heapIndex] = value
         bb.putInt(offset, heapIndex)
         val result = heapIndex
         heapIndex++
         return result
     }
-
-    fun getHeap(offset: Int): Any? {
+    fun getFromHeap(offset: Int): Any? {
         val index = bb.getInt(offset)
         return heap[index]
     }
@@ -52,9 +51,8 @@ class ArrayStructureData(val bb : ByteBuffer, val sizeElem : Int, val shape : In
             }
         }
 
-        fun getHeap(offset: Int) = this@ArrayStructureData.getHeap(offset)
-        fun putHeap(offset : Int, value: Any) = this@ArrayStructureData.putHeap(offset, value)
-        fun putHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putHeap(member.offset + this.offset, value)
+        fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
+        fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
     }
 }
 
@@ -76,10 +74,16 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             Datatype.FLOAT -> bb.getFloat(offset)
             Datatype.DOUBLE -> bb.getDouble(offset)
             Datatype.STRING -> {
-                val ret = sdata.getHeap(offset)
+                val ret = sdata.getFromHeap(offset)
                 if (ret == null) "unknown" else ret as String
             }
             else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8)
         }
     }
+
+    override fun toString(): String {
+        return "StructureMember(name='$name', datatype=$datatype, offset=$offset, dims=${dims.contentToString()}, nelems=$nelems)"
+    }
+
+
 }

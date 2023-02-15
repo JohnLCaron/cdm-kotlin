@@ -1,22 +1,23 @@
 package com.sunya.cdm.iosp
 
-import java.io.EOFException
-import java.io.File
-import java.io.IOException
-import java.io.RandomAccessFile
+import java.io.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-data class OpenFile(val location : String) {
+data class OpenFile(val location : String) : Closeable {
     val fileChannel : FileChannel
     val size : Long
     init {
         val raf = RandomAccessFile(File(location), "r")
         fileChannel = raf.getChannel();
         size = fileChannel.size()
+    }
+
+    override fun close() {
+        fileChannel.close()
     }
 
     fun seek(pos : Long) {

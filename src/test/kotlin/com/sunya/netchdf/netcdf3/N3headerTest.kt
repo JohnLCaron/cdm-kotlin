@@ -378,16 +378,17 @@ class N3headerTest {
     fun readN3header(filename : String, expect : String) {
         println("=================")
         println(filename)
-        val ncfile = Netcdf3File(filename)
-        val root = ncfile.rootGroup()
-         println("actual = $root")
-        println("expect = $expect")
+        Netcdf3File(filename).use { ncfile ->
+            val root = ncfile.rootGroup()
+            println("actual = $root")
+            println("expect = $expect")
 
-        assertEquals(expect, root.toString())
-        assertTrue(root.toString().contains(expect))
+            assertEquals(expect, root.toString())
+            assertTrue(root.toString().contains(expect))
 
-        root.variables.forEach {
-            println(" ${it.name} = ${it.spObject}")
+            root.variables.forEach {
+                println(" ${it.name} = ${it.spObject}")
+            }
         }
     }
 

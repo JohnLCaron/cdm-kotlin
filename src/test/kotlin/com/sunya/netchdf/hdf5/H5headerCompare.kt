@@ -16,6 +16,7 @@ class H5headerCompare {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
+            // bootstrap selected files
             val stream1 = Stream.of(
                 // sb1
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/string_attrs.nc4"),
@@ -23,20 +24,29 @@ class H5headerCompare {
                 // sb2
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dimScales.h5"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_1.nc"),
+                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_1.nc4"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_groups.nc"),
             )
-            val stream2 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5")
+
+            val stream3 =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
                     .withRecursion()
                     .build()
-            val stream3 =
+
+            val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
                     .withRecursion()
                     .build()
 
-            return stream3
-            // return Stream.of(stream1, stream2, stream3).flatMap { i -> i };
+            // about half of these fail because they are not netcdf4 files, so nc4lib sees them as empty
+            // LOOK should compare against HDF5 library directly (!)
+            val hdfStream =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5")
+                    .withRecursion()
+                    .build()
+
+            // return stream3
+            return Stream.of(stream4).flatMap { i -> i };
             //return stream2
         }
     }
@@ -207,8 +217,8 @@ types:
 }
      */
 
-    @Test
-    fun nameHasSpace () {
+    @Test // currently fails
+    fun charVar () {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
     }
 /*    netcdf dstr {
@@ -218,7 +228,7 @@ types:
  */
 
     @Test
-    fun compoundInner () {
+    fun compoundInnerVlen () {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
     }
 /*
@@ -244,11 +254,52 @@ dimensions:
 variables:
 	int64 time(time) ;
 	tim_record tim_records(time) ;
+data:
+
+ time = 1031111536548600, 1031336029112720, 1031336030112720,
+    1032744682300880, 1033386252364830, 1033436507387280, 1033625909928750,
+    1034720141744040, 1034777862124190, 1034812140933520, 1035166037088710,
+    1038857775888520, 1039392441890480, 1040992959891280, 1041027759893420,
+    1041237566888640, 1041906851888650, 1041931946851890, 1043767397826310,
+    1044072303892950, 1045100010827670, 1045195564890470, 1045889419890110,
+    1046613199831130, 1048382474827570, 1049148580891530, 1050509662880560,
+    1054030033913430, 1072247943885370 ;
+
+ tim_records =
+    {0, 0, 0, 0, 1, 1, 0, 1, 0, {{30007, 50334}}, {{33761, 54686}}, 1031111536548600},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50343}}, {{9182}}, 1031336029112720},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50347}}, {{9185}}, 1031336030112720},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50346}}, {{9221}}, 1032744682300880},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50338}}, {{8347}}, 1033386252364830},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50378}}, {{54660}}, 1033436507387280},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50295}}, {{8529}}, 1033625909928750},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50336, 50343}}, {{54660, 8171}}, 1034720141744040},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50342}}, {{8103}}, 1034777862124190},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50348}}, {{8139}}, 1034812140933520},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50375}}, {{54653}}, 1035166037088710},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50391}}, {{54644}}, 1038857775888520},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50332}}, {{54934}}, 1039392441890480},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50331}}, {{52569}}, 1040992959891280},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{8798}}, {{62999}}, 1041027759893420},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50396}}, {{55057}}, 1041237566888640},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50401}}, {{54806}}, 1041906851888650},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50475}}, {{52271}}, 1041931946851890},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50371}}, {{46638}}, 1043767397826310},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{54551}}, {{37057}}, 1044072303892950},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50412}}, {{7519}}, 1045100010827670},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50368}}, {{54935}}, 1045195564890470},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50421}}, {{54694}}, 1045889419890110},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50438}}, {{52173}}, 1046613199831130},
+    {1, 0, 1, 0, 0, 1, 0, 1, 0, {{4282}}, {{10016}}, 1048382474827570},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50453}}, {{52320}}, 1049148580891530},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{50425}}, {{9049}}, 1050509662880560},
+    {0, 0, 0, 0, 0, 1, 0, 1, 0, {{50369, 62999, 50325, 50285}}, {{54963, 62999, 54918, 54656}}, 1054030033913430},
+    {0, 0, 1, 0, 0, 1, 0, 1, 0, {{7164}}, {{50348}}, 1072247943885370} ;
 }
  */
 
     @Test
-    fun problem () {
+    fun attCompoundInnerString () {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
 }
     /*
@@ -301,10 +352,13 @@ variables:
         val h5file = Hdf5File(filename, true)
         println("\nh5file = ${h5file.cdl()}")
 
-        val ncfile : Netcdf = NetcdfClibFile(filename)
-        println("ncfile = ${ncfile.cdl()}")
+        val nclibfile : Netcdf = NetcdfClibFile(filename)
+        println("ncfile = ${nclibfile.cdl()}")
 
-        assertEquals(ncfile.cdl(), h5file.cdl())
+        assertEquals(nclibfile.cdl(), h5file.cdl())
+
+        h5file.close()
+        nclibfile.close()
     }
 
 }
