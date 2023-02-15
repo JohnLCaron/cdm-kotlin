@@ -1,6 +1,6 @@
 package com.sunya.cdm.api
 
-import com.sunya.cdm.iosp.StructureData
+import com.sunya.cdm.iosp.ArrayStructureData.StructureData
 import java.math.BigInteger
 import java.nio.ByteBuffer
 import java.util.*

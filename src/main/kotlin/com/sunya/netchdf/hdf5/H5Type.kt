@@ -12,7 +12,7 @@ private val defaultDatatype = Datatype.STRING
 internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
     val hdfType: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize
-    var base: H5Type? = null // only different for vlen, enum, array
+    var base: BaseType? = null // only different for vlen, enum
     var endian: ByteOrder = mdt.endian()
     var unsigned = false
     var datatype: Datatype = getNCtype(hdfType, elemSize, unsigned)
@@ -21,34 +21,35 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
     var isVlen = false // is a vlen but not string
 
     init {
-        if (hdfType == Datatype5.Fixed) { // int, long, short, byte
+        if (hdfType == Datatype5.Fixed || hdfType == Datatype5.BitField) { // int, long, short, byte
             unsigned = (mdt as DatatypeFixed).unsigned
-            datatype = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.BitField) { // bit field
-            unsigned = true
-            datatype = getNCtype(hdfType, elemSize, unsigned)
-        } else if (hdfType == Datatype5.Reference) { // reference
-            // TODO - could get the object, and change type to whatever it is (?)
-            endian = ByteOrder.LITTLE_ENDIAN
-        } else if (hdfType == Datatype5.Enumerated) { // enums
-            base = H5Type((mdt as DatatypeEnum).base)
-            endian = base!!.endian
+            datatype = getNCtype(hdfType, elemSize, unsigned) // redo now that we know the sign
+
+        } else if (hdfType == Datatype5.Enumerated) {
+            val enumMdt = mdt as DatatypeEnum
+            base = BaseType(enumMdt.datatype, enumMdt.endian(), hdfType) // LOOK hdfType wrong
+
         } else if (hdfType == Datatype5.Vlen) { // variable length array
             val vlenMdt = mdt as DatatypeVlen
             isVString = vlenMdt.isVString
             isVlen = !vlenMdt.isVString
-            base = H5Type(vlenMdt.base)
+            val baseDatatype = H5Type(vlenMdt.base)
+
+            base = BaseType(baseDatatype.datatype, vlenMdt.endian(), vlenMdt.type)
             if (vlenMdt.isVString) {
                 datatype = Datatype.STRING
             } else {
                 unsigned = vlenMdt.base.unsigned()
                 endian = vlenMdt.base.endian()
-                val baseType = getNCtype(vlenMdt.base.type, vlenMdt.base.elemSize, unsigned)
-                datatype = if (vlenMdt.base.type == Datatype5.Reference) Datatype.STRING else baseType
+                // LOOK val baseType = getNCtype(vlenMdt.base.type, vlenMdt.base.elemSize, unsigned)
+                if (vlenMdt.base.type == Datatype5.Reference) {
+                    datatype = Datatype.STRING
+                }
             }
+
         } else if (hdfType == Datatype5.Array) { // array : used for structure members
             val arrayMdt = mdt as DatatypeArray
-            base = H5Type(arrayMdt.base)
+            // val baseDatatype = H5Type(arrayMdt.base)
             endian = arrayMdt.base.endian()
             unsigned = arrayMdt.base.unsigned()
             datatype = getNCtype(arrayMdt.base.type, arrayMdt.base.elemSize, unsigned)
@@ -58,6 +59,7 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
                     datatype = Datatype.STRING
                 }
             }
+
         } else if (warnings) {
             logger.warn("WARNING not handling hdf datatype = $hdfType size= $elemSize")
         }
@@ -66,6 +68,12 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
             datatype = datatype.withTypedef(typedef)
         }
     }
+
+    class BaseType(
+        val datatype : Datatype,
+        val endian : ByteOrder,
+        val hdfType : Datatype5,
+    )
 
     /*
    * Value Description
@@ -112,8 +120,8 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
                     else -> throw RuntimeException("Bad hdf5 enum type with size= $size")
                 }
 
-            Datatype5.Vlen -> defaultDatatype // dunno
-            Datatype5.Array -> defaultDatatype // dunno
+            Datatype5.Vlen -> Datatype.VLEN
+            Datatype5.Array -> defaultDatatype // dunno, has to be transformed to base[dims]
         }
     }
 

@@ -34,8 +34,11 @@ internal class H5heap(val header: H5builder) {
         val ho = heapId.getHeapObject()
             ?: throw IllegalStateException("Illegal Heap address, HeapObject = $heapId")
 
+        val typedef = datatype.typedef
+        val valueDatatype = if (typedef != null) typedef.baseType else datatype
+
         val state = OpenFileState(ho.dataPos, endian ?: ByteOrder.nativeOrder())
-        return when (datatype) {
+        return when (valueDatatype) {
             Datatype.FLOAT -> raf.readArrayFloat(state, heapId.nelems)
             Datatype.DOUBLE -> raf.readArrayDouble(state, heapId.nelems)
             Datatype.BYTE -> raf.readArrayByte(state, heapId.nelems)
@@ -46,6 +49,24 @@ internal class H5heap(val header: H5builder) {
         }
     }
 
+    /**
+     * Fetch a String from the heap, when the heap identifier has already been put into a ByteBuffer at given pos
+     *
+     * @param bb heap id is here
+     * @param pos at this position
+     * @return String the String read from the heap
+     * @throws IOException on read error
+     */
+    @Throws(IOException::class)
+    fun readHeapString(bb: ByteBuffer, pos: Int): String? {
+        val heapId: HeapIdentifier = HeapIdentifier(bb, pos)
+        if (heapId.isEmpty()) {
+            return null
+        }
+        val ho = heapId.getHeapObject() ?: throw IllegalStateException("Cant find Heap Object,heapId=$heapId")
+        val state = OpenFileState(ho.dataPos, ByteOrder.LITTLE_ENDIAN)
+        return raf.readString(state, ho.dataSize.toInt())
+    }
 
     /**
      * Fetch a String from the heap.
@@ -99,12 +120,14 @@ internal class H5heap(val header: H5builder) {
         }
 
         // the heap id is in ByteBuffer at given pos
-        constructor(bb: ByteBuffer, pos: Int) {
+        constructor(bb: ByteBuffer, start: Int) {
+            var pos = start
             bb.order(ByteOrder.LITTLE_ENDIAN) // header information is in LE byte order
-            bb.position(pos) // reletive reading
-            nelems = bb.int
-            heapAddress = if (header.isOffsetLong) bb.long else bb.int.toLong()
-            index = bb.int
+            nelems = bb.getInt(pos)
+            pos += 4
+            heapAddress = if (header.isOffsetLong) bb.getLong(pos) else bb.getInt(pos).toLong()
+            pos += header.sizeOffsets
+            index = bb.getInt(pos)
         }
 
         fun isEmpty(): Boolean {

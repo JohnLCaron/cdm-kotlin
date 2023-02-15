@@ -1,15 +1,31 @@
 package com.sunya.cdm.api
 
+import com.sunya.cdm.iosp.StructureMember
+import com.sunya.cdm.util.Indent
+
 enum class TypedefKind {Compound, Enum, Opaque, Vlen, Unknown}
 
-open class Typedef(val name : String, val kind : TypedefKind)
+abstract class Typedef(val kind : TypedefKind, val name : String, val baseType : Datatype) {
+    abstract fun cdl(indent : Indent): String
+}
 
-class CompoundTypedef(name : String, val dims : IntArray) : Typedef(name, TypedefKind.Compound)
-
-class EnumTypedef(name : String, val baseType : Datatype, val values : Map<Int, String>) : Typedef(name, TypedefKind.Enum) {
-    override fun toString() : String {
+class CompoundTypedef(name : String, val members : List<StructureMember>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
+    override fun cdl(indent : Indent) : String {
         return buildString {
-            append("${baseType.strictEnumType().cdlName} enum $name {")
+            append("${indent}compound $name {\n")
+            val nindent = indent.incr()
+            members.forEach {
+                append("${nindent}${it.datatype} ${it.name} ;\n")
+            }
+            append("${indent}}; // $name")
+        }
+    }
+}
+
+class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, String>) : Typedef(TypedefKind.Enum, name, baseType) {
+    override fun cdl(indent : Indent) : String {
+        return buildString {
+            append("${indent}${baseType.strictEnumType().cdlName} enum $name {")
             var idx = 0
             values.forEach {
                 if (idx > 0) append(", ")
@@ -21,10 +37,14 @@ class EnumTypedef(name : String, val baseType : Datatype, val values : Map<Int, 
     }
 }
 
-class OpaqueTypedef(name : String, val dims : IntArray) : Typedef(name, TypedefKind.Opaque)
+class OpaqueTypedef(name : String, val elemSize : Int) : Typedef(TypedefKind.Opaque, name, Datatype.OPAQUE) {
+    override fun cdl(indent : Indent): String {
+        return "${indent}opaque($elemSize) $name ;"
+    }
+}
 
-class VlenTypedef(name : String, val baseType : Datatype) : Typedef(name, TypedefKind.Vlen) {
-    override fun toString() : String {
-        return "${baseType.cdlName}(*) $name ;"
+class VlenTypedef(name : String, baseType : Datatype) : Typedef(TypedefKind.Vlen, name, baseType) {
+    override fun cdl(indent : Indent) : String {
+        return "${indent}${baseType.cdlName}(*) $name ;"
     }
 }

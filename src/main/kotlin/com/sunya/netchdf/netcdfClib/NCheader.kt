@@ -222,7 +222,7 @@ class NCheader(val filename: String) {
             // create the Variable
             val vb = Variable.Builder()
             vb.name = vname
-            vb.datatype = getDatatype(typeid)
+            vb.datatype = convertType(typeid)
             vb.dimensions.addAll(g4.makeDimList(dimIds))
             vb.spObject = Vinfo(g4, varid, typeid)
 
@@ -254,12 +254,12 @@ class NCheader(val filename: String) {
             val attName: String = name_p.getUtf8String(0)
             val attType = type_p[C_INT, 0]
             val attLength = size_p[C_LONG, 0]
-            val datatype = getDatatype(attType)
+            val datatype = convertType(attType)
             if (debug) println("  nc_inq_att $grpid $varid = $attName $datatype nelems=$attLength")
 
             val userType = userTypes[attType]
             if (userType != null) {
-                result.add(readUserAttributeValues(session, grpid, varid, attName, userType, attLength))
+                result.add(readUserAttributeValues(session, grpid, varid, attName, datatype, userType, attLength))
             } else {
                 val attb = Attribute.Builder().setName(attName).setDatatype(datatype)
                 if (attLength > 0) {
@@ -385,6 +385,7 @@ class NCheader(val filename: String) {
             }
 
             Datatype.STRING -> {
+                // this is fixed length, right? assume 0 terminated ???
                 val strings_p : MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
                 /* for (i in 0 until nelems) {
                     // Allocate a string off-heap, then store a pointer to it
@@ -435,28 +436,35 @@ class NCheader(val filename: String) {
 
     internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int)
 
-    fun getDatatype(type: Int): Datatype {
-        when (type) {
-            NC_BYTE() -> return Datatype.BYTE
-            NC_CHAR() -> return Datatype.CHAR
-            NC_SHORT()-> return Datatype.SHORT
-            NC_INT() -> return Datatype.INT
-            NC_FLOAT() -> return Datatype.FLOAT
-            NC_DOUBLE() -> return Datatype.DOUBLE
-            NC_UBYTE() -> return Datatype.UBYTE
-            NC_USHORT() -> return Datatype.USHORT
-            NC_UINT() -> return Datatype.UINT
-            NC_INT64() -> return Datatype.LONG
-            NC_UINT64() -> return Datatype.ULONG
-            NC_STRING() -> return Datatype.STRING
+    fun convertType(type: Int): Datatype {
+        return when (type) {
+            NC_BYTE() -> Datatype.BYTE
+            NC_CHAR() -> Datatype.CHAR
+            NC_SHORT()-> Datatype.SHORT
+            NC_INT() -> Datatype.INT
+            NC_FLOAT() -> Datatype.FLOAT
+            NC_DOUBLE() -> Datatype.DOUBLE
+            NC_UBYTE() -> Datatype.UBYTE
+            NC_USHORT() -> Datatype.USHORT
+            NC_UINT() -> Datatype.UINT
+            NC_INT64() -> Datatype.LONG
+            NC_UINT64() -> Datatype.ULONG
+            NC_STRING() -> Datatype.STRING
             else -> {
-                val userType: UserType = userTypes[type] ?: throw RuntimeException("Unsupported attribute data type == $type")
-                return when (userType.typeClass) {
-                    NC_ENUM() -> userType.enumBaseType
-                    NC_OPAQUE() -> Datatype.OPAQUE
-                    NC_VLEN() -> Datatype.VLEN
-                    NC_COMPOUND() -> Datatype.COMPOUND
-                    else -> throw RuntimeException("Unsupported attribute data type == $type")
+                val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
+                return when (userType.typedef.kind) {
+                    TypedefKind.Enum -> {
+                        when (userType.size) {
+                            1 -> Datatype.ENUM1.withTypedef(userType.typedef)
+                            2 -> Datatype.ENUM2.withTypedef(userType.typedef)
+                            4 -> Datatype.ENUM4.withTypedef(userType.typedef)
+                            else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
+                        }
+                    }
+                    TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
+                    TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
+                    TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
+                    else -> throw RuntimeException("Unsupported data type == $type")
                 }
             }
         }

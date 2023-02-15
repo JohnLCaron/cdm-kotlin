@@ -183,7 +183,7 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
         MessageType.FillValue -> this.readFillValueMessage(state) // 5
         MessageType.Link -> this.readLinkMessage(state) // 6
         MessageType.Layout -> this.readDataLayoutMessage(state) // 8
-        MessageType.GroupInfo -> null // this.readGroupInfoMessage(state) // 10
+        MessageType.GroupInfo -> this.readGroupInfoMessage(state) // 10
         MessageType.FilterPipeline -> this.readFilterPipelineMessage(state) // 11
         MessageType.Attribute -> this.readAttributeMessage(state) // 12
         MessageType.Comment -> this.readCommentMessage(state) // 13
@@ -234,10 +234,10 @@ fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
             fld("version", 1)
             fld("rank", 1)
             fld("flags", 1)
+            fld("type", 1)
             if (version == 1) {
                 skip(4)
             }
-            fld("type", 1)
             array("dims", sizeLengths, "rank")
             if (flags and 1 != 0) {
                 array("maxsize", sizeLengths, "rank")
@@ -625,6 +625,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     val mdt: DatatypeMessage
     val isShared = flags and 1 != 0
     if (isShared) {
+        // LOOK problem is that the typedef hasnt been read yet, so doesnt get named
         mdt = getSharedDataObject(state, MessageType.Datatype).mdt!!
     } else {
         val startPos = state.pos

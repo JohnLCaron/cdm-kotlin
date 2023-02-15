@@ -1,7 +1,5 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.DataType
-import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Dimension
 import com.sunya.cdm.api.TypedefKind
 import com.sunya.cdm.iosp.OpenFileState
@@ -290,11 +288,13 @@ internal class H5Typedef(val dataObject: DataObject) {
     var compoundMessage : DatatypeCompound? = null
 
     val kind : TypedefKind
-    val address : Long
+    val mdtAddress : Long
+    val mdtHash : Int
 
     init {
         require(dataObject.mdt != null && dataObject.mdl == null)
-        address = dataObject.mdt!!.address
+        mdtAddress = dataObject.mdt!!.address
+        mdtHash = dataObject.mdt!!.hashCode()
 
         when (dataObject.mdt!!.type) {
             Datatype5.Enumerated -> {

@@ -40,7 +40,8 @@ class H5builder(val raf: OpenFile,
     internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
-    internal val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
+    private val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
+    private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
 
     val cdmRoot : Group
 
@@ -198,7 +199,6 @@ class H5builder(val raf: OpenFile,
     //////////////////////////////////////////////////////////////
     // Internal organization of Data Objects
 
-
     @Throws(IOException::class)
     fun convertReferenceToDataObjectName(reference: Long): String {
         val name = getDataObjectName(reference)
@@ -231,23 +231,38 @@ class H5builder(val raf: OpenFile,
     /**
      * All access to data objects come through here, so we can cache.
      * Look in cache first; read if not in cache.
+     * I think this is just for shared objects.
      *
      * @param address object address (aka id)
-     * @param name optional name
+     * @param name optional name, sometimes isnt known until later, so leave null. Applicable eg for an Attribute
+     *   referencing a typedef before the typedef is found through a hardlink, which supplies the name. Because
+     *   the DataObject doesnt know its name. Because its name is free to be something else. Cause thats how we roll.
      */
     @Throws(IOException::class)
     fun getDataObject(address: Long, name: String?): DataObject {
         // find it
         var dobj = dataObjectMap[address]
         if (dobj != null) {
-            if (dobj.name == null && name != null) dobj.name = name
+            if (dobj.name == null && name != null) {
+                dobj.name = name
+            }
             return dobj
         }
 
         // read and cache
-        dobj = this.readDataObject(address, name?: "")
+        dobj = this.readDataObject(address, name)
         dataObjectMap[address] = dobj
         return dobj
+    }
+
+    fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) {
+        typedefMap[mdtAddress] = typedef
+        // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
+        typedefMdtHash[mdtHash] = typedef
+    }
+
+    fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
+        return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
     }
 
     //////////////////////////////////////////////////////////////

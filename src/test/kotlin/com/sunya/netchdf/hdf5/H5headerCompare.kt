@@ -35,16 +35,33 @@ class H5headerCompare {
                     .withRecursion()
                     .build()
 
-            return stream1
+            return stream3
             // return Stream.of(stream1, stream2, stream3).flatMap { i -> i };
             //return stream2
         }
     }
 
     @Test
-    fun baseAddressNotZero() {
-        // openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
+    fun tst_compounds() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_compounds.nc4")
     }
+    /*
+netcdf tst_compounds {
+types:
+  compound obs_t {
+    byte day ;
+    short elev ;
+    int count ;
+    float relhum ;
+    double time ;
+  }; // obs_t
+dimensions:
+	n = 3 ;
+variables:
+	obs_t obs(n) ;
+		obs_t obs:_FillValue = {-99, -99, -99, -99, -99} ;
+}
+     */
 
     @Test
     fun sharedObject() {
@@ -60,11 +77,6 @@ class H5headerCompare {
     @Test
     fun hasTimeDataType() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
-    }
-
-    @Test
-    fun vlenAttribute() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
     }
 
     @Test
@@ -104,6 +116,7 @@ variables:
     @Test
     fun attVlen() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
     }
     /*
     snake@jlc:~$ ncdump -h /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4
@@ -115,7 +128,28 @@ dimensions:
 variables:
 	row_of_floats ragged_array(m) ;
 		row_of_floats ragged_array:_FillValue = {-999} ;
-} */
+}
+netcdf tst_solar_2 {
+types:
+  int(*) unimaginatively_named_vlen_type ;
+
+// global attributes:
+		unimaginatively_named_vlen_type :equally_unimaginatively_named_attribute_YAWN = {-99}, {-99, -99} ;
+}
+     */
+
+    @Test
+    fun varVlen() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/vlenInt.nc")
+    }
+    /*
+netcdf vlenInt {
+types:
+  int(*) vlen_t ;
+variables:
+	vlen_t x ;
+}
+     */
 
     @Test
     fun outofOrder() {
@@ -155,6 +189,109 @@ variables:
 		:time_coverage_duration = 0 ;
 		:license = "Freely available" ;
 } */
+
+    @Test
+    fun attArrayStruct() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_cmp.nc")
+    }
+    /*
+netcdf tst_solar_cmp {
+types:
+  compound wind_vector {
+    float u ;
+    float v ;
+  }; // wind_vector
+
+// global attributes:
+		wind_vector :my_favorite_wind_speeds = {13.3, 12.2}, {13.3, 12.2}, {13.3, 12.2} ;
+}
+     */
+
+    @Test
+    fun nameHasSpace () {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
+    }
+/*    netcdf dstr {
+        variables:
+        string Char\ Data ; Char space Data is the variable name ?? yikes!!
+    }
+ */
+
+    @Test
+    fun compoundInner () {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
+    }
+/*
+netcdf IntTimSciSamp {
+types:
+  int(*) loopData ;
+  compound tim_record {
+    int shutterPositionA ;
+    int shutterPositionD ;
+    int shutterPositionB ;
+    int shutterPositionC ;
+    int dspGainMode ;
+    int coneActiveStateA ;
+    int coneActiveStateD ;
+    int coneActiveStateB ;
+    int coneActiveStateC ;
+    loopData loopDataA(1) ;
+    loopData loopDataB(1) ;
+    int64 sampleVtcw ;
+  }; // tim_record
+dimensions:
+	time = UNLIMITED ; // (29 currently)
+variables:
+	int64 time(time) ;
+	tim_record tim_records(time) ;
+}
+ */
+
+    @Test
+    fun problem () {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
+}
+    /*
+    netcdf attributeStruct {
+types:
+  compound observation_type {
+    float tempMin ;
+    float tempMax ;
+    float precip ;
+  }; // observation_type
+  compound observation_atts {
+    string tempMin ;
+    string tempMax ;
+    string precip ;
+  }; // observation_atts
+dimensions:
+	station = 2 ;
+	observation = 6 ;
+variables:
+	int station_id(station) ;
+		station_id:standard_name = "station_id" ;
+	float lat(station) ;
+		lat:units = "degrees_north" ;
+	float lon(station) ;
+		lon:units = "degrees_east" ;
+	float elev(station) ;
+		elev:units = "feet" ;
+		elev:positive = "up" ;
+	int ragged_row_size(station) ;
+		ragged_row_size:standard_name = "ragged_row_size" ;
+	int time(observation) ;
+		time:units = "days since 1929-01-01 00 UTC" ;
+	observation_type observations(observation) ;
+		observation_atts observations:units = {"degF", "degF", "inches"} ;
+		observation_atts observations:coordinates =
+    {"time lat lon elev", "time lat lon elev", "time lat lon elev"} ;
+
+// global attributes:
+		:CF\:featureType = "stationTimeSeries" ;
+		:Conventions = "CF-1.5" ;
+}
+
+     */
 
     @ParameterizedTest
     @MethodSource("params")

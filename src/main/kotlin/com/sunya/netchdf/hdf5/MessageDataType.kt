@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
@@ -35,6 +36,10 @@ enum class Datatype5(val num : Int) {
             }
         }
     }
+
+    fun isTypedef() : Boolean {
+        return (num == 5) || (num == 6) || (num == 7) || (num == 8)
+    }
 }
 
 /**
@@ -48,6 +53,25 @@ open class DatatypeMessage(val address : Long, val type: Datatype5, val elemSize
     override fun show() : String {
         return "$type"
     }
+
+    // exclude address, allow subclasses
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeMessage) return false
+
+        if (type != other.type) return false
+        if (elemSize != other.elemSize) return false
+        if (endian != other.endian) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = type.hashCode()
+        result = 31 * result + elemSize
+        result = 31 * result + (endian?.hashCode() ?: 0)
+        return result
+    }
 }
 
 open class DatatypeFixed(address : Long, elemSize: Int, endian: ByteOrder, val unsigned: Boolean) :
@@ -56,6 +80,25 @@ open class DatatypeFixed(address : Long, elemSize: Int, endian: ByteOrder, val u
     override fun show() : String {
         return "$type elemSize=$elemSize"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+        if (!super.equals(other)) return false
+
+        other as DatatypeFixed
+
+        if (unsigned != other.unsigned) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + unsigned.hashCode()
+        return result
+    }
+
 }
 
 class DatatypeFloating(address : Long, elemSize: Int, endian: ByteOrder) : DatatypeMessage(address, Datatype5.Floating, elemSize, endian)
@@ -65,19 +108,87 @@ class DatatypeTime(address : Long, elemSize: Int, endian: ByteOrder) : DatatypeM
 class DatatypeString(address : Long, elemSize: Int) : DatatypeMessage(address, Datatype5.String, elemSize, null)
 
 class DatatypeBitField(address : Long, elemSize: Int, endian: ByteOrder, unsigned: Boolean, val bitOffset : Short,
-                       val bitPrecision : Short) : DatatypeFixed(address, elemSize, endian, unsigned)
+                       val bitPrecision : Short) : DatatypeFixed(address, elemSize, endian, unsigned) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeBitField) return false
+        if (!super.equals(other)) return false
 
-class DatatypeOpaque(address : Long, elemSize: Int, val desc: String) : DatatypeMessage(address, Datatype5.Opaque, elemSize, null)
+        if (bitOffset != other.bitOffset) return false
+        if (bitPrecision != other.bitPrecision) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + bitOffset
+        result = 31 * result + bitPrecision
+        return result
+    }
+}
+
+class DatatypeOpaque(address : Long, elemSize: Int, val desc: String) : DatatypeMessage(address, Datatype5.Opaque, elemSize, null) {
+    override fun show() : String {
+        return "${type}@${address} elemSize=$elemSize"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeOpaque) return false
+        if (!super.equals(other)) return false
+        if (desc != other.desc) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + desc.hashCode()
+        return result
+    }
+
+}
 
 class DatatypeCompound(address : Long, elemSize: Int, val members: List<StructureMember5>) :
     DatatypeMessage(address, Datatype5.Compound, elemSize, null) {
     override fun show() : String {
-        return "$type elemSize=$elemSize"
+        return "${type}@${address} elemSize=$elemSize"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeCompound) return false
+        if (!super.equals(other)) return false
+        if (members != other.members) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + members.hashCode()
+        return result
+    }
+
 }
 
 // LOOK if all we have is a mdt, must be a scalar ?? Or could be an array?
-class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessage)
+class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessage) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StructureMember5) return false
+        if (name != other.name) return false
+        if (offset != other.offset) return false
+        if (mdt != other.mdt) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + offset
+        result = 31 * result + mdt.hashCode()
+        return result
+    }
+}
 
 /**
  * @param elemSize dunno, maybe size of offset in field? maybe ignored?
@@ -85,40 +196,112 @@ class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessa
  *  0) Object Reference: A reference to another object in this HDF5 file.
  *  1) Dataset Region Reference: A reference to a region within a dataset in this HDF5 file.
  */
-class DatatypeReference(address : Long, elemSize: Int, val referenceType: Int) : DatatypeMessage(address, Datatype5.Reference, elemSize, null)
+class DatatypeReference(address : Long, elemSize: Int, val referenceType: Int)
+    : DatatypeMessage(address, Datatype5.Reference, elemSize, null) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeReference) return false
+        if (!super.equals(other)) return false
+        if (referenceType != other.referenceType) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + referenceType
+        return result
+    }
+}
 
 class DatatypeEnum(
     address : Long,
     elemSize: Int,
-    val base: DatatypeMessage,
-    val names: List<String>,
-    val nums: List<Int>
-) : DatatypeMessage(address, Datatype5.Enumerated, elemSize, null) {
+    endian: ByteOrder,
+    names: List<String>,
+    nums: List<Int>
+) : DatatypeMessage(address, Datatype5.Enumerated, elemSize, endian) {
+    val valuesMap : Map<Int, String>
+    val datatype : Datatype
 
-    val valueMap = lazy {
+    init {
         require(names.size == nums.size)
         val values = mutableMapOf<Int, String>()
         nums.onEachIndexed{idx, num -> values[num] = names[idx]}
-        values
+        valuesMap = values.toMap()
+
+        datatype = when (elemSize) {
+            1 -> Datatype.ENUM1
+            2 -> Datatype.ENUM2
+            4 -> Datatype.ENUM4
+            else -> throw java.lang.RuntimeException("invalid enum elemsize $elemSize")
+        }
     }
 
     override fun show() : String {
-        return "$type n=${names.size} base=(${base.show()})"
+        return "${type}@${address} elemSize=${elemSize})"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeEnum) return false
+        if (!super.equals(other)) return false
+        if (valuesMap != other.valuesMap) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + valuesMap.hashCode()
+        return result
     }
 }
 
 class DatatypeVlen(address : Long, elemSize: Int, val base: DatatypeMessage, val isVString: Boolean) :
     DatatypeMessage(address, Datatype5.Vlen, elemSize, null) {
     override fun show() : String {
-        return "$type elemSize=$elemSize base=(${base.show()}) isVString=$isVString"
+        return "${type}@${address} elemSize=$elemSize base=(${base.show()}) isVString=$isVString"
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeVlen) return false
+        if (!super.equals(other)) return false
+        if (base != other.base) return false
+        if (isVString != other.isVString) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + base.hashCode()
+        result = 31 * result + isVString.hashCode()
+        return result
     }
 }
 
 class DatatypeArray(address : Long, elemSize: Int, val base: DatatypeMessage, val dims: IntArray) :
     DatatypeMessage(address, Datatype5.Array, elemSize, null) {
+
     override fun show() : String {
         return "$type elemSize=$elemSize base=(${base.show()}) dims=${dims.contentToString()}"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is DatatypeArray) return false
+        if (!super.equals(other)) return false
+        if (base != other.base) return false
+        if (!dims.contentEquals(other.dims)) return false
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + base.hashCode()
+        result = 31 * result + dims.contentHashCode()
+        return result
+    }
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -166,7 +349,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             return DatatypeTime(address, elemSize, endian)
         }
 
-        3 -> {
+        3 -> { // fixed length string
             // could also store padding type and character set.
             // padding : always check for zero termination.
             // character set, ASCII < UTF8, so always use UTF8
@@ -182,8 +365,8 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             return DatatypeBitField(address, elemSize, endian, unsigned, bitOffset, bitPrecision)
         }
 
-        5 -> {
-            val len = flags0
+        5 -> { // opaque
+            val len = flags0 //  Length of desc in bytes.
             val desc = raf.readString(state, len)
             return DatatypeOpaque(address, elemSize, desc)
         }
@@ -198,14 +381,15 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             return DatatypeCompound(address, elemSize, members)
         }
 
-        7 -> {
+        7 -> { // reference
             val referenceType = flags0 and 0xf
             return DatatypeReference(address, elemSize, referenceType)
         }
 
-        8 -> {
+        8 -> { // enum
             val nmembers: Int = makeUnsignedIntFromBytes(flags1, flags0)
             val base = this.readDatatypeMessage(state)
+            require( base is DatatypeFixed)
 
             // read the enum names
             val enumNames = mutableListOf<String>()
@@ -223,7 +407,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             // LOOK since we've switched to tstate, the state position isnt updated. but we can igmore since this is the
             //  last field in the message
 
-            return DatatypeEnum(address, elemSize, base, enumNames, enumNums)
+            return DatatypeEnum(address, elemSize, base.endian?: ByteOrder.LITTLE_ENDIAN, enumNames, enumNums)
         }
 
         9 -> {
