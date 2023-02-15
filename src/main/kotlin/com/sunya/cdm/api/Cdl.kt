@@ -42,10 +42,6 @@ fun Group.cdl(indent : Indent = Indent(2)) : String {
     }
 }
 
-fun Typedef.cdl(indent : Indent = Indent(2)) : String {
-    return "${indent}${this}"
-}
-
 fun Dimension.cdl(indent : Indent = Indent(2)) : String {
     return if (isUnlimited) "${indent}$name = UNLIMITED;   // ($length currently)"
     else if (!isShared) "${indent}$length"
@@ -56,20 +52,19 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
     val typedef = datatype.typedef
     val typename = if (typedef != null) typedef.name else datatype.cdlName
     return buildString {
-        append("${indent}${typename} $name")
+        append("${indent}${typename} ${escapeCdl(name)}")
         if (dimensions.isNotEmpty()) {
             append("(")
             dimensions.forEachIndexed { idx, it ->
                 if (idx > 0) append(", ")
-                if (!it.isShared) append("$length")
-                else append(it.name + "=" + it.length)
+                if (!it.isShared) append("$length") else append(it.name)
             }
             append(")")
         }
         append(";")
         if (attributes.isNotEmpty()) {
             append("\n")
-            attributes.forEach { append("${it.cdl(name, indent.incr())}\n") }
+            attributes.forEach { append("${it.cdl(escapeCdl(name), indent.incr())}\n") }
         } else {
             append("\n")
         }
@@ -79,6 +74,7 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
 fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
     val typedef = datatype.typedef
     val typename = if (typedef != null) typedef.name else datatype.cdlName
+    val valueDatatype = if (typedef != null) typedef.baseType else datatype
     return buildString {
         append("${indent}${typename} $varname:$name = ")
         if (values.isEmpty()) {
@@ -91,7 +87,7 @@ fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
                 if (idx != 0) {
                     append(", ")
                 }
-                when (datatype) {
+                when (valueDatatype) {
                     Datatype.STRING -> append("\"${escapeCdl(it as String)}\"")
                     Datatype.FLOAT -> append("${it}f")
                     Datatype.SHORT -> append("${it}s")
@@ -216,8 +212,8 @@ fun Attribute.cdlStrict(varname: String, addType : Boolean, indent : Indent = In
 }
 
 /////////////////////
-private val org = charArrayOf('\b', '\n', '\r', '\t', '\\', '\'', '\"')
-private val replace = arrayOf("\\b", "\\n", "\\r", "\\t", "\\\\", "\\'", "\\\"")
+private val org = charArrayOf('\b', '\n', '\r', '\t', '\\', '\'', '\"', ' ')
+private val replace = arrayOf("\\b", "\\n", "\\r", "\\t", "\\\\", "\\'", "\\\"", "_")
 
 fun escapeCdl(s: String): String {
     return replace(s, org, replace)

@@ -1,9 +1,11 @@
 package com.sunya.cdm.api
 
+import java.util.*
+
 class Group(val name : String,
+            val typedefs : List<Typedef>,
             val dimensions : List<Dimension>,
             val attributes : List<Attribute>,
-            val typedefs : List<Typedef>,
             variableBuilders : List<Variable.Builder>,
             groupBuilders : List<Group.Builder>,
             val parent: Group?
@@ -36,6 +38,12 @@ class Group(val name : String,
             return true
         }
 
+        fun replaceDimension(dim: Dimension): Boolean {
+            val found = dimensions.removeIf{ it.name == dim.name }
+            addDimension(dim)
+            return found
+        }
+
         fun addAttribute(att: Attribute) {
             attributes.add(att)
         }
@@ -49,7 +57,7 @@ class Group(val name : String,
         }
 
         fun build(parent : Group?) : Group {
-            return Group(name, dimensions, attributes, typedefs, variables, groups, parent)
+            return Group(name, typedefs, dimensions, attributes, variables, groups, parent)
         }
     }
 }

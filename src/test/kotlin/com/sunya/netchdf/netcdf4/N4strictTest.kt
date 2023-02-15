@@ -162,8 +162,40 @@ variables:
         )
     }
 
+    @Test
+    fun IntTimSciSamp() {
+        readN4header(
+            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc",
+            """netcdf IntTimSciSamp {
+types:
+  int(*) loopData ;
+  compound tim_record {
+    int shutterPositionA ;
+    int shutterPositionD ;
+    int shutterPositionB ;
+    int shutterPositionC ;
+    int dspGainMode ;
+    int coneActiveStateA ;
+    int coneActiveStateD ;
+    int coneActiveStateB ;
+    int coneActiveStateC ;
+    loopData loopDataA(1) ;
+    loopData loopDataB(1) ;
+    int64 sampleVtcw ;
+  }; // tim_record
+dimensions:
+	time = UNLIMITED ; // (29 currently)
+variables:
+	int64 time(time) ;
+	tim_record tim_records(time) ;
+}
+"""
+        )
+    }
 
-    fun readN4header(filename : String, expect : String) {
+
+
+            fun readN4header(filename : String, expect : String) {
         println("=================")
         println(filename)
         val ncfile : Netcdf = NetcdfClibFile(filename)
