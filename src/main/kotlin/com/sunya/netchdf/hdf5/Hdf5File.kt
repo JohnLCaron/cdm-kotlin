@@ -14,6 +14,10 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
         header = H5builder(raf, strict)
     }
 
+    override fun close() {
+        raf.close()
+    }
+
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)

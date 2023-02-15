@@ -30,17 +30,18 @@ class N3readTest {
     fun readN3data(filename : String, expect : String) {
         println("=================")
         println(filename)
-        val ncfile = Netcdf3File(filename)
-        val root = ncfile.rootGroup()
-        println("actual = ${ncfile.cdl()}")
-        //println("expect = $expect")
+        Netcdf3File(filename).use { ncfile ->
+            val root = ncfile.rootGroup()
+            println("actual = ${ncfile.cdl()}")
+            //println("expect = $expect")
 
-        assertEquals(expect, root.toString())
-        assertTrue(root.toString().contains(expect))
+            assertEquals(expect, root.toString())
+            assertTrue(root.toString().contains(expect))
 
-        root.variables.forEach {
-            println(" ${it.name} = ${it.spObject}")
-            // println(" ${it.readData()}")
+            root.variables.forEach {
+                println(" ${it.name} = ${it.spObject}")
+                // println(" ${it.readData()}")
+            }
         }
     }
 

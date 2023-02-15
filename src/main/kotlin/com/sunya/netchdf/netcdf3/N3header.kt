@@ -277,14 +277,6 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     }
   }
 
-  /**
-   * Check if the given bytes correspond to
-   * [magic bytes][.MAGIC] of the header.
-   *
-   * @param bytes given bytes.
-   * @return `true` if the given bytes correspond to
-   * [magic bytes][.MAGIC] of the header. Otherwise `false`.
-   */
   private fun isMagicBytes(bytes: ByteArray): Boolean {
     for (i in 0..2) {
       if (bytes[i] != MAGIC[i]) {

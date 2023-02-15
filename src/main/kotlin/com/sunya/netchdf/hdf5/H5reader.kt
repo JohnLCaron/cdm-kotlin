@@ -171,7 +171,7 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) 
         sdataArray.forEach { sdata ->
             val sval = h5heap.readHeapString(sdataArray.bb, sdata.offset + member.offset)!!
             println("offset ${sdata.offset + member.offset} sval $sval")
-            sdata.putHeap(member, sval)
+            sdata.putOnHeap(member, sval)
         }
     }
     return sdataArray.toList()

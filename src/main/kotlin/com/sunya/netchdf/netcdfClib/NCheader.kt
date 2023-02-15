@@ -179,7 +179,7 @@ class NCheader(val filename: String) {
                 val dimension = Dimension(dimLength.toInt())
                 g4.dimHash[dimId] = dimension
             } else {
-                val dimension = Dimension(dimName, dimLength.toInt()) // LOOK not using unlimited
+                val dimension = Dimension(dimName, dimLength.toInt(), isUnlimited, true)
                 g4.gb.addDimension(dimension)
                 g4.dimHash[dimId] = dimension
             }

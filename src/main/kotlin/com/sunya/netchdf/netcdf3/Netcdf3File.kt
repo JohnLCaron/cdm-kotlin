@@ -17,6 +17,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         rootGroup = rootBuilder.build(null)
     }
 
+    override fun close() {
+        raf.close()
+    }
+
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)

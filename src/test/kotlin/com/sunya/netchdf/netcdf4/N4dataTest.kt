@@ -46,9 +46,9 @@ class N4dataTest {
     fun readN4data(filename: String) {
         println("=================")
         println(filename)
-        val ncfile = NetcdfClibFile(filename)
-        println(ncfile.cdl())
-        /*
+         NetcdfClibFile(filename).use { ncfile ->
+             println(ncfile.cdl())
+             /*
         val ncvars = rootClib.variables
         ncvars.forEach { n4var ->
             val ncdata = nciosp.readArrayData(n4var)
@@ -57,6 +57,7 @@ class N4dataTest {
         }
 
          */
+         }
     }
 
 }

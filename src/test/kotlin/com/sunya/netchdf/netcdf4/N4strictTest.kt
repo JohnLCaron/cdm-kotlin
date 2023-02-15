@@ -194,15 +194,14 @@ variables:
     }
 
 
-
-            fun readN4header(filename : String, expect : String) {
+    fun readN4header(filename : String, expect : String) {
         println("=================")
         println(filename)
-        val ncfile : Netcdf = NetcdfClibFile(filename)
-        //println("actual = ${ncfile.cdlStrict().normalize()}")
-        //println("expect = ${expect.normalize()}")
-
-        assertEquals(normalize(expect), normalize(ncfile.cdlStrict()))
+        NetcdfClibFile(filename).use { ncfile ->
+            //println("actual = ${ncfile.cdlStrict().normalize()}")
+            //println("expect = ${expect.normalize()}")
+            assertEquals(normalize(expect), normalize(ncfile.cdlStrict()))
+        }
     }
 
     fun normalize(org : String) : String {

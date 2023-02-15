@@ -74,24 +74,9 @@ class H5headerTest {
     fun openH5(filename: String) {
         println("=================")
         println(filename)
-        val h5file = Hdf5File(filename)
-        println(h5file.cdl())
-
-        /* val rootClib = ncheader.rootGroup.build(null)
-
-        val nciosp = ncheader.getIosp()
-
-         */
-
-        /*
-        val ncvars = rootClib.variables
-        ncvars.forEach { n4var ->
-            val ncdata = nciosp.readArrayData(n4var)
-            println("===============\n${n4var.name}")
-            println("ncdata = $ncdata")
+        Hdf5File(filename).use { h5file ->
+            println(h5file.cdl())
         }
-
-         */
     }
 
 }

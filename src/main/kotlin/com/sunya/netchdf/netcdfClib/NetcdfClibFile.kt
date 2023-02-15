@@ -19,6 +19,10 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
     override fun cdl() = cdl(this)
     override fun cdlStrict() = cdlStrict(this)
 
+    override fun close() {
+        // NOOP
+    }
+
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>  {
         TODO("Not yet implemented")
     }

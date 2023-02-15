@@ -420,7 +420,9 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
 
         10 -> {
             val ndims = raf.readByte(state).toInt()
-            state.pos += 3
+            if (version < 3) {
+                state.pos += 3
+            }
 
             val dim = IntArray(ndims)
             for (i in 0 until ndims) {
