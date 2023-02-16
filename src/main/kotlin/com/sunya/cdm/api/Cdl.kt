@@ -9,12 +9,12 @@ fun cdl(netcdf : Netcdf) : String {
     val name = filename.substringBefore('.')
     return buildString{
         append("netcdf $name {\n")
-        append(netcdf.rootGroup().cdl(Indent(2, 1)))
+        append(netcdf.rootGroup().cdl(true, Indent(2, 1)))
         append("}")
     }
 }
 
-fun Group.cdl(indent : Indent = Indent(2)) : String {
+fun Group.cdl(isRoot : Boolean, indent : Indent = Indent(2)) : String {
     return buildString{
         if (typedefs.isNotEmpty()) {
             append("${indent}types:\n")
@@ -29,13 +29,15 @@ fun Group.cdl(indent : Indent = Indent(2)) : String {
             variables.sortedBy { it.name }. map { append(it.cdl(indent.incr())) }
         }
         if (attributes.isNotEmpty()) {
-            append("\n${indent}// group attributes:\n")
+            val nindent = if (isRoot) indent else indent.incr()
+            val text = if (isRoot) "global" else "group"
+            append("\n${nindent}// $text attributes:\n")
             attributes.sortedBy { it.name }.forEach { append("${it.cdl("", indent)}\n") }
         }
         if (groups.isNotEmpty()) {
             groups.sortedBy { it.name }.forEach {
                 append("\n${indent}group: ${it.name} {\n")
-                append(it.cdl(indent.incr()))
+                append(it.cdl(false, indent.incr()))
                 append("${indent}}\n")
             }
         }
@@ -64,7 +66,7 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
         append(";")
         if (attributes.isNotEmpty()) {
             append("\n")
-            attributes.forEach { append("${it.cdl(escapeCdl(name), indent.incr())}\n") }
+            attributes.sortedBy { it.name }.forEach { append("${it.cdl(escapeCdl(name), indent.incr())}\n") }
         } else {
             append("\n")
         }
@@ -106,8 +108,9 @@ internal fun ByteBuffer.toHex() : String {
 
 
 ////////////////////////////////////////////////////////////
+// deprecated - DO not use
 
-fun cdlStrict(netcdf : Netcdf) : String {
+fun cdlStrictOld(netcdf : Netcdf) : String {
     val filename = netcdf.location().substringAfterLast('/')
     val name = filename.substringBefore('.')
     return buildString{
@@ -156,7 +159,6 @@ fun Datatype.strictEnumType() : Datatype {
         Datatype.ENUM4 -> Datatype.UINT
         else -> this
     }
-
 }
 
 fun Dimension.cdlStrict(indent : Indent = Indent(2)) : String {

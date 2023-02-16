@@ -171,8 +171,7 @@ class DatatypeCompound(address : Long, elemSize: Int, val members: List<Structur
 
 }
 
-// LOOK if all we have is a mdt, must be a scalar ?? Or could be an array?
-class StructureMember5(val name: String, val offset: Int, val mdt: DatatypeMessage) {
+class StructureMember5(val name: String, val offset: Int, val dims : IntArray, val mdt: DatatypeMessage) {
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is StructureMember5) return false
@@ -410,7 +409,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             return DatatypeEnum(address, elemSize, base.endian?: ByteOrder.LITTLE_ENDIAN, enumNames, enumNums)
         }
 
-        9 -> {
+        9 -> { // vlen
             val isVString = flags0 and 0xf == 1
             val base = this.readDatatypeMessage(state)
             // TODO padding and charset
@@ -418,7 +417,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             return DatatypeVlen(address, elemSize, base, isVString)
         }
 
-        10 -> {
+        10 -> { // array
             val ndims = raf.readByte(state).toInt()
             if (version < 3) {
                 state.pos += 3
@@ -443,7 +442,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
 }
 
 @Throws(IOException::class)
-fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: Int): StructureMember5 {
+fun H5builder.readStructureMember(state: OpenFileState, version: Int, structSize: Int): StructureMember5 {
     // dont know how long it is, read until 0 terminated and then (if version < 8) pad to 8 bytes
     val pad = if (version < 3) 8 else 0
     val name = this.readStringZ(state, pad)
@@ -451,17 +450,30 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, elemSize: 
         raf.readInt(state) // always 4 bytes
     } else {
         // var length of bytes, stupid
-        this.readVariableSizeMax(state, elemSize.toLong()).toInt()
+        this.readVariableSizeMax(state, structSize.toLong()).toInt()
     }
 
-    // LOOK ignore these, because replicated in mdt? or in a seperate dataspace message ?
     if (version == 1) {
-        state.pos += 28
+        val rank = raf.readByte(state).toInt()
+        state.pos += 11
+        val dims = intArrayOf(
+            raf.readInt(state),
+            raf.readInt(state),
+            raf.readInt(state),
+            raf.readInt(state)
+        )
+        val reducedDims = IntArray(rank) { idx -> dims[idx]}
+        val mdt = this.readDatatypeMessage(state)
+        return StructureMember5(name, offset, reducedDims, mdt)
     }
 
     val mdt = this.readDatatypeMessage(state)
+    if (mdt.type == Datatype5.Array) {
+        val arrayMdt = mdt as DatatypeArray
+        return StructureMember5(name, offset, arrayMdt.dims, arrayMdt.base)
+    }
 
-    return StructureMember5(name, offset, mdt)
+    return StructureMember5(name, offset, intArrayOf(), mdt)
 }
 
 // read a zero terminated string

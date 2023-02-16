@@ -37,7 +37,7 @@ cd /home/snake/install/jextract-19/bin
 
 fun main(args: Array<String>) {
     val h = NCheader("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc")
-    if (debug) println(h.rootGroup.build(null).cdl())
+    if (debug) println(h.rootGroup.build(null).cdl(true))
 }
 
 // Really a builder of the root Group.
@@ -264,6 +264,8 @@ class NCheader(val filename: String) {
                 val attb = Attribute.Builder().setName(attName).setDatatype(datatype)
                 if (attLength > 0) {
                     attb.values = readAttributeValues(session, grpid, varid, attName, datatype, attLength)
+                } else {
+                    attb.values = emptyList<Any>()
                 }
                 result.add(attb)
             }

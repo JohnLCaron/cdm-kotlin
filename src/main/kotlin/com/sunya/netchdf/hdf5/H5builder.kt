@@ -245,6 +245,9 @@ class H5builder(val raf: OpenFile,
         if (dobj != null) {
             if (dobj.name == null && name != null) {
                 dobj.name = name
+                if (debugFlow) {
+                    println("named object@$address as $name")
+                }
             }
             return dobj
         }
@@ -257,6 +260,7 @@ class H5builder(val raf: OpenFile,
 
     fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) {
         typedefMap[mdtAddress] = typedef
+        println("add typdef ${typedef.name}@${mdtAddress}")
         // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
         typedefMdtHash[mdtHash] = typedef
     }
@@ -277,7 +281,6 @@ class H5builder(val raf: OpenFile,
         }
         return result
     }
-
 
     fun getFileOffset(address: Long): Long {
         return baseAddress + address

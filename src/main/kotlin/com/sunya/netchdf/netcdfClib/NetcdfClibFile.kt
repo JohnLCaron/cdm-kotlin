@@ -17,7 +17,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl() = cdl(this)
-    override fun cdlStrict() = cdlStrict(this)
+    override fun cdlStrict() = cdlStrictOld(this)
 
     override fun close() {
         // NOOP

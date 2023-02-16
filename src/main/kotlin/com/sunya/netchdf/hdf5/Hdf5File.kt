@@ -21,7 +21,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)
-    override fun cdlStrict() = com.sunya.cdm.api.cdlStrict(this)
+    override fun cdlStrict() = com.sunya.cdm.api.cdlStrictOld(this)
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         TODO("Not yet implemented")

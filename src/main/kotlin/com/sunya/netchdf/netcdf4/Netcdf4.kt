@@ -1,7 +1,5 @@
 package com.sunya.netchdf.netcdf4
 
-import com.google.common.collect.ImmutableList
-
 class Netcdf4 {
     companion object {
         const val NCPROPERTIES = "_NCProperties"
@@ -19,5 +17,9 @@ class Netcdf4 {
         // global - when using classic model
         const val NETCDF4_STRICT = "_nc3_strict"
 
-        val NETCDF4_SPECIAL_ATTS = listOf(NCPROPERTIES, NETCDF4_STRICT, NETCDF4_DIMID) }
+        val NETCDF4_SPECIAL_ATTS = listOf(NCPROPERTIES, NETCDF4_COORDINATES, NETCDF4_STRICT, NETCDF4_DIMID)
+
+        // appended to variable when it conflicts with dimension scale
+        val NETCDF4_NON_COORD = "_nc4_non_coord_"
+    }
 }

@@ -107,7 +107,7 @@ variables:
 
     @Test
     fun attEnum() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_enums.nc")
     }
     /*
 netcdf test_enum_type {

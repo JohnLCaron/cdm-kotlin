@@ -85,6 +85,10 @@ internal fun H5builder.readAttributeData(
     matt: AttributeMessage,
     h5type: H5Type,
 ): List<*> {
+    if (matt.mds.type == DataspaceType.Null) {
+        return emptyList<Any>()
+    }
+
     // Vlens
     if (h5type.hdfType == Datatype5.Vlen) {
         return readVlenData(matt, h5type)
@@ -151,17 +155,12 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) 
     val compoundType = matt.mdt as DatatypeCompound
     val members = compoundType.members.map { sm5  ->
         val memberType = H5Type(sm5.mdt)
-        // LOOK how many elements? I guess 1 unless sm5.mdt is an array ??
-        val nelems = if (sm5.mdt is DatatypeArray) {
-            val dims = sm5.mdt.dims
-            Section(dims).computeSize().toInt()
-        } else 1
 
         val lamda: ((Long) -> String)?  = if (memberType.hdfType == Datatype5.Reference)
             { it -> (this@readCompoundData).convertReferenceToDataObjectName(it) }
         else null
 
-        H5StructureMember(sm5.name, memberType.datatype, sm5.offset, nelems, memberType.hdfType, lamda)
+        H5StructureMember(sm5.name, memberType.datatype, sm5.offset, sm5.dims, memberType.hdfType, lamda)
     }
 
     val h5reader = H5reader(this)
@@ -177,9 +176,9 @@ internal fun H5builder.readCompoundData(matt: AttributeMessage, h5type: H5Type) 
     return sdataArray.toList()
 }
 
-internal class H5StructureMember(name: String, datatype : Datatype, offset: Int, nelems : Int,
+internal class H5StructureMember(name: String, datatype : Datatype, offset: Int, dims : IntArray,
                                  val hdfType: Datatype5, val lamda: ((Long) -> String)?)
-    : StructureMember(name, datatype, offset, intArrayOf(nelems)) {
+    : StructureMember(name, datatype, offset, dims) {
 
     override fun value(sdata : ArrayStructureData.StructureData) : Any {
         if (hdfType == Datatype5.Reference && lamda != null) {
@@ -193,7 +192,7 @@ internal class H5StructureMember(name: String, datatype : Datatype, offset: Int,
 
 internal fun H5builder.readVlenData(matt: AttributeMessage, h5type: H5Type) : List<*> {
     val shape: IntArray = matt.mds.dims
-    val layout2 = LayoutRegular(matt.dataPos, matt.mdt.elemSize, shape, Section(shape))
+    val layout2 = LayoutRegular(matt.dataPos, matt.mdt().elemSize, shape, Section(shape))
     val h5heap = H5heap(this)
 
     // Strings

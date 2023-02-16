@@ -16,7 +16,7 @@ import java.nio.ByteOrder
 import java.util.*
 
 
-private val debugUserTypes = true
+private val debugUserTypes = false
 
 @Throws(IOException::class)
 internal fun NCheader.readUserTypes(session: MemorySession, grpid: Int, gb: Group.Builder, userTypes : MutableMap<Int, UserType>) {
@@ -254,7 +254,7 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
         val sdata = sdataArray.get(idx)
 
         members.filter { it.datatype == Datatype.VLEN }.forEach {
-            println("HEY")
+            // println("HEY")
         }
 
         members.filter { it.datatype == Datatype.STRING }.forEach { member ->
