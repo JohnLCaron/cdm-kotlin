@@ -1,8 +1,8 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.dsl.structdsl
-import com.sunya.netchdf.hdf5.FilterType.Companion.fromId
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.netchdf.hdf5.FilterType.Companion.fromId
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -163,6 +163,7 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
     // 	section below) and the Size of Header Message Data field contains the size of that Shared Message.
     if (flags and 2 != 0) { // shared
         // LOOK could be other shared objects besides datatype ??
+        // LOOK do we need to defer ??
         val mdt = getSharedDataObject(state, mtype!!).mdt // a shared datatype, eg enums
         if (debugFlow) {
             println(" shared Message ${mtype}  ${mdt?.show()}")
@@ -530,27 +531,29 @@ data class GroupInfoMessage(val estNumEntries: Short?, val estLengthEntryName: S
 
 @Throws(IOException::class)
 fun H5builder.readFilterPipelineMessage(state: OpenFileState): FilterPipelineMessage {
-    val version: Byte = raf.readByte(state)
-    val nfilters: Byte = raf.readByte(state)
-    if (version.toInt() == 1) {
+    val version = raf.readByte(state).toInt()
+    val nfilters = raf.readByte(state).toInt()
+    if (version == 1) {
         state.pos += 6
     }
     val filters = mutableListOf<Filter>()
     for (i in 0 until nfilters) {
-        val rawdata =
-            structdsl("Filter", raf, state) {
-                fld("filterId", 2)
-                fld("nameLength", 2)
-                fld("flags", 2)
-                fld("nclientValues", 2)
-                array("name", 1, "nameLength")
-                array("clientValues", 4, "nclientValues")
-                // padding for version 1
-            }
-        if (debugMessage) rawdata.show()
+        val filterId = raf.readShort(state).toInt()
+        val filterType = fromId(filterId)
+        val nameSize = if (version > 1 && filterId < 256) 0 else raf.readShort(state).toInt()
+        val flags = raf.readShort(state)
+        val nValues = raf.readShort(state).toInt()
+        val name = if (version == 1) {
+            if (nameSize > 0) readStringZ(state, 8) else FilterType.nameFromId(filterId) // null terminated, pad to 8 bytes
+        } else {
+            if (nameSize > 0) raf.readString(state, nameSize) else FilterType.nameFromId(filterId) // non-null terminated
+        }
 
-        val filterType = fromId(rawdata.getByte("filterId").toInt())
-        filters.add(Filter(filterType, rawdata.getString("name"), rawdata.getIntArray("clientValues")))
+        val clientValues = IntArray(nValues) { raf.readInt(state) }
+        if (version == 1 && nValues.toInt() and 1 != 0) { // check if odd
+            state.pos += 4
+        }
+        filters.add(Filter(filterType, name, clientValues))
     }
 
     return FilterPipelineMessage(
@@ -622,6 +625,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
         }
     if (debugMessage) rawdata.show()
 
+    // read the attribute name
     val name = rawdata.getString("name") // this has terminating zero removed
     if (version == 1) {
         // use the full width to decide on padding
@@ -629,45 +633,64 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     }
 
     // read the datatype
-    val mdt: DatatypeMessage
+    val startMdt = state.pos
+    var datatypeSize = rawdata.getShort("datatypeSize").toInt()
+
+    var lamda : ((Long) -> DatatypeMessage)? = null
+    var sharedMdtAddress : Long? = null
+    var mdt: DatatypeMessage? = null
     val isShared = flags and 1 != 0
+    // defer reading in shared objects until all objects are read
     if (isShared) {
-        // LOOK problem is that the typedef hasnt been read yet, so doesnt get named
-        mdt = getSharedDataObject(state, MessageType.Datatype).mdt!!
+        sharedMdtAddress = state.pos
+        lamda = { address -> this.getSharedDataObject(OpenFileState(address, ByteOrder.LITTLE_ENDIAN), MessageType.Datatype).mdt!! }
+        mdt = this.getSharedDataObject(state.copy(), MessageType.Datatype).mdt!!
     } else {
-        val startPos = state.pos
         mdt = this.readDatatypeMessage(state)
         if (version == 1) {
-            val datatypeSize = rawdata.getShort("datatypeSize").toInt()
-            state.pos = startPos + datatypeSize + padding(datatypeSize, 8)
+            datatypeSize +=  padding(datatypeSize, 8)
         }
     }
+    state.pos = startMdt + datatypeSize
 
     // read the dataspace
-    val startPos = state.pos
+    val startMds = state.pos
+    var dataspaceSize = rawdata.getShort("dataspaceSize").toInt()
     val mds = this.readDataspaceMessage(state)
     if (version == 1) {
-        val dataspaceSize = rawdata.getShort("dataspaceSize").toInt()
-        state.pos = startPos + dataspaceSize + padding(dataspaceSize, 8)
+        dataspaceSize += padding(dataspaceSize, 8)
     }
-
-    val dataPos = state.pos // note this is absolute position (no offset needed)
-    val size: Int = 0 // LOOK where does this come from
-    state.pos += size
+    // safety check in case readDataspaceMessage is short
+    state.pos = startMds + dataspaceSize
 
     return AttributeMessage(
         name,
         mdt,
         mds,
-        dataPos,
+        state.pos, // where the data starts, absolute position (no offset needed)
+        sharedMdtAddress,
+        lamda,
     )
 }
 
-data class AttributeMessage(val name: String, val mdt: DatatypeMessage, val mds: DataspaceMessage, val dataPos: Long) :
+class AttributeMessage(val name: String, var mdt: DatatypeMessage?, val mds: DataspaceMessage, val dataPos: Long,
+                            val sharedMdt : Long?, val deferRead : ((Long) -> DatatypeMessage)?) :
     MessageHeader(MessageType.Attribute) {
 
+    init {
+        require(mdt != null || (sharedMdt != null && deferRead != null))
+    }
+
+    fun mdt() : DatatypeMessage {
+        if (mdt == null) {
+            mdt = deferRead!!(sharedMdt!!)
+            println("defer att $name read for shared mdt@$sharedMdt")
+        }
+        return mdt!!
+    }
+
     override fun show() : String {
-        return "name=$name type=(${mdt.show()}) dims=${mds.dims.contentToString()}"
+        return "name=$name mdt=(${mdt?.show()}) dims=${mds.dims.contentToString()}"
     }
 }
 
@@ -842,7 +865,7 @@ private fun H5builder.readAttributesFromInfoMessage(
             val attMessage = this.readAttributeMessage(state)
             list.add(attMessage)
             if (debugFlow) {
-                println("    read attMessage=${attMessage}")
+                println("    read attMessage ${attMessage.show()}")
             }
         }
     }

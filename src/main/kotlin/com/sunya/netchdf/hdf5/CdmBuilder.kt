@@ -7,12 +7,12 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
-import com.sunya.netchdf.netcdf4.Netcdf4
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
 
 internal val includeOriginalAttributes = false
-internal val debugDimensionScales = true
+internal val debugDimensionScales = false
 
 internal fun H5builder.buildCdm(h5root : H5Group) : Group {
     return buildGroup(h5root).build(null)
@@ -48,8 +48,11 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
-    val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
-    val h5type = H5Type(att5.mdt, typedef)
+    val typedef = this.findTypedef(att5.mdt().address, att5.mdt.hashCode())
+    if (typedef != null) {
+        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
+    }
+    val h5type = H5Type(att5.mdt(), typedef)
     val values = this.readAttributeData(att5, h5type)
     val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     return Attribute(att5.name, useType, values)
@@ -62,7 +65,7 @@ internal fun buildTypedef(typedef5: H5Typedef): Typedef {
             // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int)
             val members = mess.members.map {
                 val h5type = H5Type(it.mdt)
-                StructureMember(it.name, h5type.datatype, it.offset, intArrayOf(1)) // LOOK nelems?
+                StructureMember(it.name, h5type.datatype, it.offset, it.dims)
             }
             CompoundTypedef(typedef5.dataObject.name!!, members)
         }
@@ -85,8 +88,11 @@ internal fun buildTypedef(typedef5: H5Typedef): Typedef {
 
 internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variable.Builder {
     val builder = Variable.Builder()
-    builder.name = v5.name
+    builder.name = v5.name.substringAfter(NETCDF4_NON_COORD)
     val typedef = this.findTypedef(v5.mdt.address, v5.mdt.hashCode())
+    if (typedef != null) {
+        println(" made variable ${v5.name} from typedef ${typedef.name}@${v5.mdt.address}")
+    }
     val h5type = H5Type(v5.mdt, typedef)
     // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
     // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype

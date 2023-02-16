@@ -7,3 +7,9 @@ data class Dimension(val name : String, val length : Int, val isUnlimited : Bool
     constructor(len : Int) : this("", len, false, false)
 
 }
+
+fun IntArray.computeSize(): Int {
+    var product = 1
+    this.forEach { product *= it}
+    return product
+}

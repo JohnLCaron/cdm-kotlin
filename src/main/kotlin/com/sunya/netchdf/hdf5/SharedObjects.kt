@@ -19,7 +19,7 @@ fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): Da
     } else {
         // The address of the object header containing the message to be shared
         val address: Long = this.readOffset(state)
-        val dobj: DataObject = this.getDataObject(address, null)
+        val dobj: DataObject = this.getDataObject(address, null) // cached here
         if (mtype === MessageType.Datatype) {
             return dobj
         }

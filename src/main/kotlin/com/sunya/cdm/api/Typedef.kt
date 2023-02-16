@@ -15,9 +15,21 @@ class CompoundTypedef(name : String, val members : List<StructureMember>) : Type
             append("${indent}compound $name {\n")
             val nindent = indent.incr()
             members.forEach {
-                append("${nindent}${it.datatype} ${it.name} ;\n")
+                append("${nindent}${it.datatype} ${it.name}${showDims(it.dims)} ;\n")
             }
             append("${indent}}; // $name")
+        }
+    }
+}
+
+private fun showDims(dims : IntArray) : String {
+    return if (dims.size == 0 || dims.computeSize() == 1) "" else
+    buildString {
+        append("(")
+        dims.forEachIndexed { idx, num ->
+            if (idx > 1) append(",")
+            append("$num")
+            append(")")
         }
     }
 }

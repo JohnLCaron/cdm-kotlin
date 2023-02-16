@@ -8,7 +8,7 @@ import java.util.*
 // "Data Object Header" Level 2A
 @Throws(IOException::class)
 fun H5builder.readDataObject(address: Long, name: String?) : DataObject {
-    println("readDataObject= $name")
+    if (debugFlow) println("readDataObject= $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
     val messages = mutableListOf<MessageHeader>()

@@ -2,7 +2,9 @@ package com.sunya.cdm.iosp
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.computeSize
 import java.nio.ByteBuffer
+import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
@@ -57,7 +59,7 @@ class ArrayStructureData(val bb : ByteBuffer, val sizeElem : Int, val shape : In
 }
 
 open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray) {
-    val nelems = Section(dims).computeSize().toInt()
+    val nelems = dims.computeSize()
 
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
@@ -73,6 +75,7 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             Datatype.ULONG -> bb.getLong(offset).toULong()
             Datatype.FLOAT -> bb.getFloat(offset)
             Datatype.DOUBLE -> bb.getDouble(offset)
+            Datatype.CHAR -> makeStringZ(bb, offset, nelems)
             Datatype.STRING -> {
                 val ret = sdata.getFromHeap(offset)
                 if (ret == null) "unknown" else ret as String
@@ -85,5 +88,10 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
         return "StructureMember(name='$name', datatype=$datatype, offset=$offset, dims=${dims.contentToString()}, nelems=$nelems)"
     }
 
-
+    // terminate at a zero
+    fun makeStringZ(bb : ByteBuffer, start : Int, maxElems : Int, charset : Charset = StandardCharsets.UTF_8): String {
+        var count = 0
+        while (count < maxElems && bb[start + count].toInt() != 0) count++
+        return String(bb.array(), start, count, charset)
+    }
 }

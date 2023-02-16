@@ -23,19 +23,43 @@ class NetchdfCompare {
 
             val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
-                    .addNameFilter{ it != "dstr.h5"} // currently failing
+                    .build()
+
+            val moar =
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .withRecursion()
                     .build()
 
             val eos5 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5")
-                    .addNameFilter{ it != "dstr.h5"} // currently failing
                     .build()
 
-            // return stream3
-            return Stream.of(stream3, stream4).flatMap { i -> i };
+            return moar
+            // return Stream.of(stream3, stream4).flatMap { i -> i };
             //return stream2
         }
     }
+
+    @Test
+    fun testProblem () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc")
+    }
+    /*
+netcdf testEmptyAtts {
+
+// global attributes:
+		:textNull = "" ;
+		:textLen0 = "" ;
+		string :testEmptyArray = "" ;
+		string :testOneArray = "" ;
+		:testDoubleArray0 = "" ;
+		:testDoubleArray1 = 3.33 ;
+		:testShortArray0 = "" ;
+		:testShortArray1 = 3s ;
+}
+
+     */
 
     @Test
     fun hdfeos () {
@@ -101,9 +125,89 @@ readDataObject= StructMetadata.0
      */
 
     @Test
-    fun problem () {
-        openNetchdf("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
+    fun compoundAttributeTest () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }
+    /*snake@jlc:~/dev/github/cdm-kotlin$ ncdump -h /media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc
+netcdf compound-attribute-test {
+types:
+  compound compound_type {
+    float field0 ;
+    float field1 ;
+    float field2 ;
+    float field3 ;
+  }; // compound_type
+  compound compound_att_string {
+    string field0 ;
+    string field1 ;
+    string field2 ;
+    string field3 ;
+  }; // compound_att_string
+  compound compound_att_char_array {
+    char field0(4) ;
+    char field1(4) ;
+    char field2(4) ;
+    char field3(4) ;
+  }; // compound_att_char_array
+  compound compound_att_float {
+    float field0 ;
+    float field1 ;
+    float field2 ;
+    float field3 ;
+  }; // compound_att_float
+dimensions:
+	dim0 = 2 ;
+variables:
+	compound_type compound_test(dim0) ;
+		compound_att_char_array compound_test:att_char_array_test = {{"a"}, {"1"}, {"abc"}, {"123"}} ;
+		compound_type           compound_test:att_primitive_test = {1, 2, 3, 4} ;
+		compound_att_string     compound_test:att_string_test = {"string for field 0", "field 1 has something", "hey look at me!", "writer\'s block"} ;
+}
+nclib
+   compound_type compound_test(dim0);
+      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
+      compound_type           compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
+      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
+
+h5lib LOOK I think compound_att_float is correct, compound_type has same hash, but wrong
+    compound_type compound_test(dim0);
+      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
+      compound_att_float      compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
+      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
+
+h5dump
+  compound_att_char_array looks like it should be an array os "strings" of size 1
+
+  H5T_ARRAY { [4] H5T_STRING {
+         STRSIZE 1;
+         STRPAD H5T_STR_NULLTERM;
+         CSET H5T_CSET_ASCII;
+         CTYPE H5T_C_S1;
+      } } "field0";
+
+      compound_att_string should be "strings" of vlen i guess
+      H5T_STRING {
+         STRSIZE H5T_VARIABLE;
+         STRPAD H5T_STR_NULLTERM;
+         CSET H5T_CSET_ASCII;
+         CTYPE H5T_C_S1;
+      } "field0";
+
+         DATATYPE "compound_type" H5T_COMPOUND {
+      H5T_IEEE_F32LE "field0";
+      H5T_IEEE_F32LE "field1";
+      H5T_IEEE_F32LE "field2";
+      H5T_IEEE_F32LE "field3";
+   }
+   same as
+      DATATYPE "compound_att_float" H5T_COMPOUND {
+      H5T_IEEE_F32LE "field0";
+      H5T_IEEE_F32LE "field1";
+      H5T_IEEE_F32LE "field2";
+      H5T_IEEE_F32LE "field3";
+   }
+
+     */
 
     @ParameterizedTest
     @MethodSource("params")
@@ -115,10 +219,10 @@ readDataObject= StructMetadata.0
             println("*** not a netchdf file = $filename")
             return
         }
-        println("\nnetchdf = ${netchdf.cdl()}")
+        //println("\nnetchdf = ${netchdf.cdl()}")
 
         val nclibfile : Netcdf = NetcdfClibFile(filename)
-        println("nclibfile = ${nclibfile.cdl()}")
+        //println("nclibfile = ${nclibfile.cdl()}")
 
         assertEquals(nclibfile.cdl(), netchdf.cdl())
 
