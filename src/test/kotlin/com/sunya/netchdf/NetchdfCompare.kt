@@ -35,8 +35,8 @@ class NetchdfCompare {
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5")
                     .build()
 
-            return moar
-            // return Stream.of(stream3, stream4).flatMap { i -> i };
+            // return moar
+            return Stream.of(stream3, stream4).flatMap { i -> i };
             //return stream2
         }
     }
@@ -219,7 +219,7 @@ h5dump
             println("*** not a netchdf file = $filename")
             return
         }
-        //println("\nnetchdf = ${netchdf.cdl()}")
+        println("\nnetchdf = ${netchdf.cdl()}")
 
         val nclibfile : Netcdf = NetcdfClibFile(filename)
         //println("nclibfile = ${nclibfile.cdl()}")

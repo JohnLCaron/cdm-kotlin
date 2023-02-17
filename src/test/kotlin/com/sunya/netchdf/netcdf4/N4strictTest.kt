@@ -200,17 +200,18 @@ variables:
         NetcdfClibFile(filename).use { ncfile ->
             //println("actual = ${ncfile.cdlStrict().normalize()}")
             //println("expect = ${expect.normalize()}")
-            assertEquals(normalize(expect), normalize(ncfile.cdlStrict()))
+            assertEquals(normalize(expect), normalize(ncfile.cdl(true)))
         }
     }
 
-    fun normalize(org : String) : String {
-        return buildString {
-            for (line in org.lines()) {
-                append(line.trim())
-                append("\n")
-            }
+}
+
+fun normalize(org : String) : String {
+    return buildString {
+        for (line in org.lines()) {
+            if (line.trim().isEmpty()) continue
+            append(line.trim())
+            append("\n")
         }
     }
-
 }

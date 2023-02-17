@@ -148,7 +148,6 @@ data class OpenFile(val location : String) : Closeable {
         val dst = readByteBuffer(state, 8 * nelems).asDoubleBuffer()
         return Array(nelems) { dst[it] }
     }
-
 }
 
 data class OpenFileState(var pos : Long, var byteOrder : ByteOrder) {

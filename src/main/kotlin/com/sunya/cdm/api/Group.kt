@@ -1,7 +1,5 @@
 package com.sunya.cdm.api
 
-import java.util.*
-
 class Group(val name : String,
             val typedefs : List<Typedef>,
             val dimensions : List<Dimension>,
@@ -16,6 +14,36 @@ class Group(val name : String,
     init {
         variables = variableBuilders.map { it.build(this) }
         groups = groupBuilders.map { it.build(this) }
+    }
+
+    fun findDimension(dimName: String) : Dimension? {
+        return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Group) return false
+
+        if (name != other.name) return false
+        if (typedefs != other.typedefs) return false
+        if (dimensions != other.dimensions) return false
+        if (attributes != other.attributes) return false
+        if (parent != other.parent) return false
+        if (variables != other.variables) return false
+        if (groups != other.groups) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + typedefs.hashCode()
+        result = 31 * result + dimensions.hashCode()
+        result = 31 * result + attributes.hashCode()
+        result = 31 * result + (parent?.hashCode() ?: 0)
+        result = 31 * result + variables.hashCode()
+        result = 31 * result + groups.hashCode()
+        return result
     }
 
     class Builder(val name : String) {
