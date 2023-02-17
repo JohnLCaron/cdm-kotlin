@@ -13,4 +13,17 @@ class TestStuff {
         println(" sum = ${seq.sum()}") // Prints 145
     }
 
+    @Test
+    fun regex() {
+        match("what:thefuck", "[A-Za-z_]+:[A-Za-z_]+")
+        match("what:thefuck", "\\w+:\\w+")
+    }
+
+    fun match(input: CharSequence, pattern: String) {
+        val regex = Regex(pattern)
+        val matcher = regex.toPattern().matcher(input)
+
+        println("match = ${matcher.find()}")
+    }
+
 }

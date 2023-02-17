@@ -23,15 +23,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl() = com.sunya.cdm.api.cdl(this)
-    override fun cdlStrict() = com.sunya.cdm.api.cdlStrictOld(this)
-
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        TODO("Not yet implemented")
-    }
+    override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable): ArrayTyped<*> {
+    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         return if (!v2.isUnlimited()) readData(v2)
             else {
                 val vinfo = v2.spObject as N3header.Vinfo
@@ -135,4 +130,22 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Netcdf) return false
+
+        if (filename != other.location()) return false
+        if (rootGroup != other.rootGroup()) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = filename.hashCode()
+        result = 31 * result + rootGroup.hashCode()
+        return result
+    }
+
+
 }

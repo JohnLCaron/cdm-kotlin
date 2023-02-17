@@ -1,5 +1,6 @@
 package com.sunya.cdm.api
 
+import java.lang.RuntimeException
 import java.util.*
 
 /**
@@ -33,6 +34,17 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         val COMPOUND = Datatype("compound", 4)
         val OPAQUE = Datatype("opaque", 4)
         val VLEN = Datatype("vlen", 4)
+
+        fun from(name : String) : Datatype {
+            return when (name) {
+                "byte" -> BYTE
+                "double" -> DOUBLE
+                "float" -> FLOAT
+                "int" -> INT
+                "short" -> SHORT
+                else -> throw RuntimeException("unknown datatype = $name")
+            }
+        }
     }
 
     override fun toString(): String {

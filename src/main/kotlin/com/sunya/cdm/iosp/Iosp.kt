@@ -11,9 +11,6 @@ interface Iosp {
     fun rootGroup() : Group
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>
-
-    @Throws(IOException::class)
-    fun readArrayData(v2: Variable): ArrayTyped<*>
+    fun readArrayData(v2: Variable, section: Section? = null) : ArrayTyped<*>
 
 }

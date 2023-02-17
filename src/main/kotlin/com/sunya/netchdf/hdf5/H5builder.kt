@@ -140,7 +140,7 @@ class H5builder(val raf: OpenFile,
         val rootSymbolTableEntry = this.readSymbolTable(state)
         val rootObject = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")
 
-        return this.readH5Group(DataObjectFacade(null, "root").setDataObject(rootObject))!!
+        return this.readH5Group(DataObjectFacade(null, "").setDataObject(rootObject))!!
     }
 
     @Throws(IOException::class)
@@ -192,7 +192,7 @@ class H5builder(val raf: OpenFile,
         }
 
         val rootObject = this.getDataObject(rootObjectAddress, "root")
-        val facade = DataObjectFacade(null, "root").setDataObject( rootObject)
+        val facade = DataObjectFacade(null, "").setDataObject( rootObject)
         return this.readH5Group(facade)!!
     }
 

@@ -16,18 +16,13 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl() = cdl(this)
-    override fun cdlStrict() = cdlStrictOld(this)
+    override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
 
     override fun close() {
         // NOOP
     }
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>  {
-        TODO("Not yet implemented")
-    }
-
-    override fun readArrayData(v2: Variable): ArrayTyped<*> {
         val vinfo = v2.spObject as NCheader.Vinfo
         require(v2.nelems < Int.MAX_VALUE)
 

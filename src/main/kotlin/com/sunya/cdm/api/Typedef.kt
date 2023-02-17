@@ -49,6 +49,16 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
     }
 }
 
+
+fun Datatype.strictEnumType() : Datatype {
+    return when(this) {
+        Datatype.ENUM1 -> Datatype.UBYTE
+        Datatype.ENUM2 -> Datatype.USHORT
+        Datatype.ENUM4 -> Datatype.UINT
+        else -> this
+    }
+}
+
 class OpaqueTypedef(name : String, val elemSize : Int) : Typedef(TypedefKind.Opaque, name, Datatype.OPAQUE) {
     override fun cdl(indent : Indent): String {
         return "${indent}opaque($elemSize) $name ;"
