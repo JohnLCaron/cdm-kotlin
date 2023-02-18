@@ -53,10 +53,10 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
         println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
     }
     val h5type = H5Type(att5.mdt(), typedef)
-    val dc = DataContainer(att5.dataPos, att5.mdt!!, att5.mds, h5type)
-    val values = this.readDataAsList(dc)
+    val dc = DataContainer(att5.name, att5.dataPos, att5.mdt!!, att5.mds, h5type)
+    val values = this.readDataArray(dc)
     val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
-    return Attribute(att5.name, useType, values)
+    return Attribute(att5.name, useType, values.toList())
 }
 
 internal fun buildTypedef(typedef5: H5Typedef): Typedef {

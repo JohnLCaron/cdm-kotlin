@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.ShortBuffer
 
-class ArrayShort(val values : ShortBuffer, val shape : IntArray) : ArrayTyped<Short>() {
+class ArrayShort(shape : IntArray, val values : ShortBuffer) : ArrayTyped<Short>(shape) {
 
     override fun iterator(): Iterator<Short> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Short>() {

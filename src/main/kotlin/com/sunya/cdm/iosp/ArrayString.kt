@@ -1,9 +1,13 @@
 package com.sunya.cdm.iosp
 
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.Section.Companion.breakoutInner
+import com.sunya.cdm.api.Section.Companion.breakoutOuter
+import com.sunya.cdm.api.Section.Companion.computeSize
 import java.nio.charset.StandardCharsets
 
-class ArrayString(val values : Array<String>, val shape : IntArray) : ArrayTyped<String>() {
+class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(shape) {
+
+    constructor(shape : IntArray, valueArray : Array<String>) : this (shape, valueArray.toList())
 
     override fun iterator(): Iterator<String> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<String>() {
@@ -39,7 +43,7 @@ fun ArrayUByte.makeStringFromBytes(): String {
 }
 
 /**
- * Create an Array of Strings out of this ArrayByte of any rank.
+ * Create an ArrayString out of this ArrayByte of any rank.
  * If there is a null (zero) value in the Array array, the String will end there.
  * The null is not returned as part of the String.
  *
@@ -48,12 +52,11 @@ fun ArrayUByte.makeStringFromBytes(): String {
 fun ArrayUByte.makeStringsFromBytes(): ArrayString {
     val rank = shape.size
     if (rank < 2) {
-        return ArrayString(arrayOf(makeStringFromBytes()), intArrayOf(1))
+        return ArrayString(intArrayOf(1), listOf(makeStringFromBytes()))
     }
-    val innerLength: Int = shape[rank - 1]
-    val outerLength = (Section(shape).computeSize() / innerLength).toInt()
-    val outerShape = IntArray(rank - 1)
-    System.arraycopy(shape, 0, outerShape, 0, rank - 1)
+    val (outerShape, innerLength) = shape.breakoutInner()
+    val outerLength = computeSize(outerShape).toInt()
+
     val result = arrayOfNulls<String>(outerLength)
     val carr = ByteArray(innerLength)
     var cidx = 0
@@ -72,5 +75,5 @@ fun ArrayUByte.makeStringsFromBytes(): ArrayString {
             cidx = 0
         }
     }
-    return ArrayString(Array(outerLength) {result[it]!!}, outerShape)
+    return ArrayString(outerShape, Array(outerLength) { result[it]!!} )
 }

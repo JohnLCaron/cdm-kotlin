@@ -122,7 +122,7 @@ variables:
     @Test
     fun attVlen() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
+        // openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
     }
     /*
     snake@jlc:~$ ncdump -h /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4

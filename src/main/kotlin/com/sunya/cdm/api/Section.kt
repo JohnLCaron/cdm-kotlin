@@ -1,5 +1,8 @@
 package com.sunya.cdm.api
 
+import com.sunya.cdm.api.Section.Companion.breakoutInner
+import com.sunya.cdm.iosp.ArrayString
+import com.sunya.cdm.iosp.makeStringFromBytes
 import java.util.*
 
 /**
@@ -763,6 +766,27 @@ class Section {
                 product *= aShape.toLong()
             }
             return product
+        }
+
+        // return outerShape, innerLength
+        fun IntArray.breakoutInner() : Pair<IntArray, Int> {
+            val rank = this.size
+            val innerLength: Int = this[rank - 1]
+            val outerShape = IntArray(rank - 1)
+            System.arraycopy(this, 0, outerShape, 0, rank - 1)
+            return Pair(outerShape, innerLength)
+        }
+
+        // return outerLength, innerShape
+        fun IntArray.breakoutOuter() : Pair<Int, IntArray> {
+            val rank = this.size // LOOK is scalar rank 1?
+            if (rank < 1) {
+                return Pair(0, intArrayOf())
+            }
+            val outerLength = this[0]
+            val innerShape = IntArray(rank - 1)
+            System.arraycopy(this, 1, innerShape, 0, rank - 1)
+            return Pair(outerLength, innerShape)
         }
 
     }

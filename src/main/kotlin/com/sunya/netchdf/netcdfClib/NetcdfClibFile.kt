@@ -65,7 +65,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                         nc_get_vars_schar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(values, v2.shape)
+                    return ArrayByte(v2.shape, values)
                 }
 
                 NC_CHAR() -> {
@@ -74,7 +74,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(values, v2.shape)
+                    return ArrayByte(v2.shape, values)
                 }
 
                 NC_DOUBLE() -> {
@@ -86,7 +86,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_DOUBLE, i))
                     }
-                    return ArrayDouble(values, v2.shape)
+                    return ArrayDouble(v2.shape, values)
                 }
 
                 NC_FLOAT() -> {
@@ -97,7 +97,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_FLOAT, i))
                     }
-                    return ArrayFloat(values, v2.shape)
+                    return ArrayFloat(v2.shape, values)
                 }
 
                 NC_INT() -> {
@@ -109,7 +109,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
-                    return ArrayInt(values, v2.shape)
+                    return ArrayInt(v2.shape, values)
                 }
 
                 NC_LONG() -> {
@@ -121,7 +121,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
                     }
-                    return ArrayLong(values, v2.shape)
+                    return ArrayLong(v2.shape, values)
                 }
 
                 NC_SHORT() -> {
@@ -132,7 +132,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
                     }
-                    return ArrayShort(values, v2.shape)
+                    return ArrayShort(v2.shape, values)
                 }
 
                 else -> throw IllegalArgumentException()

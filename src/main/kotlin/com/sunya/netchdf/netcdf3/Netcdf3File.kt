@@ -45,27 +45,27 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
         when (v2.datatype) {
             Datatype.CHAR, Datatype.BYTE -> {
-                return ArrayByte(values, v2.shape)
+                return ArrayByte(v2.shape, values)
             }
 
             Datatype.SHORT -> {
-                return ArrayShort(values.asShortBuffer(), v2.shape)
+                return ArrayShort(v2.shape, values.asShortBuffer())
             }
 
             Datatype.INT -> {
-                return ArrayInt(values.asIntBuffer(), v2.shape)
+                return ArrayInt(v2.shape, values.asIntBuffer())
             }
 
             Datatype.FLOAT -> {
-                return ArrayFloat(values.asFloatBuffer(), v2.shape)
+                return ArrayFloat(v2.shape, values.asFloatBuffer())
             }
 
             Datatype.DOUBLE -> {
-                return ArrayDouble(values.asDoubleBuffer(), v2.shape)
+                return ArrayDouble(v2.shape, values.asDoubleBuffer())
             }
 
             Datatype.LONG -> {
-                return ArrayLong(values.asLongBuffer(), v2.shape)
+                return ArrayLong(v2.shape, values.asLongBuffer())
             }
             else -> throw IllegalArgumentException()
         }
@@ -88,7 +88,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem.toInt(), chunk.nelems);
                 }
-                return ArrayByte(values, v2.shape)
+                return ArrayByte(v2.shape, values)
             }
 
 
@@ -100,8 +100,8 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem.toInt(),8 * chunk.nelems);
                 }
-                return if (v2.datatype == Datatype.LONG) ArrayLong(values.asLongBuffer(), v2.shape) else
-                    ArrayDouble(values.asDoubleBuffer(), v2.shape)
+                return if (v2.datatype == Datatype.LONG) ArrayLong(v2.shape, values.asLongBuffer()) else
+                    ArrayDouble(v2.shape, values.asDoubleBuffer())
             }
 
             Datatype.FLOAT, Datatype.INT -> {
@@ -112,8 +112,8 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem.toInt(),4 * chunk.nelems);
                 }
-                return if (v2.datatype == Datatype.INT) ArrayInt(values.asIntBuffer(), v2.shape) else
-                    ArrayFloat(values.asFloatBuffer(), v2.shape)
+                return if (v2.datatype == Datatype.INT) ArrayInt(v2.shape, values.asIntBuffer()) else
+                    ArrayFloat(v2.shape, values.asFloatBuffer())
             }
 
             Datatype.SHORT-> {
@@ -124,7 +124,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 2 * chunk.destElem.toInt(),2 * chunk.nelems);
                 }
-                return ArrayShort(values.asShortBuffer(), v2.shape)
+                return ArrayShort(v2.shape, values.asShortBuffer())
             }
 
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
