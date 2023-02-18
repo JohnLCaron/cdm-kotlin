@@ -1,11 +1,9 @@
 package com.sunya.netchdf.netcdf3
 
-import com.sunya.cdm.api.Netcdf
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import com.sunya.netchdf.netcdfClib.NCheader
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import test.util.oldTestDir
 import test.util.testFilesIn
@@ -13,6 +11,7 @@ import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
+// Compare header using cdl(strict) with Netcdf3File and NetcdfClibFile
 class N3headerCompare {
 
     companion object {

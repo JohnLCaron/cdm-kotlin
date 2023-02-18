@@ -279,10 +279,12 @@ class NCheader(val filename: String) {
             }
 
             Datatype.CHAR -> {
+                if (nelems == 0L) return emptyList()
                 val val_p = session.allocate(nelems+1) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_text", nc_get_att_text(grpid, varid, name_p, val_p))
                 val text: String = val_p.getUtf8String(0)
-                return if (text.isNotEmpty()) listOf(text) else emptyList()
+                return listOf(text)
+                // return if (text.isNotEmpty()) listOf(text) else emptyList() LOOK NIL
             }
 
             Datatype.DOUBLE -> {

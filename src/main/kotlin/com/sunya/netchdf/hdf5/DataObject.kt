@@ -92,3 +92,5 @@ class DataObject(
         }
     }
 }
+
+internal data class DataContainer(val dataPos : Long, val mdt: DatatypeMessage, val mds: DataspaceMessage, val h5type: H5Type)

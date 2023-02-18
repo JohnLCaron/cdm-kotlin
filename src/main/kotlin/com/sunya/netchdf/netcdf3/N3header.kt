@@ -183,7 +183,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     // Must keep dimensions in strict order
     for (i in 0 until numdims) {
       debugOut?.format("  dim $i pos= ${filePos.pos}\n")
-      val name = readString()
+      val name = readString()!!
       val len: Int = raf.readInt(filePos)
 
       var dim: Dimension
@@ -214,7 +214,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     // loop over variables
     for (i in 0 until nvars) {
       val ncvarb = Variable.Builder()
-      val name = readString()
+      val name = readString()!!
       ncvarb.name = name
 
       // get element count in non-record dimensions
@@ -303,15 +303,15 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     debugOut?.format(" num atts= %d%n", natts)
     for (i in 0 until natts) {
       debugOut?.format("***att $i pos= ${filePos.pos}\n")
-      val name = readString()
+      val name = readString()!!
       val type: Int = raf.readInt(filePos)
       var att: Attribute?
       if (type == 2) { // CHAR
         debugOut?.format(" begin read String val pos= ${filePos.pos}\n")
         val value = readString(valueCharset)
         debugOut?.format(" end read String val pos= ${filePos.pos}\n")
-        att = if (value.isNotEmpty()) Attribute(name, value)
-              else Attribute(name, Datatype.STRING, emptyList<String>())
+        att = if (value == null) Attribute(name, Datatype.STRING, emptyList<String>()) // nelems = 0
+              else Attribute(name, value) // may be empty string
       } else {
         debugOut?.format(" begin read val ${filePos.pos}\n")
         val nelems: Int = raf.readInt(filePos)
@@ -371,18 +371,18 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
   // read a string = (nelems, byte array), then skip to 4 byte boundary
   @Throws(IOException::class)
-  fun readString(): String {
+  fun readString(): String? {
     return readString(StandardCharsets.UTF_8)
   }
 
   @Throws(IOException::class)
-  private fun readString(charset: Charset): String {
+  private fun readString(charset: Charset): String? {
     val nelems: Int = raf.readInt(filePos)
     val b = ByteArray(nelems)
     raf.readBytes(b, filePos)
     skipToBoundary(nelems) // pad to 4 byte boundary
     if (nelems == 0) {
-      return ""
+      return null
     }
 
     // null terminates

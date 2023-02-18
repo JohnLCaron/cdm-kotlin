@@ -1,5 +1,6 @@
 package com.sunya.netchdf.netcdf3
 
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.stream.Stream
@@ -13,7 +14,8 @@ import test.util.testFilesIn
 import java.io.File
 
 // doesnt work because of differences in the value printout.
-// need to compare the parsed cdl
+// need to compare the parsed cdl, or maybe the xml?
+@Disabled
 class N3ncdumpTest {
 
     companion object {
