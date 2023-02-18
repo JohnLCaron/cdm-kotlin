@@ -206,6 +206,7 @@ class IndexChunker(srcShape: IntArray, wantSection: Section?) {
             this.srcElem = from.srcElem
             this.nelems = from.nelems
             this.destElem = from.destElem
+            this.srcPos = from.srcPos
             return this
         }
 

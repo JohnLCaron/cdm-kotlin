@@ -2,13 +2,34 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf.ffm.netcdf_h.*
+import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout
 import java.lang.foreign.ValueLayout.JAVA_INT
 import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.nio.*
+
+/*
+apt-cache search netcdf
+dpkg -L libnetcdf-dev
+ /usr/include/netcdf.h
+ /usr/lib/x86_64-linux-gnu/libnetcdf.so
+
+apt-cache search libhdf5-dev
+dpkg -L libhdf5-dev
+ /usr/include/hdf5/serial/hdf5.h
+ /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
+
+cd /home/snake/install/jextract-19/bin
+./jextract --source \
+    --header-class-name netcdf_h \
+    --target-package sunya.cdm.netcdf4.ffm \
+    -I /usr/include/netcdf.h \
+    -l /usr/lib/x86_64-linux-gnu/libnetcdf.so \
+    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
+    /usr/include/netcdf.h
+ */
 
 class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
     private val header : NCheader = NCheader(filename)

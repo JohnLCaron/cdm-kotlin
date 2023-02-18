@@ -3,7 +3,7 @@ package com.sunya.cdm.api
 // could use Array<*>
 data class Attribute(val name : String, val datatype : Datatype, val values : List<*>) {
 
-    constructor(name : String, svalue : String) : this(name, Datatype.STRING, List<String>(1) { svalue})
+    constructor(name : String, svalue : String) : this(name, Datatype.STRING, List<String>(1) { svalue })
 
     val isString = (datatype == Datatype.STRING)
 

@@ -14,27 +14,6 @@ import java.util.*
 private val debug = false
 private val debugFormat = true
 
-/*
-apt-cache search netcdf
-dpkg -L libnetcdf-dev
- /usr/include/netcdf.h
- /usr/lib/x86_64-linux-gnu/libnetcdf.so
-
-apt-cache search libhdf5-dev
-dpkg -L libhdf5-dev
- /usr/include/hdf5/serial/hdf5.h
- /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
-
-cd /home/snake/install/jextract-19/bin
-./jextract --source \
-    --header-class-name netcdf_h \
-    --target-package sunya.cdm.netcdf4.ffm \
-    -I /usr/include/netcdf.h \
-    -l /usr/lib/x86_64-linux-gnu/libnetcdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
-    /usr/include/netcdf.h
- */
-
 fun main(args: Array<String>) {
     val h = NCheader("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc")
     if (debug) println(h.rootGroup.build(null).cdl(true))
@@ -303,7 +282,7 @@ class NCheader(val filename: String) {
                 val val_p = session.allocate(nelems+1) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_text", nc_get_att_text(grpid, varid, name_p, val_p))
                 val text: String = val_p.getUtf8String(0)
-                return listOf(text)
+                return if (text.isNotEmpty()) listOf(text) else emptyList()
             }
 
             Datatype.DOUBLE -> {
@@ -402,7 +381,8 @@ class NCheader(val filename: String) {
                     // val s1 = strings_p.getUtf8String(i*8) // LOOK wrong
                     val s2 : MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
                     if (s2 != MemoryAddress.NULL) {
-                        result.add(s2.getUtf8String(0))
+                        val value = s2.getUtf8String(0)
+                        if (value.isNotEmpty()) result.add(value)
                     }
                 }
                 // nc_free_string() or does session handle this ??

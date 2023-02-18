@@ -5,6 +5,7 @@ import java.lang.foreign.*;
 import static java.lang.foreign.ValueLayout.JAVA_INT;
 import static com.sunya.netchdf.netcdf4.ffm.netcdf_h.*;
 
+// sanity check for NClib primitives
 public class NCJheader {
 
   public static void main(String[] args) {

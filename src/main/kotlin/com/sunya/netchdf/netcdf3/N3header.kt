@@ -310,7 +310,8 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
         debugOut?.format(" begin read String val pos= ${filePos.pos}\n")
         val value = readString(valueCharset)
         debugOut?.format(" end read String val pos= ${filePos.pos}\n")
-        att = Attribute(name, value)
+        att = if (value.isNotEmpty()) Attribute(name, value)
+              else Attribute(name, Datatype.STRING, emptyList<String>())
       } else {
         debugOut?.format(" begin read val ${filePos.pos}\n")
         val nelems: Int = raf.readInt(filePos)
