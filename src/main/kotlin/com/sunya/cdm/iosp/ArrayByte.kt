@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.ByteBuffer
 
-class ArrayByte(val values : ByteBuffer, val shape : IntArray) : ArrayTyped<Byte>() {
+class ArrayByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<Byte>(shape) {
 
     override fun iterator(): Iterator<Byte> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Byte>() {

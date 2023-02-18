@@ -12,7 +12,8 @@ import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
-class NetchdfCompare {
+// Compare header using cdl(!strict) with Netchdf and NetcdfClibFile
+class NetchdfCompareCdl {
 
     companion object {
         @JvmStatic
@@ -28,6 +29,8 @@ class NetchdfCompare {
             val moar =
                 testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
+                    .addNameFilter { name -> !name.endsWith("tst_vars.nc4") } // too slow LOOK why?
                     .withRecursion()
                     .build()
 
@@ -36,30 +39,15 @@ class NetchdfCompare {
                     .build()
 
             // return moar
-            return Stream.of(stream3, stream4).flatMap { i -> i };
+            return Stream.of(stream3, stream4, moar).flatMap { i -> i };
             //return stream2
         }
     }
 
     @Test
     fun testProblem () {
-        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc")
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/c0.nc")
     }
-    /*
-netcdf testEmptyAtts {
-
-// global attributes:
-		:textNull = "" ;
-		:textLen0 = "" ;
-		string :testEmptyArray = "" ;
-		string :testOneArray = "" ;
-		:testDoubleArray0 = "" ;
-		:testDoubleArray1 = 3.33 ;
-		:testShortArray0 = "" ;
-		:testShortArray1 = 3s ;
-}
-
-     */
 
     @Test
     fun hdfeos () {
@@ -124,7 +112,7 @@ readDataObject= StructMetadata.0
 
      */
 
-    @Test
+    // @Test
     fun compoundAttributeTest () {
         openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }

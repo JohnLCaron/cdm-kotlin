@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.DoubleBuffer
 
-class ArrayDouble(val values : DoubleBuffer, val shape : IntArray) : ArrayTyped<Double>() {
+class ArrayDouble(shape : IntArray, val values : DoubleBuffer) : ArrayTyped<Double>(shape) {
 
     override fun iterator(): Iterator<Double> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Double>() {

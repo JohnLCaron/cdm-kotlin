@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.FloatBuffer
 
-class ArrayFloat(val values : FloatBuffer, val shape : IntArray) : ArrayTyped<Float>() {
+class ArrayFloat(shape : IntArray, val values : FloatBuffer) : ArrayTyped<Float>(shape) {
 
     override fun iterator(): Iterator<Float> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Float>() {

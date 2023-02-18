@@ -3,7 +3,7 @@ package com.sunya.cdm.iosp
 import java.nio.ByteBuffer
 
 // LOOK not dealing with n > 1
-class ArrayOpaque(val values : ByteBuffer, val shape : IntArray) : ArrayTyped<ByteBuffer>() {
+class ArrayOpaque(shape : IntArray, val values : ByteBuffer) : ArrayTyped<ByteBuffer>(shape) {
 
     override fun iterator(): Iterator<ByteBuffer> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<ByteBuffer>() {

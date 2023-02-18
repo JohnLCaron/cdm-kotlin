@@ -248,7 +248,7 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
     bb.order(ByteOrder.LITTLE_ENDIAN)
 
     val members = (userType.typedef as CompoundTypedef).members
-    val sdataArray = ArrayStructureData(bb, userType.size, intArrayOf(nelems.toInt()), members)
+    val sdataArray = ArrayStructureData(intArrayOf(nelems.toInt()), bb, userType.size, members)
 
     for (idx in 0 until nelems.toInt()) {
         val sdata = sdataArray.get(idx)

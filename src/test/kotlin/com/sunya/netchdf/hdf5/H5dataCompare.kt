@@ -1,4 +1,4 @@
-package com.sunya.netchdf.netcdf3
+package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.Range
 import com.sunya.cdm.api.Section
@@ -16,19 +16,15 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 
 // Compare data reading for the same file with Netcdf3File and NetcdfClibFile
-class N3dataCompare {
+class H5dataCompare {
     val debug = true
 
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream1 = Stream.of(
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/simple_xy.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/nctest_64bit_offset.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testSpecialChars.nc"),
+                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attstr.h5"), // no vars haha
+                // Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc"),
                 )
             val stream2 =
                 testFilesIn(oldTestDir + "formats/netcdf3")
@@ -36,28 +32,25 @@ class N3dataCompare {
                     .addNameFilter { name -> !name.endsWith("perverse.nc") } // too slow
                     .build()
 
-            return Stream.of(stream1, stream2).flatMap { i -> i};
+            return stream1
+            // return Stream.of(stream1, stream2).flatMap { i -> i};
         }
     }
 
-    @Test
+    //@Test
     fun problem1() {
-        readN3dataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/c0tmp.nc")
+        readH5dataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/c0tmp.nc")
     }
 
-    @Test
-    fun problem2() {
-        readN3dataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/small2.nc")
-    }
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readN3dataCompareNC(filename : String) {
+    fun readH5dataCompareNC(filename : String) {
         println("=================")
         println(filename)
-        val n3file = Netcdf3File(filename)
-        val root = n3file.rootGroup()
-        // println(root.cdlString())
+        val h5file = Hdf5File(filename)
+        val root = h5file.rootGroup()
+        println(h5file.cdl())
 
         val ncfile = NetcdfClibFile(filename)
         val rootClib = ncfile.rootGroup()
@@ -66,7 +59,7 @@ class N3dataCompare {
         val ncvars = rootClib.variables
         if (debug) print("  OK")
         n3vars.forEach { n3var ->
-            val n3data = n3file.readArrayData(n3var)
+            val n3data = h5file.readArrayData(n3var)
             val ncvar = ncvars.find { it.name == n3var.name }
             val ncdata = ncfile.readArrayData(ncvar!!)
             if (ncdata != n3data) {
@@ -79,18 +72,18 @@ class N3dataCompare {
             assertEquals(ncdata, n3data)
 
             if (ncvar.nelems > 8) {
-                testMiddleSection(n3file, n3var, ncfile, ncvar)
+                testMiddleSection(h5file, n3var, ncfile, ncvar)
             }
         }
         if (debug) println()
 
-        assertEquals(ncfile.cdl(), n3file.cdl())
+        assertEquals(ncfile.cdl(), h5file.cdl())
         // println(rootClib.cdlString())
-        n3file.close()
+        h5file.close()
         ncfile.close()
     }
 
-    fun testMiddleSection(n3file : Iosp, n3var : Variable, ncfile : Iosp, ncvar : Variable) {
+    fun testMiddleSection(h5file : Iosp, n3var : Variable, ncfile : Iosp, ncvar : Variable) {
         val shape = ncvar.shape
         val orgSection = Section(shape)
         val middleRanges = orgSection.ranges.map {range ->
@@ -100,7 +93,7 @@ class N3dataCompare {
         }
         val middleSection = Section(middleRanges)
 
-        val n3data = n3file.readArrayData(n3var, middleSection)
+        val n3data = h5file.readArrayData(n3var, middleSection)
         val ncdata = ncfile.readArrayData(ncvar, middleSection)
         if (ncdata != n3data) {
             println(" *** FAIL reading data for ${ncvar.name}")

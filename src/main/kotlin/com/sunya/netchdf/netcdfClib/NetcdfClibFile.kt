@@ -2,13 +2,34 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf.ffm.netcdf_h.*
+import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.lang.foreign.MemoryLayout
 import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout
 import java.lang.foreign.ValueLayout.JAVA_INT
 import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.nio.*
+
+/*
+apt-cache search netcdf
+dpkg -L libnetcdf-dev
+ /usr/include/netcdf.h
+ /usr/lib/x86_64-linux-gnu/libnetcdf.so
+
+apt-cache search libhdf5-dev
+dpkg -L libhdf5-dev
+ /usr/include/hdf5/serial/hdf5.h
+ /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
+
+cd /home/snake/install/jextract-19/bin
+./jextract --source \
+    --header-class-name netcdf_h \
+    --target-package sunya.cdm.netcdf4.ffm \
+    -I /usr/include/netcdf.h \
+    -l /usr/lib/x86_64-linux-gnu/libnetcdf.so \
+    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
+    /usr/include/netcdf.h
+ */
 
 class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
     private val header : NCheader = NCheader(filename)
@@ -44,7 +65,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                         nc_get_vars_schar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(values, v2.shape)
+                    return ArrayByte(v2.shape, values)
                 }
 
                 NC_CHAR() -> {
@@ -53,7 +74,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(values, v2.shape)
+                    return ArrayByte(v2.shape, values)
                 }
 
                 NC_DOUBLE() -> {
@@ -65,7 +86,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_DOUBLE, i))
                     }
-                    return ArrayDouble(values, v2.shape)
+                    return ArrayDouble(v2.shape, values)
                 }
 
                 NC_FLOAT() -> {
@@ -76,7 +97,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_FLOAT, i))
                     }
-                    return ArrayFloat(values, v2.shape)
+                    return ArrayFloat(v2.shape, values)
                 }
 
                 NC_INT() -> {
@@ -88,7 +109,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
-                    return ArrayInt(values, v2.shape)
+                    return ArrayInt(v2.shape, values)
                 }
 
                 NC_LONG() -> {
@@ -100,7 +121,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
                     }
-                    return ArrayLong(values, v2.shape)
+                    return ArrayLong(v2.shape, values)
                 }
 
                 NC_SHORT() -> {
@@ -111,7 +132,7 @@ class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
                     for (i in 0 until v2.nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
                     }
-                    return ArrayShort(values, v2.shape)
+                    return ArrayShort(v2.shape, values)
                 }
 
                 else -> throw IllegalArgumentException()

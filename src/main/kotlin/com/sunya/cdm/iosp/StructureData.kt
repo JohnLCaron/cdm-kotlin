@@ -8,8 +8,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
-class ArrayStructureData(val bb : ByteBuffer, val sizeElem : Int, val shape : IntArray, val members : List<StructureMember>)
-    : ArrayTyped<ArrayStructureData.StructureData>() {
+class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : Int, val members : List<StructureMember>)
+    : ArrayTyped<ArrayStructureData.StructureData>(shape) {
 
     val nelems = Section(shape).computeSize().toInt()
 

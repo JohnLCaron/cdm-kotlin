@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.IntBuffer
 
-class ArrayInt(val values : IntBuffer, val shape : IntArray) : ArrayTyped<Int>() {
+class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape) {
 
     override fun iterator(): Iterator<Int> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Int>() {

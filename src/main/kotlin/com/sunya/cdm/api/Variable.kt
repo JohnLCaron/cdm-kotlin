@@ -16,8 +16,6 @@ data class Variable(
     fun isUnlimited() = dimensions.isNotEmpty() &&
             dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
-
-
     /////////////////////////////////////////////////////////////////////////////////////////
     fun computeSize(shape: IntArray?): Long {
         if (shape == null) {

@@ -2,7 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.nio.LongBuffer
 
-class ArrayLong(val values : LongBuffer, val shape : IntArray) : ArrayTyped<Long>() {
+class ArrayLong(shape : IntArray, val values : LongBuffer) : ArrayTyped<Long>(shape) {
 
     override fun iterator(): Iterator<Long> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Long>() {

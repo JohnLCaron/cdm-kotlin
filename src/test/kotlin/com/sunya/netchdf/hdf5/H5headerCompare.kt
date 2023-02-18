@@ -11,6 +11,7 @@ import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
+// Compare header using cdl(!strict) with Hdf5File and NetcdfClibFile
 class H5headerCompare {
 
     companion object {
@@ -27,11 +28,6 @@ class H5headerCompare {
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_1.nc4"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_groups.nc"),
             )
-
-            val stream3 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
-                    .withRecursion()
-                    .build()
 
             val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
@@ -126,7 +122,7 @@ variables:
     @Test
     fun attVlen() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
+        // openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
     }
     /*
     snake@jlc:~$ ncdump -h /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4

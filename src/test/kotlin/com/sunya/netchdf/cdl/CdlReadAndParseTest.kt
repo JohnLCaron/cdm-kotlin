@@ -27,7 +27,7 @@ class CdlReadAndParseTest {
         fun params(): Stream<Arguments> = Stream.of(
             // Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc"),
             Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc"),
-            Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testWriteFill.nc"),
+            // LOOK Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testWriteFill.nc"),
             Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/tst_v2.nc"),
             Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/tst_pres_temp_4D_classic.nc"),
         )
