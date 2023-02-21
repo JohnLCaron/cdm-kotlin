@@ -7,45 +7,11 @@ import java.util.*
 /**
  * Iterator to read/write subsets of a multidimensional array, finding the contiguous chunks.
  * The iteration is monotonic in both src and dest positions.
- *
- * <p/>
- * Example for Integers:
- *
- * <pre>
- * int[] read(IndexChunker index, int[] src) {
- *   int[] dest = new int[index.getTotalNelems()];
- *   while (index.hasNext()) {
- *     Indexer2.Chunk chunk = index.next();
- *     System.arraycopy(src, chunk.getSrcElem(), dest, chunk.getDestElem(), chunk.getNelems());
- *   }
- *   return dest;
- * }
- *
- * int[] read(IndexChunker index, RandomAccessFile raf, long start_pos) {
- *   int[] dest = new int[index.getTotalNelems()];
- *   while (index.hasNext()) {
- *     Indexer2.Chunk chunk = index.next();
- *     raf.seek(start_pos + chunk.getSrcElem() * 4);
- *     raf.readInt(dest, chunk.getDestElem(), chunk.getNelems());
- *   }
- *   return dest;
- * }
- *
- * // note src and dest misnamed
- * void write(IndexChunker index, int[] src, RandomAccessFile raf, long start_pos) {
- *   while (index.hasNext()) {
- *     Indexer2.Chunk chunk = index.next();
- *     raf.seek(start_pos + chunk.getSrcElem() * 4);
- *     raf.writeInt(src, chunk.getDestElem(), chunk.getNelems());
- *   }
- * }
- * </pre>
 
  * @param srcShape the shape of the source, eg Variable.getShape()
- * @param wantSection the wanted section in srcShape, must be subset of srcShape.
- * @throws InvalidRangeException if wantSection is incorrect
+ * @param want the wanted section in srcShape, must be subset of srcShape.
  */
-class IndexChunker(srcShape: IntArray, wantSection: Section?) {
+class IndexChunker(srcShape: IntArray, want: Section?) {
     private val dimList: MutableList<Dim> = ArrayList()
     private var chunkIndex : IndexLong // each element is one chunk; strides track position in source
     private var chunk: Chunk? = null // gets returned on next().
@@ -57,8 +23,8 @@ class IndexChunker(srcShape: IntArray, wantSection: Section?) {
     private var done: Long
 
     init {
-        var wantSection: Section? = wantSection
-        wantSection = Section.fill(wantSection, srcShape) // will throw InvalidRangeException if illegal section
+        // will throw InvalidRangeException if illegal section
+        val wantSection= if (want == null) Section(srcShape) else Section.fill(want, srcShape)
 
         // compute total size of wanted section
         totalNelems = wantSection.computeSize()
@@ -150,12 +116,9 @@ class IndexChunker(srcShape: IntArray, wantSection: Section?) {
     private class Dim constructor( // number of elements
         val stride: Long, maxSize: Int, want: Range
     ) {
-        var maxSize // number of elements - must be a long since we may merge
-                : Long
-        val want // desired Range
-                : Range
-        var wantSize // keep separate from want so we can modify when merging
-                : Int
+        var maxSize : Long // number of elements - must be a long since we may merge
+        val want : Range // desired Range
+        var wantSize : Int // keep separate from want so we can modify when merging
 
         init {
             this.maxSize = maxSize.toLong()
@@ -192,11 +155,15 @@ class IndexChunker(srcShape: IntArray, wantSection: Section?) {
      */
     class Chunk(
         var srcElem : Long, // start reading/writing here in the file
-        override var nelems: Int,  // read these many contiguous elements
-        override var destElem: Long // start writing/reading here in array
+        var nelems: Int,  // read these many contiguous elements
+        var destElem: Long // start writing/reading here in array
     ) : Layout.Chunk {
         // must be set by controlling Layout class - not used here
-        override var srcPos: Long = 0
+        var srcPos: Long = 0
+
+        override fun srcPos() = srcPos
+        override fun nelems() = nelems
+        override fun destElem() = destElem
 
         fun incrDestElem(incr: Int) {
             destElem += incr.toLong()

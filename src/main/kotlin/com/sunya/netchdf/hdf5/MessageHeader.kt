@@ -365,15 +365,17 @@ data class FillValueOldMessage(val size: Int, val value: ByteBuffer) : MessageHe
 @Throws(IOException::class)
 fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
     val version = raf.readByte(state).toInt()
+    val spaceAllocateTime: Byte
+    val fillWriteTime: Byte
     val hasFillValue: Boolean
     if (version < 3) {
-        val spaceAllocateTime = raf.readByte(state)
-        val fillWriteTime = raf.readByte(state)
+        spaceAllocateTime = raf.readByte(state)
+        fillWriteTime = raf.readByte(state)
         hasFillValue = raf.readByte(state).toInt() != 0
     } else {
         val flags = raf.readByte(state)
-        val spaceAllocateTime = (flags.toInt() and 3).toByte()
-        val fillWriteTime = (flags.toInt() shr 2 and 3).toByte()
+        spaceAllocateTime = (flags.toInt() and 3).toByte()
+        fillWriteTime = (flags.toInt() shr 2 and 3).toByte()
         hasFillValue = flags.toInt() and 32 != 0
     }
 
@@ -383,6 +385,8 @@ fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
             val value = raf.readByteBuffer(state, size)
             return FillValueMessage(
                 true,
+                spaceAllocateTime,
+                fillWriteTime,
                 size,
                 value,
             )
@@ -391,12 +395,15 @@ fun H5builder.readFillValueMessage(state: OpenFileState): FillValueMessage {
 
     return FillValueMessage(
         false,
+        spaceAllocateTime,
+        fillWriteTime,
         0,
         null,
     )
 }
 
-data class FillValueMessage(val hasFillValue: Boolean, val size: Int, val value: ByteBuffer?) : MessageHeader(MessageType.FillValue) {
+data class FillValueMessage(val hasFillValue: Boolean, val spaceAllocateTime : Byte, val fillWriteTime : Byte,
+                            val size: Int, val value: ByteBuffer?) : MessageHeader(MessageType.FillValue) {
     override fun show() : String {
         return "has hasFillValue=${hasFillValue}"
     }

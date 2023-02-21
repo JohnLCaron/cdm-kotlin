@@ -20,10 +20,10 @@ interface Layout {
      */
     interface Chunk {
         /** Get the byte position in source where to read or write: eg "file position"  */
-        val srcPos: Long
+        fun srcPos() : Long
 
         /** Get number of elements to transfer contiguously (Note: elements, not bytes)  */
-        val nelems: Int
+        fun nelems() : Int
 
         /**
          * Get starting element position as a 1D element index into the destination, eg the requested array with shape
@@ -31,6 +31,6 @@ interface Layout {
          *
          * @return starting element in the array (Note: elements, not bytes)
          */
-        val destElem: Long // LOOK why Long?
+        fun destElem() : Long // LOOK why Long?
     }
 }

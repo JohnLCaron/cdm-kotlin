@@ -51,7 +51,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
         return when (layoutClass) {
             0 -> DataLayoutCompact(rawdata.getIntArray("dims"), rawdata.getByteBuffer("compactData"))
             1 -> DataLayoutContiguous(rawdata.getIntArray("dims"), rawdata.getLong("dataAddress"))
-            2 -> DataLayoutChunked(rawdata.getIntArray("dims"), rawdata.getLong("dataAddress"), rawdata.getInt("chunkedElementSize"))
+            2 -> DataLayoutChunked(version, rawdata.getIntArray("dims"), rawdata.getLong("dataAddress"), rawdata.getInt("chunkedElementSize"))
             else -> throw RuntimeException()
         }
 
@@ -74,7 +74,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
                     2 -> { // chunked
                         fld("rank", 1)
                         fld("btreeAddress", sizeOffsets)
-                        array("dims", sizeLengths, "rank")
+                        array("dims", 4,"rank")
                         fld("chunkedElementSize", 4)
                     }
 
@@ -86,7 +86,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
         return when (layoutClass) {
             0 -> DataLayoutCompact3(rawdata.getByteBuffer("compactData"))
             1 -> DataLayoutContiguous3(rawdata.getLong("dataAddress"), rawdata.getLong("dataSize"))
-            2 -> DataLayoutChunked(rawdata.getIntArray("dims"), rawdata.getLong("btreeAddress"), rawdata.getInt("chunkedElementSize"))
+            2 -> DataLayoutChunked(version, rawdata.getIntArray("dims"), rawdata.getLong("btreeAddress"), rawdata.getInt("chunkedElementSize"))
             else -> throw RuntimeException()
         }
     } else throw RuntimeException()
@@ -118,7 +118,7 @@ open class DataLayoutMessage(layoutClassNum: Int)  : MessageHeader(MessageType.L
 
 data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer?) : DataLayoutMessage(0)
 data class DataLayoutContiguous(val dims : IntArray, val dataAddress: Long) : DataLayoutMessage(1)
-data class DataLayoutChunked(val dims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2)
+data class DataLayoutChunked(val version : Int, val dims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2)
 
 data class DataLayoutCompact3(val compactData: ByteBuffer?) : DataLayoutMessage(0)
 data class DataLayoutContiguous3(val dataAddress: Long, val dataSize: Long) : DataLayoutMessage(1)

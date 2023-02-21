@@ -1,6 +1,7 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.api.Datatype.Companion.VLEN
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.lang.foreign.MemoryLayout
@@ -31,111 +32,171 @@ cd /home/snake/install/jextract-19/bin
     /usr/include/netcdf.h
  */
 
-class NetcdfClibFile(val filename : String) : Iosp, Netcdf {
-    private val header : NCheader = NCheader(filename)
-    private val rootGroup : Group = header.rootGroup.build(null)
+class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
+    private val header: NCheader = NCheader(filename)
+    private val rootGroup: Group = header.rootGroup.build(null)
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun cdl(strict: Boolean) = com.sunya.cdm.api.cdl(this, strict)
 
     override fun close() {
         // NOOP
     }
 
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*>  {
-        val vinfo = v2.spObject as NCheader.Vinfo
-        require(v2.nelems < Int.MAX_VALUE)
+    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
+        val wantSection = if (section == null) Section(v2.shape) else Section.fill(section, v2.shape)
+        val nelems = wantSection.size()
+        require(nelems < Int.MAX_VALUE)
 
+        val vinfo = v2.spObject as NCheader.Vinfo
+        val datatype = header.convertType(vinfo.typeid)
+        if (datatype == VLEN) {
+            println("vlen not supported")
+            return ArrayString(intArrayOf(), emptyList())
+        }
         MemorySession.openConfined().use { session ->
             val longArray = MemoryLayout.sequenceLayout(v2.rank.toLong(), C_LONG)
             val origin_p = session.allocateArray(longArray, v2.rank.toLong())
             val shape_p = session.allocateArray(longArray, v2.rank.toLong())
             val stride_p = session.allocateArray(longArray, v2.rank.toLong())
             for (i in 0 until v2.rank) {
-                origin_p.setAtIndex(C_LONG, i.toLong(), 0L)
-                shape_p.setAtIndex(C_LONG, i.toLong(), v2.shape[i].toLong())
-                stride_p.setAtIndex(C_LONG, i.toLong(), 1L)
+                origin_p.setAtIndex(C_LONG, i.toLong(), wantSection.origin(i).toLong())
+                shape_p.setAtIndex(C_LONG, i.toLong(), wantSection.shape(i).toLong())
+                stride_p.setAtIndex(C_LONG, i.toLong(), wantSection.stride(i).toLong())
             }
 
-            when (vinfo.typeid) {
-                NC_BYTE() -> {
-                    val val_p = session.allocate(v2.nelems)
+            when (datatype) {
+                Datatype.ENUM1 -> {
+                    val nbytes = nelems * datatype.size
+                    val val_p = session.allocate(nbytes)
+                    checkErr("nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, origin_p))
+                    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
+                    val values = ByteBuffer.wrap(raw)
+                    return ArrayByte(wantSection.shape, values)
+                }
+
+                Datatype.BYTE -> {
+                    val val_p = session.allocate(nelems)
                     checkErr("nc_get_vars_schar",
                         nc_get_vars_schar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(v2.shape, values)
+                    return ArrayByte(wantSection.shape, values)
                 }
 
-                NC_CHAR() -> {
-                    val val_p = session.allocate(v2.nelems)
+                Datatype.UBYTE -> {
+                    val val_p = session.allocate(nelems)
+                    checkErr("nc_get_vars_uchar",
+                        nc_get_vars_uchar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
+                    val values = ByteBuffer.wrap(raw)
+                    return ArrayUByte(wantSection.shape, values)
+                }
+
+                Datatype.CHAR -> {
+                    val val_p = session.allocate(nelems)
                     checkErr("nc_get_vars_text",
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(v2.shape, values)
+                    return ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
                 }
 
-                NC_DOUBLE() -> {
+                Datatype.DOUBLE -> {
                     // can you allocate DoubleBuffer on heap directly?
-                    val val_p = session.allocateArray(C_DOUBLE, v2.nelems)
+                    val val_p = session.allocateArray(C_DOUBLE, nelems)
                     checkErr("nc_get_vars_double",
                         nc_get_vars_double(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = DoubleBuffer.allocate(v2.nelems.toInt())
-                    for (i in 0 until v2.nelems) {
+                    val values = DoubleBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_DOUBLE, i))
                     }
-                    return ArrayDouble(v2.shape, values)
+                    return ArrayDouble(wantSection.shape, values)
                 }
 
-                NC_FLOAT() -> {
-                    val val_p = session.allocateArray(C_FLOAT, v2.nelems)
+                Datatype.FLOAT -> {
+                    val val_p = session.allocateArray(C_FLOAT, nelems)
                     checkErr("nc_get_vars_float",
                         nc_get_vars_float(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = FloatBuffer.allocate(v2.nelems.toInt())
-                    for (i in 0 until v2.nelems) {
+                    val values = FloatBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_FLOAT, i))
                     }
-                    return ArrayFloat(v2.shape, values)
+                    return ArrayFloat(wantSection.shape, values)
                 }
 
-                NC_INT() -> {
+                Datatype.INT -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_INT, v2.nelems)
+                    val val_p = session.allocateArray(C_INT, nelems)
                     checkErr("nc_get_vars_int",
                         nc_get_vars_int(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = IntBuffer.allocate(v2.nelems.toInt())
-                    for (i in 0 until v2.nelems) {
+                    val values = IntBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
-                    return ArrayInt(v2.shape, values)
+                    return ArrayInt(wantSection.shape, values)
                 }
 
-                NC_LONG() -> {
+                Datatype.UINT -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_LONG, v2.nelems)
+                    val val_p = session.allocateArray(C_INT, nelems)
+                    checkErr("nc_get_vars_uint",
+                        nc_get_vars_uint(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = IntBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
+                        values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
+                    }
+                    return ArrayInt(wantSection.shape, values)
+                }
+
+                Datatype.LONG -> {
+                    // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
+                    val val_p = session.allocateArray(C_LONG, nelems)
                     checkErr("nc_get_vars_long",
                         nc_get_vars_long(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = LongBuffer.allocate(v2.nelems.toInt())
-                    for (i in 0 until v2.nelems) {
+                    val values = LongBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
                     }
-                    return ArrayLong(v2.shape, values)
+                    return ArrayLong(wantSection.shape, values)
                 }
 
-                NC_SHORT() -> {
-                    val val_p = session.allocateArray(C_SHORT, v2.nelems)
+                Datatype.ULONG -> {
+                    // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
+                    val val_p = session.allocateArray(C_LONG, nelems)
+                    checkErr("nc_get_vars_ulonglong",
+                        nc_get_vars_ulonglong(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = LongBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
+                        values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
+                    }
+                    return ArrayULong(wantSection.shape, values)
+                }
+
+                Datatype.SHORT -> {
+                    val val_p = session.allocateArray(C_SHORT, nelems)
                     checkErr("nc_get_vars_short",
                         nc_get_vars_short(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = ShortBuffer.allocate(v2.nelems.toInt())
-                    for (i in 0 until v2.nelems) {
+                    val values = ShortBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
                     }
-                    return ArrayShort(v2.shape, values)
+                    return ArrayShort(wantSection.shape, values)
                 }
 
-                else -> throw IllegalArgumentException()
+                Datatype.USHORT -> {
+                    val val_p = session.allocateArray(C_SHORT, nelems)
+                    checkErr("nc_get_vars_ushort",
+                        nc_get_vars_ushort(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = ShortBuffer.allocate(nelems.toInt())
+                    for (i in 0 until nelems) {
+                        values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
+                    }
+                    return ArrayUShort(wantSection.shape, values)
+                }
+
+                else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
             }
         }
     }

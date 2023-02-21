@@ -48,7 +48,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
     }
 
     override fun toString(): String {
-        return cdlName
+        return if (this == VLEN) "$cdlName ${typedef!!.baseType.cdlName}" else cdlName
     }
 
     val isString : Boolean

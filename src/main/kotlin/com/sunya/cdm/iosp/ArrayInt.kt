@@ -30,7 +30,7 @@ class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape
 
     override fun toString(): String {
         return buildString {
-            append("shape=${shape.contentToString()})\n")
+            append("shape=${shape.contentToString()} data=")
             for (i in 0 until values.limit()) { append("${values[i]},")}
             append("\n")
         }

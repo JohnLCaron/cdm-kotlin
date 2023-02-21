@@ -266,10 +266,13 @@ internal class H5GroupBuilder(
 }
 
 internal class H5Variable(val header : H5builder, val dataObject: DataObject) {
+    // these all have to be non-null for it to be a variable
+    val name = dataObject.name!!
     val mdt : DatatypeMessage = dataObject.mdt!!
     val mdl : DataLayoutMessage = dataObject.mdl!!
     val mds : DataspaceMessage = dataObject.mds!!
-    val name = dataObject.name!!
+    // optional
+    val mfp: FilterPipelineMessage? = dataObject.mfp
 
     // used in CdmBuilder
     var is2DCoordinate = false

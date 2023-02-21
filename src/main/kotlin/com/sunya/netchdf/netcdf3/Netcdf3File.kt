@@ -83,10 +83,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             Datatype.CHAR, Datatype.BYTE -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
-                    filePos.pos = chunk.srcPos
-                    val bytesRead = raf.readByteBuffer(filePos, chunk.nelems)
+                    filePos.pos = chunk.srcPos()
+                    val bytesRead = raf.readByteBuffer(filePos, chunk.nelems())
                     // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem.toInt(), chunk.nelems);
+                    System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem().toInt(), chunk.nelems());
                 }
                 return ArrayByte(v2.shape, values)
             }
@@ -95,10 +95,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             Datatype.DOUBLE, Datatype.LONG -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
-                    filePos.pos = chunk.srcPos
-                    val bytesRead = raf.readByteBuffer(filePos, 8 * chunk.nelems)
+                    filePos.pos = chunk.srcPos()
+                    val bytesRead = raf.readByteBuffer(filePos, 8 * chunk.nelems())
                     // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem.toInt(),8 * chunk.nelems);
+                    System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem().toInt(),8 * chunk.nelems());
                 }
                 return if (v2.datatype == Datatype.LONG) ArrayLong(v2.shape, values.asLongBuffer()) else
                     ArrayDouble(v2.shape, values.asDoubleBuffer())
@@ -107,10 +107,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             Datatype.FLOAT, Datatype.INT -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
-                    filePos.pos = chunk.srcPos
-                    val bytesRead = raf.readByteBuffer(filePos, 4 * chunk.nelems)
+                    filePos.pos = chunk.srcPos()
+                    val bytesRead = raf.readByteBuffer(filePos, 4 * chunk.nelems())
                     // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem.toInt(),4 * chunk.nelems);
+                    System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem().toInt(),4 * chunk.nelems());
                 }
                 return if (v2.datatype == Datatype.INT) ArrayInt(v2.shape, values.asIntBuffer()) else
                     ArrayFloat(v2.shape, values.asFloatBuffer())
@@ -119,10 +119,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
             Datatype.SHORT-> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
-                    filePos.pos = chunk.srcPos
-                    val bytesRead = raf.readByteBuffer(filePos, 2 * chunk.nelems)
+                    filePos.pos = chunk.srcPos()
+                    val bytesRead = raf.readByteBuffer(filePos, 2 * chunk.nelems())
                     // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 2 * chunk.destElem.toInt(),2 * chunk.nelems);
+                    System.arraycopy(bytesRead.array(), 0, values.array(), 2 * chunk.destElem().toInt(),2 * chunk.nelems());
                 }
                 return ArrayShort(v2.shape, values.asShortBuffer())
             }

@@ -15,6 +15,14 @@ class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<Stri
         override fun computeNext() = if (idx >= values.size) done() else setNext(values[idx++])
     }
 
+    override fun toString(): String {
+        return buildString {
+            append("shape=${shape.contentToString()} data= ")
+            for (i in 0 until values.size) { append("'${values[i]}',")}
+            append("\n")
+        }
+    }
+
 }
 
 

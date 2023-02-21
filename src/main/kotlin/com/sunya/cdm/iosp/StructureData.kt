@@ -34,6 +34,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
         heapIndex++
         return result
     }
+
     fun getFromHeap(offset: Int): Any? {
         val index = bb.getInt(offset)
         return heap[index]

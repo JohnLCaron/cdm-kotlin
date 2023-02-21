@@ -46,7 +46,7 @@ class NetchdfCompareCdl {
 
     @Test
     fun testProblem () {
-        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/c0.nc")
+        openNetchdf("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
     }
 
     @Test
