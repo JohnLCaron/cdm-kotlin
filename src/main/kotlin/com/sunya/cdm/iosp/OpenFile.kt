@@ -43,12 +43,14 @@ data class OpenFile(val location : String) : Closeable {
         if (state.pos > fileChannel.size()) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
-        dst.position(dstPos)
+        // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
         dst.limit(dstPos + nbytes)
+        dst.position(dstPos)
         val nread =  fileChannel.read(dst, state.pos)
         if (nread != nbytes) {
             throw EOFException("Tried to read past EOF at pos ${state.pos} location $location")
         }
+        // println("read at ${state.pos} $nbytes bytes to $dstPos")
         state.pos += nread
         return nread
     }
@@ -150,7 +152,7 @@ data class OpenFile(val location : String) : Closeable {
     }
 }
 
-data class OpenFileState(var pos : Long, var byteOrder : ByteOrder) {
+data class OpenFileState(var pos : Long, var byteOrder : ByteOrder = ByteOrder.LITTLE_ENDIAN) {
     fun incr(addit : Long) : OpenFileState {
         this.pos += addit
         return this

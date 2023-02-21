@@ -1,8 +1,5 @@
 package com.sunya.cdm.api
 
-import com.sunya.cdm.api.Section.Companion.breakoutInner
-import com.sunya.cdm.iosp.ArrayString
-import com.sunya.cdm.iosp.makeStringFromBytes
 import java.util.*
 
 /**
@@ -162,7 +159,7 @@ class Section {
      */
     @Throws(InvalidRangeException::class)
     fun compact(): Section {
-        val results: MutableList<Range?> = ArrayList(getRank())
+        val results: MutableList<Range?> = ArrayList(rank())
         for (r in ranges) {
             results.add(r?.compact())
         }
@@ -183,12 +180,12 @@ class Section {
         if (want == null) {
             return this
         }
-        if (want.getRank() != getRank()) {
+        if (want.rank() != rank()) {
             throw InvalidRangeException("Invalid Section rank")
         }
 
         // check individual nulls
-        val results: MutableList<Range?> = ArrayList(getRank())
+        val results: MutableList<Range?> = ArrayList(rank())
         for (j in ranges.indices) {
             val base = ranges[j]
             val r = want.getRange(j)
@@ -215,7 +212,7 @@ class Section {
         }
 
         // check individual nulls
-        val results: MutableList<Range?> = ArrayList(getRank())
+        val results: MutableList<Range?> = ArrayList(rank())
         for (j in ranges.indices) {
             val base = ranges[j]
             val r = other.getRange(j)
@@ -350,27 +347,27 @@ class Section {
         }
 
     /** Get origin of the ith Range  */
-    fun getOrigin(i: Int): Int {
+    fun origin(i: Int): Int {
         return ranges[i]!!.first
     }
 
     /** Get length of the ith Range  */
-    fun getShape(i: Int): Int {
+    fun shape(i: Int): Int {
         return ranges[i]!!.length
     }
 
     /** Get stride of the ith Range  */
-    fun getStride(i: Int): Int {
+    fun stride(i: Int): Int {
         return ranges[i]!!.stride
     }
 
     /** Get rank = number of Ranges.  */
-    fun getRank(): Int {
+    fun rank(): Int {
         return ranges.size
     }
 
     private fun compatibleRank(other: Section): Boolean {
-        return getRank() == other.getRank()
+        return rank() == other.rank()
     }
 
     /**
@@ -388,6 +385,11 @@ class Section {
             product *= r.length
         }
         return product
+    }
+
+    fun size(): Long = size.value
+    private val size = lazy {
+        computeSize()
     }
 
     /**
@@ -453,7 +455,7 @@ class Section {
         if (isScalar(shape) && isScalar(this.shape)) {
             return true
         }
-        if (getRank() != shape.size) {
+        if (rank() != shape.size) {
             return false
         }
         for (i in ranges.indices) {
@@ -490,19 +492,19 @@ class Section {
     }
 
     inner class Iterator internal constructor(shape: IntArray) {
-        private val odo = IntArray(getRank()) // odometer - the current element
+        private val odo = IntArray(rank()) // odometer - the current element
         private val rangeIterList: MutableList<kotlin.collections.Iterator<Int>> = ArrayList()
-        private val stride = IntArray(getRank())
+        private val stride = IntArray(rank())
         private val total: Long
         private var done: Long
 
         init {
             var ss = 1
-            for (i in getRank() - 1 downTo 0) { // fastest varying last
+            for (i in rank() - 1 downTo 0) { // fastest varying last
                 stride[i] = ss
                 ss *= shape[i]
             }
-            for (i in 0 until getRank()) {
+            for (i in 0 until rank()) {
                 val iter = getRange(i)!!.iterator()
                 odo[i] = iter.next()
                 rangeIterList.add(iter)
@@ -531,7 +533,7 @@ class Section {
         }
 
         private fun incr() {
-            var digit = getRank() - 1
+            var digit = rank() - 1
             while (digit >= 0) {
                 val iter = rangeIterList[digit]
                 if (iter.hasNext()) {
@@ -550,7 +552,7 @@ class Section {
 
         private fun currentElement(): Int {
             var value = 0
-            for (ii in 0 until getRank()) value += odo[ii] * stride[ii]
+            for (ii in 0 until rank()) value += odo[ii] * stride[ii]
             return value
         }
     } // Section.Iterator

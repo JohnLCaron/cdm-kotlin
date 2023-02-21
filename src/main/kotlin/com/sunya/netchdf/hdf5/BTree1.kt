@@ -5,7 +5,23 @@ import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
 
-// Level 1A1 - Version 1 B-trees
+// Level 1A1 - Version 1 B-trees.
+// The nodes are links to SymbolTableNode's I think
+// aka GroupBTree from H5objects in netcdf-java library
+// called from readGroupOld()
+
+/*
+Version 1 B-trees in HDF5 files are an implementation of the B-link tree. The sibling nodes at a particular level in the
+tree are stored in a doubly-linked list. See the “Efficient Locking for Concurrent Operations on B-trees” paper by
+Phillip Lehman and S. Bing Yao as published in the ACM Transactions on Database Systems, Vol. 6, No. 4, December 1981.
+
+The B-trees implemented by the file format contain one more key than the number of children. In other words, each child
+pointer out of a B-tree node has a left key and a right key. The pointers out of internal nodes point to sub-trees
+while the pointers out of leaf nodes point to symbol nodes and raw data chunks. Aside from that difference, internal
+nodes and leaf nodes are identical.
+
+The version 1 B-trees are being phased out in favor of the version 2 B-trees
+ */
 internal class Btree1(val header : H5builder, val owner: String, address: Long) {
     val raf = header.raf
     var wantType = 0
@@ -93,7 +109,7 @@ internal class Btree1(val header : H5builder, val owner: String, address: Long) 
             val size = (8 + nentries * 40).toLong()
         }
     }
-} // GroupBTree
+} // Btree1
 
 // Level 1C - Symbol Table Entry
 internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry {
@@ -143,7 +159,7 @@ internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry
     )
 }
 
-// aka Group Entry "level 1C"
+// III.C. Disk Format: Level 1C - Symbol Table Entry (aka Group Entry)
 internal data class SymbolTableEntry(
     val nameOffset: Long,
     val objectHeaderAddress: Long,

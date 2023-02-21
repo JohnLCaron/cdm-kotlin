@@ -12,7 +12,7 @@ import java.util.*
 
 
 private val debug = false
-private val debugFormat = true
+private val debugFormat = false
 
 fun main(args: Array<String>) {
     val h = NCheader("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc")
@@ -203,7 +203,10 @@ class NCheader(val filename: String) {
             vb.name = vname
             vb.datatype = convertType(typeid)
             vb.dimensions.addAll(g4.makeDimList(dimIds))
-            vb.spObject = Vinfo(g4, varid, typeid)
+
+            val usertype = if (typeid >= 32) userTypes[typeid] else null
+
+            vb.spObject = Vinfo(g4, varid, typeid, usertype)
 
             // read Variable attributes
             if (natts > 0) {
@@ -418,7 +421,7 @@ class NCheader(val filename: String) {
 
     }
 
-    internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int)
+    internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int, val userType : UserType?)
 
     fun convertType(type: Int): Datatype {
         return when (type) {

@@ -2,23 +2,22 @@ package com.sunya.cdm.iosp
 
 import com.sunya.cdm.api.Section
 
+/**
+ * LayoutRegular has data stored in row-major order, like netcdf non-record variables.
+ *
+ * @param startPos starting address of the entire data array.
+ * @param elemSize size of an element in bytes.
+ * @param varShape shape of the entire data array. must have rank &gt; 0
+ * @param wantSection the wanted section of data
+ */
 class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSection: Section?) : Layout {
     private val chunker: IndexChunker
     private val startPos : Long // starting position
-
     override val elemSize : Int // size of each element
 
-
-    /**
-     * Constructor.
-     *
-     * @param startPos starting address of the entire data array.
-     * @param elemSize size of an element in bytes.
-     * @param varShape shape of the entire data array.
-     * @param wantSection the wanted section of data, contains a List of Range objects.
-     * @throws InvalidRangeException if ranges are misformed
-     */
     init {
+        if (startPos <= 0)
+            println("HEY")
         require(startPos >= 0)
         require(elemSize > 0)
         this.startPos = startPos

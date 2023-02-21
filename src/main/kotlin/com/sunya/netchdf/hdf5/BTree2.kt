@@ -18,9 +18,10 @@ import java.util.*
  * The entry into a version 2 B-tree is a header which contains global information about the structure of the B-tree.
  * The root node address field in the header points to the B-tree root node, which is either an internal or leaf node,
  * depending on the value in the header's depth field. An internal node consists of records plus pointers to further
- * leaf
- * or internal nodes in the tree. A leaf node consists of solely of records. The format of the records depends on the
- * B-tree type (stored in the header).
+ * leaf or internal nodes in the tree. A leaf node consists of solely of records. The format of the records depends on
+ * the B-tree type.
+ *
+ * Used in readGroupNew(), readAttributesFromInfoMessage(), FractalHeap.
  */
 class BTree2(h5: H5builder, owner: String, address: Long) {
     private val debugBtree2 = false

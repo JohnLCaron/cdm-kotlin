@@ -1,6 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
@@ -10,6 +11,7 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
+import java.nio.*
 
 internal val includeOriginalAttributes = false
 internal val debugDimensionScales = false
@@ -37,7 +39,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     if (strict) {
         val iter = groupb.attributes.iterator()
-        while(iter.hasNext()) {
+        while (iter.hasNext()) {
             if (NETCDF4_SPECIAL_ATTS.contains(iter.next().name)) {
                 iter.remove()
             }
@@ -53,8 +55,8 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
         println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
     }
     val h5type = H5Type(att5.mdt(), typedef)
-    val dc = DataContainer(att5.name, att5.dataPos, att5.mdt!!, att5.mds, h5type)
-    val values = this.readDataArray(dc)
+    val dc = AttributeContainer(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
+    val values = this.readRegularData(dc, null)
     val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     return Attribute(att5.name, useType, values.toList())
 }
@@ -103,12 +105,7 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     }
 
     if (v5.dimList != null) {
-        v5.dimList!!.split(" ").forEach { dimName ->
-            val dim = group5.findDimension(dimName)
-            if (dim != null) {
-                builder.dimensions.add(dim)
-            }
-        }
+        builder.dimList = v5.dimList!!.trim().split(" ")
     } else if (v5.mds.dims.size > 0) {
         v5.mds.dims.forEach{builder.dimensions.add(Dimension(it))}
     }
@@ -116,6 +113,11 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     for (att5 in v5.attributes()) {
         builder.attributes.add(buildAttribute(att5))
     }
+
+    // TODO if compact, do not use fileOffset
+    require (v5.dataObject.mdl != null)
+    val vdata = VariableData(this, builder.name!!, h5type, v5.mdt, v5.mds, v5)
+    builder.spObject = vdata
 
     if (strict) {
         val iter = builder.attributes.iterator()
@@ -128,6 +130,123 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     return builder
 }
 
+internal interface DataContainer {
+    val name: String
+    val h5type: H5Type
+    val dataPos: Long
+    val mdt: DatatypeMessage
+    val mds: DataspaceMessage
+}
+
+internal open class AttributeContainer(
+    override val name : String,
+    override val h5type: H5Type,
+    override val dataPos : Long,
+    override val mdt: DatatypeMessage,
+    override val mds: DataspaceMessage) : DataContainer
+
+
+internal class VariableData(
+    val h5 : H5builder,
+    override val name: String,
+    override val h5type: H5Type,
+    override val mdt: DatatypeMessage,
+    override val mds: DataspaceMessage,
+    v5 : H5Variable
+) : DataContainer {
+    override val dataPos : Long
+
+    val mdl = v5.mdl
+    val mfp = v5.mfp
+
+    val isChunked : Boolean
+    val storageSize : IntArray // dimensions
+    val elementSize : Int // total length in bytes on disk of one element
+
+    val useFillValue : Boolean
+    var fillValue : Any? = null
+
+    init {
+        dataPos = when (mdl) {
+            is DataLayoutContiguous -> h5.getFileOffset((mdl as DataLayoutContiguous).dataAddress)
+            is DataLayoutContiguous3 -> h5.getFileOffset((mdl as DataLayoutContiguous3).dataAddress)
+            is DataLayoutChunked -> h5.getFileOffset((mdl as DataLayoutChunked).btreeAddress)
+            else -> -1 // LOOK compact
+        }
+
+        // deal with unallocated data
+        fillValue = getFillValueNonDefault(v5, h5type)
+        useFillValue = (dataPos == -1L)
+
+        isChunked = (mdl.layoutClass == LayoutClass.Chunked)
+        when (mdl) {
+            is DataLayoutCompact -> {
+                this.storageSize = mds.dims
+                this.elementSize = mdt.elemSize
+            }
+            is DataLayoutCompact3 -> {
+                this.storageSize = mds.dims
+                this.elementSize = mdt.elemSize
+            }
+            is DataLayoutContiguous -> {
+                this.storageSize = mds.dims
+                val nelems = computeSize(this.storageSize).toInt()
+                this.elementSize = (mdt.elemSize / nelems)
+            }
+            is DataLayoutContiguous3 -> {
+                this.storageSize = mds.dims
+                val nelems = computeSize(this.storageSize).toInt()
+                this.elementSize = (mdt.elemSize / nelems)
+            }
+            is DataLayoutChunked -> {
+                this.storageSize = mdl.dims
+                this.elementSize = storageSize[storageSize.size - 1] // last number is element size
+                // make the data btree, entries are not read in, but the point is to cache it ??
+                // this.btree = DataBTree(h5, this.dataPos, shape, this.storageSize, null)
+            }
+            else -> throw RuntimeException()
+        }
+    }
+}
+
+internal fun getFillValueNonDefault(v5 : H5Variable, h5type: H5Type): Any? {
+    // look for fill value message
+    var fillValueBB : ByteBuffer? = null
+    for (mess in v5.dataObject.messages) {
+        if (mess.mtype === MessageType.FillValue) {
+            val fvm = mess as FillValueMessage
+            if (fvm.hasFillValue) {
+                fillValueBB = fvm.value // val value: ByteBuffer?
+            }
+        } else if (mess.mtype === MessageType.FillValueOld) {
+            val fvm = mess as FillValueOldMessage
+            if (fvm.size > 0) {
+                fillValueBB = fvm.value // val value: ByteBuffer?
+            }
+        }
+    }
+    if (fillValueBB == null) return null
+    fillValueBB.position(0)
+    fillValueBB.order(h5type.endian)
+
+    // a single data value, same datatype as the dataset
+    return when (h5type.datatype) {
+        Datatype.BYTE -> fillValueBB.get()
+        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> fillValueBB.get().toUByte()
+        Datatype.SHORT -> fillValueBB.getShort()
+        Datatype.USHORT, Datatype.ENUM2 -> fillValueBB.getShort().toUShort()
+        Datatype.INT -> fillValueBB.getInt()
+        Datatype.UINT, Datatype.ENUM4 -> fillValueBB.getInt().toUInt()
+        Datatype.FLOAT -> fillValueBB.getFloat()
+        Datatype.DOUBLE -> fillValueBB.getDouble()
+        Datatype.LONG -> fillValueBB.getLong()
+        Datatype.ULONG -> fillValueBB.getLong().toULong()
+        Datatype.OPAQUE -> fillValueBB
+        else -> null
+    }
+}
+
+
 ///////////////////////// Attributes
 
 /*
@@ -137,14 +256,14 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
    * Attributes in HDF5 and netCDF-4 correspond very closely. Each attribute in an HDF5 file is represented as an
    * attribute in the netCDF-4 file, with the exception of the attributes below, which are ignored by the netCDF-4 API.
    *
-   * _Netcdf4Coordinates An integer array containing the dimension IDs of a variable which is a multi-dimensional
+   * 1) _Netcdf4Coordinates An integer array containing the dimension IDs of a variable which is a multi-dimensional
    * coordinate variable.
-   * _nc3_strict When this (scalar, H5T_NATIVE_INT) attribute exists in the root group of the HDF5 file, the netCDF API
+   * 2) _nc3_strict When this (scalar, H5T_NATIVE_INT) attribute exists in the root group of the HDF5 file, the netCDF API
    * will enforce the netCDF classic model on the data file.
-   * REFERENCE_LIST This attribute is created and maintained by the HDF5 dimension scale API.
-   * CLASS This attribute is created and maintained by the HDF5 dimension scale API.
-   * DIMENSION_LIST This attribute is created and maintained by the HDF5 dimension scale API.
-   * NAME This attribute is created and maintained by the HDF5 dimension scale API.
+   * 3) REFERENCE_LIST This attribute is created and maintained by the HDF5 dimension scale API.
+   * 4) CLASS This attribute is created and maintained by the HDF5 dimension scale API.
+   * 5) DIMENSION_LIST This attribute is created and maintained by the HDF5 dimension scale API.
+   * 6) NAME This attribute is created and maintained by the HDF5 dimension scale API.
  */
 
 ///////////////////////// Dimensions

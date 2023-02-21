@@ -46,6 +46,10 @@ class Group(val name : String,
         return result
     }
 
+    override fun toString(): String {
+        return if (parent == null) "root" else name
+    }
+
     class Builder(val name : String) {
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()

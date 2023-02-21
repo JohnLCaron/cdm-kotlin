@@ -66,7 +66,7 @@ data class Variable(
 
         fun build(group : Group) : Variable {
             val useDimensions = if (dimList != null) dimList!!.map {
-                group.findDimension(it) ?: throw RuntimeException("Cant find dimension $it")
+                group.findDimension(it) ?: throw RuntimeException("Cant find dimension named '$it'")
             } else dimensions
 
             return Variable(group, name!!, datatype!!, useDimensions, attributes, spObject)
