@@ -19,6 +19,8 @@ fun main(args: Array<String>) {
     if (debug) println(h.rootGroup.build(null).cdl(true))
 }
 
+internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
+
 // Really a builder of the root Group.
 class NCheader(val filename: String) {
     val rootGroup = Group.Builder("")
@@ -26,7 +28,6 @@ class NCheader(val filename: String) {
     private var format = 0
     private var formatx = 0
     private var mode = 0
-    internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
 
     init {
         MemorySession.openConfined().use { session ->
@@ -422,41 +423,40 @@ class NCheader(val filename: String) {
     }
 
     internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int, val userType : UserType?)
+}
 
-    fun convertType(type: Int): Datatype {
-        return when (type) {
-            NC_BYTE() -> Datatype.BYTE
-            NC_CHAR() -> Datatype.CHAR
-            NC_SHORT()-> Datatype.SHORT
-            NC_INT() -> Datatype.INT
-            NC_FLOAT() -> Datatype.FLOAT
-            NC_DOUBLE() -> Datatype.DOUBLE
-            NC_UBYTE() -> Datatype.UBYTE
-            NC_USHORT() -> Datatype.USHORT
-            NC_UINT() -> Datatype.UINT
-            NC_INT64() -> Datatype.LONG
-            NC_UINT64() -> Datatype.ULONG
-            NC_STRING() -> Datatype.STRING
-            else -> {
-                val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
-                return when (userType.typedef.kind) {
-                    TypedefKind.Enum -> {
-                        when (userType.size) {
-                            1 -> Datatype.ENUM1.withTypedef(userType.typedef)
-                            2 -> Datatype.ENUM2.withTypedef(userType.typedef)
-                            4 -> Datatype.ENUM4.withTypedef(userType.typedef)
-                            else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
-                        }
+fun convertType(type: Int): Datatype {
+    return when (type) {
+        NC_BYTE() -> Datatype.BYTE
+        NC_CHAR() -> Datatype.CHAR
+        NC_SHORT()-> Datatype.SHORT
+        NC_INT() -> Datatype.INT
+        NC_FLOAT() -> Datatype.FLOAT
+        NC_DOUBLE() -> Datatype.DOUBLE
+        NC_UBYTE() -> Datatype.UBYTE
+        NC_USHORT() -> Datatype.USHORT
+        NC_UINT() -> Datatype.UINT
+        NC_INT64() -> Datatype.LONG
+        NC_UINT64() -> Datatype.ULONG
+        NC_STRING() -> Datatype.STRING
+        else -> {
+            val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
+            return when (userType.typedef.kind) {
+                TypedefKind.Enum -> {
+                    when (userType.size) {
+                        1 -> Datatype.ENUM1.withTypedef(userType.typedef)
+                        2 -> Datatype.ENUM2.withTypedef(userType.typedef)
+                        4 -> Datatype.ENUM4.withTypedef(userType.typedef)
+                        else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
                     }
-                    TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
-                    TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
-                    TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
-                    else -> throw RuntimeException("Unsupported data type == $type")
                 }
+                TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
+                TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
+                TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
+                else -> throw RuntimeException("Unsupported data type == $type")
             }
         }
     }
-
 }
 
 fun checkErr (where : String, ret: Int) {

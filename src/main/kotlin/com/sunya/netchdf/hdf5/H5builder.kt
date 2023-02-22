@@ -265,6 +265,7 @@ class H5builder(val raf: OpenFile,
         typedefMdtHash[mdtHash] = typedef
     }
 
+    // LOOK just pass the mdt ??
     fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
         return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
     }

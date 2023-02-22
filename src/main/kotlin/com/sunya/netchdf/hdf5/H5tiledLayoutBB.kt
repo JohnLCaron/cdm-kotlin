@@ -56,7 +56,7 @@ class H5tiledLayoutBB(
      * @throws IOException on io error
      */
     init {
-        val vinfo = v2.spObject as VariableData
+        val vinfo = v2.spObject as DataContainerVariable
         requireNotNull(vinfo)
         require(vinfo.isChunked)
 

@@ -38,7 +38,7 @@ internal class H5heap(val header: H5builder) {
         val valueDatatype = if (typedef != null) typedef.baseType else datatype
 
         val state = OpenFileState(ho.dataPos, endian ?: ByteOrder.nativeOrder())
-        return when (valueDatatype) {
+        val result = when (valueDatatype) {
             Datatype.FLOAT -> raf.readArrayFloat(state, heapId.nelems)
             Datatype.DOUBLE -> raf.readArrayDouble(state, heapId.nelems)
             Datatype.BYTE -> raf.readArrayByte(state, heapId.nelems)
@@ -47,6 +47,7 @@ internal class H5heap(val header: H5builder) {
             Datatype.LONG -> raf.readArrayLong(state, heapId.nelems)
             else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
         }
+        return result
     }
 
     /**

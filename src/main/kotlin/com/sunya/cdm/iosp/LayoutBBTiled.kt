@@ -120,7 +120,7 @@ class LayoutBBTiled(
     }
 
     companion object {
-        private const val debug = true
+        private const val debug = false
         private const val debugIntersection = false
     }
 }

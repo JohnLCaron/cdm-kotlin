@@ -28,12 +28,4 @@ class ArrayByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<Byte>(sh
         return result
     }
 
-
-    override fun toString(): String {
-        return buildString {
-            append("shape=${shape.contentToString()})\n")
-            for (i in 0 until values.limit()) { append("${values[i]},")}
-            append("\n")
-        }
-    }
 }

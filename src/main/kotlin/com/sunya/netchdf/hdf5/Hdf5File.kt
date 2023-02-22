@@ -27,7 +27,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         val wantSection = if (section == null) Section(v2.shape) else Section.fill(section, v2.shape)
-        val vinfo = v2.spObject as VariableData
+        val vinfo = v2.spObject as DataContainerVariable
 
         if (vinfo.useFillValue) { // fill value only, no  data
             return ArraySingle(wantSection.shape, vinfo.h5type.datatype, vinfo.fillValue)

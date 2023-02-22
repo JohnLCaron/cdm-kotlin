@@ -8,7 +8,9 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
     override fun toString(): String {
         return buildString {
             append("shape=${shape.contentToString()} data=")
-            for (value in this){ append("$value,")}
+            for (value in this){
+                append("$value,")
+            }
             append("\n")
         }
     }
@@ -21,7 +23,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
             val iter1 = array1.iterator()
             val iter2 = array2.iterator()
             var count = 0
-            while (iter1.hasNext()) {
+            while (iter1.hasNext() && iter2.hasNext()) {
                 val v1 = iter1.next()
                 val v2 = iter2.next()
                 count++

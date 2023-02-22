@@ -6,7 +6,6 @@ import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import kotlin.reflect.KClass
 
 // Handles reading attributes and regular layout Variables (eg contiguous, maybe compact)
 internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
@@ -14,14 +13,6 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = dc.h5type
-
-    if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(dc)
-    }
-    if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(dc)
-    }
-
     var shape: IntArray = dc.mds.dims
     var readDtype: Datatype = h5type.datatype
     var endian: ByteOrder = h5type.endian
@@ -44,6 +35,13 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val wantSection = if (section == null) Section(shape) else Section.fill(section, shape)
     val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, wantSection)
 
+    if (h5type.hdfType == Datatype5.Vlen) {
+        return readVlenData(dc, layout, wantSection)
+    }
+    if (h5type.hdfType == Datatype5.Compound) {
+        return readCompoundData(dc, layout, wantSection)
+    }
+
     val state = OpenFileState(0, endian)
     val dataArray = readNonHeapData(state, layout, readDtype, wantSection.shape)
 
@@ -51,24 +49,24 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     if (h5type.hdfType == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = dc.mdt as DatatypeEnum
-        return convertEnums(enumMsg.valuesMap, dataArray)
+        return dataArray.convertEnums(enumMsg.valuesMap)
     }
 
     return dataArray
 }
 
 // Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
-internal fun H5builder.readChunkedData(vinfo: VariableData, layout : Layout, section : Section): ArrayTyped<*> {
+internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : Layout, section : Section): ArrayTyped<*> {
     if (vinfo.mds.type == DataspaceType.Null) {
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = vinfo.h5type
 
     if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(vinfo)
+        return readVlenData(vinfo, layout, section)
     }
     if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(vinfo)
+        return readCompoundData(vinfo, layout, section)
     }
 
     var shape: IntArray = vinfo.mds.dims
@@ -97,7 +95,7 @@ internal fun H5builder.readChunkedData(vinfo: VariableData, layout : Layout, sec
     if (h5type.hdfType == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = vinfo.mdt as DatatypeEnum
-        return convertEnums(enumMsg.valuesMap, dataArray)
+        return dataArray.convertEnums(enumMsg.valuesMap)
     }
 
     return dataArray
@@ -142,17 +140,17 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
 }
 
 // Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
-internal fun H5builder.readFilteredChunkedData(vinfo: VariableData, layout : LayoutBB, section : Section): ArrayTyped<*> {
+internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, layout : LayoutBB, section : Section): ArrayTyped<*> {
     if (vinfo.mds.type == DataspaceType.Null) {
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = vinfo.h5type
 
     if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(vinfo)
+        return readVlenData(vinfo, layout, section)
     }
     if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(vinfo)
+        return readCompoundData(vinfo, layout, section)
     }
 
     var shape: IntArray = vinfo.mds.dims
@@ -181,7 +179,7 @@ internal fun H5builder.readFilteredChunkedData(vinfo: VariableData, layout : Lay
     if (h5type.hdfType == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = vinfo.mdt as DatatypeEnum
-        return convertEnums(enumMsg.valuesMap, dataArray)
+        return dataArray.convertEnums(enumMsg.valuesMap)
     }
 
     return dataArray
@@ -235,12 +233,17 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: LayoutBB
 }
 
 // The structure data is not on the heap, but the variable length members (vlen, string) are
-internal fun H5builder.readCompoundData(dc: DataContainer) : ArrayStructureData {
+internal fun H5builder.readCompoundData(dc: DataContainer, layout : Layout, section : Section) : ArrayStructureData {
+    val datatype = dc.h5type.datatype
+    require(datatype == Datatype.COMPOUND)
+    requireNotNull(datatype.typedef)
+    require(datatype.typedef is CompoundTypedef)
+
     val shape: IntArray = dc.mds.dims
     val state = OpenFileState(0, dc.h5type.endian)
-    val layout: Layout = LayoutRegular(dc.dataPos, dc.h5type.elemSize, shape, Section(shape))
 
-    val compoundType = dc.mdt as DatatypeCompound
+
+    /* val compoundType = dc.mdt as DatatypeCompound
     val members = compoundType.members.map { sm5  ->
         val memberType = H5Type(sm5.mdt)
 
@@ -249,17 +252,22 @@ internal fun H5builder.readCompoundData(dc: DataContainer) : ArrayStructureData 
         else null
 
         H5StructureMember(sm5.name, memberType.datatype, sm5.offset, sm5.dims, memberType.hdfType, lamda)
+    } */
+
+    val sdataArray = readArrayStructureData(state, layout, shape, datatype.typedef.members)
+    val h5heap = H5heap(this)
+    sdataArray.putStringsOnHeap {  offset -> h5heap.readHeapString(sdataArray.bb, offset)!! }
+
+    sdataArray.putVlensOnHeap { member, offset ->
+        val listOfArrays = mutableListOf<Array<*>>()
+        for (i in 0 until member.nelems) {
+            val heapId = h5heap.readHeapIdentifier(sdataArray.bb, offset)
+            val vlenArray = h5heap.getHeapDataArray(heapId, member.datatype, dc.h5type.endian)
+            listOfArrays.add(vlenArray)
+        }
+        ArrayVlen(member.dims, listOfArrays, member.datatype)
     }
 
-    val h5heap = H5heap(this)
-    val sdataArray = readArrayStructureData(state, layout, shape, members)
-    members.filter { it.datatype == Datatype.STRING }.forEach { member ->
-        sdataArray.forEach { sdata ->
-            val sval = h5heap.readHeapString(sdataArray.bb, sdata.offset + member.offset)!!
-            println("offset ${sdata.offset + member.offset} sval $sval")
-            sdata.putOnHeap(member, sval)
-        }
-    }
     return sdataArray
 }
 
@@ -277,7 +285,7 @@ internal fun H5builder.readArrayStructureData(state: OpenFileState, layout: Layo
     return ArrayStructureData(shape, bb, layout.elemSize, members)
 }
 
-internal fun H5builder.readVlenData(dc: DataContainer) : ArrayTyped<*> {
+internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, section : Section) : ArrayTyped<*> {
     val shape: IntArray = dc.mds.dims
     val layout2 = LayoutRegular(dc.dataPos, dc.mdt.elemSize, shape, Section(shape))
     val h5heap = H5heap(this)
@@ -332,7 +340,7 @@ internal fun H5builder.readVlenData(dc: DataContainer) : ArrayTyped<*> {
                 count++
             }
         }
-        return ArrayVlen(intArrayOf(count), listOfArrays, baseType)
+        return ArrayVlen(shape, listOfArrays, baseType)
     }
 }
 
@@ -349,19 +357,4 @@ internal class H5StructureMember(name: String, datatype : Datatype, offset: Int,
         return super.value(sdata)
     }
 }
-internal fun convertEnums(map: Map<Int, String>, enumValues: ArrayTyped<*>): ArrayString {
-    val wtf : KClass<out ArrayTyped<*>> = enumValues::class // LOOK is there something simpler ?
-    val size = computeSize(enumValues.shape).toInt()
-    val enumIter = enumValues.iterator()
-    val stringValues = Array(size) {
-        val enumVal = enumIter.next()
-        val num = when (wtf.simpleName) {
-            "ArrayUByte" ->  (enumVal as UByte).toInt()
-            "ArrayUShort" ->  (enumVal as UShort).toInt()
-            "ArrayUInt" ->  (enumVal as UInt).toInt()
-            else -> RuntimeException("unknown ${wtf.simpleName}")
-        }
-        map[num] ?: "Unknown enum number=$enumVal"
-    }
-    return ArrayString(enumValues.shape, stringValues)
-}
+

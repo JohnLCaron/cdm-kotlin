@@ -1,5 +1,7 @@
 package com.sunya.cdm.api
 
+import com.sunya.cdm.iosp.ArrayString
+import com.sunya.cdm.iosp.ArrayTyped
 import com.sunya.cdm.iosp.StructureMember
 import com.sunya.cdm.util.Indent
 
@@ -15,7 +17,8 @@ class CompoundTypedef(name : String, val members : List<StructureMember>) : Type
             append("${indent}compound $name {\n")
             val nindent = indent.incr()
             members.forEach {
-                append("${nindent}${it.datatype} ${it.name}${showDims(it.dims)} ;\n")
+                val typename = if (it.datatype.typedef != null) it.datatype.typedef.name  else it.datatype.cdlName
+                append("${nindent}${typename} ${it.name}${showDims(it.dims)} ;\n")
             }
             append("${indent}}; // $name")
         }
@@ -47,6 +50,28 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
             append("};")
         }
     }
+
+    /** Convert array of ENUM into equivalent array of String */
+    fun ArrayTyped<*>.convertEnums(): ArrayString {
+        return this.convertEnums(values)
+    }
+}
+
+/** Convert array of ENUM into equivalent array of String */
+fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
+    val size = Section.computeSize(this.shape).toInt()
+    val enumIter = this.iterator()
+    val stringValues = List(size) {
+        val enumVal = enumIter.next()
+        val num = when (enumVal) {
+            is UByte ->  enumVal.toInt()
+            is UShort ->  enumVal.toInt()
+            is UInt ->  enumVal.toInt()
+            else -> RuntimeException("unknown enum ${enumVal!!::class}")
+        }
+        map[num] ?: "Unknown enum number=$enumVal"
+    }
+    return ArrayString(this.shape, stringValues)
 }
 
 

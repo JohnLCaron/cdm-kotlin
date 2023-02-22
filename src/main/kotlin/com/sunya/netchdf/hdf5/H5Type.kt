@@ -9,6 +9,7 @@ private const val warnings = true
 private val logger = KotlinLogging.logger("H5Type")
 private val defaultDatatype = Datatype.STRING
 
+// LOOK needs to be rewritten, unclear on its scope
 internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
     val hdfType: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize

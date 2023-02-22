@@ -5,5 +5,5 @@ import java.io.Closeable
 interface Netcdf : Closeable {
     fun rootGroup() : Group
     fun location() : String
-    fun cdl(strict : Boolean = false) : String
+    fun cdl(strict : Boolean = true) : String
 }

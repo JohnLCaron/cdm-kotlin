@@ -55,20 +55,27 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
         println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
     }
     val h5type = H5Type(att5.mdt(), typedef)
-    val dc = AttributeContainer(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
+    val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
     val values = this.readRegularData(dc, null)
     val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     return Attribute(att5.name, useType, values.toList())
 }
 
-internal fun buildTypedef(typedef5: H5Typedef): Typedef {
+internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
     return when (typedef5.kind) {
         TypedefKind.Compound -> {
             val mess = typedef5.compoundMessage!!
             // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int)
             val members = mess.members.map {
                 val h5type = H5Type(it.mdt)
-                StructureMember(it.name, h5type.datatype, it.offset, it.dims)
+                var datatype = h5type.datatype
+                if (h5type.datatype == Datatype.VLEN) {
+                    val typedef = findTypedef(it.mdt.address, it.mdt.hashCode()) // LOOK just pass the mdt ??
+                    if (typedef != null) {
+                        datatype = datatype.withTypedef(typedef)
+                    }
+                }
+                StructureMember(it.name, datatype, it.offset, it.dims)
             }
             CompoundTypedef(typedef5.dataObject.name!!, members)
         }
@@ -97,6 +104,7 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
         println(" made variable ${v5.name} from typedef ${typedef.name}@${v5.mdt.address}")
     }
     val h5type = H5Type(v5.mdt, typedef)
+
     // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
     // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
     builder.datatype = h5type.datatype
@@ -116,7 +124,7 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
 
     // TODO if compact, do not use fileOffset
     require (v5.dataObject.mdl != null)
-    val vdata = VariableData(this, builder.name!!, h5type, v5.mdt, v5.mds, v5)
+    val vdata = DataContainerVariable(this, builder.name!!, h5type, v5.mdt, v5.mds, v5)
     builder.spObject = vdata
 
     if (strict) {
@@ -138,7 +146,7 @@ internal interface DataContainer {
     val mds: DataspaceMessage
 }
 
-internal open class AttributeContainer(
+internal open class DataContainerAttribute(
     override val name : String,
     override val h5type: H5Type,
     override val dataPos : Long,
@@ -146,7 +154,7 @@ internal open class AttributeContainer(
     override val mds: DataspaceMessage) : DataContainer
 
 
-internal class VariableData(
+internal class DataContainerVariable(
     val h5 : H5builder,
     override val name: String,
     override val h5type: H5Type,

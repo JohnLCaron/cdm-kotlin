@@ -40,8 +40,12 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
         return heap[index]
     }
 
+    override fun toString(): String {
+        return "ArrayStructureData(sizeElem=$sizeElem, members=$members, nelems=$nelems)"
+    }
+
     inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
-        override fun toString(): String {
+        fun toString2(): String {
             return buildString {
                 append("{")
                 members.forEachIndexed { idx, m ->
@@ -56,6 +60,26 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
 
         fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
         fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
+    }
+}
+
+fun ArrayStructureData.putStringsOnHeap(lamda : (Int) -> String) {
+    members.filter { it.datatype == Datatype.STRING }.forEach { member ->
+        this.forEach { sdata ->
+            val sval = lamda(sdata.offset + member.offset)
+            println("string offset ${sdata.offset + member.offset} -> sval $sval")
+            sdata.putOnHeap(member, sval)
+        }
+    }
+}
+
+fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVlen) {
+    members.filter { it.datatype == Datatype.VLEN }.forEach { member ->
+        this.forEach { sdata ->
+            val vlen = lamda(member, sdata.offset + member.offset)
+            // println("vlen member $member, offset ${sdata.offset + member.offset} -> vlen $vlen")
+            sdata.putOnHeap(member, vlen)
+        }
     }
 }
 
@@ -80,6 +104,10 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             Datatype.STRING -> {
                 val ret = sdata.getFromHeap(offset)
                 if (ret == null) "unknown" else ret as String
+            }
+            Datatype.VLEN -> {
+                val ret = sdata.getFromHeap(offset)
+                if (ret != null) (ret as ArrayVlen) else throw RuntimeException("cant find ArrayVlen on heap at $offset")
             }
             else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8)
         }
