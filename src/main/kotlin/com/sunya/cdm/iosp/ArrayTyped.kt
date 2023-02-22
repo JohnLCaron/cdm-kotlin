@@ -7,8 +7,9 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
 
     override fun toString(): String {
         return buildString {
-            append("shape=${shape.contentToString()} data=")
-            for (value in this){
+            append("class ${this@ArrayTyped::class.java.simpleName} shape=${shape.contentToString()} data=")
+            val iter = this@ArrayTyped.iterator()
+            for (value in iter) {
                 append("$value,")
             }
             append("\n")

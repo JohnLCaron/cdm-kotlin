@@ -10,13 +10,13 @@ private val logger = KotlinLogging.logger("H5Type")
 private val defaultDatatype = Datatype.STRING
 
 // LOOK needs to be rewritten, unclear on its scope
-internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
+internal class H5TypeInfo(mdt: DatatypeMessage, typedef : Typedef? = null) {
     val hdfType: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize
     var base: BaseType? = null // only different for vlen, enum
     var endian: ByteOrder = mdt.endian()
     var unsigned = false
-    var datatype: Datatype = getNCtype(hdfType, elemSize, unsigned)
+    var datatype: Datatype = makeNCdatatype(hdfType, elemSize, unsigned)
 
     var isVString = false // is a vlen string
     var isVlen = false // is a vlen but not string
@@ -24,7 +24,7 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
     init {
         if (hdfType == Datatype5.Fixed || hdfType == Datatype5.BitField) { // int, long, short, byte
             unsigned = (mdt as DatatypeFixed).unsigned
-            datatype = getNCtype(hdfType, elemSize, unsigned) // redo now that we know the sign
+            datatype = makeNCdatatype(hdfType, elemSize, unsigned) // redo now that we know the sign
 
         } else if (hdfType == Datatype5.Enumerated) {
             val enumMdt = mdt as DatatypeEnum
@@ -34,7 +34,7 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
             val vlenMdt = mdt as DatatypeVlen
             isVString = vlenMdt.isVString
             isVlen = !vlenMdt.isVString
-            val baseDatatype = H5Type(vlenMdt.base)
+            val baseDatatype = H5TypeInfo(vlenMdt.base)
 
             base = BaseType(baseDatatype.datatype, vlenMdt.endian(), vlenMdt.type)
             if (vlenMdt.isVString) {
@@ -53,7 +53,7 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
             // val baseDatatype = H5Type(arrayMdt.base)
             endian = arrayMdt.base.endian()
             unsigned = arrayMdt.base.unsigned()
-            datatype = getNCtype(arrayMdt.base.type, arrayMdt.base.elemSize, unsigned)
+            datatype = makeNCdatatype(arrayMdt.base.type, arrayMdt.base.elemSize, unsigned)
             if (arrayMdt.base.type == Datatype5.Vlen) {
                 val vlenMdt = arrayMdt.base as DatatypeVlen
                 if (vlenMdt.isVString) {
@@ -90,7 +90,7 @@ internal class H5Type(mdt: DatatypeMessage, typedef : Typedef? = null) {
    * 9 Variable-Length
    * 10 Array
    */
-    private fun getNCtype(hdfType: Datatype5, size: Int, unsigned: Boolean): Datatype {
+    private fun makeNCdatatype(hdfType: Datatype5, size: Int, unsigned: Boolean): Datatype {
         return when (hdfType) {
             Datatype5.Fixed, Datatype5.BitField ->
                 when (size) {

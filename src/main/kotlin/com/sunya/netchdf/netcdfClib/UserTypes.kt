@@ -2,6 +2,7 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
+import com.sunya.netchdf.hdf5.H5heap
 import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
@@ -157,12 +158,12 @@ internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, vari
     val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
     checkErr("nc_get_att", nc_get_att(grpid, varid, attname_p, vlen_p))
 
-    attb.values = readVlenData(nelems, basetype, vlen_p)
+    attb.values = readVlenDataList(nelems, basetype, vlen_p)
     return attb
 }
 
 // factored out to use in compound
-internal fun readVlenData(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
+internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
     val parray = mutableListOf<Any>()
     for (elem in 0 until nelems) {
         val count = nc_vlen_t.getLength(vlen_p, elem)
@@ -253,6 +254,10 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
     sdataArray.putStringsOnHeap {  offset ->
         val address = val_p.get(ADDRESS, (offset).toLong())
         address.getUtf8String(0)
+        // LOOK heres a pointer, see decodeCompoundAttData():
+        //             lval = getNativeAddr(pos, nc4bytes);
+        //            Pointer p = new Pointer(lval);
+        //            String strval = p.getString(0, CDM.UTF8);
     }
 
     attb.values = sdataArray.toList()

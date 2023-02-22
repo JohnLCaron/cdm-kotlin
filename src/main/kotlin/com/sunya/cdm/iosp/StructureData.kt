@@ -45,7 +45,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
     }
 
     inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
-        fun toString2(): String {
+        override fun toString(): String {
             return buildString {
                 append("{")
                 members.forEachIndexed { idx, m ->
@@ -60,6 +60,24 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
 
         fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
         fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
+
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is StructureData) return false
+
+            if (bb != other.bb) return false
+            if (offset != other.offset) return false
+            if (members != other.members) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            var result = bb.hashCode()
+            result = 31 * result + offset
+            result = 31 * result + members.hashCode()
+            return result
+        }
     }
 }
 
@@ -114,13 +132,37 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
     }
 
     override fun toString(): String {
-        return "StructureMember(name='$name', datatype=$datatype, offset=$offset, dims=${dims.contentToString()}, nelems=$nelems)"
+        return "\nStructureMember(name='$name', datatype=$datatype, offset=$offset, dims=${dims.contentToString()}, nelems=$nelems)"
     }
+
+
 
     // terminate at a zero
     fun makeStringZ(bb : ByteBuffer, start : Int, maxElems : Int, charset : Charset = StandardCharsets.UTF_8): String {
         var count = 0
         while (count < maxElems && bb[start + count].toInt() != 0) count++
         return String(bb.array(), start, count, charset)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is StructureMember) return false
+
+        if (name != other.name) return false
+        if (datatype != other.datatype) return false
+        if (offset != other.offset) return false
+        if (!dims.contentEquals(other.dims)) return false
+        if (nelems != other.nelems) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = name.hashCode()
+        result = 31 * result + datatype.hashCode()
+        result = 31 * result + offset
+        result = 31 * result + dims.contentHashCode()
+        result = 31 * result + nelems
+        return result
     }
 }

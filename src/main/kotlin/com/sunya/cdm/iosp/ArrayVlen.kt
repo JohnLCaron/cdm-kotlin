@@ -2,22 +2,18 @@ package com.sunya.cdm.iosp
 
 import com.sunya.cdm.api.Datatype
 
-class ArrayVlen<T>(shape : IntArray, val values : List<Iterator<T>>, val baseType : Datatype) : ArrayTyped<T>(shape) {
-
-    init {
-        println("HEY")
-    }
+class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Datatype) : ArrayTyped<Any>(shape) {
 
     // iterate over all the values, needed eg for toList()
-    override fun iterator(): Iterator<T> = AllIterator()
+    override fun iterator(): Iterator<Any> = AllIterator()
 
-    private inner class AllIterator : AbstractIterator<T>() {
+    private inner class AllIterator : AbstractIterator<Any>() {
         private var idx = 0
-        private var currentIterator : Iterator<T>? = null
+        private var currentIterator : Iterator<Any>? = null
         override fun computeNext() {
             if (currentIterator == null) {
                 if (idx >= values.size) return done()
-                currentIterator = values[idx++]
+                currentIterator = values[idx++].iterator() as Iterator<Any> // LOOK
             }
             if (currentIterator!!.hasNext()) {
                 setNext(currentIterator!!.next()!!)
@@ -27,8 +23,8 @@ class ArrayVlen<T>(shape : IntArray, val values : List<Iterator<T>>, val baseTyp
             }
         }
     }
-    override fun toString(): String {
-        return "ArrayVlen(baseType=$baseType)"
-    }
+    //override fun toString(): String {
+    //    return "ArrayVlen(baseType=$baseType)"
+    //}
 
 }

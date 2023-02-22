@@ -7,10 +7,7 @@ import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
-import java.lang.foreign.MemoryLayout
-import java.lang.foreign.MemorySegment
-import java.lang.foreign.MemorySession
-import java.lang.foreign.ValueLayout
+import java.lang.foreign.*
 import java.lang.foreign.ValueLayout.JAVA_INT
 import java.lang.foreign.ValueLayout.JAVA_LONG
 import java.nio.*
@@ -85,6 +82,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     checkErr("nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val bb = ByteBuffer.wrap(raw)
+                    bb.order(ByteOrder.LITTLE_ENDIAN)
 
                     val members = datatype.typedef.members
                     val sdataArray = ArrayStructureData(v2.shape, bb, userType.size, members)
@@ -186,7 +184,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
-                    return ArrayInt(wantSection.shape, values)
+                    return ArrayUInt(wantSection.shape, values)
                 }
 
                 Datatype.LONG -> {
@@ -235,6 +233,25 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     return ArrayUShort(wantSection.shape, values)
                 }
 
+                Datatype.STRING -> {
+                    val val_p = session.allocateArray(ValueLayout.ADDRESS, nelems)
+                    checkErr("nc_get_vars_string",
+                        nc_get_vars_string(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = mutableListOf<String>()
+                    for (i in 0 until nelems) {
+                        values.add(val_p.getAtIndex(ValueLayout.ADDRESS, i).getUtf8String(0))
+                    }
+                    return ArrayString(wantSection.shape, values)
+                }
+
+                Datatype.OPAQUE -> {
+                    val val_p = session.allocate(nelems * userType!!.size)
+                    checkErr("nc_get_var opaque", nc_get_var(vinfo.g4.grpid, vinfo.varid, val_p))
+                    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
+                    val bb = ByteBuffer.wrap(raw)
+                    return ArrayOpaque(wantSection.shape, bb, userType!!.size)
+                }
+
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
             }
         }
@@ -245,10 +262,22 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
         val nelems = computeSize(v2.shape)
 
         MemorySession.openConfined().use { session ->
+            // an array of vlen structs. each vlen has an address and a size
             val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
             checkErr("readVlen nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, vlen_p))
-            val values = readVlenData(nelems, basetype, vlen_p)
-            return ArrayVlen(v2.shape, listOf(values), basetype)
+            val arrayOfVlen = mutableListOf<Array<*>>()
+
+            // each vlen pointer is the address of the vlen array of length arraySize
+            for (elem in 0 until nelems) {
+                val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
+                val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
+                val vlen = when (basetype) {
+                    Datatype.INT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                    else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
+                }
+                arrayOfVlen.add(vlen)
+            }
+            return ArrayVlen(v2.shape, arrayOfVlen, basetype)
         }
     }
 }

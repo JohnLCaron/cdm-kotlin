@@ -54,7 +54,7 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     if (typedef != null) {
         println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
     }
-    val h5type = H5Type(att5.mdt(), typedef)
+    val h5type = H5TypeInfo(att5.mdt(), typedef)
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
     val values = this.readRegularData(dc, null)
     val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
@@ -67,7 +67,7 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
             val mess = typedef5.compoundMessage!!
             // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int)
             val members = mess.members.map {
-                val h5type = H5Type(it.mdt)
+                val h5type = H5TypeInfo(it.mdt)
                 var datatype = h5type.datatype
                 if (h5type.datatype == Datatype.VLEN) {
                     val typedef = findTypedef(it.mdt.address, it.mdt.hashCode()) // LOOK just pass the mdt ??
@@ -89,7 +89,7 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
         }
         TypedefKind.Vlen -> {
             val mess = typedef5.vlenMessage!!
-            val h5type = H5Type(mess.base)
+            val h5type = H5TypeInfo(mess.base)
             VlenTypedef(typedef5.dataObject.name!!, h5type.datatype)
         }
         else -> throw RuntimeException()
@@ -103,7 +103,7 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     if (typedef != null) {
         println(" made variable ${v5.name} from typedef ${typedef.name}@${v5.mdt.address}")
     }
-    val h5type = H5Type(v5.mdt, typedef)
+    val h5type = H5TypeInfo(v5.mdt, typedef)
 
     // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
     // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
@@ -140,7 +140,7 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
 
 internal interface DataContainer {
     val name: String
-    val h5type: H5Type
+    val h5type: H5TypeInfo
     val dataPos: Long
     val mdt: DatatypeMessage
     val mds: DataspaceMessage
@@ -148,7 +148,7 @@ internal interface DataContainer {
 
 internal open class DataContainerAttribute(
     override val name : String,
-    override val h5type: H5Type,
+    override val h5type: H5TypeInfo,
     override val dataPos : Long,
     override val mdt: DatatypeMessage,
     override val mds: DataspaceMessage) : DataContainer
@@ -157,7 +157,7 @@ internal open class DataContainerAttribute(
 internal class DataContainerVariable(
     val h5 : H5builder,
     override val name: String,
-    override val h5type: H5Type,
+    override val h5type: H5TypeInfo,
     override val mdt: DatatypeMessage,
     override val mds: DataspaceMessage,
     v5 : H5Variable
@@ -217,7 +217,7 @@ internal class DataContainerVariable(
     }
 }
 
-internal fun getFillValueNonDefault(v5 : H5Variable, h5type: H5Type): Any? {
+internal fun getFillValueNonDefault(v5 : H5Variable, h5type: H5TypeInfo): Any? {
     // look for fill value message
     var fillValueBB : ByteBuffer? = null
     for (mess in v5.dataObject.messages) {
