@@ -19,7 +19,7 @@ class Tiling(shape: IntArray, chunk: IntArray) {
 
     init {
         // convenient to allow tileSize to have (an) extra dimension at the end
-        // to accomodate hdf5 storage, which has the element size
+        // to accommodate hdf5 storage, which has the element size
         Preconditions.checkArgument(shape.size <= chunk.size)
         rank = shape.size
         this.chunk = chunk

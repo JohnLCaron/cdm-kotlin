@@ -13,7 +13,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-val debugFlow = false
+val debugFlow = true
 private val debugStart = false
 private val debugSuperblock = false
 

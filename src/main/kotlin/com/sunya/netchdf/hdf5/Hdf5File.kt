@@ -30,7 +30,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
         val vinfo = v2.spObject as DataContainerVariable
 
         if (vinfo.useFillValue) { // fill value only, no  data
-            return ArraySingle(wantSection.shape, vinfo.h5type.datatype, vinfo.fillValue)
+            return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
         }
 
         if (vinfo.mfp != null) { // filtered
@@ -44,7 +44,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
         }
 
         if (vinfo.isChunked) {
-            val layout = H5tiledLayout(header, v2, wantSection, vinfo.h5type.datatype)
+            val layout = H5tiledLayout(header, v2, wantSection, v2.datatype)
             return header.readChunkedData(vinfo, layout, wantSection)
         } else {
             return header.readRegularData(vinfo, wantSection)

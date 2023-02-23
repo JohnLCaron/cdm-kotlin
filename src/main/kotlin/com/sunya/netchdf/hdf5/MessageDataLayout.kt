@@ -46,7 +46,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
                     array("compactData", 1, "compactDataSize")
                 }
             }
-        rawdata.show()
+        if (debugMessage) rawdata.show()
 
         return when (layoutClass) {
             0 -> DataLayoutCompact(rawdata.getIntArray("dims"), rawdata.getByteBuffer("compactData"))

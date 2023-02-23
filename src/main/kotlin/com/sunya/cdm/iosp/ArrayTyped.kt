@@ -37,6 +37,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
     }
 }
 
+// An array of any shape that has a single value for all elements
 class ArraySingle<T>(shape : IntArray, val datatype : Datatype, val fillValue : T) : ArrayTyped<T>(shape) {
     val nelems = computeSize(shape)
     override fun iterator(): Iterator<T> = SingleIterator()

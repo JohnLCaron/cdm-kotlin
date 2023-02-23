@@ -1,8 +1,6 @@
 package com.sunya.cdm.api
 
-import com.sunya.cdm.iosp.ArrayStructureData
 import java.lang.RuntimeException
-import java.nio.ByteBuffer
 import java.util.*
 
 /**
@@ -85,7 +83,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         }
     }
 
-    fun withTypedef(typedef : Typedef) : Datatype = this.copy(typedef = typedef)
+    fun withTypedef(typedef : Typedef?) : Datatype = this.copy(typedef = typedef)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

@@ -54,10 +54,11 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     if (typedef != null) {
         println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
     }
-    val h5type = H5TypeInfo(att5.mdt(), typedef)
+    val h5type = H5TypeInfo(att5.mdt())
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
     val values = this.readRegularData(dc, null)
-    val useType = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
+    var useType = h5type.datatype(this)
+    if (useType == Datatype.CHAR) useType = Datatype.STRING // LOOK
     return Attribute(att5.name, useType, values.toList())
 }
 
@@ -68,13 +69,7 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
             // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int)
             val members = mess.members.map {
                 val h5type = H5TypeInfo(it.mdt)
-                var datatype = h5type.datatype
-                if (h5type.datatype == Datatype.VLEN) {
-                    val typedef = findTypedef(it.mdt.address, it.mdt.hashCode()) // LOOK just pass the mdt ??
-                    if (typedef != null) {
-                        datatype = datatype.withTypedef(typedef)
-                    }
-                }
+                val datatype = h5type.datatype(this)
                 StructureMember(it.name, datatype, it.offset, it.dims)
             }
             CompoundTypedef(typedef5.dataObject.name!!, members)
@@ -90,7 +85,7 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
         TypedefKind.Vlen -> {
             val mess = typedef5.vlenMessage!!
             val h5type = H5TypeInfo(mess.base)
-            VlenTypedef(typedef5.dataObject.name!!, h5type.datatype)
+            VlenTypedef(typedef5.dataObject.name!!, h5type.datatype(this))
         }
         else -> throw RuntimeException()
     }
@@ -103,12 +98,12 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     if (typedef != null) {
         println(" made variable ${v5.name} from typedef ${typedef.name}@${v5.mdt.address}")
     }
-    val h5type = H5TypeInfo(v5.mdt, typedef)
+    val h5type = H5TypeInfo(v5.mdt)
 
     // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
     // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
-    builder.datatype = h5type.datatype
-    if (h5type.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
+    builder.datatype = h5type.datatype(this)
+    if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
         builder.datatype = Datatype.STRING
     }
 
@@ -183,7 +178,7 @@ internal class DataContainerVariable(
         }
 
         // deal with unallocated data
-        fillValue = getFillValueNonDefault(v5, h5type)
+        fillValue = getFillValueNonDefault(h5, v5, h5type)
         useFillValue = (dataPos == -1L)
 
         isChunked = (mdl.layoutClass == LayoutClass.Chunked)
@@ -217,7 +212,7 @@ internal class DataContainerVariable(
     }
 }
 
-internal fun getFillValueNonDefault(v5 : H5Variable, h5type: H5TypeInfo): Any? {
+internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5TypeInfo): Any? {
     // look for fill value message
     var fillValueBB : ByteBuffer? = null
     for (mess in v5.dataObject.messages) {
@@ -238,7 +233,7 @@ internal fun getFillValueNonDefault(v5 : H5Variable, h5type: H5TypeInfo): Any? {
     fillValueBB.order(h5type.endian)
 
     // a single data value, same datatype as the dataset
-    return when (h5type.datatype) {
+    return when (h5type.datatype(h5)) {
         Datatype.BYTE -> fillValueBB.get()
         Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> fillValueBB.get().toUByte()
         Datatype.SHORT -> fillValueBB.getShort()

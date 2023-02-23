@@ -41,10 +41,14 @@ class H5headerCompare {
                     .withRecursion()
                     .build()
 
-            // return stream3
             return Stream.of(stream4).flatMap { i -> i };
             //return stream2
         }
+    }
+
+    @Test
+    fun problem() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc")
     }
 
     @Test

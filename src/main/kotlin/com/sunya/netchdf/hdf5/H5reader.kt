@@ -14,8 +14,8 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     }
     val h5type = dc.h5type
     var shape: IntArray = dc.mds.dims
-    var readDtype: Datatype = h5type.datatype
-    var endian: ByteOrder = h5type.endian
+    val readDtype: Datatype = h5type.datatype(this)
+    val endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
     if (h5type.hdfType == Datatype5.String) { // char
@@ -26,10 +26,6 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
             shape = newShape
             elemSize = 1
         }
-
-    } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
-        readDtype = h5type.base!!.datatype
-        endian = h5type.endian
     }
 
     val wantSection = Section.fill(section, shape)
@@ -70,8 +66,8 @@ internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : La
     }
 
     var shape: IntArray = vinfo.mds.dims
-    var readDtype: Datatype = h5type.datatype
-    var endian: ByteOrder = h5type.endian
+    val readDtype: Datatype = h5type.datatype(this)
+    val endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
     if (h5type.hdfType == Datatype5.String) { // char
@@ -83,9 +79,6 @@ internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : La
             elemSize = 1
         }
 
-    } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
-        readDtype = h5type.base!!.datatype
-        endian = h5type.endian
     }
 
     val state = OpenFileState(0, endian) // pos set by layout
@@ -154,8 +147,8 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
     }
 
     var shape: IntArray = vinfo.mds.dims
-    var readDtype: Datatype = h5type.datatype
-    var endian: ByteOrder = h5type.endian
+    val readDtype: Datatype = h5type.datatype(this)
+    val endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
     if (h5type.hdfType == Datatype5.String) { // char
@@ -167,9 +160,6 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
             elemSize = 1 // LOOK why?
         }
 
-    } else if (h5type.hdfType == Datatype5.Enumerated) { // enum
-        readDtype = h5type.base!!.datatype
-        endian = h5type.endian
     }
 
     val state = OpenFileState(0, endian) // pos set by layout
@@ -234,7 +224,7 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: LayoutBB
 
 // The structure data is not on the heap, but the variable length members (vlen, string) are
 internal fun H5builder.readCompoundData(dc: DataContainer, layout : Layout, section : Section) : ArrayStructureData {
-    val datatype = dc.h5type.datatype
+    val datatype = dc.h5type.datatype(this)
     require(datatype == Datatype.COMPOUND)
     requireNotNull(datatype.typedef)
     require(datatype.typedef is CompoundTypedef)
@@ -329,7 +319,7 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, section 
 
         // general case is to read an array of vlen objects
         // each vlen generates an Array of type baseType
-        val baseType = H5TypeInfo(base, null).datatype
+        val baseType = H5TypeInfo(base).datatype(this) // LOOK this is wrong or can be simplified
         val listOfArrays : MutableList<Array<*>> = mutableListOf<Array<*>>()
         var count = 0
         while (layout2.hasNext()) {
