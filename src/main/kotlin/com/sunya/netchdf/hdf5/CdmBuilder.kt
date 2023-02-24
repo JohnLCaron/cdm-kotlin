@@ -28,8 +28,9 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     group5.typedefs.forEach {
         val typedef = buildTypedef( it )
-        this.addTypedef(it.mdtAddress, typedef, it.mdtHash)
-        groupb.typedefs.add(typedef)
+        if (this.addTypedef(it.mdtAddress, typedef, it.mdtHash)) {
+            groupb.typedefs.add(typedef)
+        }
     }
 
     group5.attributes().forEach { groupb.addAttribute( buildAttribute( it )) }

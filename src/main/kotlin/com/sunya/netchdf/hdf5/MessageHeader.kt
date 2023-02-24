@@ -651,7 +651,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     val mdt = if (isShared) {
         sharedMdtAddress = state.pos
         lamda = { address -> this.getSharedDataObject(OpenFileState(address, ByteOrder.LITTLE_ENDIAN), MessageType.Datatype).mdt!! }
-        this.getSharedDataObject(state.copy(), MessageType.Datatype).mdt!!
+        this.getSharedDataObject(state.copy(), MessageType.Datatype).mdt
     } else {
         if (version == 1) {
             datatypeSize +=  padding(datatypeSize, 8)
@@ -672,7 +672,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 
     return AttributeMessage(
         name,
-        mdt,
+        mdt!!,
         mds,
         state.pos, // where the data starts, absolute position (no offset needed)
         //sharedMdtAddress,
@@ -780,6 +780,7 @@ fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): Da
         val address: Long = this.readOffset(state)
         val dobj: DataObject = this.getDataObject(address, null) // cached here
         if (mtype === MessageType.Datatype) {
+            dobj.mdt!!.isShared = true
             return dobj
         }
         throw UnsupportedOperationException("****SHARED MESSAGE type = $mtype")

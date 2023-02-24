@@ -69,20 +69,21 @@ class DataObject(
 ) {
     var groupMessage: SymbolTableMessage? = null
     var groupNewMessage: LinkInfoMessage? = null
-    var mdt: DatatypeMessage? = null
     var mds: DataspaceMessage? = null
     var mdl: DataLayoutMessage? = null
     var mfp: FilterPipelineMessage? = null
     val attributes = mutableListOf<AttributeMessage>()
-    
+    val mdt: DatatypeMessage? // not present for group message
+
     init {
+        var findMdt : DatatypeMessage? = null
         // look for group or a datatype/dataspace/layout message
         for (mess: MessageHeader in messages) {
             when (mess.mtype) {
                 MessageType.SymbolTable -> groupMessage = mess as SymbolTableMessage
                 MessageType.LinkInfo -> groupNewMessage = mess as LinkInfoMessage
                 MessageType.Dataspace -> mds = mess as DataspaceMessage
-                MessageType.Datatype -> mdt = mess as DatatypeMessage
+                MessageType.Datatype -> findMdt = mess as DatatypeMessage
                 MessageType.Layout -> mdl = mess as DataLayoutMessage
                 MessageType.FilterPipeline -> mfp = mess as FilterPipelineMessage
                 MessageType.Attribute -> attributes.add(mess as AttributeMessage)
@@ -90,5 +91,6 @@ class DataObject(
                 else -> { /* noop */ }
             }
         }
+        this.mdt = findMdt // at least its a val not a var
     }
 }

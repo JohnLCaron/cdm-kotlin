@@ -31,6 +31,7 @@ class H5dataCompare {
 
             val stream2 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .build()
 
             val stream3 =
@@ -54,6 +55,7 @@ class H5dataCompare {
 
     @Test
     fun problem() {
+        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/tst_string_data.nc")
     }
 
     @ParameterizedTest
@@ -62,7 +64,9 @@ class H5dataCompare {
         readDataCompareNC(filename, null)
     }
 
-    fun readDataCompareNC(filename: String, varname: String?) {
+    fun readDataCompareNC(filename: String, varname: String? = null) {
+        println("=================")
+        println(filename)
         val h5file = Hdf5File(filename)
         val ncfile = NetcdfClibFile(filename)
         compareNetcdf(h5file, ncfile, varname)
@@ -75,8 +79,7 @@ var debugCompareNetcdf = true
 var showData = false
 
 fun compareNetcdf(myfile: Netcdf, ncfile: Netcdf, varname: String?) {
-    println("=================")
-    println(myfile.location())
+
     println(myfile.cdl())
     println()
 

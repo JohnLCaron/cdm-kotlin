@@ -92,7 +92,7 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
             append("(")
             dimensions.forEachIndexed { idx, it ->
                 if (idx > 0) append(", ")
-                if (!it.isShared) append("$length") else append(it.name)
+                if (!it.isShared) append("${it.length}") else append(it.name)
             }
             append(")")
         }
@@ -115,7 +115,7 @@ fun Variable.cdlStrict(indent : Indent = Indent(2)) : String {
             append("(")
             dimensions.forEachIndexed { idx, it ->
                 if (idx > 0) append(", ")
-                if (!it.isShared) append("$length") else append(it.name)
+                if (!it.isShared) append("${it.length}") else append(it.name)
             }
             append(")")
         }

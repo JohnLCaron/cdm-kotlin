@@ -31,6 +31,7 @@ class H5headerCompare {
 
             val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .withRecursion()
                     .build()
 
@@ -48,7 +49,7 @@ class H5headerCompare {
 
     @Test
     fun problem() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_atomic_types.nc")
     }
 
     @Test

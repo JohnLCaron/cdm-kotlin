@@ -13,7 +13,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-val debugFlow = false
+val debugFlow = true
 private val debugStart = false
 private val debugSuperblock = false
 
@@ -251,11 +251,16 @@ class H5builder(val raf: OpenFile,
         return dobj
     }
 
-    fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) {
+    fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) : Boolean {
+        if (typedefMdtHash[mdtHash] != null) {
+            println("already have typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
+            return false
+        }
         typedefMap[mdtAddress] = typedef
-        println("add typdef ${typedef.name}@${mdtAddress}")
+        println("add typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
         // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
         typedefMdtHash[mdtHash] = typedef
+        return true
     }
 
     // LOOK just pass the mdt ??

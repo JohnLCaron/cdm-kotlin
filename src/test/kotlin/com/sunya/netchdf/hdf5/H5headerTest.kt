@@ -39,7 +39,7 @@ class H5headerTest {
     // same with opaque
     @Test
     fun opaqueTypedef() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/opaque.h5")
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/opaque.h5", "Opaque")
     }
 
     // same with enum
@@ -61,10 +61,19 @@ class H5headerTest {
     @ParameterizedTest
     @MethodSource("params")
     fun openH5(filename: String) {
+        openH5(filename, null)
+    }
+
+    fun openH5(filename: String, varname : String? = null) {
         println("=================")
         println(filename)
         Hdf5File(filename).use { h5file ->
             println(h5file.cdl())
+            if (varname != null) {
+                val h5var = h5file.rootGroup().variables.find { it.name == varname } ?: throw RuntimeException("cant find $varname")
+                val h5data = h5file.readArrayData(h5var)
+                println(" $varname = $h5data")
+            }
         }
     }
 

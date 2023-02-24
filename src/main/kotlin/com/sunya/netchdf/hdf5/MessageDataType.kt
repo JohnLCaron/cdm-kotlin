@@ -47,6 +47,8 @@ enum class Datatype5(val num : Int) {
  */
 open class DatatypeMessage(val address : Long, val type: Datatype5, val elemSize: Int, val endian: ByteOrder?) :
     MessageHeader(MessageType.Datatype) {
+    var isShared : Boolean = false
+
     open fun unsigned() = false
     open fun endian() = endian?: ByteOrder.LITTLE_ENDIAN
 

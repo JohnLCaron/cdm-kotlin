@@ -4,8 +4,8 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
-import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
+import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
+import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
 import java.lang.foreign.ValueLayout.*
@@ -104,7 +104,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     bb.order(ByteOrder.LITTLE_ENDIAN)
 
                     val members = datatype.typedef.members
-                    val sdataArray = ArrayStructureData(v2.shape, bb, userType.size, members)
+                    val sdataArray = ArrayStructureData(wantSection.shape, bb, userType.size, members)
                     // strings vs array of strings, also duplicate readCompoundAttValues
                     sdataArray.putStringsOnHeap {  offset ->
                         val address = val_p.get(ValueLayout.ADDRESS, (offset).toLong())
@@ -273,35 +273,6 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
             }
-        }
-    }
-
-    @Throws(IOException::class)
-    internal fun readVlen(v2 : Variable, vinfo : NCheader.Vinfo, basetype : Datatype): ArrayTyped<*> {
-        val nelems = computeSize(v2.shape)
-
-        MemorySession.openConfined().use { session ->
-            // an array of vlen structs. each vlen has an address and a size
-            val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
-            checkErr("readVlen nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, vlen_p))
-            val arrayOfVlen = mutableListOf<Array<*>>()
-
-            // each vlen pointer is the address of the vlen array of length arraySize
-            for (elem in 0 until nelems) {
-                val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
-                val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
-                val vlen = when (basetype) {
-                    Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
-                    Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
-                    Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
-                    Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
-                    Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
-                    Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
-                    else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
-                }
-                arrayOfVlen.add(vlen)
-            }
-            return ArrayVlen(v2.shape, arrayOfVlen, basetype)
         }
     }
 }
