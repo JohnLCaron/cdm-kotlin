@@ -21,6 +21,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
             if (!array1.shape.contentEquals(array2.shape)) {
                 return false
             }
+
             val iter1 = array1.iterator()
             val iter2 = array2.iterator()
             var count = 0
@@ -29,6 +30,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
                 val v2 = iter2.next()
                 count++
                 if (v1 != v2) {
+                    val ok = (v1 == v2)
                     return false
                 }
             }

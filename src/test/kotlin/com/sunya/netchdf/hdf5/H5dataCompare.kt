@@ -46,11 +46,11 @@ class H5dataCompare {
 
     @Test
     fun problem1() {
-        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
+        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
     }
     @Test
     fun problem2() {
-        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc", "tim_records")
+        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/cdm_sea_soundings.nc4", "fun_soundings")
     }
 
     @Test

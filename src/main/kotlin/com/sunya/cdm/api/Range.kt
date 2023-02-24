@@ -231,7 +231,6 @@ data class Range(
      *  * k  last
      *  * k = element of this Range
      *
-     *
      * @param start starting index
      * @return first in interval, else -1 if there is no such element.
      */

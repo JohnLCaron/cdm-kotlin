@@ -6,7 +6,6 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
 
     // iterate over all the values, needed eg for toList()
     override fun iterator(): Iterator<Any> = AllIterator()
-
     private inner class AllIterator : AbstractIterator<Any>() {
         private var idx = 0
         private var currentIterator : Iterator<Any>? = null
@@ -23,8 +22,25 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
             }
         }
     }
-    //override fun toString(): String {
-    //    return "ArrayVlen(baseType=$baseType)"
-    //}
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ArrayVlen) return false
+
+        if (baseType != other.baseType) return false
+
+        values.zip(other.values).forEach {pair ->
+            if (!pair.component1().contentEquals(pair.component2())) {
+                return false
+            }
+        }
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = values.hashCode()
+        result = 31 * result + baseType.hashCode()
+        return result
+    }
 
 }

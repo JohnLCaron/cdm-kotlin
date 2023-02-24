@@ -11,6 +11,9 @@ import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
 
+/**
+ * @param strict true = make it agree with nclib if possible
+ */
 class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
     private val raf : OpenFile = OpenFile(filename)
     private val header : H5builder

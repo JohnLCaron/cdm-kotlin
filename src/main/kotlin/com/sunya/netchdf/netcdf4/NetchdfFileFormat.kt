@@ -110,13 +110,14 @@ import java.nio.ByteOrder
  */
 
 /** Enumeration of the kinds of NetCDF file formats. NC_FORMAT_64BIT_DATA is not currently supported in this library.  */
-enum class NetcdfFileFormat(private val version: Int, private val formatName: String) {
+enum class NetchdfFileFormat(private val version: Int, private val formatName: String) {
     INVALID(0, "Invalid"),  //
     NC_FORMAT_CLASSIC(1, "NetCDF-3"),  //
     NC_FORMAT_64BIT_OFFSET(2, "netcdf-3 64bit-offset"),  //
     NC_FORMAT_NETCDF4(3, "NetCDF-4"),  // This is really just HDF-5, dont know yet if its written by netcdf4.
     NC_FORMAT_NETCDF4_CLASSIC(4, "netcdf-4 classic"),  // psuedo format I think
-    NC_FORMAT_64BIT_DATA(5, "netcdf-5");
+    NC_FORMAT_64BIT_DATA(5, "netcdf-5"),
+    HDF5(5, "hdf5"); // not a netcdf4 file
 
     fun version(): Int {
         return version
@@ -164,7 +165,7 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
          * @return NetcdfFileFormat that matches constants in netcdf-c/include/netcdf.h, or INVALID if not a netcdf file.
          */
         @Throws(IOException::class)
-        fun findNetcdfFormatType(raf: OpenFile): NetcdfFileFormat {
+        fun findNetcdfFormatType(raf: OpenFile): NetchdfFileFormat {
             val magic = ByteArray(MAGIC_NUMBER_LEN)
             if (raf.readBytes(magic, OpenFileState(0, ByteOrder.nativeOrder())) != magic.size) {
                 return INVALID
@@ -178,7 +179,7 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
                 else searchForwardHdf5(raf, magic)
         }
 
-        fun netcdfFormat(format : Int): NetcdfFileFormat {
+        fun netcdfFormat(format : Int): NetchdfFileFormat {
             return when (format) {
                 0 -> INVALID
                 1 -> NC_FORMAT_CLASSIC
@@ -244,15 +245,15 @@ enum class NetcdfFileFormat(private val version: Int, private val formatName: St
             }
         }
 
-        private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetcdfFileFormat {
+        private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetchdfFileFormat {
             // For HDF5, we need to search forward on 512 block sizes
             val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
-            var format : NetcdfFileFormat? = null
+            var format : NetchdfFileFormat? = null
             while (filePos.pos < raf.size - 8 && filePos.pos < MAXHEADERPOS && format == null) {
                 if (raf.readBytes(magic, filePos) < MAGIC_NUMBER_LEN) {
                     format = INVALID
                 } else if (memequal(H5HEAD, magic, H5HEAD.size)) {
-                    format = NC_FORMAT_NETCDF4
+                    format = NC_FORMAT_NETCDF4 // actually dont know here if its netcdf4 or just hdf5.
                 } else {
                     filePos.pos = if (filePos.pos == 0L) 512 else 2 * filePos.pos
                 }
