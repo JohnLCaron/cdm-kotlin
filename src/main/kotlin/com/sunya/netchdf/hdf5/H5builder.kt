@@ -251,6 +251,7 @@ class H5builder(val raf: OpenFile,
         return dobj
     }
 
+    // LOOK typedefs are global to the file, rather than being contained in a group. Barf.
     fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) : Boolean {
         if (typedefMdtHash[mdtHash] != null) {
             println("already have typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")

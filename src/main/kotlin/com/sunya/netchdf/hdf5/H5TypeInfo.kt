@@ -92,12 +92,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                 Datatype.COMPOUND.withTypedef(typedef)
             }
             Datatype5.Enumerated -> {
-                val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
-                if (typedef == null) {
-                    // as long as the variable has the enum embedded, then make it and add it.
-                    // h5builder.addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int)
-                    logger.warn("Cant find Enum typedef for $this")
-                }
+                val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash) ?: throw RuntimeException("Cant find Enum typedef for $this")
                 when (this.elemSize) {
                     1 -> Datatype.ENUM1.withTypedef(typedef)
                     2 -> Datatype.ENUM2.withTypedef(typedef)
@@ -108,8 +103,13 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
             Datatype5.Vlen -> {
                 if (this.isVString or this.base!!.isVString or (this.base!!.hdfType == Datatype5.Reference)) Datatype.STRING else {
                     val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
-                        ?: throw RuntimeException("Cant find VLEN typedef for $this")
-                    Datatype.VLEN.withTypedef(typedef)
+                    return if (typedef == null) {
+                        // theres no actual info in the typedef, so we will just allow this
+                        logger.warn("Cant find Vlen typedef for $this")
+                        Datatype.VLEN
+                    } else {
+                        Datatype.VLEN.withTypedef(typedef)
+                    }
                 }
             }
             Datatype5.Array -> {

@@ -74,7 +74,6 @@ fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
     return ArrayString(this.shape, stringValues)
 }
 
-
 fun Datatype.strictEnumType() : Datatype {
     return when(this) {
         Datatype.ENUM1 -> Datatype.UBYTE
@@ -84,12 +83,14 @@ fun Datatype.strictEnumType() : Datatype {
     }
 }
 
+// dont really need a typedef, no extra information
 class OpaqueTypedef(name : String, val elemSize : Int) : Typedef(TypedefKind.Opaque, name, Datatype.OPAQUE) {
     override fun cdl(indent : Indent): String {
         return "${indent}opaque($elemSize) $name ;"
     }
 }
 
+// dont really need a typedef, no extra information
 class VlenTypedef(name : String, baseType : Datatype) : Typedef(TypedefKind.Vlen, name, baseType) {
     override fun cdl(indent : Indent) : String {
         return "${indent}${baseType.cdlName}(*) $name ;"
