@@ -733,7 +733,7 @@ data class CommonMessage(val comment: String) : MessageHeader(MessageType.Commen
 // This message is used to locate the table of shared object header message (SOHM) indexes. Each index consists of
 // information to find the shared messages from either the heap or object header.
 // This message is only found in the superblock extension.
-// I think this is what the shared objects reference (see SharedObjects)
+// LOOK not really sure what this is used for
 
 @Throws(IOException::class)
 fun H5builder.readSharedMessage(state: OpenFileState): SharedMessage {
@@ -758,6 +758,31 @@ fun H5builder.readSharedMessage(state: OpenFileState): SharedMessage {
 data class SharedMessage(val address: Long, val nindices: Int) : MessageHeader(MessageType.SharedObject) {
     override fun show() : String {
         return "address = $address nindices = $nindices"
+    }
+}
+
+// Level 2A2 - Data Object Header Messages
+// “shared message” encoding
+fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): DataObject {
+    val sharedVersion = raf.readByte(state).toInt()
+    val sharedType = raf.readByte(state).toInt()
+    if (sharedVersion == 1) {
+        state.pos += 6
+    }
+    if (sharedVersion == 3 && sharedType == 1) {
+        val heapId = raf.readLong(state)
+        // LOOK Message stored in file’s shared object header message heap (a shared message).
+        //   the 8-byte fractal heap ID for the message in the file’s shared object header message heap.
+        //   Maybe this points into table located by a SharedMessage
+        throw UnsupportedOperationException("****SHARED MESSAGE type = $mtype heapId = $heapId")
+    } else {
+        // The address of the object header containing the message to be shared
+        val address: Long = this.readOffset(state)
+        val dobj: DataObject = this.getDataObject(address, null) // cached here
+        if (mtype === MessageType.Datatype) {
+            return dobj
+        }
+        throw UnsupportedOperationException("****SHARED MESSAGE type = $mtype")
     }
 }
 

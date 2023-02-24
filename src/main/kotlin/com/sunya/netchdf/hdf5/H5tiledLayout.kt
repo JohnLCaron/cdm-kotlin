@@ -49,7 +49,7 @@ internal class H5tiledLayout(
         if (debug) println(" H5tiledLayout: $this")
 
         // create the data chunk iterator LOOK maybe vinfo.btree, to cache it ?
-        val btree = DataBTree(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
+        val btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
         val iter: LayoutTiled.DataChunkIterator = btree.getDataChunkIteratorNoFilter(want, nChunkDims)
         delegate = LayoutTiled(iter, chunkSize, elemSize, wantSection)
     }

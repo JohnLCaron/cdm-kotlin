@@ -31,7 +31,6 @@ internal class H5heap(val header: H5builder) {
 
     @Throws(IOException::class)
     fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype, endian: ByteOrder?): Array<*> {
-        try {
         val ho = heapId.getHeapObject()
             ?: throw IllegalStateException("Illegal Heap address, HeapObject = $heapId")
 
@@ -49,11 +48,6 @@ internal class H5heap(val header: H5builder) {
             else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
         }
         return result
-        } catch (ex : Exception) {
-            println("HEY $ex")
-            heapId.getHeapObject()
-            throw ex
-        }
     }
 
     /**

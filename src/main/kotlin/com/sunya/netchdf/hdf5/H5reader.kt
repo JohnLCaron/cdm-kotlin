@@ -269,7 +269,6 @@ internal fun H5builder.readArrayStructureData(state: OpenFileState, layout: Layo
 
 internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSection : Section) : ArrayTyped<*> {
     // LOOK not using wantedSection to subset
-    val shape: IntArray = dc.mds.dims // LOOK should shape be part of h5type?
     val h5heap = H5heap(this)
 
     // Strings
@@ -283,7 +282,7 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
                 sarray.add(sval ?: "")
             }
         }
-        return ArrayString(shape, sarray)
+        return ArrayString(wantedSection.shape, sarray)
     }
 
     // Vlen (non-String)
@@ -305,7 +304,7 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
                     }
                 }
             }
-            return ArrayString(shape, refsList)
+            return ArrayString(wantedSection.shape, refsList)
         }
 
         // general case is to read an array of vlen objects
@@ -323,7 +322,7 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
                 count++
             }
         }
-        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
+        return ArrayVlen(wantedSection.shape, listOfArrays.toList(), readDatatype)
     }
 }
 
