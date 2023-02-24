@@ -7,10 +7,11 @@ import java.util.*
 import mu.KotlinLogging
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Datatype.*
-import com.sunya.cdm.iosp.ArrayUByte
+import com.sunya.cdm.array.ArrayUByte
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
-import com.sunya.cdm.iosp.makeStringFromBytes
+import com.sunya.cdm.array.makeStringFromBytes
+import com.sunya.netchdf.netcdf4.NetcdfFileFormat
 import java.nio.ByteOrder
 
 /*

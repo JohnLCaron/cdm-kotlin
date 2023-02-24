@@ -1,6 +1,7 @@
 package com.sunya.netchdf.netcdf3
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer

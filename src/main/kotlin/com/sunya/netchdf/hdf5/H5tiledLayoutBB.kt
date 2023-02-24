@@ -176,7 +176,7 @@ class H5tiledLayoutBB(
             }
 
         @Throws(IOException::class)
-        override fun getByteBuffer(expectedLengthBytes: Int): ByteBuffer {
+        override fun getByteBuffer(expectedSizeBytes: Int): ByteBuffer {
             try {
                 // read the data
                 val state = OpenFileState(delegate.filePos)

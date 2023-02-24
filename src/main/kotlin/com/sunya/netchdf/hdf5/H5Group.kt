@@ -105,7 +105,7 @@ internal fun H5builder.readGroupOld(groupb: H5GroupBuilder, btreeAddress: Long, 
     }
 
     val nameHeap = LocalHeap(this, nameHeapAddress)
-    val btree = Btree1(this, groupb.name, btreeAddress)
+    val btree = Btree1(this, btreeAddress, groupb.name)
 
     // now read all the entries in the btree : Level 1C
     for (s in btree.symbolTableEntries) {

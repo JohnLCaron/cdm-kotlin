@@ -1,11 +1,11 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
-import java.nio.LongBuffer
+import java.nio.FloatBuffer
 
-class ArrayLong(shape : IntArray, val values : LongBuffer) : ArrayTyped<Long>(shape) {
+class ArrayFloat(shape : IntArray, val values : FloatBuffer) : ArrayTyped<Float>(shape) {
 
-    override fun iterator(): Iterator<Long> = BufferIterator()
-    private inner class BufferIterator : AbstractIterator<Long>() {
+    override fun iterator(): Iterator<Float> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Float>() {
         private var idx = 0
         override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
     }
@@ -14,7 +14,7 @@ class ArrayLong(shape : IntArray, val values : LongBuffer) : ArrayTyped<Long>(sh
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ArrayLong
+        other as ArrayFloat
 
         if (values != other.values) return false
         if (!shape.contentEquals(other.shape)) return false

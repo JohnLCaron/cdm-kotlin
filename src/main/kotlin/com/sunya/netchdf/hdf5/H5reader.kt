@@ -5,6 +5,7 @@ import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.convertEnums
+import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -73,6 +74,7 @@ internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : La
     val endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
+    // LOOK is this needed?
     if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
             val newShape = IntArray(shape.size + 1)
@@ -154,6 +156,7 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
     val endian: ByteOrder = h5type.endian
     var elemSize = h5type.elemSize
 
+    // LOOK isa this needed?
     if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
             val newShape = IntArray(shape.size + 1)
@@ -293,7 +296,7 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
         if (base.hdfType == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             while (layout.hasNext()) {
-                val chunk: Layout.Chunk = layout.next() ?: continue
+                val chunk: Layout.Chunk = layout.next()
                 for (i in 0 until chunk.nelems()) {
                     val address: Long = chunk.srcPos() + layout.elemSize * i
                     val vlenArray = h5heap.getHeapDataArray(address, Datatype.LONG, base.endian)
@@ -326,15 +329,16 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
     }
 }
 
+// LOOK is this needed?
 internal class H5StructureMember(name: String, datatype : Datatype, offset: Int, dims : IntArray,
-                                 val hdfType: Datatype5, val lamda: ((Long) -> String)?)
+                                 val hdfType: Datatype5, val lamda: ((Long) -> String))
     : StructureMember(name, datatype, offset, dims) {
 
     override fun value(sdata : ArrayStructureData.StructureData) : Any {
-        if (hdfType == Datatype5.Reference && lamda != null) {
+        if (hdfType == Datatype5.Reference) {
             val offset = sdata.offset + this.offset
             val reference = sdata.bb.getLong(offset)
-            return lamda!!(reference)
+            return lamda(reference)
         }
         return super.value(sdata)
     }

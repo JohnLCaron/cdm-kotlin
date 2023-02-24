@@ -1,8 +1,8 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.Datatype.Companion.VLEN
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
@@ -268,7 +268,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     checkErr("opaque nc_get_var", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val bb = ByteBuffer.wrap(raw)
-                    return ArrayOpaque(wantSection.shape, bb, userType!!.size)
+                    return ArrayOpaque(wantSection.shape, bb, userType.size)
                 }
 
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")

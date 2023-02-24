@@ -65,7 +65,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
 
     internal fun getEntry1(hugeObjectID: Int): Record1? {
         for (entry in entryList) {
-            val record1 = entry!!.record as Record1?
+            val record1 = entry.record as Record1?
             if (record1!!.hugeObjectID == hugeObjectID.toLong()) return record1
         }
         return null

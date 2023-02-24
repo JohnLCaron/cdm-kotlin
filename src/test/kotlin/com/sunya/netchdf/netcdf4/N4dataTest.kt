@@ -4,10 +4,7 @@ import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Range
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
-import com.sunya.cdm.iosp.ArrayTyped
 import com.sunya.cdm.iosp.Iosp
-import com.sunya.netchdf.hdf5.debugCompareNetcdf
-import com.sunya.netchdf.hdf5.testMiddleSection
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments

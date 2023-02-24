@@ -4,7 +4,6 @@ import com.sunya.cdm.api.Netcdf
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.Hdf5File
 import com.sunya.netchdf.netcdf3.Netcdf3File
-import com.sunya.netchdf.netcdf3.NetcdfFileFormat
 
 fun openNetchdfFile(filename : String) : Netcdf? {
     OpenFile(filename).use { raf ->

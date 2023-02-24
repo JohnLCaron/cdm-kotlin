@@ -4,6 +4,9 @@ import com.google.common.base.Preconditions
 import com.sunya.cdm.api.Netcdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
+import com.sunya.cdm.array.ArraySingle
+import com.sunya.cdm.array.ArrayString
+import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer

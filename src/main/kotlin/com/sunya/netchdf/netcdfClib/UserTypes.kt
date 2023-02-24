@@ -1,8 +1,10 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.array.ArrayStructureData
+import com.sunya.cdm.array.StructureMember
+import com.sunya.cdm.array.putStringsOnHeap
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.hdf5.H5heap
 import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
@@ -15,7 +17,6 @@ import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
-
 
 private val debugUserTypes = false
 
@@ -113,20 +114,20 @@ private fun NCheader.readCompoundFields(session: MemorySession, grpid: Int, type
     for (fldidx in 0 until nfields) {
         val name_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
         val offset_p = session.allocate(C_LONG)
-        val typeid_p = session.allocate(C_INT)
+        val ftypeid_p = session.allocate(C_INT)
         val ndims_p = session.allocate(C_INT)
         val dims_p = session.allocateArray(C_INT, NC_MAX_DIMS())
 
         checkErr("nc_inq_compound_field",
-            nc_inq_compound_field(grpid, typeid, fldidx, name_p, offset_p, typeid_p, ndims_p, dims_p))
+            nc_inq_compound_field(grpid, typeid, fldidx, name_p, offset_p, ftypeid_p, ndims_p, dims_p))
         val name = name_p.getUtf8String(0)
         val offset = offset_p[C_LONG, 0]
-        val typeid = typeid_p[C_INT, 0]
+        val ftypeid = ftypeid_p[C_INT, 0]
         val ndims = ndims_p[C_INT, 0]
         val dims = IntArray(ndims) { dims_p.getAtIndex(ValueLayout.JAVA_INT, it.toLong())}
 
         // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int) {
-        val fld = StructureMember(name, convertType(typeid.toInt()), offset.toInt(), dims)
+        val fld = StructureMember(name, convertType(ftypeid), offset.toInt(), dims)
         members.add(fld)
         if (debugUserTypes) println(" add StructureMember= $fld")
     }

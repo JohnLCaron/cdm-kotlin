@@ -2,9 +2,9 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.netchdf.netcdf3.*
-import com.sunya.netchdf.netcdf3.NetcdfFileFormat.Companion.netcdfFormat
-import com.sunya.netchdf.netcdf3.NetcdfFileFormat.Companion.netcdfFormatExtended
-import com.sunya.netchdf.netcdf3.NetcdfFileFormat.Companion.netcdfMode
+import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfFormat
+import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfFormatExtended
+import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfMode
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*

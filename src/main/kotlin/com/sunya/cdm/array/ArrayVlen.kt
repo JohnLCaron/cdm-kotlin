@@ -1,4 +1,4 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 
@@ -16,7 +16,7 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
                 currentIterator = values[idx++].iterator() as Iterator<Any> // LOOK
             }
             if (currentIterator!!.hasNext()) {
-                setNext(currentIterator!!.next()!!)
+                setNext(currentIterator!!.next())
             } else {
                 currentIterator = null
                 return computeNext()

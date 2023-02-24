@@ -218,13 +218,7 @@ class H5builder(val raf: OpenFile,
      */
     @Throws(IOException::class)
     fun getDataObjectName(objId: Long): String? {
-        val dobj = getDataObject(objId, null)
-        return if (dobj == null) {
-            logger.error("getDataObjectName cant find dataObject id= $objId")
-            null
-        } else {
-            dobj.name
-        }
+        return getDataObject(objId, null).name
     }
 
     /**

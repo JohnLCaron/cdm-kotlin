@@ -345,23 +345,17 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
         }
     }
 
-    inner class IndirectBlock internal constructor(nrows: Int, iblock_size: Long) {
-        val size: Long
-        val nrows: Int
+    inner class IndirectBlock internal constructor(var nrows: Int, val size: Long) {
         var directRows = 0
         var indirectRows = 0
-        var directBlocks: MutableList<DataBlock>? = null
-        var indirectBlocks: MutableList<IndirectBlock>? = null
+        val directBlocks = mutableListOf<DataBlock>()
+        var indirectBlocks = mutableListOf<IndirectBlock>()
 
         init {
-            var nrows = nrows
-            this.nrows = nrows
-            size = iblock_size
             if (nrows < 0) {
-                val n = log2(iblock_size) - log2(startingBlockSize * tableWidth) + 1 // LOOK
+                nrows = log2(size) - log2(startingBlockSize * tableWidth) + 1 // LOOK
             }
-            val maxrows_directBlocks =
-                (log2(maxDirectBlockSize) - log2(startingBlockSize)) + 2 // LOOK
+            val maxrows_directBlocks = (log2(maxDirectBlockSize) - log2(startingBlockSize)) + 2 // LOOK
             if (nrows < maxrows_directBlocks) {
                 directRows = nrows
                 indirectRows = 0
@@ -373,13 +367,11 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
         }
 
         fun add(dblock: DataBlock) {
-            if (directBlocks == null) directBlocks = ArrayList()
-            directBlocks!!.add(dblock)
+            directBlocks.add(dblock)
         }
 
         fun add(iblock: IndirectBlock) {
-            if (indirectBlocks == null) indirectBlocks = ArrayList()
-            indirectBlocks!!.add(iblock)
+            indirectBlocks.add(iblock)
         }
 
         fun showDetails(f: Formatter) {
@@ -389,11 +381,11 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
             )
             f.format(" DataBlocks:%n")
             f.format("  address            dataPos            offset size end%n")
-            if (directBlocks != null) for (dblock: DataBlock in directBlocks!!) f.format(
+            for (dblock: DataBlock in directBlocks) f.format(
                 "  %#-18x %#-18x %5d  %4d %5d %n", dblock.address, dblock.dataPos, dblock.offset, dblock.size,
                 (dblock.offset + dblock.size)
             )
-            if (indirectBlocks != null) for (iblock: IndirectBlock in indirectBlocks!!) iblock.showDetails(f)
+            for (iblock: IndirectBlock in indirectBlocks) iblock.showDetails(f)
         }
     }
 

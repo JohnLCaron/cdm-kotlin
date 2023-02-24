@@ -4,9 +4,9 @@ import java.lang.RuntimeException
 import java.util.*
 
 /**
+ * The CDM api datatype. Note the file storage types may be different.
  * @param cdlName name in CDL
  * @param size Size in bytes of one element of this data type, Strings = 0, Structures = 1
- * @param primitiveClass The primitive class type, inverse of forPrimitiveClass()
  * @param signed only needed for integral types
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  */
