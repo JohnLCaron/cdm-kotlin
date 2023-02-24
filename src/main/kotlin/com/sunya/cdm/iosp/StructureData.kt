@@ -61,12 +61,13 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
         fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
         fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
 
+        // LOOK wrong
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is StructureData) return false
 
-            if (bb != other.bb) return false
-            if (offset != other.offset) return false
+            // if (bb != other.bb) return false LOOK must check each member
+            // if (offset != other.offset) return false
             if (members != other.members) return false
 
             return true
@@ -93,9 +94,10 @@ fun ArrayStructureData.putStringsOnHeap(lamda : (Int) -> String) {
 
 fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVlen) {
     members.filter { it.datatype == Datatype.VLEN }.forEach { member ->
-        this.forEach { sdata ->
+        // println("member ${member.name}")
+        this.forEachIndexed { idx, sdata ->
+            // println("sdata $idx")
             val vlen = lamda(member, sdata.offset + member.offset)
-            // println("vlen member $member, offset ${sdata.offset + member.offset} -> vlen $vlen")
             sdata.putOnHeap(member, vlen)
         }
     }
@@ -150,7 +152,6 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
 
         if (name != other.name) return false
         if (datatype != other.datatype) return false
-        if (offset != other.offset) return false
         if (!dims.contentEquals(other.dims)) return false
         if (nelems != other.nelems) return false
 
@@ -160,7 +161,6 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
     override fun hashCode(): Int {
         var result = name.hashCode()
         result = 31 * result + datatype.hashCode()
-        result = 31 * result + offset
         result = 31 * result + dims.contentHashCode()
         result = 31 * result + nelems
         return result

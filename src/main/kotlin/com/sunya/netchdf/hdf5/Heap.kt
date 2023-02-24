@@ -31,6 +31,7 @@ internal class H5heap(val header: H5builder) {
 
     @Throws(IOException::class)
     fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype, endian: ByteOrder?): Array<*> {
+        try {
         val ho = heapId.getHeapObject()
             ?: throw IllegalStateException("Illegal Heap address, HeapObject = $heapId")
 
@@ -41,13 +42,18 @@ internal class H5heap(val header: H5builder) {
         val result = when (valueDatatype) {
             Datatype.FLOAT -> raf.readArrayFloat(state, heapId.nelems)
             Datatype.DOUBLE -> raf.readArrayDouble(state, heapId.nelems)
-            Datatype.BYTE -> raf.readArrayByte(state, heapId.nelems)
-            Datatype.SHORT -> raf.readArrayShort(state, heapId.nelems)
-            Datatype.INT -> raf.readArrayInt(state, heapId.nelems)
-            Datatype.LONG -> raf.readArrayLong(state, heapId.nelems)
+            Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> raf.readArrayByte(state, heapId.nelems)
+            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> raf.readArrayShort(state, heapId.nelems)
+            Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> raf.readArrayInt(state, heapId.nelems)
+            Datatype.LONG, Datatype.ULONG -> raf.readArrayLong(state, heapId.nelems)
             else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
         }
         return result
+        } catch (ex : Exception) {
+            println("HEY $ex")
+            heapId.getHeapObject()
+            throw ex
+        }
     }
 
     /**
@@ -123,13 +129,13 @@ internal class H5heap(val header: H5builder) {
 
         // the heap id is in ByteBuffer at given pos
         constructor(bb: ByteBuffer, start: Int) {
-            var pos = start
-            bb.order(ByteOrder.LITTLE_ENDIAN) // header information is in LE byte order
-            nelems = bb.getInt(pos)
-            pos += 4
-            heapAddress = if (header.isOffsetLong) bb.getLong(pos) else bb.getInt(pos).toLong()
-            pos += header.sizeOffsets
-            index = bb.getInt(pos)
+                var pos = start
+                bb.order(ByteOrder.LITTLE_ENDIAN) // header information is in LE byte order
+                nelems = bb.getInt(pos)
+                pos += 4
+                heapAddress = if (header.isOffsetLong) bb.getLong(pos) else bb.getInt(pos).toLong()
+                pos += header.sizeOffsets
+                index = bb.getInt(pos)
         }
 
         fun isEmpty(): Boolean {

@@ -67,20 +67,20 @@ class H5tiledLayoutBB(
         // Section.intersect(). It appears that storageSize (actually msl.chunkSize) may have an extra dimension, reletive
         // to the Variable.
         val dtype = v2.datatype
-        if (dtype == Datatype.CHAR && want.rank() < vinfo.storageSize.size) {
+        if (dtype == Datatype.CHAR && want.rank() < vinfo.storageDims.size) {
             wantSection = Section.builder().appendRanges(want.ranges).appendRange(1).build()
         } else {
             wantSection = Section.fill(want, v2.shape)
         }
 
         // one less chunk dimension, except in the case of char
-        nChunkDims = if (dtype === Datatype.CHAR) vinfo.storageSize.size else vinfo.storageSize.size - 1
+        nChunkDims = if (dtype === Datatype.CHAR) vinfo.storageDims.size else vinfo.storageDims.size - 1
         chunkSize = IntArray(nChunkDims)
-        System.arraycopy(vinfo.storageSize, 0, chunkSize, 0, nChunkDims)
-        elemSize = vinfo.storageSize.get(vinfo.storageSize.size - 1) // last one is always the elements size
+        System.arraycopy(vinfo.storageDims, 0, chunkSize, 0, nChunkDims)
+        elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
 
         // create the data chunk iterator
-        val btree = DataBTree(h5, vinfo.dataPos, v2.shape, vinfo.storageSize, null)
+        val btree = DataBTree(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
         val iter: DataBTree.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
         delegate = LayoutBBTiled(dcIter, chunkSize, elemSize, want)

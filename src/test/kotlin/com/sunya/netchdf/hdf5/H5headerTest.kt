@@ -30,6 +30,7 @@ class H5headerTest {
     }
 
     // these are not netcdf4. we have a compound type without a typedef. should just add it as a typedef??
+    // could also just be a local variable (eg like netcdf-java). MAy not be a seperate name.
     @Test
     fun compoundTypedef() {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/cstr.h5")

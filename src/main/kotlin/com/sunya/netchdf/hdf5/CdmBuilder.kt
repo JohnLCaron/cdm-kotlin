@@ -50,12 +50,12 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
-    val typedef = this.findTypedef(att5.mdt().address, att5.mdt.hashCode())
+    val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
     if (typedef != null) {
-        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt().address}")
+        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt.address}")
     }
-    val h5type = H5TypeInfo(att5.mdt())
-    val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt!!, att5.mds)
+    val h5type = H5TypeInfo(att5.mdt)
+    val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
     val values = this.readRegularData(dc, null)
     var useType = h5type.datatype(this)
     if (useType == Datatype.CHAR) useType = Datatype.STRING // LOOK
@@ -92,17 +92,12 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
 }
 
 internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variable.Builder {
+    // what the cdm variable looks like
     val builder = Variable.Builder()
     builder.name = v5.name.substringAfter(NETCDF4_NON_COORD)
-    val typedef = this.findTypedef(v5.mdt.address, v5.mdt.hashCode())
-    if (typedef != null) {
-        println(" made variable ${v5.name} from typedef ${typedef.name}@${v5.mdt.address}")
-    }
-    val h5type = H5TypeInfo(v5.mdt)
 
-    // for some reason Nclib sometimes sets top level variables to string (dstr.nc) or not (tst_small_netcdf4)
-    // builder.datatype = if (h5type.datatype == Datatype.CHAR) Datatype.STRING else h5type.datatype
-    builder.datatype = h5type.datatype(this)
+    val h5type = H5TypeInfo(v5.mdt)
+    builder.datatype = h5type.datatype(this) // typedefs added here
     if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
         builder.datatype = Datatype.STRING
     }
@@ -110,26 +105,27 @@ internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variab
     if (v5.dimList != null) {
         builder.dimList = v5.dimList!!.trim().split(" ")
     } else if (v5.mds.dims.size > 0) {
+        // LOOK non-shared, integrate with shared ??
         v5.mds.dims.forEach{builder.dimensions.add(Dimension(it))}
     }
 
     for (att5 in v5.attributes()) {
         builder.attributes.add(buildAttribute(att5))
     }
-
-    // TODO if compact, do not use fileOffset
-    require (v5.dataObject.mdl != null)
-    val vdata = DataContainerVariable(this, builder.name!!, h5type, v5.mdt, v5.mds, v5)
-    builder.spObject = vdata
-
     if (strict) {
         val iter = builder.attributes.iterator()
-        while(iter.hasNext()) {
+        while (iter.hasNext()) {
             if (NETCDF4_SPECIAL_ATTS.contains(iter.next().name)) {
                 iter.remove()
             }
         }
     }
+
+    // stuff needed to read hdf5
+    require (v5.dataObject.mdl != null)
+    val vdata = DataContainerVariable(builder.name!!, h5type, v5, this)
+    builder.spObject = vdata
+
     return builder
 }
 
@@ -139,6 +135,7 @@ internal interface DataContainer {
     val dataPos: Long
     val mdt: DatatypeMessage
     val mds: DataspaceMessage
+    val storageDims : IntArray
 }
 
 internal open class DataContainerAttribute(
@@ -146,35 +143,38 @@ internal open class DataContainerAttribute(
     override val h5type: H5TypeInfo,
     override val dataPos : Long,
     override val mdt: DatatypeMessage,
-    override val mds: DataspaceMessage) : DataContainer
+    override val mds: DataspaceMessage,
+    ) : DataContainer {
+        override val storageDims = mds.dims
+    }
 
 
 internal class DataContainerVariable(
-    val h5 : H5builder,
     override val name: String,
     override val h5type: H5TypeInfo,
-    override val mdt: DatatypeMessage,
-    override val mds: DataspaceMessage,
-    v5 : H5Variable
+    v5 : H5Variable,
+    h5 : H5builder,
 ) : DataContainer {
     override val dataPos : Long
+    override val mdt: DatatypeMessage = v5.mdt
+    override val mds: DataspaceMessage = v5.mds
+    override val storageDims : IntArray // dimensions
 
     val mdl = v5.mdl
     val mfp = v5.mfp
 
     val isChunked : Boolean
-    val storageSize : IntArray // dimensions
     val elementSize : Int // total length in bytes on disk of one element
-
     val useFillValue : Boolean
-    var fillValue : Any? = null
+    val fillValue : Any?
 
     init {
+        // TODO if compact, do not use fileOffset
         dataPos = when (mdl) {
             is DataLayoutContiguous -> h5.getFileOffset((mdl as DataLayoutContiguous).dataAddress)
             is DataLayoutContiguous3 -> h5.getFileOffset((mdl as DataLayoutContiguous3).dataAddress)
             is DataLayoutChunked -> h5.getFileOffset((mdl as DataLayoutChunked).btreeAddress)
-            else -> -1 // LOOK compact
+            else -> -1 // LOOK compact?
         }
 
         // deal with unallocated data
@@ -184,26 +184,26 @@ internal class DataContainerVariable(
         isChunked = (mdl.layoutClass == LayoutClass.Chunked)
         when (mdl) {
             is DataLayoutCompact -> {
-                this.storageSize = mds.dims
+                this.storageDims = mds.dims
                 this.elementSize = mdt.elemSize
             }
             is DataLayoutCompact3 -> {
-                this.storageSize = mds.dims
+                this.storageDims = mds.dims
                 this.elementSize = mdt.elemSize
             }
             is DataLayoutContiguous -> {
-                this.storageSize = mds.dims
-                val nelems = computeSize(this.storageSize).toInt()
+                this.storageDims = mds.dims
+                val nelems = computeSize(this.storageDims).toInt()
                 this.elementSize = (mdt.elemSize / nelems)
             }
             is DataLayoutContiguous3 -> {
-                this.storageSize = mds.dims
-                val nelems = computeSize(this.storageSize).toInt()
+                this.storageDims = mds.dims
+                val nelems = computeSize(this.storageDims).toInt()
                 this.elementSize = (mdt.elemSize / nelems)
             }
             is DataLayoutChunked -> {
-                this.storageSize = mdl.dims
-                this.elementSize = storageSize[storageSize.size - 1] // last number is element size
+                this.storageDims = mdl.dims // LOOK
+                this.elementSize = storageDims[storageDims.size - 1] // last number is element size
                 // make the data btree, entries are not read in, but the point is to cache it ??
                 // this.btree = DataBTree(h5, this.dataPos, shape, this.storageSize, null)
             }

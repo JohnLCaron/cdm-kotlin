@@ -1,5 +1,13 @@
 package com.sunya.netchdf.netcdf4
 
+import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Range
+import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.Variable
+import com.sunya.cdm.iosp.ArrayTyped
+import com.sunya.cdm.iosp.Iosp
+import com.sunya.netchdf.hdf5.debugCompareNetcdf
+import com.sunya.netchdf.hdf5.testMiddleSection
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -38,6 +46,7 @@ class N4dataTest {
 
     @Test
     fun problem() {
+        readN4data("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
     }
 
     @ParameterizedTest
@@ -45,18 +54,34 @@ class N4dataTest {
     fun readN4data(filename: String) {
         println("=================")
         println(filename)
+
          NetcdfClibFile(filename).use { ncfile ->
              println(ncfile.cdl())
-             /*
-        val ncvars = rootClib.variables
-        ncvars.forEach { n4var ->
-            val ncdata = nciosp.readArrayData(n4var)
-            println("===============\n${n4var.name}")
-            println("ncdata = $ncdata")
-        }
-
-         */
+            val ncvars = ncfile.rootGroup().variables
+            ncvars.forEach { n4var ->
+                val ncdata = ncfile.readArrayData(n4var)
+                println("===============\n${n4var.name}")
+                println("ncdata = $ncdata")
+                if (n4var.nelems > 8 && n4var.datatype != Datatype.CHAR) {
+                    readMiddleSection(ncfile, n4var)
+                }
+            }
          }
+    }
+
+    fun readMiddleSection(ncfile: Iosp, ncvar: Variable) {
+        val shape = ncvar.shape
+        val orgSection = Section(shape)
+        val middleRanges = orgSection.ranges.map { range ->
+            if (range == null) throw RuntimeException("Range is null")
+            if (range.length < 9) range
+            else Range(range.first + range.length / 3, range.last - range.length / 3)
+        }
+        val middleSection = Section(middleRanges)
+        println(" ${ncvar.name}[$middleSection]")
+        val ncdata = ncfile.readArrayData(ncvar, middleSection)
+        println("===============\n${ncvar.name}")
+        println("ncdata = $ncdata")
     }
 
 }

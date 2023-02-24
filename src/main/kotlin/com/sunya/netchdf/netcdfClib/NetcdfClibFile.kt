@@ -8,8 +8,7 @@ import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
-import java.lang.foreign.ValueLayout.JAVA_INT
-import java.lang.foreign.ValueLayout.JAVA_LONG
+import java.lang.foreign.ValueLayout.*
 import java.nio.*
 import java.util.*
 
@@ -47,7 +46,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
     }
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val wantSection = if (section == null) Section(v2.shape) else Section.fill(section, v2.shape)
+        val wantSection = Section.fill(section, v2.shape)
         val nelems = wantSection.size()
         require(nelems < Int.MAX_VALUE)
 
@@ -79,7 +78,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                     val nbytes = nelems * userType.size // LOOK relation of userType.size to datatype.size ??
                     val val_p = session.allocate(nbytes)
-                    checkErr("nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, val_p))
+                    checkErr("compound nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val bb = ByteBuffer.wrap(raw)
                     bb.order(ByteOrder.LITTLE_ENDIAN)
@@ -100,7 +99,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     // int 	nc_get_var (int ncid, int varid, void *ip)
                     // 	Read an entire variable in one call.
                     // nc_get_vara (int ncid, int varid, const size_t *startp, const size_t *countp, void *ip)
-                    checkErr("nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, val_p))
+                    checkErr("enum nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
                     with(datatype.typedef as EnumTypedef) {
@@ -189,7 +188,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                 Datatype.LONG -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_LONG, nelems)
+                    val val_p = session.allocateArray(C_LONG as MemoryLayout, nelems)
                     checkErr("nc_get_vars_long",
                         nc_get_vars_long(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val values = LongBuffer.allocate(nelems.toInt())
@@ -201,7 +200,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                 Datatype.ULONG -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_LONG, nelems)
+                    val val_p = session.allocateArray(C_LONG  as MemoryLayout, nelems)
                     checkErr("nc_get_vars_ulonglong",
                         nc_get_vars_ulonglong(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val values = LongBuffer.allocate(nelems.toInt())
@@ -246,7 +245,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                 Datatype.OPAQUE -> {
                     val val_p = session.allocate(nelems * userType!!.size)
-                    checkErr("nc_get_var opaque", nc_get_var(vinfo.g4.grpid, vinfo.varid, val_p))
+                    checkErr("opaque nc_get_var", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val bb = ByteBuffer.wrap(raw)
                     return ArrayOpaque(wantSection.shape, bb, userType!!.size)
@@ -272,7 +271,12 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                 val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
                 val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
                 val vlen = when (basetype) {
-                    Datatype.INT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                    Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
+                    Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
+                    Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+                    Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+                    Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                    Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
                     else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
                 }
                 arrayOfVlen.add(vlen)

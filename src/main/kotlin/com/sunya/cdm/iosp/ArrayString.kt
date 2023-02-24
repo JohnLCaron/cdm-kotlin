@@ -60,7 +60,7 @@ fun ArrayUByte.makeStringFromBytes(): String {
 fun ArrayUByte.makeStringsFromBytes(): ArrayString {
     val rank = shape.size
     if (rank < 2) {
-        return ArrayString(intArrayOf(1), listOf(makeStringFromBytes()))
+        return ArrayString(intArrayOf(), listOf(makeStringFromBytes()))
     }
     val (outerShape, innerLength) = shape.breakoutInner()
     val outerLength = computeSize(outerShape).toInt()

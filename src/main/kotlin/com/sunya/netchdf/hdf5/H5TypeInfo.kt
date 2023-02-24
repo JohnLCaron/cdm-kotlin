@@ -11,22 +11,16 @@ private val defaultDatatype = Datatype.STRING
 
 // everything needed to read data from a dataset (attribute, variable) in HDF5
 // sometime you need to read data before you have a cdm object, eg for attributes
-// translating to the correct CDM object may not be complete
 internal class H5TypeInfo(mdt: DatatypeMessage) {
     val hdfType: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize
     val endian: ByteOrder = mdt.endian()
-    val isVlen = (hdfType == Datatype5.Vlen) // is a vlen
     val isVString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
 
     var unsigned = false
     var base: H5TypeInfo? = null // used for vlen, array
     val mdtAddress = mdt.address // used to look up typedefs
     val mdtHash = mdt.hashCode() // used to look up typedefs
-
-
-    // can we get rid of ??
-    // var datatype: Datatype = makeNCdatatype(hdfType, elemSize, unsigned)
 
     init {
         if (hdfType == Datatype5.Fixed) {
@@ -59,6 +53,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
      * 9 Variable-Length
      * 10 Array
      */
+    // Call this after all the typedefs have been found
     fun datatype(h5builder : H5builder): Datatype {
         return when (hdfType) {
             Datatype5.Fixed, Datatype5.BitField ->
@@ -114,7 +109,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     }
 
     override fun toString(): String {
-        return "H5TypeInfo(hdfType=$hdfType, elemSize=$elemSize, endian=$endian, isVlen=$isVlen, isVString=$isVString, unsigned=$unsigned, base=$base)"
+        return "H5TypeInfo(hdfType=$hdfType, elemSize=$elemSize, endian=$endian, isVString=$isVString, unsigned=$unsigned, base=$base)"
     }
 
 

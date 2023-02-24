@@ -1,7 +1,10 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.*
+import com.sunya.cdm.api.CompoundTypedef
+import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.convertEnums
 import com.sunya.cdm.iosp.*
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -13,12 +16,12 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = dc.h5type
-    var shape: IntArray = dc.mds.dims
+    val shape: IntArray = dc.storageDims
     val readDtype: Datatype = h5type.datatype(this)
     val endian: ByteOrder = h5type.endian
-    var elemSize = h5type.elemSize
+    val elemSize = h5type.elemSize
 
-    if (h5type.hdfType == Datatype5.String) { // char
+    /* if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
             val newShape = IntArray(shape.size + 1)
             System.arraycopy(shape, 0, newShape, 0, shape.size)
@@ -26,7 +29,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
             shape = newShape
             elemSize = 1
         }
-    }
+    } */
 
     val wantSection = Section.fill(section, shape)
     val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, wantSection)
@@ -229,22 +232,9 @@ internal fun H5builder.readCompoundData(dc: DataContainer, layout : Layout, sect
     requireNotNull(datatype.typedef)
     require(datatype.typedef is CompoundTypedef)
 
-    val shape: IntArray = dc.mds.dims
     val state = OpenFileState(0, dc.h5type.endian)
 
-
-    /* val compoundType = dc.mdt as DatatypeCompound
-    val members = compoundType.members.map { sm5  ->
-        val memberType = H5Type(sm5.mdt)
-
-        val lamda: ((Long) -> String)?  = if (memberType.hdfType == Datatype5.Reference)
-            { it -> (this@readCompoundData).convertReferenceToDataObjectName(it) }
-        else null
-
-        H5StructureMember(sm5.name, memberType.datatype, sm5.offset, sm5.dims, memberType.hdfType, lamda)
-    } */
-
-    val sdataArray = readArrayStructureData(state, layout, shape, datatype.typedef.members)
+    val sdataArray = readArrayStructureData(state, layout, section.shape, datatype.typedef.members)
     val h5heap = H5heap(this)
     sdataArray.putStringsOnHeap {  offset -> h5heap.readHeapString(sdataArray.bb, offset)!! }
 
@@ -253,6 +243,7 @@ internal fun H5builder.readCompoundData(dc: DataContainer, layout : Layout, sect
         for (i in 0 until member.nelems) {
             val heapId = h5heap.readHeapIdentifier(sdataArray.bb, offset)
             val vlenArray = h5heap.getHeapDataArray(heapId, member.datatype, dc.h5type.endian)
+            // println("  ${vlenArray.contentToString()}")
             listOfArrays.add(vlenArray)
         }
         ArrayVlen(member.dims, listOfArrays, member.datatype)
@@ -272,23 +263,24 @@ internal fun H5builder.readArrayStructureData(state: OpenFileState, layout: Layo
         raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
     }
     bb.position(0)
+    bb.limit(bb.capacity())
     return ArrayStructureData(shape, bb, layout.elemSize, members)
 }
 
-internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, section : Section) : ArrayTyped<*> {
-    val shape: IntArray = dc.mds.dims
-    val layout2 = LayoutRegular(dc.dataPos, dc.mdt.elemSize, shape, Section(shape))
+internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSection : Section) : ArrayTyped<*> {
+    // LOOK not using wantedSection to subset
+    val shape: IntArray = dc.mds.dims // LOOK should shape be part of h5type?
     val h5heap = H5heap(this)
 
     // Strings
     if (dc.h5type.isVString) {
         val sarray = mutableListOf<String>()
-        while (layout2.hasNext()) {
-            val chunk: Layout.Chunk = layout2.next()
+        while (layout.hasNext()) {
+            val chunk: Layout.Chunk = layout.next()
             for (i in 0 until chunk.nelems()) {
-                val address: Long = chunk.srcPos() + layout2.elemSize * i
+                val address: Long = chunk.srcPos() + layout.elemSize * i
                 val sval = h5heap.readHeapString(address)
-                if (sval != null) sarray.add(sval)
+                sarray.add(sval ?: "")
             }
         }
         return ArrayString(shape, sarray)
@@ -296,17 +288,16 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, section 
 
     // Vlen (non-String)
     else {
-        val vlenMdt = dc.mdt as DatatypeVlen
-        val base = vlenMdt.base
+        val base = dc.h5type.base!!
 
         // variable length array of references, get translated into strings LOOK always?
-        if (base.type == Datatype5.Reference) {
+        if (base.hdfType == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
-            while (layout2.hasNext()) {
-                val chunk: Layout.Chunk = layout2.next() ?: continue
+            while (layout.hasNext()) {
+                val chunk: Layout.Chunk = layout.next() ?: continue
                 for (i in 0 until chunk.nelems()) {
-                    val address: Long = chunk.srcPos() + layout2.elemSize * i
-                    val vlenArray = h5heap.getHeapDataArray(address, Datatype.LONG, base.endian())
+                    val address: Long = chunk.srcPos() + layout.elemSize * i
+                    val vlenArray = h5heap.getHeapDataArray(address, Datatype.LONG, base.endian)
                     // LOOK require vlenArray is Array<Long>
                     val refsArray = this.convertReferencesToDataObjectName(vlenArray as Array<Long>)
                     for (s in refsArray) {
@@ -319,20 +310,20 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, section 
 
         // general case is to read an array of vlen objects
         // each vlen generates an Array of type baseType
-        val baseType = H5TypeInfo(base).datatype(this) // LOOK this is wrong or can be simplified
-        val listOfArrays : MutableList<Array<*>> = mutableListOf<Array<*>>()
+        val listOfArrays = mutableListOf<Array<*>>()
+        val readDatatype = base.datatype(this)
         var count = 0
-        while (layout2.hasNext()) {
-            val chunk: Layout.Chunk = layout2.next()
+        while (layout.hasNext()) {
+            val chunk: Layout.Chunk = layout.next()
             for (i in 0 until chunk.nelems()) {
-                val address: Long = chunk.srcPos() + layout2.elemSize * i
-                val vlenArray = h5heap.getHeapDataArray(address, baseType, base.endian())
+                val address: Long = chunk.srcPos() + layout.elemSize * i
+                val vlenArray = h5heap.getHeapDataArray(address, readDatatype, base.endian)
                 // LOOK require vlenArray is Array<T>
                 listOfArrays.add(vlenArray)
                 count++
             }
         }
-        return ArrayVlen(shape, listOfArrays.toList(), baseType)
+        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
     }
 }
 
