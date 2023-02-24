@@ -5,8 +5,8 @@ import com.sunya.cdm.array.ArrayStructureData
 import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.array.putStringsOnHeap
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
-import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
+import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
+import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.MemoryAddress
 import java.lang.foreign.MemorySegment

@@ -199,11 +199,17 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
         if (local.groupMessage != null || local.groupNewMessage != null) {
             // has a group message
             isGroup = true
-        } else if (local.mdt != null && local.mdl != null) {
+        } else if ((local.mdt != null) and (local.mdl != null)) {
             // has a Datatype and a DataLayout message
             isVariable = true
+            // if its an enum or compound, could be a non-shared typedef. Found in non-netcdf4 hdf5 files.
+            if (!local.mdt!!.isShared) {
+                if ((local.mdt.type == Datatype5.Enumerated) or (local.mdt.type == Datatype5.Compound)) {
+                    isTypedef = true
+                }
+            }
         } else if (local.mdt != null) {
-            // has only a Datatype
+            // must be a  typedef
             isTypedef = true
         } else {
             // see /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4 = opaque typedef
@@ -240,19 +246,17 @@ internal class H5GroupBuilder(
         for (nested in nestedObjects) {
             nested.build(header)
 
-            // if has a "group message", then its a group
             if (nested.isGroup) {
                 val nestedGroup = header.readH5Group(nested)
                 if (nestedGroup != null) {
                     nestedGroupsBuilders.add(nestedGroup)
                 }
-
-                // if it has a Datatype and a StorageLayout, then its a Variable
-            } else if (nested.isVariable) {
+            }
+            if (nested.isVariable) {
                 variables.add(H5Variable(header, nested.dataObject!!))
-
-                // if it has only a Datatype, its a Typedef
-            } else if (nested.isTypedef) {
+            }
+            // might be both a variable and a typedef
+            if (nested.isTypedef) {
                 val typedef = H5Typedef(nested.dataObject!!)
                 typedefs.add(typedef)
             }
@@ -295,7 +299,7 @@ internal class H5Typedef(val dataObject: DataObject) {
     val mdtHash : Int
 
     init {
-        require(dataObject.mdt != null && dataObject.mdl == null)
+        require(dataObject.mdt != null)
         mdtAddress = dataObject.mdt!!.address
         mdtHash = dataObject.mdt!!.hashCode()
 

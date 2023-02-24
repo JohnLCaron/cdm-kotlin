@@ -5,19 +5,13 @@ import com.sunya.netchdf.netcdf3.*
 import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfFormat
 import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfFormatExtended
 import com.sunya.netchdf.netcdf4.NetcdfFileFormat.Companion.netcdfMode
-import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
+import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
 import java.util.*
 
-
 private val debug = false
 private val debugFormat = false
-
-fun main(args: Array<String>) {
-    val h = NCheader("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc")
-    if (debug) println(h.rootGroup.build(null).cdl(true))
-}
 
 internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
 
@@ -388,7 +382,9 @@ class NCheader(val filename: String) {
                     val s2 : MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
                     if (s2 != MemoryAddress.NULL) {
                         val value = s2.getUtf8String(0)
-                        if (value.isNotEmpty()) result.add(value)
+                        result.add(value)
+                    } else {
+                        result.add("")
                     }
                 }
                 // nc_free_string() or does session handle this ??

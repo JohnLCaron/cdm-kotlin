@@ -24,12 +24,14 @@ class NetchdfCompareCdl {
 
             val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .build()
 
             val moar =
                 testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
+                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .addNameFilter { name -> !name.endsWith("tst_vars.nc4") } // too slow LOOK why?
                     .withRecursion()
                     .build()

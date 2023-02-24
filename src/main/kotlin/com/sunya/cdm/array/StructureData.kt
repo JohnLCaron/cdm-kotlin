@@ -68,7 +68,9 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
 
             // if (bb != other.bb) return false LOOK must check each member
             // if (offset != other.offset) return false
-            if (members != other.members) return false
+            if (members != other.members) {
+                return false
+            }
 
             return true
         }

@@ -271,7 +271,6 @@ internal fun H5builder.readArrayStructureData(state: OpenFileState, layout: Layo
 }
 
 internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSection : Section) : ArrayTyped<*> {
-    // LOOK not using wantedSection to subset
     val h5heap = H5heap(this)
 
     // Strings

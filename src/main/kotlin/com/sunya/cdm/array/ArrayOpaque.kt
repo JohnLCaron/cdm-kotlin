@@ -21,4 +21,15 @@ class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : A
             setNext(values)
         }
     }
+
+    override fun toString(): String {
+        return "ArrayOpaque(size=$size, nelems=$nelems, \n values=${showValues()})"
+    }
+
+    private fun showValues(): String {
+        return buildString {
+            for (idx in 0 until values.limit()) append("${values.get(idx)},")
+        }
+    }
+
 }
