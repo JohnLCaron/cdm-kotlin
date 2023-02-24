@@ -5,7 +5,10 @@ import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteBuffer
 
-// Message Type 8 "Data Storage Layout" : regular (contiguous), chunked, or compact (stored with the message)
+// Message Type 8 "Data Layout" : regular (contiguous), chunked, or compact (stored with the message)
+// The dimensions were specified in version 1 and 2. In version 3 and 4, dimensions are in the Dataspace message.
+// When chunked, the last dimension is the chunk size. LOOK version 4 not done.
+
 // The Data Layout message describes how the elements of a multi-dimensional array are stored in the HDF5 file.
 // Four types of data layout are supported:
 //  Contiguous: The array is stored in one contiguous area of the file. This layout requires that the size of the array
@@ -20,6 +23,7 @@ import java.nio.ByteBuffer
 //  Virtual: This is only supported for version 4 of the Data Layout message. The message stores information that is
 //     used to locate the global heap collection containing the Virtual Dataset (VDS) mapping information. The mapping
 //     associates the VDS to the source dataset elements that are stored across a collection of HDF5 files.
+
 
 @Throws(IOException::class)
 fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
@@ -46,7 +50,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
                     array("compactData", 1, "compactDataSize")
                 }
             }
-        rawdata.show()
+        if (debugMessage) rawdata.show()
 
         return when (layoutClass) {
             0 -> DataLayoutCompact(rawdata.getIntArray("dims"), rawdata.getByteBuffer("compactData"))
@@ -110,15 +114,19 @@ enum class LayoutClass(val num : Int) {
 
 open class DataLayoutMessage(layoutClassNum: Int)  : MessageHeader(MessageType.Layout) {
     val layoutClass = LayoutClass.of(layoutClassNum)
+    override fun show() : String = "class=$layoutClass"
+}
+data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer?) : DataLayoutMessage(0)
 
-    override fun show() : String {
-        return "class=$layoutClass"
-    }
+data class DataLayoutContiguous(val dims : IntArray, val dataAddress: Long) : DataLayoutMessage(1) {
+    override fun show() : String = "class=$layoutClass dims=${dims.contentToString()} dataAddress=$dataAddress"
+}
+data class DataLayoutChunked(val version : Int, val dims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2) {
+    override fun show(): String = "class=$layoutClass dims=${dims.contentToString()} btreeAddress=$btreeAddress chunkedElementSize=$chunkedElementSize"
 }
 
-data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer?) : DataLayoutMessage(0)
-data class DataLayoutContiguous(val dims : IntArray, val dataAddress: Long) : DataLayoutMessage(1)
-data class DataLayoutChunked(val version : Int, val dims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2)
-
 data class DataLayoutCompact3(val compactData: ByteBuffer?) : DataLayoutMessage(0)
-data class DataLayoutContiguous3(val dataAddress: Long, val dataSize: Long) : DataLayoutMessage(1)
+
+data class DataLayoutContiguous3(val dataAddress: Long, val dataSize: Long) : DataLayoutMessage(1) {
+    override fun show(): String = "class=$layoutClass dataAddress=$dataAddress dataSize=$dataSize"
+}

@@ -26,11 +26,12 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val wantSection = if (section == null) Section(v2.shape) else Section.fill(section, v2.shape)
-        val vinfo = v2.spObject as VariableData
+        // LOOK do we need to adjust wantSection for vinfo.storageDims? If so, we we need to adjust back ??
+        val wantSection = Section.fill(section, v2.shape)
 
+        val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.useFillValue) { // fill value only, no  data
-            return ArraySingle(wantSection.shape, vinfo.h5type.datatype, vinfo.fillValue)
+            return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
         }
 
         if (vinfo.mfp != null) { // filtered
@@ -43,11 +44,16 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             }
         }
 
-        if (vinfo.isChunked) {
-            val layout = H5tiledLayout(header, v2, wantSection, vinfo.h5type.datatype)
-            return header.readChunkedData(vinfo, layout, wantSection)
-        } else {
-            return header.readRegularData(vinfo, wantSection)
+        try {
+            if (vinfo.isChunked) {
+                val layout = H5tiledLayout(header, v2, wantSection, v2.datatype)
+                return header.readChunkedData(vinfo, layout, wantSection)
+            } else {
+                return header.readRegularData(vinfo, wantSection)
+            }
+        } catch (ex : Exception) {
+            println("failed to read ${v2.name}, $ex")
+            throw ex
         }
     }
 

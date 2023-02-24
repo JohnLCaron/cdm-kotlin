@@ -7,8 +7,10 @@ import java.util.*
 import mu.KotlinLogging
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Datatype.*
+import com.sunya.cdm.iosp.ArrayUByte
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.iosp.makeStringFromBytes
 import java.nio.ByteOrder
 
 /*
@@ -118,7 +120,6 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     // the file contained only one record variable and it was of type byte, char, or short).
     // Example TestDir.cdmLocalTestDataDir + "byteArrayRecordVarPaddingTest-bad.nc"
     // Example /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc
-
     if (unlimitedVariables.size == 1) {
       val uvar = unlimitedVariables[0]
       val dtype = uvar.datatype
@@ -262,7 +263,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       //if (vsize < 0) { // when does this happen ?? streaming i think
       //  vsize = (velems.toInt() + padding(velems)) * datatype.size
       //}
-      val vinfo = Vinfo(name, vsize, begin, isRecord, varAttsPos.toULong())
+      val vinfo = Vinfo(name, vsize, begin, isRecord, datatype.size)
       ncvarb.spObject = vinfo
 
       // track how big each record is
@@ -335,8 +336,14 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   @Throws(IOException::class)
   fun readAttributeArray(type: Datatype, nelems: Int, attBuilder: Attribute.Builder): Int {
     when (type) {
-      Datatype.CHAR, Datatype.BYTE -> {
+      Datatype.BYTE -> {
         attBuilder.values = raf.readArrayByte(filePos, nelems).asList()
+        return nelems
+      }
+
+      Datatype.CHAR -> {
+        val wtf  = ArrayUByte(intArrayOf(1), raf.readByteBuffer(filePos, nelems))
+        attBuilder.values = wtf.makeStringFromBytes().toList()
         return nelems
       }
 
@@ -503,10 +510,10 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
    */
   data class Vinfo(
     val name: String,
-    val vsize: Int,
+    val vsize: Int, // if record, per record
     val begin: Long,
     val isRecordVariable: Boolean,
-    val attsPos: ULong
+    val elemSize: Int
   )
 
 }

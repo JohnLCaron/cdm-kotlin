@@ -2,14 +2,15 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Datatype.Companion.VLEN
+import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.iosp.*
+import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
-import java.lang.foreign.MemoryLayout
-import java.lang.foreign.MemorySession
-import java.lang.foreign.ValueLayout
-import java.lang.foreign.ValueLayout.JAVA_INT
-import java.lang.foreign.ValueLayout.JAVA_LONG
+import java.io.IOException
+import java.lang.foreign.*
+import java.lang.foreign.ValueLayout.*
 import java.nio.*
+import java.util.*
 
 /*
 apt-cache search netcdf
@@ -45,16 +46,19 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
     }
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val wantSection = if (section == null) Section(v2.shape) else Section.fill(section, v2.shape)
+        val wantSection = Section.fill(section, v2.shape)
         val nelems = wantSection.size()
         require(nelems < Int.MAX_VALUE)
 
         val vinfo = v2.spObject as NCheader.Vinfo
-        val datatype = header.convertType(vinfo.typeid)
+        val datatype = convertType(vinfo.typeid)
+        val userType = userTypes[vinfo.typeid]
+
         if (datatype == VLEN) {
-            println("vlen not supported")
-            return ArrayString(intArrayOf(), emptyList())
+            // wtf is nelems ?? is var length fawgawsake
+            return readVlen(v2, vinfo, convertType(userType!!.baseTypeid))
         }
+
         MemorySession.openConfined().use { session ->
             val longArray = MemoryLayout.sequenceLayout(v2.rank.toLong(), C_LONG)
             val origin_p = session.allocateArray(longArray, v2.rank.toLong())
@@ -67,13 +71,45 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
             }
 
             when (datatype) {
-                Datatype.ENUM1 -> {
+                Datatype.COMPOUND -> {
+                    requireNotNull(userType)
+                    requireNotNull(datatype.typedef)
+                    require(datatype.typedef is CompoundTypedef)
+
+                    val nbytes = nelems * userType.size // LOOK relation of userType.size to datatype.size ??
+                    val val_p = session.allocate(nbytes)
+                    checkErr("compound nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
+                    val bb = ByteBuffer.wrap(raw)
+                    bb.order(ByteOrder.LITTLE_ENDIAN)
+
+                    val members = datatype.typedef.members
+                    val sdataArray = ArrayStructureData(v2.shape, bb, userType.size, members)
+                    // strings vs array of strings, also duplicate readCompoundAttValues
+                    sdataArray.putStringsOnHeap {  offset ->
+                        val address = val_p.get(ValueLayout.ADDRESS, (offset).toLong())
+                        address.getUtf8String(0)
+                    }
+                    return sdataArray
+                }
+
+                Datatype.ENUM1, Datatype.ENUM2, Datatype.ENUM4 -> {
                     val nbytes = nelems * datatype.size
                     val val_p = session.allocate(nbytes)
-                    checkErr("nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, origin_p))
+                    // int 	nc_get_var (int ncid, int varid, void *ip)
+                    // 	Read an entire variable in one call.
+                    // nc_get_vara (int ncid, int varid, const size_t *startp, const size_t *countp, void *ip)
+                    checkErr("enum nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(wantSection.shape, values)
+                    with(datatype.typedef as EnumTypedef) {
+                        when (datatype) {
+                            Datatype.ENUM1 -> return ArrayUByte(wantSection.shape, values).convertEnums()
+                            Datatype.ENUM2 -> return ArrayUShort(wantSection.shape, values.asShortBuffer()).convertEnums()
+                            Datatype.ENUM4 -> return ArrayUInt(wantSection.shape, values.asIntBuffer()).convertEnums()
+                            else -> throw RuntimeException()
+                        }
+                    }
                 }
 
                 Datatype.BYTE -> {
@@ -147,12 +183,12 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     for (i in 0 until nelems) {
                         values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
                     }
-                    return ArrayInt(wantSection.shape, values)
+                    return ArrayUInt(wantSection.shape, values)
                 }
 
                 Datatype.LONG -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_LONG, nelems)
+                    val val_p = session.allocateArray(C_LONG as MemoryLayout, nelems)
                     checkErr("nc_get_vars_long",
                         nc_get_vars_long(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val values = LongBuffer.allocate(nelems.toInt())
@@ -164,7 +200,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
                 Datatype.ULONG -> {
                     // nc_get_vars_int(int ncid, int varid, const size_t *startp, const size_t *countp, const ptrdiff_t *stridep, int *ip);
-                    val val_p = session.allocateArray(C_LONG, nelems)
+                    val val_p = session.allocateArray(C_LONG  as MemoryLayout, nelems)
                     checkErr("nc_get_vars_ulonglong",
                         nc_get_vars_ulonglong(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val values = LongBuffer.allocate(nelems.toInt())
@@ -196,8 +232,56 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     return ArrayUShort(wantSection.shape, values)
                 }
 
+                Datatype.STRING -> {
+                    val val_p = session.allocateArray(ValueLayout.ADDRESS, nelems)
+                    checkErr("nc_get_vars_string",
+                        nc_get_vars_string(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val values = mutableListOf<String>()
+                    for (i in 0 until nelems) {
+                        values.add(val_p.getAtIndex(ValueLayout.ADDRESS, i).getUtf8String(0))
+                    }
+                    return ArrayString(wantSection.shape, values)
+                }
+
+                Datatype.OPAQUE -> {
+                    val val_p = session.allocate(nelems * userType!!.size)
+                    checkErr("opaque nc_get_var", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
+                    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
+                    val bb = ByteBuffer.wrap(raw)
+                    return ArrayOpaque(wantSection.shape, bb, userType!!.size)
+                }
+
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
             }
+        }
+    }
+
+    @Throws(IOException::class)
+    internal fun readVlen(v2 : Variable, vinfo : NCheader.Vinfo, basetype : Datatype): ArrayTyped<*> {
+        val nelems = computeSize(v2.shape)
+
+        MemorySession.openConfined().use { session ->
+            // an array of vlen structs. each vlen has an address and a size
+            val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
+            checkErr("readVlen nc_get_var", nc_get_var(vinfo.g4.grpid, vinfo.varid, vlen_p))
+            val arrayOfVlen = mutableListOf<Array<*>>()
+
+            // each vlen pointer is the address of the vlen array of length arraySize
+            for (elem in 0 until nelems) {
+                val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
+                val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
+                val vlen = when (basetype) {
+                    Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
+                    Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
+                    Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+                    Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+                    Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                    Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+                    else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
+                }
+                arrayOfVlen.add(vlen)
+            }
+            return ArrayVlen(v2.shape, arrayOfVlen, basetype)
         }
     }
 }

@@ -27,12 +27,4 @@ class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape
         result = 31 * result + shape.contentHashCode()
         return result
     }
-
-    override fun toString(): String {
-        return buildString {
-            append("shape=${shape.contentToString()} data=")
-            for (i in 0 until values.limit()) { append("${values[i]},")}
-            append("\n")
-        }
-    }
 }

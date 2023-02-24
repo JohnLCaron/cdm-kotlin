@@ -13,19 +13,19 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-val debugFlow = false
+val debugFlow = true
 private val debugStart = false
 private val debugSuperblock = false
 
 /**
  * Build the rootGroup for an HD5 file.
- * @param valueCharset used when reading HDF5 header.
+ * @param strict  true = make it agree with nclib if possible
+ * @param valueCharset used when reading HDF5 header. LOOK need example to test
  */
 class H5builder(val raf: OpenFile,
                 val strict : Boolean,
                 val valueCharset: Charset = StandardCharsets.UTF_8,
 ) {
-    
     private var baseAddress: Long = 0 // may be offset for arbitrary metadata
     var sizeOffsets: Int = 0
     var sizeLengths: Int = 0
@@ -35,7 +35,6 @@ class H5builder(val raf: OpenFile,
     val memTracker = MemTracker(raf.size)
 
     var isNetcdf4 = false
-    private val h5rootGroup : H5Group
 
     internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
@@ -81,7 +80,7 @@ class H5builder(val raf: OpenFile,
         replaceSymbolicLinks(rootGroupBuilder)
 
         // build tree of H5groups
-        h5rootGroup = rootGroupBuilder.build()
+        val h5rootGroup = rootGroupBuilder.build()
         // convert into CDM
         this.cdmRoot = this.buildCdm(h5rootGroup)
     }
@@ -265,6 +264,7 @@ class H5builder(val raf: OpenFile,
         typedefMdtHash[mdtHash] = typedef
     }
 
+    // LOOK just pass the mdt ??
     fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
         return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
     }

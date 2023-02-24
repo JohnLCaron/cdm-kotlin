@@ -29,9 +29,9 @@ data class OpenFile(val location : String) : Closeable {
         if (state.pos > fileChannel.size()) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
-        val nread =  fileChannel.read(dst, state.pos)
+        val nread = fileChannel.read(dst, state.pos)
         if (nread != dst.capacity()) {
-            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location")
+            throw EOFException("Only read $nread bytes of wanted ${dst.capacity()} bytes; starting at pos ${state.pos} EOF=${fileChannel.size()}")
         }
         dst.flip()
         state.pos += nread
@@ -48,7 +48,7 @@ data class OpenFile(val location : String) : Closeable {
         dst.position(dstPos)
         val nread =  fileChannel.read(dst, state.pos)
         if (nread != nbytes) {
-            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location")
+            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
         }
         // println("read at ${state.pos} $nbytes bytes to $dstPos")
         state.pos += nread

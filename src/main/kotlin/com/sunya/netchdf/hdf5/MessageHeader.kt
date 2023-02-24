@@ -14,7 +14,7 @@ internal val debugMessage = false
 // type safe enum
 enum class MessageType(val uname: String, val num: Int) {
     NIL("NIL", 0),
-    Dataspace("SimpleDataspace", 1),
+    Dataspace("Dataspace", 1),
     LinkInfo("GroupNew", 2),
     Datatype("Datatype", 3),
     FillValueOld("FillValueOld", 4),
@@ -288,7 +288,7 @@ data class DataspaceMessage(val type: DataspaceType, val dims: IntArray, val isU
     fun rank(): Int = dims.size
 
     override fun show() : String {
-        return "${type} ${dims.contentToString()} isUnlimited=$isUnlimited"
+        return "${type} dims=${dims.contentToString()} isUnlimited=$isUnlimited"
     }
 }
 
@@ -645,18 +645,18 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 
     var lamda : ((Long) -> DatatypeMessage)? = null
     var sharedMdtAddress : Long? = null
-    var mdt: DatatypeMessage? = null
     val isShared = flags and 1 != 0
-    // defer reading in shared objects until all objects are read
-    if (isShared) {
+
+    // LOOK should we defer reading in shared objects until all objects are read ??
+    val mdt = if (isShared) {
         sharedMdtAddress = state.pos
         lamda = { address -> this.getSharedDataObject(OpenFileState(address, ByteOrder.LITTLE_ENDIAN), MessageType.Datatype).mdt!! }
-        mdt = this.getSharedDataObject(state.copy(), MessageType.Datatype).mdt!!
+        this.getSharedDataObject(state.copy(), MessageType.Datatype).mdt!!
     } else {
-        mdt = this.readDatatypeMessage(state)
         if (version == 1) {
             datatypeSize +=  padding(datatypeSize, 8)
         }
+        this.readDatatypeMessage(state)
     }
     state.pos = startMdt + datatypeSize
 
@@ -675,12 +675,21 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
         mdt,
         mds,
         state.pos, // where the data starts, absolute position (no offset needed)
-        sharedMdtAddress,
-        lamda,
+        //sharedMdtAddress,
+        //lamda,
     )
 }
 
-class AttributeMessage(val name: String, var mdt: DatatypeMessage?, val mds: DataspaceMessage, val dataPos: Long,
+class AttributeMessage(val name: String, var mdt: DatatypeMessage, val mds: DataspaceMessage, val dataPos: Long) :
+    MessageHeader(MessageType.Attribute) {
+
+    override fun show() : String {
+        return "name=$name mdt=(${mdt.show()}) dims=${mds.dims.contentToString()}"
+    }
+}
+
+// LOOK should we defer reading in shared objects until all objects are read ??
+class AttributeMessageDefferred(val name: String, var mdt: DatatypeMessage?, val mds: DataspaceMessage, val dataPos: Long,
                             val sharedMdt : Long?, val deferRead : ((Long) -> DatatypeMessage)?) :
     MessageHeader(MessageType.Attribute) {
 

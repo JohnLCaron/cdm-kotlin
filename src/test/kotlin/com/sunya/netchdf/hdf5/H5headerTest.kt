@@ -29,20 +29,23 @@ class H5headerTest {
         }
     }
 
+    // these are not netcdf4. we have a compound type without a typedef. should just add it as a typedef??
+    // could also just be a local variable (eg like netcdf-java). MAy not be a seperate name.
     @Test
-    fun sharedObject() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc")
+    fun compoundTypedef() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/cstr.h5")
     }
 
+    // same with opaque
     @Test
-    fun fractalHeap() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_atomic_types.nc")
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/testCFGridWriter.nc4")
+    fun opaqueTypedef() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/opaque.h5")
     }
 
+    // same with enum
     @Test
-    fun hasTimeDataType() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
+    fun enumTypedef() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/enum.h5")
     }
 
     @Test

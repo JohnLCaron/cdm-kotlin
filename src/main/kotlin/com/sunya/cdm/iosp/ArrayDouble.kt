@@ -27,12 +27,4 @@ class ArrayDouble(shape : IntArray, val values : DoubleBuffer) : ArrayTyped<Doub
         result = 31 * result + shape.contentHashCode()
         return result
     }
-
-    override fun toString(): String {
-        return buildString {
-            append("shape=${shape.contentToString()})\n")
-            for (i in 0 until values.limit()) { append("${values[i]},")}
-            append("\n")
-        }
-    }
 }

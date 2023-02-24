@@ -2,6 +2,7 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.*
+import com.sunya.netchdf.hdf5.H5heap
 import com.sunya.netchdf.netcdf4.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdf4.ffm.netcdf_h.*
 import java.io.IOException
@@ -157,12 +158,12 @@ internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, vari
     val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
     checkErr("nc_get_att", nc_get_att(grpid, varid, attname_p, vlen_p))
 
-    attb.values = readVlenData(nelems, basetype, vlen_p)
+    attb.values = readVlenDataList(nelems, basetype, vlen_p)
     return attb
 }
 
 // factored out to use in compound
-internal fun NCheader.readVlenData(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<Any> {
+internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
     val parray = mutableListOf<Any>()
     for (elem in 0 until nelems) {
         val count = nc_vlen_t.getLength(vlen_p, elem)
@@ -216,7 +217,7 @@ private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid
     val bb = ByteBuffer.wrap(raw)
 
     val result = mutableListOf<String>()
-    val map = (userType.typedef!! as EnumTypedef).values
+    val map = (userType.typedef as EnumTypedef).values
     for (i in 0 until nelems.toInt()) {
         val num = when (userType.enumBasePrimitiveType) {
             Datatype.UBYTE -> bb.get(i).toUByte().toInt()
@@ -231,6 +232,7 @@ private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid
     return attb
 }
 
+// LOOK strings vs array of strings, also duplicate readCompoundAttValues
 @Throws(IOException::class)
 internal fun NCheader.readCompoundAttValues(session: MemorySession,
                                             grpid: Int, varid: Int, attname: String, nelems: Long, datatype : Datatype, userType: UserType
@@ -249,22 +251,13 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
 
     val members = (userType.typedef as CompoundTypedef).members
     val sdataArray = ArrayStructureData(intArrayOf(nelems.toInt()), bb, userType.size, members)
-
-    for (idx in 0 until nelems.toInt()) {
-        val sdata = sdataArray.get(idx)
-
-        members.filter { it.datatype == Datatype.VLEN }.forEach {
-            // println("HEY")
-        }
-
-        members.filter { it.datatype == Datatype.STRING }.forEach { member ->
-            sdataArray.forEach { sdata ->
-                val address = val_p.get(ADDRESS, (sdata.offset + member.offset).toLong())
-                val sval: String = address.getUtf8String(0)
-                sdata.putOnHeap(member, sval)
-            }
-        }
-
+    sdataArray.putStringsOnHeap {  offset ->
+        val address = val_p.get(ADDRESS, (offset).toLong())
+        address.getUtf8String(0)
+        // LOOK heres a pointer, see decodeCompoundAttData():
+        //             lval = getNativeAddr(pos, nc4bytes);
+        //            Pointer p = new Pointer(lval);
+        //            String strval = p.getString(0, CDM.UTF8);
     }
 
     attb.values = sdataArray.toList()
@@ -278,13 +271,13 @@ fun getNativeAddr(buf: ByteBuffer, pos: Int): Long {
 
 ////////////////////////////////////////////////////////////////
 
-internal class UserType(
-                        val grpid: Int,
-                        val typeid: Int,
-                        val name: String,
-                        val size: Int, // the size of the user defined type
-                        val baseTypeid: Int, // the base typeid for vlen and enum types
-                        val typedef: Typedef,
+class UserType(
+        val grpid: Int,
+        val typeid: Int,
+        val name: String,
+        val size: Int, // the size of the user defined type
+        val baseTypeid: Int, // the base typeid for vlen and enum types
+        val typedef: Typedef,
 ) {
 
     val enumBaseType: Datatype
