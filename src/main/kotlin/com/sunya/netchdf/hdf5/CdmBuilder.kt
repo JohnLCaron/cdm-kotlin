@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
@@ -171,9 +172,9 @@ internal class DataContainerVariable(
     init {
         // TODO if compact, do not use fileOffset
         dataPos = when (mdl) {
-            is DataLayoutContiguous -> h5.getFileOffset((mdl as DataLayoutContiguous).dataAddress)
-            is DataLayoutContiguous3 -> h5.getFileOffset((mdl as DataLayoutContiguous3).dataAddress)
-            is DataLayoutChunked -> h5.getFileOffset((mdl as DataLayoutChunked).btreeAddress)
+            is DataLayoutContiguous -> h5.getFileOffset(mdl.dataAddress)
+            is DataLayoutContiguous3 -> h5.getFileOffset(mdl.dataAddress)
+            is DataLayoutChunked -> h5.getFileOffset(mdl.btreeAddress)
             else -> -1 // LOOK compact?
         }
 

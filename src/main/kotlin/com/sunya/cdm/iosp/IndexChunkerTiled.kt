@@ -11,14 +11,16 @@ import java.util.*
  * stored contiguously, in a regular layout. Assume dataSection strides must be = 1, that is, the stored data is not
  * strided.
  *
- *
  * The user asks for some section, wantSection (may have strides).
  * For each dataSection that intersects wantSection, a IndexChunkerTiled is created, which
  * figures out the optimal access pattern, based on reading contiguous runs of data. Each
  * IndexChunkerTiled handles only one dataSection. Typically the calling program loops over
  * all dataSections that intersect the wanted section.
  *
+ * Assume varSection.intersects(wantSection).
  *
+ * @param dataSection the section of data we actually have. must have all ranges with stride = 1.
+ * @param wantSection the wanted section of data, it will be intersected with dataSection.
  * Both dataSection and wantSection refer to the variable's overall shape.
  */
 class IndexChunkerTiled(dataSection: Section, wantSection: Section) {

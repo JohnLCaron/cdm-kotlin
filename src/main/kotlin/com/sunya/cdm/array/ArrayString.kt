@@ -1,7 +1,6 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Section.Companion.breakoutInner
-import com.sunya.cdm.api.Section.Companion.breakoutOuter
 import com.sunya.cdm.api.Section.Companion.computeSize
 import java.nio.charset.StandardCharsets
 

@@ -1,11 +1,11 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
-import java.nio.ShortBuffer
+import java.nio.ByteBuffer
 
-class ArrayShort(shape : IntArray, val values : ShortBuffer) : ArrayTyped<Short>(shape) {
+class ArrayByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<Byte>(shape) {
 
-    override fun iterator(): Iterator<Short> = BufferIterator()
-    private inner class BufferIterator : AbstractIterator<Short>() {
+    override fun iterator(): Iterator<Byte> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Byte>() {
         private var idx = 0
         override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
     }
@@ -14,7 +14,7 @@ class ArrayShort(shape : IntArray, val values : ShortBuffer) : ArrayTyped<Short>
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ArrayShort
+        other as ArrayByte
 
         if (values != other.values) return false
         if (!shape.contentEquals(other.shape)) return false
@@ -27,4 +27,5 @@ class ArrayShort(shape : IntArray, val values : ShortBuffer) : ArrayTyped<Short>
         result = 31 * result + shape.contentHashCode()
         return result
     }
+
 }

@@ -1,11 +1,11 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
-import java.nio.IntBuffer
+import java.nio.DoubleBuffer
 
-class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape) {
+class ArrayDouble(shape : IntArray, val values : DoubleBuffer) : ArrayTyped<Double>(shape) {
 
-    override fun iterator(): Iterator<Int> = BufferIterator()
-    private inner class BufferIterator : AbstractIterator<Int>() {
+    override fun iterator(): Iterator<Double> = BufferIterator()
+    private inner class BufferIterator : AbstractIterator<Double>() {
         private var idx = 0
         override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
     }
@@ -14,7 +14,7 @@ class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as ArrayInt
+        other as ArrayDouble
 
         if (values != other.values) return false
         if (!shape.contentEquals(other.shape)) return false

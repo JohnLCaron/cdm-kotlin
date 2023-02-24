@@ -96,14 +96,14 @@ variables:
     @MethodSource("params")
     fun testCdlParser(filename: String, cdl: String) {
         println("$cdl")
-        val result = CdlParser.parseToEnd(cdl)
-        println("${result.cdl(true)}")
-        assertEquals(normalize(cdl), normalize(result.cdl(true)))
+        val netcdf = CdlParser.parseToEnd(cdl)
+        println("${netcdf.cdl(true)}")
+        assertEquals(normalize(cdl), normalize(netcdf.cdl(true)))
 
         val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
-        when (val result = cdlGrammer.tryParseToEnd(cdl)) {
-            is ErrorResult -> println("Could not parse expression: $result")
-            is Parsed<SyntaxTree<Netcdf>> -> printSyntaxTree(cdl, result.value)
+        when (val parseResult = cdlGrammer.tryParseToEnd(cdl)) {
+            is ErrorResult -> println("Could not parse expression: $parseResult")
+            is Parsed<SyntaxTree<Netcdf>> -> printSyntaxTree(cdl, parseResult.value)
         }
 
        //val syntaxTree = cdlSyntaxTree.parseToEnd(expect)

@@ -1,7 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.iosp.ArrayTyped
+import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.Iosp
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest

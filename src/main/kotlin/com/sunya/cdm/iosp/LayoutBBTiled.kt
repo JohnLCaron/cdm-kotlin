@@ -25,7 +25,7 @@ class LayoutBBTiled(
     private var next: Chunk? = null
 
     init {
-        if (debug) println(" want section=" + wantSection)
+        if (debug) println(" want section=$wantSection")
         totalNelems = wantSection.computeSize()
         totalNelemsDone = 0
     }
@@ -57,7 +57,7 @@ class LayoutBBTiled(
                     break
             }
             if (debug) println(
-                " found intersecting dataSection: " + dataSection + " intersect= " + dataSection.intersect(wantSection)
+                " found intersecting dataSection: $dataSection intersect= ${dataSection.intersect(wantSection)}"
             )
             val expectedLengthBytes = dataSection.computeSize().toInt() * elemSize
             index = IndexChunkerTiled(dataSection, wantSection) // new indexer into this chunk
@@ -74,16 +74,12 @@ class LayoutBBTiled(
     }
 
     override fun toString(): String {
-        val sbuff = StringBuilder()
-        sbuff.append("wantSection=").append(wantSection).append("; ")
-        sbuff.append("chunkSize=[")
-        for (i in chunkSize.indices) {
-            if (i > 0) sbuff.append(",")
-            sbuff.append(chunkSize[i])
+        return buildString {
+            append("wantSection=$wantSection; ")
+            append("chunkSize= ${chunkSize.contentToString()}")
+            append(" totalNelems=$totalNelems")
+            append(" elemSize=$elemSize")
         }
-        sbuff.append("] totalNelems=").append(totalNelems)
-        sbuff.append(" elemSize=").append(elemSize)
-        return sbuff.toString()
     }
 
     interface DataChunkIterator {

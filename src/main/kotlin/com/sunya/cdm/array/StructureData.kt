@@ -1,4 +1,4 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section

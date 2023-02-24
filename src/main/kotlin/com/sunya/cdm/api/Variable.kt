@@ -11,7 +11,6 @@ data class Variable(
     val rank : Int = dimensions.size
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
     val nelems : Long = computeSize(this.shape)
-    val elementSize = datatype.size
 
     fun isUnlimited() = dimensions.isNotEmpty() &&
             dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}

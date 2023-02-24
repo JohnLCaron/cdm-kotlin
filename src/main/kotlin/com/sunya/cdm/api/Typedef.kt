@@ -1,8 +1,8 @@
 package com.sunya.cdm.api
 
-import com.sunya.cdm.iosp.ArrayString
-import com.sunya.cdm.iosp.ArrayTyped
-import com.sunya.cdm.iosp.StructureMember
+import com.sunya.cdm.array.ArrayString
+import com.sunya.cdm.array.ArrayTyped
+import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.util.Indent
 
 enum class TypedefKind {Compound, Enum, Opaque, Vlen, Unknown}
@@ -26,7 +26,7 @@ class CompoundTypedef(name : String, val members : List<StructureMember>) : Type
 }
 
 private fun showDims(dims : IntArray) : String {
-    return if (dims.size == 0 || dims.computeSize() == 1) "" else
+    return if (dims.isEmpty() || dims.computeSize() == 1) "" else
     buildString {
         append("(")
         dims.forEachIndexed { idx, num ->

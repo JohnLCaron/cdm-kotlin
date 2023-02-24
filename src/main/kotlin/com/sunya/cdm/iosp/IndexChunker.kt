@@ -99,8 +99,8 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
             }
             if (debug) {
                 System.out.printf("  elemsPerChunk=%d  nchunks=%d ", nelems, IndexLong.computeSize(shape))
-                System.out.printf("  indexShape=%s%n", Arrays.toString(shape))
-                System.out.printf("  indexStride=%s%n", Arrays.toString(wstride))
+                System.out.printf("  indexShape=%s%n", shape.contentToString())
+                System.out.printf("  indexStride=%s%n", wstride.contentToString())
             }
             chunkIndex = IndexLong(shape, wstride)
 
