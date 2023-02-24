@@ -300,24 +300,24 @@ internal class H5Typedef(val dataObject: DataObject) {
 
     init {
         require(dataObject.mdt != null)
-        mdtAddress = dataObject.mdt!!.address
-        mdtHash = dataObject.mdt!!.hashCode()
+        mdtAddress = dataObject.mdt.address
+        mdtHash = dataObject.mdt.hashCode()
 
-        when (dataObject.mdt!!.type) {
+        when (dataObject.mdt.type) {
             Datatype5.Enumerated -> {
-                this.enumMessage = (dataObject.mdt!!) as DatatypeEnum
+                this.enumMessage = (dataObject.mdt) as DatatypeEnum
                 kind = TypedefKind.Enum
             }
             Datatype5.Vlen -> {
-                this.vlenMessage = (dataObject.mdt!!) as DatatypeVlen
+                this.vlenMessage = (dataObject.mdt) as DatatypeVlen
                 kind = TypedefKind.Vlen
             }
             Datatype5.Opaque -> {
-                this.opaqueMessage = (dataObject.mdt!!) as DatatypeOpaque
+                this.opaqueMessage = (dataObject.mdt) as DatatypeOpaque
                 kind = TypedefKind.Opaque
             }
             Datatype5.Compound -> {
-                this.compoundMessage = (dataObject.mdt!!) as DatatypeCompound
+                this.compoundMessage = (dataObject.mdt) as DatatypeCompound
                 kind = TypedefKind.Compound
             }
             else -> {
