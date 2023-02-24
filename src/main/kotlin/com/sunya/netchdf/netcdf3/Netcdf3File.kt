@@ -14,13 +14,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
     init {
         val rootBuilder = Group.Builder("")
-        header = N3header(raf, rootBuilder, null)
-        /* rootBuilder.variables.forEach {
-            if (it.datatype == Datatype.CHAR) {
-                it.datatype = Datatype.STRING
-                // seems like we should remove a dimension
-            }
-        } */
+        header = N3header(raf, rootBuilder)
         rootGroup = rootBuilder.build(null)
     }
 
@@ -52,63 +46,22 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
         val values = ByteBuffer.allocate(nbytes.toInt())
 
-        when (v2.datatype) {
-            Datatype.BYTE -> {
-                while (layout.hasNext()) {
-                    val chunk = layout.next()
-                    filePos.pos = chunk.srcPos()
-                    val bytesRead = raf.readByteBuffer(filePos, chunk.nelems())
-                    // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem().toInt(), chunk.nelems());
-                }
-                return ArrayByte(wantSection.shape, values)
-            }
+        while (layout.hasNext()) {
+            val chunk = layout.next()
+            filePos.pos = chunk.srcPos()
+            val bytesRead = raf.readByteBuffer(filePos, vinfo.elemSize * chunk.nelems())
+            // extra copy
+            System.arraycopy(bytesRead.array(), 0, values.array(), vinfo.elemSize * chunk.destElem().toInt(), vinfo.elemSize * chunk.nelems());
+        }
 
-            Datatype.CHAR, Datatype.STRING -> {
-                while (layout.hasNext()) {
-                    val chunk = layout.next()
-                    filePos.pos = chunk.srcPos()
-                    val bytesRead = raf.readByteBuffer(filePos, chunk.nelems())
-                    // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem().toInt(), chunk.nelems());
-                }
-                return ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
-            }
-
-            Datatype.DOUBLE, Datatype.LONG -> {
-                while (layout.hasNext()) {
-                    val chunk = layout.next()
-                    filePos.pos = chunk.srcPos()
-                    val bytesRead = raf.readByteBuffer(filePos, 8 * chunk.nelems())
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem().toInt(), 8 * chunk.nelems())
-                }
-                return if (v2.datatype == Datatype.LONG) ArrayLong(wantSection.shape, values.asLongBuffer()) else
-                    ArrayDouble(wantSection.shape, values.asDoubleBuffer())
-            }
-
-            Datatype.FLOAT, Datatype.INT -> {
-                while (layout.hasNext()) {
-                    val chunk = layout.next()
-                    filePos.pos = chunk.srcPos()
-                    val bytesRead = raf.readByteBuffer(filePos, 4 * chunk.nelems())
-                    // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem().toInt(),4 * chunk.nelems());
-                }
-                return if (v2.datatype == Datatype.INT) ArrayInt(wantSection.shape, values.asIntBuffer()) else
-                    ArrayFloat(wantSection.shape, values.asFloatBuffer())
-            }
-
-            Datatype.SHORT-> {
-                while (layout.hasNext()) {
-                    val chunk = layout.next()
-                    filePos.pos = chunk.srcPos()
-                    val bytesRead = raf.readByteBuffer(filePos, 2 * chunk.nelems())
-                    // extra copy
-                    System.arraycopy(bytesRead.array(), 0, values.array(), 2 * chunk.destElem().toInt(),2 * chunk.nelems());
-                }
-                return ArrayShort(wantSection.shape, values.asShortBuffer())
-            }
-
+        return when (v2.datatype) {
+            Datatype.BYTE -> ArrayByte(wantSection.shape, values)
+            Datatype.CHAR, Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
+            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values.asDoubleBuffer())
+            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values.asFloatBuffer())
+            Datatype.INT -> ArrayInt(wantSection.shape, values.asIntBuffer())
+            Datatype.LONG -> ArrayLong(wantSection.shape, values.asLongBuffer())
+            Datatype.SHORT -> ArrayShort(wantSection.shape, values.asShortBuffer())
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }

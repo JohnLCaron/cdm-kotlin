@@ -25,7 +25,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
         }
     }
 
-    private val heap by lazy { mutableMapOf<Int, Any>() }
+    private val heap = mutableMapOf<Int, Any>()
     private var heapIndex = 0
     fun putOnHeap(offset : Int, value: Any): Int {
         heap[heapIndex] = value
@@ -36,7 +36,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
     }
 
     fun getFromHeap(offset: Int): Any? {
-        val index = bb.getInt(offset)
+        val index = bb.getInt(offset) // youve clobbered the byte buffer. is that ok ??
         return heap[index]
     }
 
@@ -61,17 +61,23 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
         fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
         fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
 
-        // LOOK wrong
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is StructureData) return false
 
-            // if (bb != other.bb) return false LOOK must check each member
-            // if (offset != other.offset) return false
             if (members != other.members) {
                 return false
             }
-
+            // check each member's value
+            members.forEachIndexed { idx, m ->
+                val om = other.members[idx]
+                if (m.value(this) != om.value(other)) {
+                    val v1 = m.value(this)
+                    val v2 = om.value(other)
+                    val ok = v1.equals(v2)
+                    return false
+                }
+            }
             return true
         }
 
@@ -79,6 +85,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
             var result = bb.hashCode()
             result = 31 * result + offset
             result = 31 * result + members.hashCode()
+            members.forEach { result = 31 * result + it.value(this).hashCode() } // LOOK probably wrong
             return result
         }
     }
@@ -129,7 +136,10 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             }
             Datatype.VLEN -> {
                 val ret = sdata.getFromHeap(offset)
-                if (ret != null) (ret as ArrayVlen) else throw RuntimeException("cant find ArrayVlen on heap at $offset")
+                if (ret != null) (ret as ArrayVlen) else {
+                    sdata.getFromHeap(offset)
+                    throw RuntimeException("cant find ArrayVlen on heap at $offset")
+                }
             }
             else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8)
         }
@@ -138,8 +148,6 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
     override fun toString(): String {
         return "\nStructureMember(name='$name', datatype=$datatype, offset=$offset, dims=${dims.contentToString()}, nelems=$nelems)"
     }
-
-
 
     // terminate at a zero
     fun makeStringZ(bb : ByteBuffer, start : Int, maxElems : Int, charset : Charset = StandardCharsets.UTF_8): String {

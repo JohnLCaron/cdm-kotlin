@@ -11,7 +11,7 @@ import com.sunya.cdm.array.ArrayUByte
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.array.makeStringFromBytes
-import com.sunya.netchdf.netcdf4.NetcdfFileFormat
+import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import java.nio.ByteOrder
 
 /*
@@ -55,7 +55,7 @@ import java.nio.ByteOrder
 private val logger = KotlinLogging.logger("N3header")
 
 // Really a builder of the root Group.
-class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
+class N3header(val raf: OpenFile, root: Group.Builder) {
   private val root: Group.Builder
   private var unlimitedDimension: Dimension? = null
   private val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
@@ -90,20 +90,19 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
 
     // number of records
     numrecs = raf.readInt(filePos)
-    debugOut?.format("numrecs= $numrecs\n")
     if (numrecs == -1) {
       isStreaming = true
       numrecs = 0
     }
 
     // dimensions
-    readDimensions(raf, root, debugOut)
+    readDimensions(raf, root)
 
     // global attributes
-    readAttributes(root.attributes, debugOut)
+    readAttributes(root.attributes)
 
     // variables
-    readVariables(raf, root, debugOut)
+    readVariables(raf, root)
 
     if (dataStart == Long.MAX_VALUE) { // if nvars == 0
       dataStart = filePos.pos
@@ -171,7 +170,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
      */
   }
 
-  private fun readDimensions(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
+  private fun readDimensions(raf: OpenFile, root: Group.Builder) {
     var numdims = 0
     val magic = raf.readInt(filePos)
     if (magic == 0) {
@@ -179,12 +178,10 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     } else {
       if (magic != MAGIC_DIM) throw IOException("Malformed netCDF file - dim magic number wrong " + raf.location)
       numdims = raf.readInt(filePos)
-      debugOut?.format("numdims= $numdims\n")
     }
 
     // Must keep dimensions in strict order
     for (i in 0 until numdims) {
-      debugOut?.format("  dim $i pos= ${filePos.pos}\n")
       val name = readString()!!
       val len: Int = raf.readInt(filePos)
 
@@ -197,11 +194,10 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       }
       fileDimensions.add(dim)
       root.addDimension(dim)
-      debugOut?.format(" added dimension $dim\n")
     }
   }
 
-  private fun readVariables(raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
+  private fun readVariables(raf: OpenFile, root: Group.Builder) {
     // variables
     val magic = raf.readInt(filePos)
     val nvars = if (magic == 0) {
@@ -211,7 +207,6 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       if (magic != MAGIC_VAR) throw IOException("Malformed netCDF file  - var magic number wrong ${raf.location}")
       raf.readInt(filePos)
     }
-    debugOut?.format("num variables= $nvars\n")
 
     // loop over variables
     for (i in 0 until nvars) {
@@ -236,15 +231,9 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       }
       ncvarb.dimensions.addAll(dims)
 
-      if (debugOut != null) {
-        debugOut.format("---name=<${ncvarb.name}> dims = [")
-        for (dim in dims) debugOut.format("${dim.name} ")
-        debugOut.format("]\n")
-      }
-
       // variable attributes
       val varAttsPos: Long = filePos.pos
-      readAttributes(ncvarb.attributes, debugOut)
+      readAttributes(ncvarb.attributes)
 
       // data type
       val type: Int = raf.readInt(filePos)
@@ -254,12 +243,10 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       // size and beginning data position in file
       val vsize = raf.readInt(filePos)
       val begin = if (useLongOffset) raf.readLong(filePos) else raf.readInt(filePos).toLong()
-      if (debugOut != null) {
-        debugOut.format(
-          " name= $name type=$type vsize=$vsize velems=$velems begin=$begin isRecord=$isRecord attsPos=$varAttsPos\n"
-        )
+      if (debugSize) {
+        println(" name= $name type=$type vsize=$vsize velems=$velems begin=$begin isRecord=$isRecord attsPos=$varAttsPos")
         val calcVsize: Long = (velems + padding(velems)) * datatype.size
-        if (vsize.toLong() != calcVsize) debugOut.format(" *** readVsize $vsize != calcVsize $calcVsize\n")
+        if (vsize.toLong() != calcVsize) println(" *** readVsize $vsize != calcVsize $calcVsize")
       }
       //if (vsize < 0) { // when does this happen ?? streaming i think
       //  vsize = (velems.toInt() + padding(velems)) * datatype.size
@@ -293,7 +280,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   }
 
   @Throws(IOException::class)
-  private fun readAttributes(atts: MutableList<Attribute>, debugOut: Formatter?): Int {
+  private fun readAttributes(atts: MutableList<Attribute>): Int {
     var natts = 0
     val magic: Int = raf.readInt(filePos)
     if (magic == 0) {
@@ -302,20 +289,15 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       if (magic != MAGIC_ATT) throw IOException("Malformed netCDF file  - att magic number wrong " + raf.location)
       natts = raf.readInt(filePos)
     }
-    debugOut?.format(" num atts= %d%n", natts)
     for (i in 0 until natts) {
-      debugOut?.format("***att $i pos= ${filePos.pos}\n")
       val name = readString()!!
       val type: Int = raf.readInt(filePos)
       var att: Attribute?
       if (type == 2) { // CHAR
-        debugOut?.format(" begin read String val pos= ${filePos.pos}\n")
         val value = readString(valueCharset)
-        debugOut?.format(" end read String val pos= ${filePos.pos}\n")
         att = if (value == null) Attribute(name, Datatype.STRING, emptyList<String>()) // nelems = 0
               else Attribute(name, value) // may be empty string
       } else {
-        debugOut?.format(" begin read val ${filePos.pos}\n")
         val nelems: Int = raf.readInt(filePos)
         val dtype: Datatype = getDatatype(type)
         val builder = Attribute.Builder()
@@ -326,10 +308,8 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
           skipToBoundary(nbytes)
         }
         att = builder.build()
-        debugOut?.format(" end read val pos= ${filePos.pos}\n")
       }
       atts.add(att)
-      debugOut?.format("  $att\n")
     }
     return natts
   }
@@ -410,22 +390,6 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
     filePos.pos += padding(nbytes)
   }
 
-  /*
-  private fun makeRecordStructure(root: Group.Builder, uvars: MutableList<Variable.Builder<*>>): Boolean {
-    val recordStructure: Structure.Builder<*> = Structure.builder().setName("record")
-    recordStructure.setParentGroupBuilder(root).setDimensionsByName(udim.getShortName())
-    for (v in uvars) {
-      val memberV: Variable.Builder<*> = v.makeSliceBuilder(0, 0) // set unlimited dimension to 0
-      recordStructure.addMemberVariable(memberV)
-    }
-    root.addVariable(recordStructure)
-    uvars.add(recordStructure)
-    return true
-  }
-
-   */
-
-
   @Throws(IOException::class)
   fun showDetail(out: Formatter) {
     val actual: Long = raf.size
@@ -450,7 +414,7 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
       val vinfo = vb.spObject as Vinfo
       out.format("  %20s %8d %8d  %s %n",
             vinfo.name,
-            vinfo.begin.toLong(),
+            vinfo.begin,
             vinfo.vsize.toLong(),
             vinfo.isRecordVariable
           )
@@ -460,17 +424,17 @@ class N3header(val raf: OpenFile, root: Group.Builder, debugOut: Formatter?) {
   companion object {
     val MAGIC = byteArrayOf(0x43, 0x44, 0x46, 0x01)
     val MAGIC_LONG = byteArrayOf(0x43, 0x44, 0x46, 0x02)   // 64-bit offset format
+    val debugSize = false
 
     const val MAGIC_DIM = 10
     const val MAGIC_VAR = 11
     const val MAGIC_ATT = 12
-    var disallowFileTruncation = false
     var debugHeaderSize = false
 
     @Throws(IOException::class)
     fun isValidFile(raf: OpenFile): Boolean {
-      return when (NetcdfFileFormat.findNetcdfFormatType(raf)) {
-        NetcdfFileFormat.NC_FORMAT_CLASSIC, NetcdfFileFormat.NC_FORMAT_64BIT_OFFSET -> true
+      return when (NetchdfFileFormat.findNetcdfFormatType(raf)) {
+        NetchdfFileFormat.NC_FORMAT_CLASSIC, NetchdfFileFormat.NC_FORMAT_64BIT_OFFSET -> true
         else -> false
       }
     }

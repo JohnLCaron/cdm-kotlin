@@ -89,6 +89,8 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                         arrayOfVlen.add(vlen)
                     }
                     return ArrayVlen(wantSection.shape, arrayOfVlen, basetype)
+                    // TODO nc_free_vlen(nc_vlen_t *vl);
+                    //      nc_free_string(size_t len, char **data);
                 }
 
                 Datatype.COMPOUND -> {
@@ -109,6 +111,32 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     sdataArray.putStringsOnHeap {  offset ->
                         val address = val_p.get(ValueLayout.ADDRESS, (offset).toLong())
                         address.getUtf8String(0)
+                    }
+                    sdataArray.putVlensOnHeap { member, offset ->
+                        // look duplicate (maybe)
+                        val listOfArrays = mutableListOf<Array<*>>()
+                        val vlenSize = nc_vlen_t.sizeof().toInt()
+                        for (elem in 0 until member.nelems) {
+                            val arraySizeBB = bb.getLong(offset + elem * vlenSize)
+                            val arraySize = val_p.get(ValueLayout.JAVA_LONG, (offset).toLong()).toInt()
+                            bb.order(ByteOrder.LITTLE_ENDIAN)
+                            val addressBB = bb.getLong(offset + 8)
+                            bb.order(ByteOrder.BIG_ENDIAN)
+                            val addressBBbig = bb.getLong(offset + 8)
+                            bb.order(ByteOrder.LITTLE_ENDIAN)
+                            val address = val_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
+                            val vlen = when (member.datatype.typedef!!.baseType) {
+                                Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
+                                Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
+                                Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+                                Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+                                Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                                Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+                                else -> throw IllegalArgumentException("unsupported datatype ${member.datatype}")
+                            }
+                            listOfArrays.add(vlen)
+                        }
+                        ArrayVlen(member.dims, listOfArrays, member.datatype)
                     }
                     return sdataArray
                 }

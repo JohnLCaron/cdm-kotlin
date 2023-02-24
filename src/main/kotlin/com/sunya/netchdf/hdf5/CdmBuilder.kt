@@ -27,7 +27,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     makeDimensions(groupb, group5)
 
     group5.typedefs.forEach {
-        val typedef = buildTypedef( it )
+        val typedef = buildTypedef(groupb, it )
         if (this.addTypedef(it.mdtAddress, typedef, it.mdtHash)) {
             groupb.typedefs.add(typedef)
         }
@@ -35,7 +35,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     group5.attributes().forEach { groupb.addAttribute( buildAttribute( it )) }
 
-    group5.variables.filter{ it.isVariable }.forEach { groupb.addVariable( buildVariable( group5, it )) }
+    group5.variables.filter{ it.isVariable }.forEach { groupb.addVariable( buildVariable( it )) }
 
     group5.nestedGroups.forEach { groupb.addGroup( buildGroup( it )) }
 
@@ -51,30 +51,11 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     return groupb
 }
 
-internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
-    val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
-    if (typedef != null) {
-        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt.address}")
-    }
-    val h5type = H5TypeInfo(att5.mdt)
-    val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
-    val values = this.readRegularData(dc, null)
-    var useType = h5type.datatype(this)
-    if (useType == Datatype.CHAR) useType = Datatype.STRING // LOOK
-    return Attribute(att5.name, useType, values.toList())
-}
-
-internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
+internal fun H5builder.buildTypedef(groupb : Group.Builder, typedef5: H5Typedef): Typedef {
     return when (typedef5.kind) {
         TypedefKind.Compound -> {
             val mess = typedef5.compoundMessage!!
-            // open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val nelems : Int)
-            val members = mess.members.map {
-                val h5type = H5TypeInfo(it.mdt)
-                val datatype = h5type.datatype(this)
-                StructureMember(it.name, datatype, it.offset, it.dims)
-            }
-            CompoundTypedef(typedef5.dataObject.name!!, members)
+            this.buildCompoundTypedef(groupb, typedef5.dataObject.name!!, mess)
         }
         TypedefKind.Enum -> {
             val mess = typedef5.enumMessage!!
@@ -93,7 +74,49 @@ internal fun H5builder.buildTypedef(typedef5: H5Typedef): Typedef {
     }
 }
 
-internal fun H5builder.buildVariable(group5 : H5Group, v5 : H5Variable) : Variable.Builder {
+// allow it to recurse
+internal fun H5builder.buildCompoundTypedef(groupb : Group.Builder, name : String, mess: DatatypeCompound) : Typedef {
+    // first look for embedded typedefs that need to be added
+    mess.members.forEach { member ->
+        val nestedTypedef = when (member.mdt.type) {
+            Datatype5.Compound -> buildCompoundTypedef(groupb, member.name, member.mdt as DatatypeCompound)
+            Datatype5.Enumerated -> buildEnumTypedef(member.name, member.mdt as DatatypeEnum)
+            else -> null
+        }
+        if (nestedTypedef != null) {
+            if (this.addTypedef(member.mdt.address, nestedTypedef, member.mdt.hashCode())) {
+                groupb.typedefs.add(nestedTypedef)
+            }
+        }
+    }
+
+    // now build the typedef for the compound message
+    val members = mess.members.map {
+        val h5type = H5TypeInfo(it.mdt)
+        val datatype = h5type.datatype(this)
+        StructureMember(it.name, datatype, it.offset, it.dims)
+    }
+    return CompoundTypedef(name, members)
+}
+
+internal fun buildEnumTypedef(name : String, mess: DatatypeEnum): EnumTypedef {
+    return EnumTypedef(name, mess.datatype, mess.valuesMap)
+}
+
+internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
+    val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
+    if (typedef != null) {
+        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt.address}")
+    }
+    val h5type = H5TypeInfo(att5.mdt)
+    val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
+    val values = this.readRegularData(dc, null)
+    var useType = h5type.datatype(this)
+    if (useType == Datatype.CHAR) useType = Datatype.STRING // LOOK
+    return Attribute(att5.name, useType, values.toList())
+}
+
+internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     // what the cdm variable looks like
     val builder = Variable.Builder()
     builder.name = v5.name.substringAfter(NETCDF4_NON_COORD)
@@ -406,7 +429,7 @@ private fun extendDimension(parent: Group.Builder, h5group: H5Group, name: Strin
     return dimName
 }
 
-internal fun H5builder.findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
+internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
     val lens: IntArray = h5variable.mds.dims
     if (lens.size > 2) {
         println("DIMENSION_LIST: dimension scale > 2 = ${h5variable.name}")

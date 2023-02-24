@@ -42,10 +42,12 @@ class H5headerTest {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/opaque.h5", "Opaque")
     }
 
-    // same with enum
+    // a compound with a member thats a type thats not a seperate typedef.
+    // the obvious thing to do is to be able to add a typedef when processing the member.
+    // or look for it when building H5group
     @Test
-    fun enumTypedef() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/enum.h5")
+    fun compoundEnumTypedef() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/enumcmpnd.h5")
     }
 
     @Test

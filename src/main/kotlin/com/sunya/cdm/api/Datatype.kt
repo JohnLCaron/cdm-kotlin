@@ -83,6 +83,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         }
     }
 
+    /** Used for Hdf5 Enum, Compound, Opaque, Vlen. The last two arent particularly useful. */
     fun withTypedef(typedef : Typedef?) : Datatype = this.copy(typedef = typedef)
 
     override fun equals(other: Any?): Boolean {
