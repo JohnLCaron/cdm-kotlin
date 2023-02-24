@@ -26,13 +26,12 @@ import java.util.*
 class BTree2(h5: H5builder, owner: String, address: Long) {
     private val debugBtree2 = false
     private val debugPos = false
-    private val debugOut = System.out
     val btreeType: Int
-    private val nodeSize : Int // size in bytes of btree nodes
-    private val recordSize : Short// size in bytes of btree records
+    private val nodeSize: Int // size in bytes of btree nodes
+    private val recordSize: Short// size in bytes of btree records
     private val owner: String
     private val h5: H5builder
-    private val raf : OpenFile
+    private val raf: OpenFile
     val entryList: MutableList<Entry2> = ArrayList()
 
     init {
@@ -42,7 +41,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
 
         // header
-        val magic = raf.readString(state,4)
+        val magic = raf.readString(state, 4)
         check(magic == "BTHD") { "$magic should equal BTHD" }
         val version: Byte = raf.readByte(state)
         btreeType = raf.readByte(state).toInt()
@@ -55,13 +54,6 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val numRecordsRootNode: Short = raf.readShort(state)
         val totalRecords: Long = h5.readLength(state) // total in entire btree
         val checksum: Int = raf.readInt(state)
-        if (debugBtree2) {
-            debugOut.printf(
-                "BTree2 (%s) version=%d type=%d treeDepth=%d nodeSize=%d recordSize=%d numRecordsRootNode=%d totalRecords=%d rootNodeAddress=%d%n",
-                owner, version, btreeType, treeDepth, nodeSize, recordSize, numRecordsRootNode, totalRecords,
-                rootNodeAddress
-            )
-        }
         if (treeDepth > 0) {
             val node = InternalNode(rootNodeAddress, numRecordsRootNode, recordSize, treeDepth.toInt())
             node.recurse()
@@ -92,15 +84,13 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
 
         init {
             val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
-            if (debugPos) debugOut.println("--Btree2 InternalNode position=" + state.pos)
 
             // header
-            val magic = raf.readString(state,4)
+            val magic = raf.readString(state, 4)
             check(magic == "BTIN") { "$magic should equal BTIN" }
             val version: Byte = raf.readByte(state)
             val nodeType = raf.readByte(state).toInt()
             check(nodeType == btreeType)
-            if (debugBtree2) debugOut.println("   BTree2 InternalNode version=$version type=$nodeType nrecords=$nrecords")
             entries = arrayOfNulls(nrecords + 1) // did i mention theres actually n+1 children?
             for (i in 0 until nrecords) {
                 entries[i] = Entry2()
@@ -113,14 +103,10 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
             for (i in 0 until nrecords + 1) {
                 val e = entries[i]
                 e!!.childAddress = h5.readOffset(state)
-                e.nrecords = h5.readVariableSizeUnsigned(state,1) // readVariableSizeMax(maxNumRecords);
+                e.nrecords = h5.readVariableSizeUnsigned(state, 1) // readVariableSizeMax(maxNumRecords);
                 if (depth > 1) {
                     e.totNrecords = h5.readVariableSizeUnsigned(state, 2)
                 } // readVariableSizeMax(maxNumRecordsPlusDesc);
-                if (debugBtree2) debugOut.println(
-                    " BTree2 entry childAddress=" + e.childAddress + " nrecords=" + e.nrecords + " totNrecords="
-                            + e.totNrecords
-                )
             }
 
             // skip
@@ -150,15 +136,13 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
 
         init {
             val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
-            if (debugPos) debugOut.println("--Btree2 InternalNode position=" + state.pos)
 
             // header
-            val magic = raf.readString(state,4)
+            val magic = raf.readString(state, 4)
             check(magic == "BTLF") { "$magic should equal BTLF" }
             val version: Byte = raf.readByte(state)
             val nodeType = raf.readByte(state).toInt()
             check(nodeType == btreeType)
-            if (debugBtree2) debugOut.println("   BTree2 LeafNode version=$version type=$nodeType nrecords=$nrecords")
 
             for (i in 0 until nrecords) {
                 val entry = Entry2()
@@ -176,7 +160,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
     }
 
     @Throws(IOException::class)
-    fun readRecord(state : OpenFileState, type: Int): Any {
+    fun readRecord(state: OpenFileState, type: Int): Any {
         return when (type) {
             1 -> Record1(state)
             2 -> Record2(state)
@@ -187,146 +171,73 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
             7 -> {
                 Record70(state) // TODO wrong
             }
+
             8 -> Record8(state)
             9 -> Record9(state)
             else -> throw IllegalStateException()
         }
     }
 
-    internal inner class Record1(state : OpenFileState) {
-        var hugeObjectAddress: Long
-        var hugeObjectLength: Long
-        var hugeObjectID: Long
-
-        init {
-            hugeObjectAddress = h5.readOffset(state)
-            hugeObjectLength = h5.readLength(state)
-            hugeObjectID = h5.readLength(state)
-        }
+    internal inner class Record1(state: OpenFileState) {
+        val hugeObjectAddress = h5.readOffset(state)
+        val hugeObjectLength = h5.readLength(state)
+        val hugeObjectID = h5.readLength(state)
     }
 
-    internal inner class Record2(state : OpenFileState) {
-        var hugeObjectAddress: Long
-        var hugeObjectLength: Long
-        var hugeObjectID: Long
-        var hugeObjectSize: Long
-        var filterMask: Int
-
-        init {
-            hugeObjectAddress = h5.readOffset(state)
-            hugeObjectLength = h5.readLength(state)
-            filterMask = raf.readInt(state)
-            hugeObjectSize = h5.readLength(state)
-            hugeObjectID = h5.readLength(state)
-        }
+    internal inner class Record2(state: OpenFileState) {
+        val hugeObjectAddress = h5.readOffset(state)
+        val hugeObjectLength = h5.readLength(state)
+        val filterMask = raf.readInt(state)
+        val hugeObjectSize = h5.readLength(state)
+        val hugeObjectID = h5.readLength(state)
     }
 
-    internal inner class Record3(state : OpenFileState) {
-        var hugeObjectAddress: Long
-        var hugeObjectLength: Long
-
-        init {
-            hugeObjectAddress = h5.readOffset(state)
-            hugeObjectLength = h5.readLength(state)
-        }
+    internal inner class Record3(state: OpenFileState) {
+        val hugeObjectAddress = h5.readOffset(state)
+        val hugeObjectLength = h5.readLength(state)
     }
 
-    internal inner class Record4(state : OpenFileState) {
-        var hugeObjectAddress: Long
-        var hugeObjectLength: Long
-        var hugeObjectID: Long = 0
-        var hugeObjectSize: Long
-        var filterMask: Int
-
-        init {
-            hugeObjectAddress = h5.readOffset(state)
-            hugeObjectLength = h5.readLength(state)
-            filterMask = raf.readInt(state)
-            hugeObjectSize = h5.readLength(state)
-        }
+    internal inner class Record4(state: OpenFileState) {
+        val hugeObjectAddress = h5.readOffset(state)
+        val hugeObjectLength = h5.readLength(state)
+        val filterMask = raf.readInt(state)
+        val hugeObjectSize = h5.readLength(state)
     }
 
-    inner class Record5(state : OpenFileState) {
-        var nameHash: Int
-        val heapId : ByteArray
-
-        init {
-            nameHash = raf.readInt(state)
-            heapId = raf.readByteBuffer(state, 7).array()
-            if (debugBtree2) debugOut.println("  record5 nameHash=" + nameHash + " heapId=" + Arrays.toString(heapId))
-        }
+    inner class Record5(state: OpenFileState) {
+        val nameHash = raf.readInt(state)
+        val heapId = raf.readByteBuffer(state, 7).array()
     }
 
-    inner class Record6(state : OpenFileState) {
-        var creationOrder: Long
-        val heapId : ByteArray
-
-        init {
-            creationOrder = raf.readLong(state)
-            heapId = raf.readByteBuffer(state, 7).array()
-            if (debugBtree2) debugOut.println(
-                "  record6 creationOrder=" + creationOrder + " heapId=" + Arrays.toString(
-                    heapId
-                )
-            )
-        }
+    inner class Record6(state: OpenFileState) {
+        val creationOrder = raf.readLong(state)
+        val heapId = raf.readByteBuffer(state, 7).array()
     }
 
-    internal inner class Record70(state : OpenFileState) {
-        var location: Byte
-        var refCount: Int
-        val id : ByteArray
-
-        init {
-            location = raf.readByte(state)
-            refCount = raf.readInt(state)
-            id = raf.readByteBuffer(state, 8).array()
-        }
+    internal inner class Record70(state: OpenFileState) {
+        val location = raf.readByte(state)
+        val refCount = raf.readInt(state)
+        val id = raf.readByteBuffer(state, 8).array()
     }
 
-    internal inner class Record71(state : OpenFileState) {
-        var location: Byte
-        var messtype: Byte
-        var index: Short
-        var address: Long
-
-        init {
-            location = raf.readByte(state)
-            raf.readByte(state) // skip a byte
-            messtype = raf.readByte(state)
-            index = raf.readShort(state)
-            address = h5.readOffset(state)
-        }
+    internal inner class Record71(state: OpenFileState) {
+        val location = raf.readByte(state)
+        val skip = raf.readByte(state)
+        val messtype = raf.readByte(state)
+        val index = raf.readShort(state)
+        val address = h5.readOffset(state)
     }
 
-    inner class Record8(state : OpenFileState) {
-        var flags: Byte
-        var creationOrder: Int
-        var nameHash: Int
-        val heapId : ByteArray
-
-        init {
-            heapId = raf.readByteBuffer(state, 8).array()
-            flags = raf.readByte(state)
-            creationOrder = raf.readInt(state)
-            nameHash = raf.readInt(state)
-            if (debugBtree2) debugOut.println(
-                "  record8 creationOrder=" + creationOrder + " heapId=" + Arrays.toString(
-                    heapId
-                )
-            )
-        }
+    inner class Record8(state: OpenFileState) {
+        val heapId = raf.readByteBuffer(state, 8).array()
+        val flags = raf.readByte(state)
+        val creationOrder = raf.readInt(state)
+        val nameHash = raf.readInt(state)
     }
 
-    inner class Record9(state : OpenFileState) {
-        var flags: Byte
-        var creationOrder: Int
-        val heapId : ByteArray
-
-        init {
-            heapId = raf.readByteBuffer(state, 8).array()
-            flags = raf.readByte(state)
-            creationOrder = raf.readInt(state)
-        }
+    inner class Record9(state: OpenFileState) {
+        val heapId = raf.readByteBuffer(state, 8).array()
+        val flags = raf.readByte(state)
+        val creationOrder = raf.readInt(state)
     }
 } // BTree2

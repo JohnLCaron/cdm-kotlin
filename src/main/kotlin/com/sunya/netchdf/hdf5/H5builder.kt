@@ -13,7 +13,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-val debugFlow = true
+val debugFlow = false
 private val debugStart = false
 private val debugSuperblock = false
 
@@ -399,36 +399,6 @@ class H5builder(val raf: OpenFile,
         }
         return sarray
     }
-
-    /*
-    val OpenFile: OpenFile
-        get() = raf
-
-    val isClassic: Boolean
-        get() = false // TODO
-
-    fun close() {
-        if (debugTracker) {
-            val f = Formatter()
-            memTracker.report(f)
-            println("{}", f)
-        }
-    }
-
-    @Throws(IOException::class)
-    fun getEosInfo(f: Formatter?) {
-        HdfEos.getEosInfo(raf.getLocation(), this, root, f)
-    }
-
-    val dataObjects: List<Any>
-        // debug - hdf5Table
-        get() {
-            val result: ArrayList<DataObject> = ArrayList<Any?>(addressMap.values)
-            result.sort(Comparator.comparingLong<DataObject>(ToLongFunction<DataObject> { o: DataObject -> o.address }))
-            return result
-        }
-
-     */
 
     companion object {
         private val logger = KotlinLogging.logger("H5builder")

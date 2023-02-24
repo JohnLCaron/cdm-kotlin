@@ -54,11 +54,6 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
         val datatype = convertType(vinfo.typeid)
         val userType = userTypes[vinfo.typeid]
 
-        if (datatype == VLEN) {
-            // wtf is nelems ?? is var length fawgawsake
-            return readVlen(v2, vinfo, convertType(userType!!.baseTypeid))
-        }
-
         MemorySession.openConfined().use { session ->
             val longArray = MemoryLayout.sequenceLayout(v2.rank.toLong(), C_LONG)
             val origin_p = session.allocateArray(longArray, v2.rank.toLong())
@@ -71,6 +66,31 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
             }
 
             when (datatype) {
+                Datatype.VLEN -> {
+                    val basetype = convertType(userType!!.baseTypeid)
+                    // an array of vlen structs. each vlen has an address and a size
+                    val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
+                    checkErr("vlen nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, vlen_p))
+                    val arrayOfVlen = mutableListOf<Array<*>>()
+
+                    // each vlen pointer is the address of the vlen array of length arraySize
+                    for (elem in 0 until nelems) {
+                        val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
+                        val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
+                        val vlen = when (basetype) {
+                            Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
+                            Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
+                            Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+                            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+                            Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+                            Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+                            else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
+                        }
+                        arrayOfVlen.add(vlen)
+                    }
+                    return ArrayVlen(wantSection.shape, arrayOfVlen, basetype)
+                }
+
                 Datatype.COMPOUND -> {
                     requireNotNull(userType)
                     requireNotNull(datatype.typedef)

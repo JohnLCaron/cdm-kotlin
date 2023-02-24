@@ -16,8 +16,6 @@ class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSecti
     override val elemSize : Int // size of each element
 
     init {
-        if (startPos <= 0)
-            println("HEY")
         require(startPos >= 0)
         require(elemSize > 0)
         this.startPos = startPos

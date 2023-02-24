@@ -22,7 +22,7 @@ nodes and leaf nodes are identical.
 
 The version 1 B-trees are being phased out in favor of the version 2 B-trees
  */
-internal class Btree1(val header : H5builder, val owner: String, address: Long) {
+internal class Btree1(val header : H5builder, address: Long) {
     val raf = header.raf
     var wantType = 0
     private val sentries: MutableList<SymbolTableEntry> = ArrayList() // list of type SymbolTableEntry

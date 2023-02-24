@@ -14,12 +14,12 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
     init {
         val rootBuilder = Group.Builder("")
         header = N3header(raf, rootBuilder, null)
-        rootBuilder.variables.forEach {
+        /* rootBuilder.variables.forEach {
             if (it.datatype == Datatype.CHAR) {
                 it.datatype = Datatype.STRING
                 // seems like we should remove a dimension
             }
-        }
+        } */
         rootGroup = rootBuilder.build(null)
     }
 
@@ -40,52 +40,11 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         } else {
             LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, wantSection)
         }
-        return readDataLayout(layout, v2)
-    }
-
-    // LOOK need section ?
-    @Throws(IOException::class)
-    fun readData(v2: Variable, wantSection : Section): ArrayTyped<*> {
-        val vinfo = v2.spObject as N3header.Vinfo
-        val nbytes = vinfo.vsize
-        require(nbytes < Int.MAX_VALUE)
-        val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
-        val values = raf.readByteBuffer(filePos, nbytes.toInt())
-
-        when (v2.datatype) {
-            Datatype.BYTE -> {
-                return ArrayByte(v2.shape, values)
-            }
-
-            Datatype.CHAR, Datatype.STRING -> {
-                return ArrayUByte(v2.shape, values).makeStringsFromBytes()
-            }
-
-            Datatype.SHORT -> {
-                return ArrayShort(v2.shape, values.asShortBuffer())
-            }
-
-            Datatype.INT -> {
-                return ArrayInt(v2.shape, values.asIntBuffer())
-            }
-
-            Datatype.FLOAT -> {
-                return ArrayFloat(v2.shape, values.asFloatBuffer())
-            }
-
-            Datatype.DOUBLE -> {
-                return ArrayDouble(v2.shape, values.asDoubleBuffer())
-            }
-
-            Datatype.LONG -> {
-                return ArrayLong(v2.shape, values.asLongBuffer())
-            }
-            else -> throw IllegalArgumentException()
-        }
+        return readDataWithLayout(layout, v2, wantSection)
     }
 
     @Throws(IOException::class)
-    private fun readDataLayout(layout: Layout, v2: Variable): ArrayTyped<*> {
+    private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
         val vinfo = v2.spObject as N3header.Vinfo
         val nbytes = (vinfo.elemSize * v2.nelems)
         require(nbytes < Int.MAX_VALUE)
@@ -101,19 +60,18 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem().toInt(), chunk.nelems());
                 }
-                return ArrayByte(v2.shape, values)
+                return ArrayByte(wantSection.shape, values)
             }
 
             Datatype.CHAR, Datatype.STRING -> {
                 while (layout.hasNext()) {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos()
-                    println("read ${chunk.nelems()} at pos ${filePos.pos}")
                     val bytesRead = raf.readByteBuffer(filePos, chunk.nelems())
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), chunk.destElem().toInt(), chunk.nelems());
                 }
-                return ArrayUByte(v2.shape, values).makeStringsFromBytes()
+                return ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
             }
 
             Datatype.DOUBLE, Datatype.LONG -> {
@@ -121,15 +79,10 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     val chunk = layout.next()
                     filePos.pos = chunk.srcPos()
                     val bytesRead = raf.readByteBuffer(filePos, 8 * chunk.nelems())
-                    // extra copy
-                    try {
-                        System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem().toInt(), 8 * chunk.nelems())
-                    } catch (exc : Exception) {
-                        println("HEY")
-                    }
+                    System.arraycopy(bytesRead.array(), 0, values.array(), 8 * chunk.destElem().toInt(), 8 * chunk.nelems())
                 }
-                return if (v2.datatype == Datatype.LONG) ArrayLong(v2.shape, values.asLongBuffer()) else
-                    ArrayDouble(v2.shape, values.asDoubleBuffer())
+                return if (v2.datatype == Datatype.LONG) ArrayLong(wantSection.shape, values.asLongBuffer()) else
+                    ArrayDouble(wantSection.shape, values.asDoubleBuffer())
             }
 
             Datatype.FLOAT, Datatype.INT -> {
@@ -140,8 +93,8 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 4 * chunk.destElem().toInt(),4 * chunk.nelems());
                 }
-                return if (v2.datatype == Datatype.INT) ArrayInt(v2.shape, values.asIntBuffer()) else
-                    ArrayFloat(v2.shape, values.asFloatBuffer())
+                return if (v2.datatype == Datatype.INT) ArrayInt(wantSection.shape, values.asIntBuffer()) else
+                    ArrayFloat(wantSection.shape, values.asFloatBuffer())
             }
 
             Datatype.SHORT-> {
@@ -152,7 +105,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
                     // extra copy
                     System.arraycopy(bytesRead.array(), 0, values.array(), 2 * chunk.destElem().toInt(),2 * chunk.nelems());
                 }
-                return ArrayShort(v2.shape, values.asShortBuffer())
+                return ArrayShort(wantSection.shape, values.asShortBuffer())
             }
 
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")

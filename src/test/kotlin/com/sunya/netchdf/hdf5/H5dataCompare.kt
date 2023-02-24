@@ -44,23 +44,16 @@ class H5dataCompare {
     }
 
     @Test
-    fun problem() {
-        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
+    fun problem1() {
+        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
     }
-
     @Test
     fun problem2() {
-        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_string_data.nc")
-    }
-
-    @Test
-    fun problem3() {
         readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc", "tim_records")
     }
 
     @Test
-    fun problem4() {
-        readH5dataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/cdm_sea_soundings.nc4")
+    fun problem() {
     }
 
     @ParameterizedTest
@@ -78,7 +71,9 @@ class H5dataCompare {
     }
 }
 
-var debugCompareNetcdf = false
+var debugCompareNetcdf = true
+var showData = false
+
 fun compareNetcdf(myfile: Netcdf, ncfile: Netcdf, varname: String?) {
     println("=================")
     println(myfile.location())
@@ -107,7 +102,7 @@ fun oneVar(varname: String, h5file: Iosp, ncfile: Iosp) {
         assertTrue(false)
         return
     } else {
-        if (debugCompareNetcdf) {
+        if (showData) {
             print(" ${ncvar.cdl()}, ")
             print("\n mydata = $mydata")
             print(" ncdata = $ncdata")
@@ -128,14 +123,15 @@ fun testMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Variab
         else Range(range.first + range.length / 3, range.last - range.length / 3)
     }
     val middleSection = Section(middleRanges)
-    println(" ${ncvar.name}[$middleSection]")
+    // println(" ${ncvar.name}[$middleSection]")
 
-    val h5data = myfile.readArrayData(myvar, middleSection)
+    val mydata = myfile.readArrayData(myvar, middleSection)
     val ncdata = ncfile.readArrayData(ncvar, middleSection)
-    if (!ArrayTyped.contentEquals(ncdata, h5data)) {
+    if (!ArrayTyped.contentEquals(ncdata, mydata)) {
         println(" *** FAIL reading middle section for variable = ${ncvar}")
-        println(" mydata = $h5data")
+        println(" mydata = $mydata")
         println(" ncdata = $ncdata")
+        assertTrue(false)
         return
     } else {
         if (debugCompareNetcdf) print(" ${ncvar.name}[$middleSection], ")

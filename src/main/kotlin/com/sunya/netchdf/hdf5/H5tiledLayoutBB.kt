@@ -80,8 +80,8 @@ class H5tiledLayoutBB(
         elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
 
         // create the data chunk iterator
-        val btree = DataBTree(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
-        val iter: DataBTree.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
+        val btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
+        val iter: BTreeData.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
         delegate = LayoutBBTiled(dcIter, chunkSize, elemSize, want)
         if (System.getProperty(INFLATEBUFFERSIZE_PROPERTY) != null) {
@@ -124,7 +124,7 @@ class H5tiledLayoutBB(
         return sbuff.toString()
     }
 
-    private inner class DataChunkIterator(val delegate: DataBTree.DataChunkIterator) :
+    private inner class DataChunkIterator(val delegate: BTreeData.DataChunkIterator) :
         LayoutBBTiled.DataChunkIterator {
         override operator fun hasNext(): Boolean {
             return delegate.hasNext()
@@ -136,7 +136,7 @@ class H5tiledLayoutBB(
         }
     }
 
-    private inner class DataChunk(val delegate: DataBTree.DataChunk) : LayoutBBTiled.DataChunk {
+    private inner class DataChunk(val delegate: BTreeData.DataChunk) : LayoutBBTiled.DataChunk {
         init {
 
             // Check that the chunk length (delegate.size) isn't greater than the maximum array length that we can
