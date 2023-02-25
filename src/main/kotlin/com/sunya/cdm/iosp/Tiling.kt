@@ -1,4 +1,4 @@
-package com.sunya.netchdf.hdf5
+package com.sunya.cdm.iosp
 
 import com.google.common.base.Preconditions
 import java.util.*
@@ -10,7 +10,6 @@ import java.util.*
  * Index are points in the original multidimensional index.
  * Tiles are points in the tiled space.
  * Each tile has the same size, given by tileSize.
- * LOOK maybe move to IOSP ??
  */
 class Tiling(shape: IntArray, chunk: IntArray) {
     private val rank: Int

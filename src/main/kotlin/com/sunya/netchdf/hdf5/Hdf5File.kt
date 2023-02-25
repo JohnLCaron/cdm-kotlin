@@ -73,7 +73,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             var destPos = chunk.destElem().toInt()
             for (i in 0 until chunk.nelems()) { // 16 byte "heap ids"
                 // TODO does this handle section correctly ??
-                val s = h5heap.readHeapString(bb, (chunk.srcElem() + i) * 16)
+                val s = h5heap.readHeapString(bb, (chunk.srcElem().toInt() + i) * 16)
                 sa.add(s!!)
             }
         }

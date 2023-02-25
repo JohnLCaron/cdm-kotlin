@@ -14,20 +14,17 @@ import kotlin.math.min
  * @param srcShape shape of the entire data array. must have rank &gt; 0
  * @param wantSection the wanted section of data
 */
-class LayoutRegularSegmented(startPos: Long, elemSize: Int, recSize: Long, srcShape: IntArray, wantSection: Section?) :
+class LayoutRegularSegmented(val startPos: Long, override val elemSize: Int, val recSize: Long, srcShape: IntArray, wantSection: Section?) :
     Layout {
     override val totalNelems: Long
     private val innerNelems: Long
-    private val startPos: Long
-    private val recSize: Long
-    override val elemSize: Int
 
     // outer chunk
     private val chunker: IndexChunker
-    private val chunkOuter = IndexChunker.Chunk(0, 0, 0)
+    private val chunkOuter = IndexChunker.Chunk(0, 0, 0) // LOOK can we get rid of this ??
 
     // inner chunk = deal with segmentation
-    private val chunkInner: IndexChunker.Chunk = IndexChunker.Chunk(0, 0, 0)
+    private val chunkInner: IndexChunker.Chunk = IndexChunker.Chunk(0, 0, 0) // LOOK can we get rid of this ??
     private var needInner = 0
     private var doneInner = 0
     private var done: Long
@@ -37,9 +34,6 @@ class LayoutRegularSegmented(startPos: Long, elemSize: Int, recSize: Long, srcSh
         require(elemSize > 0)
         require(recSize > 0)
         require(srcShape.size > 0)
-        this.startPos = startPos
-        this.elemSize = elemSize
-        this.recSize = recSize
         chunker = IndexChunker(srcShape, wantSection)
         totalNelems = chunker.totalNelems
         innerNelems = if (srcShape[0] == 0) 0 else computeSize(srcShape) / srcShape[0]
@@ -96,7 +90,7 @@ class LayoutRegularSegmented(startPos: Long, elemSize: Int, recSize: Long, srcSh
     fun nextOuter(): IndexChunker.Chunk {
         val nextChunk = chunker.next()
         nextChunk.srcPos = getFilePos(nextChunk.srcElem)
-        return chunkOuter.set(nextChunk)
+        return chunkOuter.set(nextChunk) // LOOK can we get rid of this ??
     }
 
     companion object {

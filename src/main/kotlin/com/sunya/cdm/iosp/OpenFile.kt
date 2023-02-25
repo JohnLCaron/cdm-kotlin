@@ -7,7 +7,7 @@ import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-/** An abstraction over a Java FileChannel */
+/** An abstraction over a Java FileChannel. */
 data class OpenFile(val location : String) : Closeable {
     val fileChannel : FileChannel
     val size : Long

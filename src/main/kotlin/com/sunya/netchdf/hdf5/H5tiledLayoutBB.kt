@@ -7,7 +7,7 @@ import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.iosp.LayoutBB
-import com.sunya.cdm.iosp.LayoutBBTiled
+import com.sunya.cdm.iosp.LayoutTiledBB
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.util.IOcopyB
@@ -33,11 +33,10 @@ class H5tiledLayoutBB(
     v2: Variable,
     want: Section,
     val filters: List<Filter>,
-    byteOrder: ByteOrder
+    val byteOrder: ByteOrder
 ) : LayoutBB {
-    private val delegate: LayoutBBTiled
+    private val delegate: LayoutTiledBB
     private val raf: OpenFile
-    private val byteOrder: ByteOrder
     private var wantSection: Section
     private val chunkSize : IntArray // from the StorageLayout message (exclude the elemSize)
     override val elemSize : Int // last dimension of the StorageLayout message
@@ -61,7 +60,6 @@ class H5tiledLayoutBB(
         require(vinfo.isChunked)
 
         this.raf = h5.raf
-        this.byteOrder = byteOrder
 
         // we have to translate the want section into the same rank as the storageSize, in order to be able to call
         // Section.intersect(). It appears that storageSize (actually msl.chunkSize) may have an extra dimension, reletive
@@ -83,7 +81,7 @@ class H5tiledLayoutBB(
         val btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
         val iter: BTreeData.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
-        delegate = LayoutBBTiled(dcIter, chunkSize, elemSize, want)
+        delegate = LayoutTiledBB(dcIter, chunkSize, elemSize, want)
         if (System.getProperty(INFLATEBUFFERSIZE_PROPERTY) != null) {
             try {
                 val size = System.getProperty(INFLATEBUFFERSIZE_PROPERTY).toInt()
@@ -125,18 +123,18 @@ class H5tiledLayoutBB(
     }
 
     private inner class DataChunkIterator(val delegate: BTreeData.DataChunkIterator) :
-        LayoutBBTiled.DataChunkIterator {
+        LayoutTiledBB.DataChunkIterator {
         override operator fun hasNext(): Boolean {
             return delegate.hasNext()
         }
 
         @Throws(IOException::class)
-        override operator fun next(): LayoutBBTiled.DataChunk {
+        override operator fun next(): LayoutTiledBB.DataChunk {
             return DataChunk(delegate.next())
         }
     }
 
-    private inner class DataChunk(val delegate: BTreeData.DataChunk) : LayoutBBTiled.DataChunk {
+    private inner class DataChunk(val delegate: BTreeData.DataChunk) : LayoutTiledBB.DataChunk {
         init {
 
             // Check that the chunk length (delegate.size) isn't greater than the maximum array length that we can

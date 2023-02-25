@@ -4,6 +4,7 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.iosp.LayoutTiled
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.iosp.Tiling
 import java.nio.ByteOrder
 
 /**

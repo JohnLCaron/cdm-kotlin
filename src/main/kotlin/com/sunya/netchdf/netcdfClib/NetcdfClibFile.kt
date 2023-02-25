@@ -71,24 +71,15 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     // an array of vlen structs. each vlen has an address and a size
                     val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
                     checkErr("vlen nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, vlen_p))
-                    val arrayOfVlen = mutableListOf<Array<*>>()
 
                     // each vlen pointer is the address of the vlen array of length arraySize
+                    val listOfVlen = mutableListOf<Array<*>>()
                     for (elem in 0 until nelems) {
                         val arraySize = nc_vlen_t.getLength(vlen_p, elem).toInt()
-                        val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
-                        val vlen = when (basetype) {
-                            Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
-                            Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
-                            Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
-                            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
-                            Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
-                            Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
-                            else -> throw IllegalArgumentException("unsupported datatype ${basetype}")
-                        }
-                        arrayOfVlen.add(vlen)
+                        val address = nc_vlen_t.getAddress(vlen_p, elem)
+                        listOfVlen.add( readVlenArray(arraySize, address, basetype))
                     }
-                    return ArrayVlen(wantSection.shape, arrayOfVlen, basetype)
+                    return ArrayVlen(wantSection.shape, listOfVlen, basetype)
                     // TODO nc_free_vlen(nc_vlen_t *vl);
                     //      nc_free_string(size_t len, char **data);
                 }
@@ -114,29 +105,13 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     }
                     sdataArray.putVlensOnHeap { member, offset ->
                         // look duplicate (maybe)
-                        val listOfArrays = mutableListOf<Array<*>>()
-                        val vlenSize = nc_vlen_t.sizeof().toInt()
+                        val listOfVlen = mutableListOf<Array<*>>()
                         for (elem in 0 until member.nelems) {
-                            val arraySizeBB = bb.getLong(offset + elem * vlenSize)
                             val arraySize = val_p.get(ValueLayout.JAVA_LONG, (offset).toLong()).toInt()
-                            bb.order(ByteOrder.LITTLE_ENDIAN)
-                            val addressBB = bb.getLong(offset + 8)
-                            bb.order(ByteOrder.BIG_ENDIAN)
-                            val addressBBbig = bb.getLong(offset + 8)
-                            bb.order(ByteOrder.LITTLE_ENDIAN)
                             val address = val_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
-                            val vlen = when (member.datatype.typedef!!.baseType) {
-                                Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
-                                Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
-                                Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
-                                Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
-                                Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
-                                Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
-                                else -> throw IllegalArgumentException("unsupported datatype ${member.datatype}")
-                            }
-                            listOfArrays.add(vlen)
+                            listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
                         }
-                        ArrayVlen(member.dims, listOfArrays, member.datatype)
+                        ArrayVlen(member.dims, listOfVlen, member.datatype)
                     }
                     return sdataArray
                 }
@@ -302,5 +277,17 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
             }
         }
+    }
+}
+
+private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {
+    return when (datatype) {
+        Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
+        Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
+        Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+        Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+        Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+        Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+        else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
     }
 }

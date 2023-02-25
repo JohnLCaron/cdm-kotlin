@@ -10,6 +10,8 @@ import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import test.util.oldTestDir
 import test.util.testFilesIn
+import java.io.File
+import java.io.RandomAccessFile
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertTrue
@@ -58,6 +60,11 @@ class H5dataCompare {
         readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/tst_string_data.nc")
     }
 
+    // @Test slow -element at a time on 100 Mb !!
+    fun problem3() {
+        readH5dataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc")
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readH5dataCompareNC(filename: String) {
@@ -65,8 +72,11 @@ class H5dataCompare {
     }
 
     fun readDataCompareNC(filename: String, varname: String? = null) {
+        RandomAccessFile(File(filename), "r").use { raf ->
+            val size = raf.getChannel().size() / 1000.0 / 1000.0
+            println(" $filename size ${"%.2f".format(size)} Mbytes")
+        }
         println("=================")
-        println(filename)
         val h5file = Hdf5File(filename)
         val ncfile = NetcdfClibFile(filename)
         compareNetcdf(h5file, ncfile, varname)
@@ -79,23 +89,29 @@ var debugCompareNetcdf = true
 var showData = false
 
 fun compareNetcdf(myfile: Netcdf, ncfile: Netcdf, varname: String?) {
-
     println(myfile.cdl())
     println()
 
     if (varname != null) {
         oneVar(varname, myfile as Iosp, ncfile as Iosp)
     } else {
-        myfile.rootGroup().variables.forEach { oneVar(it.name, myfile as Iosp, ncfile as Iosp) }
+        myfile.rootGroup().variables.forEachIndexed { idx, it ->
+            oneVar(it.name, myfile as Iosp, ncfile as Iosp)
+        }
     }
+    println()
 }
 
 fun oneVar(varname: String, h5file: Iosp, ncfile: Iosp) {
+    if (varname == "eta")
+        println("HEY")
+
     val myvar = h5file.rootGroup().variables.find { it.name == varname }
     val mydata = h5file.readArrayData(myvar!!)
 
     val ncvar = ncfile.rootGroup().variables.find { it.name == varname }
     val ncdata = ncfile.readArrayData(ncvar!!)
+    if (debugCompareNetcdf) println(" ${ncvar.name}, ")
 
     if (!ArrayTyped.contentEquals(ncdata, mydata)) {
         println(" *** FAIL reading data for variable = ${ncvar.datatype} ${ncvar.name} ${ncvar.dimensions.map { it.name }}")
@@ -114,7 +130,6 @@ fun oneVar(varname: String, h5file: Iosp, ncfile: Iosp) {
     if (ncvar.nelems > 8 && ncvar.datatype != Datatype.CHAR) {
         testMiddleSection(h5file, myvar, ncfile, ncvar)
     }
-    if (debugCompareNetcdf) println()
 }
 
 fun testMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Variable) {
@@ -126,18 +141,18 @@ fun testMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Variab
         else Range(range.first + range.length / 3, range.last - range.length / 3)
     }
     val middleSection = Section(middleRanges)
-    // println(" ${ncvar.name}[$middleSection]")
 
+    if (debugCompareNetcdf) println(" myfile ${ncvar.name}[$middleSection],")
     val mydata = myfile.readArrayData(myvar, middleSection)
+    if (debugCompareNetcdf) println(" ncfile ${ncvar.name}[$middleSection],")
     val ncdata = ncfile.readArrayData(ncvar, middleSection)
+
     if (!ArrayTyped.contentEquals(ncdata, mydata)) {
         println(" *** FAIL reading middle section for variable = ${ncvar}")
         println(" mydata = $mydata")
         println(" ncdata = $ncdata")
         assertTrue(false)
         return
-    } else {
-        if (debugCompareNetcdf) print(" ${ncvar.name}[$middleSection], ")
     }
 
 }

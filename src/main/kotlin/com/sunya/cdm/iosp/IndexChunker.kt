@@ -5,33 +5,30 @@ import com.sunya.cdm.api.Section
 import java.util.*
 
 /**
- * Iterator to read/write subsets of a multidimensional array, finding the contiguous chunks.
+ * Finds contiguous chunks of data, used by Layout implementations, not exposed in the Layout API.
  * The iteration is monotonic in both src and dest positions.
 
  * @param srcShape the shape of the source, eg Variable.getShape()
- * @param want the wanted section in srcShape, must be subset of srcShape.
+ * @param want the wanted section in srcShape, must be subset of srcShape; if null, use varShape
  */
-class IndexChunker(srcShape: IntArray, want: Section?) {
-    private val dimList: MutableList<Dim> = ArrayList()
+class IndexChunker(srcShape: IntArray, want: Section?) : Iterator<Layout.Chunk> {
+    private val dimList = mutableListOf<Dim>()
     private var chunkIndex : IndexLong // each element is one chunk; strides track position in source
     private var chunk: Chunk? = null // gets returned on next().
     private var nelems = 0 // number of elements to read at one time
     private var start: Long
 
-    /** Get total number of elements in wantSection  */
-    val totalNelems: Long
-    private var done: Long
+    val totalNelems: Long // total number of elements in wantSection
+    private var done: Long // done so far
 
     init {
         // will throw InvalidRangeException if illegal section
-        val wantSection= if (want == null) Section(srcShape) else Section.fill(want, srcShape)
-
-        // compute total size of wanted section
+        val wantSection= Section.fill(want, srcShape)
         totalNelems = wantSection.computeSize()
         done = 0
         start = 0
 
-        // see if this is a "want all of it" single chunk
+        // see if this is a "want all of it", so its a single chunk
         if (wantSection.equivalent(srcShape)) {
             nelems = totalNelems.toInt()
             chunkIndex = IndexLong()
@@ -41,7 +38,7 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
             val varRank = srcShape.size
             var stride: Long = 1
             for (ii in varRank - 1 downTo 0) {
-                dimList.add(Dim(stride, srcShape[ii], wantSection.getRange(ii)!!)) // note reversed : fastest first
+                dimList.add(Dim(stride, srcShape[ii].toLong(), wantSection.getRange(ii)!!)) // note reversed : fastest first
                 stride *= srcShape[ii].toLong()
             }
 
@@ -88,7 +85,7 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
                 start += dim.stride * dim.want.first() // watch for overflow on large files
             }
 
-            // we will use an Index object to keep track of the chunks, each index represents nelems
+            // we will use an IndexLong to keep track of the chunks, each index represents nelems
             val rank = dimList.size
             val wstride = LongArray(rank)
             val shape = IntArray(rank)
@@ -114,26 +111,24 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
     }
 
     private class Dim constructor( // number of elements
-        val stride: Long, maxSize: Int, want: Range
+        val stride: Long,
+        var maxSize: Long,  // number of elements
+        val want: Range
     ) {
-        var maxSize : Long // number of elements - must be a long since we may merge
-        val want : Range // desired Range
         var wantSize : Int // keep separate from want so we can modify when merging
 
         init {
-            this.maxSize = maxSize.toLong()
             wantSize = want.length
-            this.want = want
         }
     }
 
     /** If there are more chunks to process  */
-    operator fun hasNext(): Boolean {
+    override operator fun hasNext(): Boolean {
         return done < totalNelems
     }
 
     /** Get the next chunk  */
-    operator fun next(): Chunk {
+    override operator fun next(): IndexChunker.Chunk {
         if (chunk == null) {
             chunk = Chunk(start, nelems, 0)
         } else {
@@ -161,6 +156,7 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
         // must be set by controlling Layout class - not used here
         var srcPos: Long = 0
 
+        override fun srcElem() = srcElem
         override fun srcPos() = srcPos
         override fun nelems() = nelems
         override fun destElem() = destElem
@@ -169,7 +165,7 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
             destElem += incr.toLong()
         }
 
-        fun set(from: Chunk) : Chunk {
+        fun set(from: Chunk) : Chunk { // LOOK should create a new Index from this. probably
             this.srcElem = from.srcElem
             this.nelems = from.nelems
             this.destElem = from.destElem
@@ -183,32 +179,12 @@ class IndexChunker(srcShape: IntArray, want: Section?) {
     }
 
     override fun toString(): String {
-        val sbuff = StringBuilder()
-        sbuff.append("wantSize=")
-        for (i in dimList.indices) {
-            val elem = dimList[i]
-            if (i > 0) sbuff.append(",")
-            sbuff.append(elem.wantSize)
+        return buildString {
+            append("wantSize=${dimList.map {it.wantSize}}")
+            append(" maxSize=${dimList.map {it.maxSize}}")
+            append(" wantStride=${dimList.map {it.want.stride}}")
+            append(" stride=${dimList.map {it.stride}}")
         }
-        sbuff.append(" maxSize=")
-        for (i in dimList.indices) {
-            val elem = dimList[i]
-            if (i > 0) sbuff.append(",")
-            sbuff.append(elem.maxSize)
-        }
-        sbuff.append(" wantStride=")
-        for (i in dimList.indices) {
-            val elem = dimList[i]
-            if (i > 0) sbuff.append(",")
-            sbuff.append(elem.want.stride)
-        }
-        sbuff.append(" stride=")
-        for (i in dimList.indices) {
-            val elem = dimList[i]
-            if (i > 0) sbuff.append(",")
-            sbuff.append(elem.stride)
-        }
-        return sbuff.toString()
     }
 
     companion object {

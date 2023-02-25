@@ -1,6 +1,6 @@
 package com.sunya.cdm.iosp
 
-/** Uses longs for indexing. */
+/** Uses longs for indexing, used by IndexChunkers. */
 class IndexLong {
     private val shape: IntArray
     private val stride: LongArray

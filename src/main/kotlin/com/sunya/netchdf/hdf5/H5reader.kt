@@ -193,9 +193,9 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: LayoutBB
     // the layout handles moving around in the file, adding the filter and giving back the finished results as a byte buffer
     while (layout.hasNext()) {
         val chunk : LayoutBB.Chunk = layout.next()
-        val chunkBB: ByteBuffer = chunk.byteBuffer!!
+        val chunkBB: ByteBuffer = chunk.byteBuffer
         val srcElem = layout.elemSize * chunk.srcElem()
-        chunkBB.position(srcElem)
+        chunkBB.position(srcElem.toInt())
         var pos = layout.elemSize * chunk.destElem().toInt()
         val nelems = layout.elemSize * chunk.nelems()
         for (i in 0 until nelems) {
