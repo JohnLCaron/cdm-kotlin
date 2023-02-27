@@ -44,7 +44,7 @@ data class OpenFile(val location : String) : Closeable {
         if (state.pos > fileChannel.size()) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
-        // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
+        // this is what fileChannel.read uses to read into dst; so limit and pos must get changed
         dst.limit(dstPos + nbytes)
         dst.position(dstPos)
         val nread =  fileChannel.read(dst, state.pos)

@@ -57,6 +57,16 @@ class NetchdfCompareCdl {
     }
 
     @Test
+    fun testChunked2 () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc")
+    }
+
+    @Test
+    fun testChunked () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/e562p1_fp.inst3_3d_asm_Nv.20100907_00z+20100909_1200z.nc4")
+    }
+
+    @Test
     fun hdfeos () {
         openNetchdf("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5/grid_1_3d_xyz_aug.h5")
     }

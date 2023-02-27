@@ -108,10 +108,15 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     }
     val bb = ByteBuffer.allocate(sizeBytes.toInt())
     bb.order(state.byteOrder)
+    var count = 0
     while (layout.hasNext()) {
         val chunk = layout.next()
         state.pos = chunk.srcPos()
         raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
+        count++
+    }
+    if (layout is H5tiledLayout) {
+        println("Number of Chunks = $count")
     }
     bb.position(0)
     bb.limit(bb.capacity())
@@ -188,6 +193,7 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: LayoutBB
     if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
         throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
     }
+    var count = 0
     val bb = ByteBuffer.allocate(sizeBytes.toInt())
     bb.order(state.byteOrder)
     // the layout handles moving around in the file, adding the filter and giving back the finished results as a byte buffer
@@ -206,6 +212,7 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: LayoutBB
     }
     bb.position(0)
     bb.limit(bb.capacity())
+    println("Number of filtered chunks = $count")
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)

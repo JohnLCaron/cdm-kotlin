@@ -11,7 +11,6 @@ import com.sunya.cdm.iosp.LayoutTiledBB
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.util.IOcopyB
-import mu.KotlinLogging
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.IOException
@@ -20,15 +19,13 @@ import java.nio.ByteOrder
 import java.util.zip.Inflater
 import java.util.zip.InflaterInputStream
 
-private val logger = KotlinLogging.logger("H5tiledLayoutBB")
-
 /**
  * Iterator to read/write subsets of an array.
  * This calculates byte offsets for HD5 chunked datasets.
  * Assumes that the data is stored in chunks, indexed by a Btree.
  * Used for filtered data
  */
-class H5tiledLayoutBB(
+class H5chunkedData(
     h5: H5builder,
     v2: Variable,
     want: Section,
@@ -82,15 +79,6 @@ class H5tiledLayoutBB(
         val iter: BTreeData.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
         delegate = LayoutTiledBB(dcIter, chunkSize, elemSize, want)
-        if (System.getProperty(INFLATEBUFFERSIZE_PROPERTY) != null) {
-            try {
-                val size = System.getProperty(INFLATEBUFFERSIZE_PROPERTY).toInt()
-                if (size <= 0) logger.warn(String.format("-D%s must be > 0", INFLATEBUFFERSIZE_PROPERTY)
-                ) else inflatebuffersize = size
-            } catch (nfe: NumberFormatException) {
-                logger.warn(String.format("-D%s is not an integer", INFLATEBUFFERSIZE_PROPERTY))
-            }
-        }
         if (debugFilter) System.out.printf(
             "inflate buffer size -D%s = %d%n", INFLATEBUFFERSIZE_PROPERTY,
             inflatebuffersize
@@ -178,9 +166,7 @@ class H5tiledLayoutBB(
             try {
                 // read the data
                 val state = OpenFileState(delegate.filePos)
-                // perhaps use a preallocated buffer?
                 var data = raf.readByteBuffer(state, delegate.size).array()
-                // println("read $delegate")
 
                 // apply filters backwards
                 for (i in filters.indices.reversed()) {
@@ -203,7 +189,6 @@ class H5tiledLayoutBB(
                 val result = ByteBuffer.wrap(data)
                 result.order(byteOrder)
                 return result
-
             } catch (e: OutOfMemoryError) {
                 val oom: Error = OutOfMemoryError(
                     ("Ran out of memory trying to read HDF5 filtered chunk. Either increase the "
@@ -235,7 +220,7 @@ class H5tiledLayoutBB(
             }
             return output.slice()
         }
-        
+
          */
 
         @Throws(IOException::class)
@@ -247,7 +232,7 @@ class H5tiledLayoutBB(
             val len = Math.min(8 * compressed.size, Companion.MAX_ARRAY_LEN)
             val out = ByteArrayOutputStream(len) // Fixes KXL-349288
             IOcopyB(inflatestream, out, len)
-            val uncomp = out.toByteArray() // copy ??
+            val uncomp = out.toByteArray()
             if (debug || debugFilter) println(" inflate bytes in= " + compressed.size + " bytes out= " + uncomp.size)
             return uncomp
         }
