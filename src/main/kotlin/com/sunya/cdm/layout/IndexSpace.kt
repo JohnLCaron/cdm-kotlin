@@ -48,4 +48,10 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
     fun makeSection() : Section {
         return Section(start, nelems)
     }
+
+    override fun toString(): String {
+        return "${makeSection()}"
+    }
+
+
 }

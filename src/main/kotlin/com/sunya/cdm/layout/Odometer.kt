@@ -59,7 +59,12 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
         return element
     }
 
+
+
     override fun iterator() = OdoIterator()
+    override fun toString(): String {
+        return "Odometer(section=$section, limit=${limit.contentToString()}, strider=${strider.contentToString()})"
+    }
 
     inner class OdoIterator() : AbstractIterator<IntArray>() {
         var count = 0

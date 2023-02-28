@@ -16,8 +16,6 @@ import java.io.OutputStream
 @Throws(IOException::class)
 fun IOcopyB(input: InputStream, out: OutputStream, bufferSize: Int): Long {
     var totalBytesRead: Long = 0
-    var done = 0
-    var next = 1
     val buffer = ByteArray(bufferSize)
     while (true) {
         val n = input.read(buffer)

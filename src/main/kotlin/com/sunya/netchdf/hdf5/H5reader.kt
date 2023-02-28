@@ -211,7 +211,7 @@ internal fun H5builder.readChunkedData(v2: Variable, wantSection : Section) : Ar
         chunker.transfer(filteredData, bb)
         count++
     }
-    // println(" New $count dataChunks; nodes: readCache = ${chunkedData.readHit}, readNodes = ${chunkedData.readMiss}")
+    println(" New $count dataChunks; nodes: readCache = ${chunkedData.readHit}, readNodes = ${chunkedData.readMiss}")
 
     bb.position(0)
     bb.limit(bb.capacity())
@@ -243,9 +243,17 @@ fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
         val chunk = this.next()
         src.position(this.elemSize * chunk.srcElem.toInt())
         dst.position(this.elemSize * chunk.destElem.toInt())
-        for (i in 0 until this.elemSize * chunk.nelems) {
-            dst.put(src.get())
-        } // LOOK is there a bulk copy ? maybe duplicate ? maybe System.arraycopy ??
+        // Object src,  int  srcPos, Object dest, int destPos, int length
+        System.arraycopy(
+            src.array(),
+            this.elemSize * chunk.srcElem.toInt(),
+            dst.array(),
+            this.elemSize * chunk.destElem.toInt(),
+            this.elemSize * chunk.nelems,
+        )
+        //for (i in 0 until this.elemSize * chunk.nelems) {
+        //    dst.put(src.get())
+        //} // LOOK is there a bulk copy ? maybe duplicate ? maybe System.arraycopy ??
     }
 }
 

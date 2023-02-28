@@ -14,7 +14,7 @@ class H5filters(
     val mfp: FilterPipelineMessage?,
     val byteOrder: ByteOrder
 ) {
-    val inflateBufferSize = 512 // LOOK make this settable
+    val inflateBufferSize = 20_000 // LOOK make this settable
 
     fun apply(rawdata: ByteBuffer, entry: BTree1New.DataChunkEntry): ByteBuffer {
         if (mfp == null) return rawdata
@@ -85,7 +85,7 @@ class H5filters(
         val inflatestream = InflaterInputStream(input, inflater, inflateBufferSize)
         val len = Math.min(8 * compressed.size, Companion.MAX_ARRAY_LEN)
         val out = ByteArrayOutputStream(len) // Fixes KXL-349288
-        IOcopyB(inflatestream, out, len)
+        IOcopyB(inflatestream, out, inflateBufferSize)
         val uncomp = out.toByteArray()
         if (debug || debugFilter) println(" inflate bytes in= " + compressed.size + " bytes out= " + uncomp.size)
         return uncomp
