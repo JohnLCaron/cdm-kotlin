@@ -4,6 +4,7 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
+import kotlin.system.measureNanoTime
 
 // Test chunked data reading
 class H5dataTiming {
@@ -18,7 +19,7 @@ class H5dataTiming {
         readData(reversed, "fxx", Section("0:99, 0:9, 0:9"))
         readData(reversed, "fyy", Section("0:99, 0:99, 0:9"))
         readData(reversed, "pxx", Section("0:99, 0:99, 0:99"))
-        // readData(filename, "pyy", Section("0:99, 0:99, :"))
+        readData(reversed, "pyy", Section("0:99, 0:99, :"))
     }
 
     @Test
@@ -31,30 +32,41 @@ class H5dataTiming {
     }
 
     @Test
-    fun chunked2() {
+    fun chunkedFiltered() {
         //  variable UpperDeschutes_t4p10_swemelt[8395, 781, 385], Chunked dims=[1, 30, 30, 8]
-        // readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:9, :, :"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:9, :, :"))
         readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:100, 0:30, 0:40"))
-        // readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, 0:40"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, 0:40"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, 0:385"))
+    }
+
+    @Test
+    fun problem() {
+        //  variable UpperDeschutes_t4p10_swemelt[8395, 781, 385], Chunked dims=[1, 30, 30, 8]
+        readH5data(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:9, :, :"), false)
     }
 
     fun readData(filename: String, varname: String, readSection : Section) {
         readNcdata(filename, varname, readSection)
-        readH5data(filename, varname, readSection)
+        readH5data(filename, varname, readSection, false)
+        readH5data(filename, varname, readSection, true)
     }
 
-    fun readH5data(filename: String, varname: String, readSection : Section) {
+    fun readH5data(filename: String, varname: String, readSection : Section, useOld : Boolean) {
         Hdf5File(filename).use { h5file ->
             // println(h5file.cdl())
             val myvar = h5file.rootGroup().variables.find { it.name == varname }
 
-            val starting = System.currentTimeMillis()
-            val mydata = h5file.readArrayData(myvar!!, readSection)
-            val took = (System.currentTimeMillis() - starting) / 1000.0
+            var size : Long = 0L
+            val elapsed = measureNanoTime {
+                Hdf5File.useOld = useOld
+                val mydata = h5file.readArrayData(myvar!!, readSection)
+                size = computeSize(mydata.shape)
+            }.toDouble() * 1.0e-9
 
-            val size = computeSize(mydata.shape)
-            val tookPer = size / took
-            println(" readH5data[$readSection] took $took secs; read values/sec = ${"%.0f".format(tookPer)} size=$size")
+            val tookPer = size / elapsed
+            val what = if (useOld) "old" else "new"
+            println(" $what readH5data[$readSection] took ${"%.4f".format(elapsed)} secs; read values/sec = ${"%.0f".format(tookPer)} size=$size")
         }
     }
 
@@ -63,13 +75,14 @@ class H5dataTiming {
             // println(h5file.cdl())
             val myvar = h5file.rootGroup().variables.find { it.name == varname }
 
-            val starting = System.currentTimeMillis()
-            val mydata = h5file.readArrayData(myvar!!, readSection)
-            val took = (System.currentTimeMillis() - starting) / 1000.0
+            var size : Long = 0L
+            val elapsed = measureNanoTime {
+                val mydata = h5file.readArrayData(myvar!!, readSection)
+                size = computeSize(mydata.shape)
+            }.toDouble() * 1.0e-9
 
-            val size = computeSize(mydata.shape)
-            val tookPer = size / took
-            println(" readNcdata[$readSection] took $took secs; read values/sec = ${"%.0f".format(tookPer)} size=$size")
+            val tookPer = size / elapsed
+            println(" readNcdata[$readSection] took ${"%.4f".format(elapsed)} secs; read values/sec = ${"%.0f".format(tookPer)} size=$size")
         }
     }
 }

@@ -167,7 +167,7 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
         @Throws(IOException::class)
         fun findNetcdfFormatType(raf: OpenFile): NetchdfFileFormat {
             val magic = ByteArray(MAGIC_NUMBER_LEN)
-            if (raf.readBytes(magic, OpenFileState(0, ByteOrder.nativeOrder())) != magic.size) {
+            if (raf.readBytesUnchecked(OpenFileState(0, ByteOrder.nativeOrder()), magic) != MAGIC_NUMBER_LEN) {
                 return INVALID
             }
 
@@ -250,7 +250,7 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
             val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
             var format : NetchdfFileFormat? = null
             while (filePos.pos < raf.size - 8 && filePos.pos < MAXHEADERPOS && format == null) {
-                if (raf.readBytes(magic, filePos) < MAGIC_NUMBER_LEN) {
+                if (raf.readBytesUnchecked(filePos, magic) < MAGIC_NUMBER_LEN) {
                     format = INVALID
                 } else if (memequal(H5HEAD, magic, H5HEAD.size)) {
                     format = NC_FORMAT_NETCDF4 // actually dont know here if its netcdf4 or just hdf5.

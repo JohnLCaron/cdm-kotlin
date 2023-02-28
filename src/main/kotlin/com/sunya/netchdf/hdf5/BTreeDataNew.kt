@@ -4,7 +4,7 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.iosp.LayoutTiled
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
-import com.sunya.cdm.iosp.Tiling
+import com.sunya.cdm.iosp.TilingOld
 import java.nio.ByteOrder
 
 /**
@@ -19,6 +19,7 @@ import java.nio.ByteOrder
  *
  * The pointers in internal nodes point to sub-trees while the pointers in leaf nodes point to symbol nodes and
  * raw data chunks. Aside from that difference, internal nodes and leaf nodes are identical.
+ * NOT USED
  */
 class BTreeDataNew(
     val h5: H5builder,
@@ -27,7 +28,7 @@ class BTreeDataNew(
     storageSize: IntArray,
 ) {
     private val raf: OpenFile = h5.raf
-    private val tiling: Tiling = Tiling(varShape, storageSize)
+    private val tiling: TilingOld = TilingOld(varShape, storageSize)
     private val ndimStorage: Int = storageSize.size
     private val wantType: Int = 1 // 0 = group nodes, 1 = raw data chunks
 

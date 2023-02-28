@@ -4,7 +4,7 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.iosp.LayoutTiled
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
-import com.sunya.cdm.iosp.Tiling
+import com.sunya.cdm.iosp.TilingOld
 import java.nio.ByteOrder
 
 /**
@@ -28,11 +28,13 @@ class BTreeData(
     val memTracker: MemTracker?
 ) {
     private val raf: OpenFile = h5.raf
-    private val tiling: Tiling = Tiling(varShape, storageSize)
+    private val tiling: TilingOld = TilingOld(varShape, storageSize)
     private val ndimStorage: Int = storageSize.size
     private val wantType: Int = 1
 
     private var owner: Any? = null
+    var readNodes = 0
+    var readChunks = 0
 
     fun setOwner(owner: Any?) {
         this.owner = owner
@@ -123,6 +125,7 @@ class BTreeData(
         private var currentEntry = 0 // track iteration; TODO why not an iterator ??
 
         init {
+            readNodes++
             val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
             this.address = address
             val magic: String = raf.readString(state, 4)
@@ -228,6 +231,7 @@ class BTreeData(
         val filePos : Long // filePos of a single raw data chunk, already shifted by the offset if needed
 
         init {
+            readChunks++
             size = raf.readInt(state)
             filterMask = raf.readInt(state)
             offset = IntArray(ndim)

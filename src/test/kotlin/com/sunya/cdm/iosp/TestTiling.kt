@@ -11,7 +11,7 @@ class TestTiling {
     fun testTiling() {
         val varshape = intArrayOf(4, 6, 20)
         val chunk = intArrayOf(1, 3, 20)
-        val tiling = Tiling(varshape, chunk)
+        val tiling = TilingOld(varshape, chunk)
 
         // look not checking if pt is contained in varshape
         checkEquals(intArrayOf(2, 1, 1), tiling.tile(intArrayOf(2, 5, 20)))
@@ -22,7 +22,7 @@ class TestTiling {
     fun testTilingSection() {
         val varshape = intArrayOf(4, 6, 200)
         val chunk = intArrayOf(1, 3, 20)
-        val tiling = Tiling(varshape, chunk)
+        val tiling = TilingOld(varshape, chunk)
 
         val indexSection = Section("1:2, 1:2, 0:12")
         val tiledSection = tiling.section(indexSection)
@@ -33,7 +33,7 @@ class TestTiling {
     fun testTilingSection2() {
         val varshape = intArrayOf(4, 6, 200)
         val chunk = intArrayOf(1, 3, 20)
-        val tiling = Tiling(varshape, chunk)
+        val tiling = TilingOld(varshape, chunk)
 
         val indexSection = Section("1:3, 2:4, 150:199")
         val tiledSection = tiling.section(indexSection)
@@ -44,7 +44,7 @@ class TestTiling {
     fun testTilingSection3() {
         val varshape = intArrayOf(4, 6, 200)
         val chunk = intArrayOf(1, 3, 11)
-        val tiling = Tiling(varshape, chunk)
+        val tiling = TilingOld(varshape, chunk)
 
         val indexSection = Section("1, 4:5, 33:55")
         val tiledSection = tiling.section(indexSection)

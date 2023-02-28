@@ -5,7 +5,7 @@ import com.sunya.cdm.api.Section
 import java.util.*
 
 /**
- * Finds contiguous chunks of data, used by Layout implementations, not exposed in the Layout API.
+ * Finds contiguous chunks of data, used by Layout implementations.
  * The iteration is monotonic in both src and dest positions.
 
  * @param srcShape the shape of the source, eg Variable.getShape()

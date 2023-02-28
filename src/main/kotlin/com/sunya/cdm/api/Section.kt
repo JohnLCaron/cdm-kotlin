@@ -5,10 +5,8 @@ import java.util.*
 /**
  * A section of multidimensional array indices.
  * Represented as List<Range>.
- *
- *
  * TODO evaluate use of null.
-</Range> */
+*/
 class Section {
     val ranges : List<Range?> // unmodifiableList
 
@@ -734,9 +732,7 @@ class Section {
             for (i in shape.indices) {
                 ok = ok and (s.getRange(i) != null)
             }
-            return if (ok) {
-                s
-            } else Section(s.ranges, shape)
+            return if (ok) s else Section(s.ranges, shape)
 
             // fill in any nulls
         }

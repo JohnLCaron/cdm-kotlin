@@ -1,7 +1,6 @@
 package com.sunya.cdm.iosp
 
 import com.sunya.cdm.api.Section
-import java.lang.Integer.max
 
 /**
  * An abstraction of HDF5 chunking, allowing to efficiently find the data chunks that cover
@@ -15,7 +14,7 @@ import java.lang.Integer.max
  * @param varshape the variable's shape
  * @param chunk  actual storage is in this shape. may be larger than the shape.
  */
-class Tiling(varshape: IntArray, val chunk: IntArray) {
+class TilingOld(varshape: IntArray, val chunk: IntArray) {
     val rank: Int
     private val shape : IntArray // overall shape of the dataset's index space - may be larger than actual variable shape
     private val strider : IntArray // for computing tile index

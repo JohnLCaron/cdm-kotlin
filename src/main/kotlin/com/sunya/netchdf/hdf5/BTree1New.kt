@@ -1,6 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.layout.Tiling
 import java.nio.ByteOrder
 
 /**
@@ -61,9 +62,6 @@ class BTree1New(
             leftAddress = h5.readOffset(state)
             rightAddress = h5.readOffset(state)
 
-            // could we gulp this in one read ?
-            // val size: Long = 8 + 2 * h5.sizeOffsets + nentries.toLong() * (8 + h5.sizeOffsets + 8 + ndimStorage)
-
             for (idx in 0..nentries) {
                 if (type == 0) {
                     val key = h5.readLength(state) // 4 or 8 bytes
@@ -94,5 +92,8 @@ class BTree1New(
     data class DataChunkKey(val chunkSize: Int, val filterMask : Int, val offsets: IntArray)
 
     // childAddress = data chunk (level 1) else a child node
-    data class DataChunkEntry(val level : Int, val parent : Node, val idx : Int, val key : DataChunkKey, val childAddress : Long)
+    data class DataChunkEntry(val level : Int, val parent : Node, val idx : Int, val key : DataChunkKey, val childAddress : Long) {
+        fun show(tiling : Tiling) : String = "chunkSize=${key.chunkSize}, chunk=${key.offsets.contentToString()}" +
+                ", tile= ${tiling.tile(key.offsets).contentToString()}"
+    }
 }

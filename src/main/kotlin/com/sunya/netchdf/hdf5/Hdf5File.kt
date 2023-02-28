@@ -46,14 +46,27 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             if (vinfo.h5type.isVString) {
                 return readFilteredStringData(layout, wantSection)
             } else {
-                return header.readFilteredChunkedData(vinfo, layout, wantSection)
+                val useData = if (useOld) header.readFilteredChunkedData(vinfo, layout, wantSection)
+                    else header.readChunkedData(v2, wantSection)
+
+                // val data1 =  header.readFilteredChunkedData(vinfo, layout, wantSection)
+                //val same = ArrayTyped.contentEquals(data1, data2)
+                //println("${v2.name} same = $same")
+                return useData
             }
         }
 
         try {
             if (vinfo.isChunked) {
                 val layout = H5tiledLayout(header, v2, wantSection, v2.datatype)
-                return header.readChunkedData(vinfo, layout, wantSection)
+                val useData = if (useOld) header.readChunkedData(vinfo, layout, wantSection)
+                else header.readChunkedData(v2, wantSection)
+
+                //val data1 = header.readChunkedData(vinfo, layout, wantSection)
+                // val data2 = header.readChunkedData(v2, wantSection)
+                //val same = ArrayTyped.contentEquals(data1, data2)
+                //println("${v2.name} same = $same")
+                return useData
             } else {
                 return header.readRegularData(vinfo, wantSection)
             }
@@ -78,6 +91,11 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             }
         }
         return ArrayString(wantSection.shape, sa)
+    }
+
+    companion object {
+        var useOld = false
+        var checkBoth = false
     }
 
 

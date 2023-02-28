@@ -42,6 +42,7 @@ class H5tiledLayoutBB(
     override val elemSize : Int // last dimension of the StorageLayout message
     private val nChunkDims: Int
     private var inflatebuffersize = DEFAULTZIPBUFFERSIZE
+    val btree : BTreeData
 
     /**
      * Constructor.
@@ -78,7 +79,7 @@ class H5tiledLayoutBB(
         elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
 
         // create the data chunk iterator
-        val btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
+        this.btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
         val iter: BTreeData.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
         delegate = LayoutTiledBB(dcIter, chunkSize, elemSize, want)
@@ -108,6 +109,9 @@ class H5tiledLayoutBB(
     override operator fun next(): LayoutBB.Chunk {
         return delegate.next()
     }
+
+    fun readNodes() = btree.readNodes
+    fun readChunks() = btree.readChunks
 
     override fun toString(): String {
         val sbuff = StringBuilder()

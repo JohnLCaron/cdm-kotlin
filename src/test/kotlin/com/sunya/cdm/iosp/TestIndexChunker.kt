@@ -82,6 +82,15 @@ class TestIndexChunker {
     }
 
     @Test
+    fun testMiddleHalf() {
+        val wantSection = intArrayOf(2, 10, 20)
+        val dataChunk = Section("0:1, 5:9, 0:19")
+        runIndexChunker(wantSection, dataChunk, dataChunk.computeSize().toInt() / 2, 2, true) {
+            if (it == 0) 100 else 300
+        }
+    }
+
+    @Test
     fun testPartCol() {
         val full = intArrayOf(2, 10, 20)
         val part = intArrayOf(2, 10, 10)
