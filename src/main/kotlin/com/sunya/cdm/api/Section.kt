@@ -5,10 +5,8 @@ import java.util.*
 /**
  * A section of multidimensional array indices.
  * Represented as List<Range>.
- *
- *
  * TODO evaluate use of null.
-</Range> */
+*/
 class Section {
     val ranges : List<Range?> // unmodifiableList
 
@@ -166,6 +164,15 @@ class Section {
         return Section(results)
     }
 
+    fun contains(index : IntArray): Boolean {
+        ranges.forEachIndexed { idx, r ->
+            if (!(r!!.contains(index[idx]))) {
+                return false
+            }
+        }
+        return true
+    }
+
     /**
      * Create a new Section by composing with a Section that is reletive to this Section.
      *
@@ -306,44 +313,25 @@ class Section {
             }
             return false
         }
+    // Get shape array using the Range.length() values.
     val shape: IntArray
-        /**
-         * Get shape array using the Range.length() values.
-         *
-         * @return int[] shape
-         */
         get() {
-            val result = IntArray(ranges.size)
-            for (i in ranges.indices) {
-                result[i] = ranges[i]!!.length
-            }
-            return result
+            return IntArray(ranges.size) { ranges[it]!!.length }
         }
+    // Get origin array using the Range.first() values.
     val origin: IntArray
-        /**
-         * Get origin array using the Range.first() values.
-         *
-         * @return int[] origin
-         */
         get() {
-            val result = IntArray(ranges.size)
-            for (i in ranges.indices) {
-                result[i] = ranges[i]!!.first
-            }
-            return result
+            return IntArray(ranges.size) { ranges[it]!!.first }
         }
+    // Get stride array using the Range.stride() values
     val stride: IntArray
-        /**
-         * Get stride array using the Range.stride() values.
-         *
-         * @return int[] stride
-         */
         get() {
-            val result = IntArray(ranges.size)
-            for (i in ranges.indices) {
-                result[i] = ranges[i]!!.stride
-            }
-            return result
+            return IntArray(ranges.size) { ranges[it]!!.stride }
+        }
+    // Get limit array using the Range.first + length - 1, thus inclusive
+    val limit: IntArray
+        get() {
+            return IntArray(ranges.size) { ranges[it]!!.first + ranges[it]!!.length - 1 }
         }
 
     /** Get origin of the ith Range  */
@@ -359,6 +347,11 @@ class Section {
     /** Get stride of the ith Range  */
     fun stride(i: Int): Int {
         return ranges[i]!!.stride
+    }
+
+    /** Get limit (exclusive) of the ith Range  */
+    fun limit(i: Int): Int {
+        return ranges[i]!!.first + ranges[i]!!.length
     }
 
     /** Get rank = number of Ranges.  */
@@ -739,9 +732,7 @@ class Section {
             for (i in shape.indices) {
                 ok = ok and (s.getRange(i) != null)
             }
-            return if (ok) {
-                s
-            } else Section(s.ranges, shape)
+            return if (ok) s else Section(s.ranges, shape)
 
             // fill in any nulls
         }

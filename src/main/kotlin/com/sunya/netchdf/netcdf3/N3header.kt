@@ -80,8 +80,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
     recStart = Int.MAX_VALUE.toLong() // where the record data starts
 
     // netcdf magic number
-    val b = ByteArray(4)
-    raf.readBytes(b, filePos)
+    val b = raf.readBytes(filePos, 4)
     if (!isMagicBytes(b)) {
       throw IOException("Not a netCDF file " + raf.location)
     }
@@ -366,8 +365,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
   @Throws(IOException::class)
   private fun readString(charset: Charset): String? {
     val nelems: Int = raf.readInt(filePos)
-    val b = ByteArray(nelems)
-    raf.readBytes(b, filePos)
+    val b = raf.readBytes(filePos, nelems)
     skipToBoundary(nelems) // pad to 4 byte boundary
     if (nelems == 0) {
       return null

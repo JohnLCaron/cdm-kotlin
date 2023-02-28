@@ -1,115 +1,111 @@
 package com.sunya.cdm.iosp
 
-import java.io.*
+import java.io.Closeable
+import java.io.EOFException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
-import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-/** An abstraction over a Java FileChannel */
+/** An abstraction over a Java FileChannel. */
 data class OpenFile(val location : String) : Closeable {
-    val fileChannel : FileChannel
+    val raf : com.sunya.io.RandomAccessFile
     val size : Long
     init {
-        val raf = RandomAccessFile(File(location), "r")
-        fileChannel = raf.getChannel();
-        size = fileChannel.size()
+        raf = com.sunya.io.RandomAccessFile(location, "r")
+        raf.order(ByteOrder.LITTLE_ENDIAN)
+        size = raf.length()
     }
 
     override fun close() {
-        fileChannel.close()
+        raf.close()
     }
 
-    fun seek(pos : Long) {
-        fileChannel.position(pos)
-    }
-
-    @Throws(IOException::class)
-    fun readBytes(dst : ByteBuffer, state : OpenFileState) : Int {
-        if (state.pos > fileChannel.size()) {
-            throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
-        }
-        val nread = fileChannel.read(dst, state.pos)
-        if (nread != dst.capacity()) {
-            throw EOFException("Only read $nread bytes of wanted ${dst.capacity()} bytes; starting at pos ${state.pos} EOF=${fileChannel.size()}")
-        }
-        dst.flip()
-        state.pos += nread
-        return nread
-    }
-
-    @Throws(IOException::class)
     fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
-        if (state.pos > fileChannel.size()) {
-            throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
+        if (state.pos > size) {
+            throw EOFException("Tried to read past EOF ${size} at pos ${state.pos} location $location")
         }
-        // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
-        dst.limit(dstPos + nbytes)
-        dst.position(dstPos)
-        val nread =  fileChannel.read(dst, state.pos)
-        if (nread != nbytes) {
-            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
+        val bb = readBytes(state, nbytes)
+        var pos = dstPos
+        for (idx in 0 until bb.size) {
+            dst.put(pos++, bb[idx])
         }
-        // println("read at ${state.pos} $nbytes bytes to $dstPos")
+        return bb.size
+    }
+
+    fun readByteBuffer(state : OpenFileState, nbytes : Int): ByteBuffer {
+        val dst = readBytes(state, nbytes)
+        val bb = ByteBuffer.wrap(dst)
+        bb.order(state.byteOrder)
+        return bb
+    }
+
+    // doesnt check the number of bytes read
+    fun readBytesUnchecked(state : OpenFileState, dst : ByteArray) : Int {
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        val nread = raf.read(dst)
         state.pos += nread
         return nread
     }
 
-    fun readByteBuffer(state : OpenFileState, nelems : Int): ByteBuffer {
-        val dst = ByteBuffer.allocate(nelems)
-        require (readBytes(dst, state) == nelems)
-        dst.order(state.byteOrder)
+    fun readBytes(state : OpenFileState, dst : ByteArray) : Int {
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        val nread = raf.read(dst)
+        if (nread != dst.size) {
+            throw EOFException("Only read $nread bytes of wanted ${dst.size} bytes; starting at pos ${state.pos} EOF=${size}")
+        }
+        state.pos += nread
+        return nread
+    }
+
+    fun readBytes(state : OpenFileState, nbytes : Int) : ByteArray {
+        val dst = ByteArray(nbytes)
+        readBytes(state, dst)
         return dst
     }
 
-    fun readBytes(dst : ByteArray, state : OpenFileState) : Int {
-        return readBytes(ByteBuffer.wrap(dst), state)
-    }
-
     fun readByte(state : OpenFileState): Byte {
-        if (state.pos > fileChannel.size()) {
-            throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
-        }
-        val dst = ByteBuffer.allocate(1)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.get(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos++
+        return raf.readByte()
     }
 
     fun readDouble(state : OpenFileState): Double {
-        val dst = ByteBuffer.allocate(8)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getDouble(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos += 8
+        return raf.readDouble()
     }
 
     fun readFloat(state : OpenFileState): Float {
-        val dst = ByteBuffer.allocate(4)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getFloat(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos += 4
+        return raf.readFloat()
     }
 
     fun readInt(state : OpenFileState): Int {
-        val dst = ByteBuffer.allocate(4)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getInt(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos += 4
+        return raf.readInt()
     }
 
     fun readLong(state : OpenFileState): Long {
-        val dst = ByteBuffer.allocate(8)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getLong(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos += 8
+        return raf.readLong()
     }
 
     fun readShort(state : OpenFileState): Short {
-        val dst = ByteBuffer.allocate(2)
-        readBytes(dst, state)
-        dst.order(state.byteOrder)
-        return dst.getShort(0)
+        raf.seek(state.pos)
+        raf.order(state.byteOrder)
+        state.pos += 2
+        return raf.readShort()
     }
 
     fun readString(state : OpenFileState, nbytes : Int): String {
@@ -117,9 +113,9 @@ data class OpenFile(val location : String) : Closeable {
     }
 
     fun readString(state : OpenFileState, nbytes : Int, charset : Charset): String {
-        val dst = ByteBuffer.allocate(nbytes)
-        readBytes(dst, state)
-        return makeStringZ(dst.array(), charset)
+        val dst = ByteArray(nbytes)
+        readBytes(state, dst)
+        return makeStringZ(dst, charset)
     }
 
     fun readArrayByte(state : OpenFileState, nelems : Int): Array<Byte> {

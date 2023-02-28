@@ -13,12 +13,12 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-val debugFlow = true
+val debugFlow = false
 private val debugStart = false
 private val debugSuperblock = false
 
 /**
- * Build the rootGroup for an HD5 file.
+ * Build the rootGroup for an HDF5 file.
  * @param strict  true = make it agree with nclib if possible
  * @param valueCharset used when reading HDF5 header. LOOK need example to test
  */
@@ -264,7 +264,7 @@ class H5builder(val raf: OpenFile,
         return true
     }
 
-    // LOOK just pass the mdt ??
+    // LOOK could just pass the mdt ??
     fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
         return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
     }
@@ -385,19 +385,6 @@ class H5builder(val raf: OpenFile,
         }
         return String(b, start, count - start, valueCharset) // all strings are considered to be UTF-8
         // unicode
-    }
-
-    internal fun convertEnums(map: Map<Int, String>, values: Array<Number>): List<String> {
-        val sarray = mutableListOf<String>()
-        for (noom in values) {
-            val ival = noom.toInt()
-            var sval = map[ival]
-            if (sval == null) {
-                sval = "Unknown enum value=$ival"
-            }
-            sarray.add(sval)
-        }
-        return sarray
     }
 
     companion object {

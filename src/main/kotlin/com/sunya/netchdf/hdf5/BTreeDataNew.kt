@@ -19,29 +19,28 @@ import java.nio.ByteOrder
  *
  * The pointers in internal nodes point to sub-trees while the pointers in leaf nodes point to symbol nodes and
  * raw data chunks. Aside from that difference, internal nodes and leaf nodes are identical.
+ * NOT USED
  */
-class BTreeData(
+class BTreeDataNew(
     val h5: H5builder,
     val rootNodeAddress: Long,
     varShape: IntArray,
     storageSize: IntArray,
-    val memTracker: MemTracker?
 ) {
     private val raf: OpenFile = h5.raf
     private val tiling: TilingOld = TilingOld(varShape, storageSize)
     private val ndimStorage: Int = storageSize.size
-    private val wantType: Int = 1
+    private val wantType: Int = 1 // 0 = group nodes, 1 = raw data chunks
 
+    private val nodes = mutableMapOf<Long, Node>()
     private var owner: Any? = null
-    var readNodes = 0
-    var readChunks = 0
 
     fun setOwner(owner: Any?) {
         this.owner = owner
     }
 
     // used by H5tiledLayoutBB
-    fun getDataChunkIteratorFilter(want: Section): BTreeData.DataChunkIterator {
+    fun getDataChunkIteratorFilter(want: Section): BTreeDataNew.DataChunkIterator {
         return DataChunkIterator(want)
     }
 
@@ -53,16 +52,22 @@ class BTreeData(
     // An Iterator over the DataChunks in the btree.
     // returns the actual data from the btree leaf (level 0) nodes.
     // used by H5tiledLayout, when there are no filters
+    // no caching i think
     /**
      * @param want skip any nodes that are before this section
      * @param nChunkDim number of chunk dimensions - may be less than the offset[] length
      */
     internal inner class DataChunkIteratorNoFilter(want: Section, private val nChunkDim: Int) :
         LayoutTiled.DataChunkIterator {
-        private val root: BTreeData.Node
+
+        private val root: BTreeDataNew.Node
 
         init {
             root = Node(rootNodeAddress, -1) // should we cache the nodes ???
+            if (nodes[rootNodeAddress] != null) {
+                println("HEY already read node at $rootNodeAddress")
+            }
+            nodes[rootNodeAddress] = root
             root.first(want.origin)
         }
 
@@ -71,28 +76,29 @@ class BTreeData(
         }
 
         override operator fun next(): LayoutTiled.DataChunk {
-            val dataChunk: BTreeData.DataChunk = root.next()
-            var offset: IntArray = dataChunk.offset
+            val dataChunk: BTreeDataNew.DataChunk = root.next()
+            var offset: IntArray = dataChunk.key.offsets
             if (offset.size > nChunkDim) { // may have to eliminate last offset
                 offset = IntArray(nChunkDim)
-                System.arraycopy(dataChunk.offset, 0, offset, 0, nChunkDim)
+                System.arraycopy(dataChunk.key.offsets, 0, offset, 0, nChunkDim)
             }
             return LayoutTiled.DataChunk(offset, dataChunk.filePos)
         }
     }
 
     // An Iterator over the DataChunks in the btree.
-    // returns the data chunck info from the btree leaf (level 0) nodes
-    // used by H5tiledLayoutBB, when there are filters
-    /**
-     * @param want skip any nodes that are before this section
-     */
+    // returns the DataChunks contained in the leaf (level 0) nodes
+    /** @param want skip any nodes that are before this section */
     inner class DataChunkIterator internal constructor(want: Section) {
-        private val root: BTreeData.Node
+        private val root: BTreeDataNew.Node
         private val wantOrigin: IntArray
 
         init {
             root = Node(rootNodeAddress, -1) // should we cache the nodes ???
+            if (nodes[rootNodeAddress] != null) {
+                println("HEY already read node at $rootNodeAddress")
+            }
+            nodes[rootNodeAddress] = root
             wantOrigin = want.origin
             root.first(wantOrigin)
         }
@@ -101,64 +107,56 @@ class BTreeData(
             return root.hasNext() // && !node.greaterThan(wantOrigin);
         }
 
-        operator fun next(): BTreeData.DataChunk {
+        operator fun next(): BTreeDataNew.DataChunk {
             return root.next()
         }
     }
 
     // Btree nodes
-    internal inner class Node(address: Long, parent: Long) {
-        private val address: Long
+    private inner class Node(val address: Long, parent: Long) {
         private val level: Int
         private val nentries: Int
-        private var currentNode: BTreeData.Node? = null
+        private var currentNode: BTreeDataNew.Node? = null
 
         // level 0 only
-        private val myEntries = mutableListOf<BTreeData.DataChunk>()
+        private val myDataChunks = mutableListOf<BTreeDataNew.DataChunk>()
 
         // level > 0 only
-        private val offsets = mutableListOf<IntArray>() // int[nentries][ndim]; // other levels
-
-        // "For raw data chunk nodes, the child pointer is the address of a single raw data chunk"
-        private val childPointer = mutableListOf<Long>() // long[nentries];
+        private val keys = mutableListOf<Key>() // int[nentries][ndim]; // other levels
+        private val childPointers = mutableListOf<Long>() // long[nentries];
 
         private var currentEntry = 0 // track iteration; TODO why not an iterator ??
 
         init {
-            readNodes++
             val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
-            this.address = address
             val magic: String = raf.readString(state, 4)
             check(magic == "TREE") { "DataBTree doesnt start with TREE" }
 
             val type: Int = raf.readByte(state).toInt()
             check(type == wantType) { "DataBTree must be type $wantType" }
 
-            level = raf.readByte(state).toInt()
-            nentries = raf.readShort(state).toInt()
-            val size: Long =
-                8 + 2 * h5.sizeOffsets + nentries.toLong() * (8 + h5.sizeOffsets + 8 + ndimStorage)
-            memTracker?.addByLen("Data BTree ($owner)", address, size)
+            level = raf.readByte(state).toInt() // leaf nodes are level 0
+            nentries = raf.readShort(state).toInt() // number of children to which this node points
+            // val size: Long = 8 + 2 * h5.sizeOffsets + nentries.toLong() * (8 + h5.sizeOffsets + 8 + ndimStorage)
             val leftAddress: Long = h5.readOffset(state)
             val rightAddress: Long = h5.readOffset(state)
 
-            if (level == 0) {
-                // read all entries as a DataChunk
-                for (i in 0..nentries) {
-                    val dc: BTreeData.DataChunk = DataChunk(state, ndimStorage, i == nentries)
-                    myEntries.add(dc)
+            // could we gulp this in one read ?
+            for (i in 0..nentries) {
+                val chunkSize = raf.readInt(state)
+                val filterMask = raf.readInt(state)
+                val inner = IntArray(ndimStorage) { j ->
+                    val loffset: Long = raf.readLong(state)
+                    require(loffset < Int.MAX_VALUE) // why?
+                    loffset.toInt()
                 }
-
-            } else { // just track the offsets and node addresses
-                for (i in 0..nentries) {
-                    state.pos += 8 // skip size, filterMask
-                    val inner = IntArray(ndimStorage) { j ->
-                        val loffset: Long = raf.readLong(state)
-                        require(loffset < Int.MAX_VALUE) // why?
-                        loffset.toInt()
-                    }
-                    offsets.add(inner) // LOOK not used ??
-                    childPointer.add(if (i == nentries) -1 else h5.readOffset(state))
+                val key = Key(chunkSize, filterMask, inner)
+                val childPointer = h5.readOffset(state) // 4 or 8 bytes
+                if (level == 0) {
+                    myDataChunks.add( DataChunk(key, childPointer))
+                } else {
+                    keys.add(key)
+                    childPointers.add(if (i == nentries) -1 else childPointer)
                 }
             }
         }
@@ -172,17 +170,22 @@ class BTreeData(
                 // note nentries-1 - assume dont skip the last one
                 currentEntry = 0
                 while (currentEntry < nentries - 1) {
-                    val entry: BTreeData.DataChunk = myEntries[currentEntry + 1] // look at the next one
-                    if (wantOrigin == null || tiling.compare(wantOrigin, entry.offset) < 0) break
+                    val entry: BTreeDataNew.DataChunk = myDataChunks[currentEntry + 1] // look at the next one
+                    if (wantOrigin == null || tiling.compare(wantOrigin, entry.key.offsets) < 0) break
                     currentEntry++
                 }
             } else {
                 currentNode = null
                 currentEntry = 0
                 while (currentEntry < nentries) {
-                    if (wantOrigin == null || tiling.compare(wantOrigin, offsets[currentEntry + 1]) < 0) {
-                        currentNode = Node(childPointer[currentEntry], address)
+                    if (wantOrigin == null || tiling.compare(wantOrigin, keys[currentEntry + 1].offsets) < 0) {
+                        val childAddress = childPointers[currentEntry]
+                        currentNode = Node(childAddress, address)
                         currentNode!!.first(wantOrigin)
+                        if (nodes[childAddress] != null) {
+                            println("HEY already read node at $rootNodeAddress")
+                        }
+                        nodes[childAddress] = currentNode!!
                         break
                     }
                     currentEntry++
@@ -191,8 +194,13 @@ class BTreeData(
                 // heres the case where its the last entry we want; the tiling.compare() above may fail
                 if (currentNode == null) {
                     currentEntry = nentries - 1
-                    currentNode = Node(childPointer[currentEntry], address)
+                    val childAddress = childPointers[currentEntry]
+                    currentNode = Node(childAddress, address)
                     currentNode!!.first(wantOrigin)
+                    if (nodes[childAddress] != null) {
+                        println("HEY already read node at $rootNodeAddress")
+                    }
+                    nodes[childAddress] = currentNode!!
                 }
             }
             require(nentries == 0 || currentEntry < nentries) { "$currentEntry >= $nentries" }
@@ -207,45 +215,25 @@ class BTreeData(
             }
         }
 
-        operator fun next(): BTreeData.DataChunk {
+        operator fun next(): BTreeDataNew.DataChunk {
             return if (level == 0) {
-                myEntries[currentEntry++]
+                myDataChunks[currentEntry++]
             } else {
                 if (currentNode!!.hasNext()) return currentNode!!.next() // LOOK recursion instead of loop ?
                 currentEntry++
-                currentNode = Node(childPointer[currentEntry], address)
+                val childAddress = childPointers[currentEntry]
+                currentNode = Node(childAddress, address)
                 currentNode!!.first(null)
+                if (nodes[childAddress] != null) {
+                    println("HEY already read node at $rootNodeAddress")
+                }
+                nodes[childAddress] = currentNode!!
                 currentNode!!.next()
             }
         }
     }
 
-    // these are part of the level 1A data structure, type 1
-    // see http://www.hdfgroup.org/HDF5/doc/H5.format.html#V1Btrees,
-    // see "Key" field (type 1) p 10
-    // this is only for leaf nodes (level 0)
-    inner class DataChunk internal constructor(state : OpenFileState, ndim: Int, last: Boolean) {
-        val size : Int // size of chunk in bytes; need storage layout dimensions to interpret
-        val filterMask : Int // bitfield indicating which filters have been skipped for this chunk
-        val offset : IntArray// offset index of this chunk, reletive to entire array
-        val filePos : Long // filePos of a single raw data chunk, already shifted by the offset if needed
+    data class Key(val chunkSize: Int, val filterMask : Int, val offsets: IntArray)
 
-        init {
-            readChunks++
-            size = raf.readInt(state)
-            filterMask = raf.readInt(state)
-            offset = IntArray(ndim)
-            for (i in 0 until ndim) {
-                val loffset: Long = raf.readLong(state)
-                require(loffset < Int.MAX_VALUE)
-                offset[i] = loffset.toInt()
-            }
-            filePos = if (last) -1 else h5.readAddress(state)
-            memTracker?.addByLen("Chunked Data ($owner)", filePos, size.toLong())
-        }
-
-        override fun toString(): String {
-            return "  BtreeData.DataChunk filePos = $filePos size=$size offsets=${offset.contentToString()}"
-        }
-    }
+    data class DataChunk(val key : Key, val filePos : Long)
 }

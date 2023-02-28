@@ -1,36 +1,33 @@
 package com.sunya.cdm.iosp
 
-interface Layout {
-    /** Get total number of elements in the wanted subset.  */
+interface Layout : Iterator<Layout.Chunk> {
+    /** The total number of elements in the wanted subset.  */
     val totalNelems: Long
 
-    /** Get size of each element in bytes.  */
+    /** The size of each element in bytes.  */
     val elemSize: Int
 
-    /** Is there more to do?  */
-    operator fun hasNext(): Boolean
+    /** Is there more to do?  Must be called before calling next()*/
+    override operator fun hasNext(): Boolean
 
-    /** Get the next chunk, not null if hasNext() is true.  */
-    operator fun next(): Chunk
+    /** Get the next chunk, guarenteed not null if hasNext() is true.  */
+    override operator fun next(): Chunk
 
     /**
      * A chunk of data that is contiguous in both the source and destination.
-     * Read nelems from src at filePos, store in destination at startElem.
-     * (or) Write nelems to file at filePos, from array at startElem.
+     * Read nelems from src at srcPos/srcElem, copy to the destination at destElem.
      */
     interface Chunk {
-        /** Get the byte position in source where to read or write: eg "file position"  */
+        /** The byte position in source where to read from: may be a "file position" or offset into a ByteBuffer  */
         fun srcPos() : Long
 
-        /** Get number of elements to transfer contiguously (Note: elements, not bytes)  */
+        /** The 1D element position in the source to read from. (Note: elements, not bytes)   */
+        fun srcElem() : Long
+
+        /** Number of elements to transfer contiguously (Note: elements, not bytes)  */
         fun nelems() : Int
 
-        /**
-         * Get starting element position as a 1D element index into the destination, eg the requested array with shape
-         * "wantSection".
-         *
-         * @return starting element in the array (Note: elements, not bytes)
-         */
+        /** The 1D element position in the destination to copy into. (Note: elements, not bytes) */
         fun destElem() : Long // LOOK why Long?
     }
 }

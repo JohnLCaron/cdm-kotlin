@@ -11,7 +11,7 @@ import java.nio.*
  * Chunks do not necessarily cover the array, missing data is possible.
  * Used by HDF4 and HDF5.
  */
-class LayoutBBTiled(
+class LayoutTiledBB(
     val chunkIterator: DataChunkIterator, // iterator over all data chunks
     val chunkSize: IntArray, // all chunks assumed to be the same size
     val elemSize: Int, // size of an element in bytes.
@@ -110,7 +110,7 @@ class LayoutBBTiled(
 
         override fun srcPos(): Long = delegate!!.srcPos
         override fun nelems() = delegate!!.nelems
-        override fun srcElem() : Int = delegate!!.srcElem.toInt()
+        override fun srcElem() = delegate!!.srcElem
         override fun destElem() : Long = delegate!!.destElem
         override fun toString() = delegate.toString()
     }

@@ -5,10 +5,10 @@ import com.sunya.cdm.api.Section
 /**
  * LayoutRegular has data stored in row-major order, like netcdf non-record variables.
  *
- * @param startPos starting address of the entire data array.
+ * @param startPos starting address (bytes) of the complete source data array.
  * @param elemSize size of an element in bytes.
  * @param varShape shape of the entire data array. must have rank &gt; 0
- * @param wantSection the wanted section of data
+ * @param wantSection the wanted section of data; if null, use varShape
  */
 class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSection: Section?) : Layout {
     private val chunker: IndexChunker

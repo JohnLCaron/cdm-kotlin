@@ -87,7 +87,6 @@ internal class H5heap(val header: H5builder) {
         if (ho.dataSize == 0L) return null
         if (ho.dataSize > 1000 * 1000) return java.lang.String.format("Bad HeapObject.dataSize=%s", ho)
         val state = OpenFileState(ho.dataPos, ByteOrder.nativeOrder())
-        raf.seek(ho.dataPos)
         return raf.readString(state, ho.dataSize.toInt(), header.valueCharset)
     }
 

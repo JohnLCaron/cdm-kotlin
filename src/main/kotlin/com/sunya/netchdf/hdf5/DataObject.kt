@@ -26,14 +26,7 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject {
         // LOOK not well documented
         state.pos += 4
 
-        val count = this.readMessagesVersion1(state, nmess, objectHeaderSize, messages)
-        /* if (count != nmess) {
-            println("  expected $nmess, read $count messages")
-        }
-        if (state.pos != startPos + objectHeaderSize) {
-            println("  set expected pos ${startPos + objectHeaderSize}, actual ${state.pos}")
-            state.pos = startPos + objectHeaderSize
-        } */
+        this.readMessagesVersion1(state, nmess, objectHeaderSize, messages)
         return DataObject(address, name, messages)
         
     } else { // IV.A.1.b. Version 2 Data Object Header Prefix
@@ -55,12 +48,10 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject {
             val minDenseAttributes: Short = raf.readShort(state)
         }
         val sizeOfChunk: Long = this.readVariableSizeFactor(state,flags and 3)
-        val count =  this.readMessagesVersion2(state, sizeOfChunk, ((flags shr 2) and 1) == 1, messages)
-
+        this.readMessagesVersion2(state, sizeOfChunk, ((flags shr 2) and 1) == 1, messages)
         return DataObject(address, name, messages)
     }
 }
-
 
 class DataObject(
     val address : Long, // aka object id : obviously unique

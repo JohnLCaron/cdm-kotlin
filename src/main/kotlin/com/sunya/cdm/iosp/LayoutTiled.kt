@@ -9,6 +9,7 @@ import java.io.IOException
  * Chunks have an offset into the complete array.
  * Chunks do not necessarily cover the array, missing data is possible.
  * Used by HDF4 and HDF5.
+ * LOOK maybe all shou use LayoutTiledBB? more efficient if "reversed" chunking
  */
 class LayoutTiled(val chunkIterator: DataChunkIterator, val chunkSize: IntArray, override val elemSize: Int,
                   wantSection: Section) : Layout {
@@ -84,16 +85,11 @@ class LayoutTiled(val chunkIterator: DataChunkIterator, val chunkSize: IntArray,
     }
 
     override fun toString(): String {
-        val sbuff = StringBuilder()
-        sbuff.append("want=").append(want).append("; ")
-        sbuff.append("chunkSize=[")
-        for (i in chunkSize.indices) {
-            if (i > 0) sbuff.append(",")
-            sbuff.append(chunkSize[i])
+        return buildString {
+            append("want=$want; ")
+            append("chunkSize=${chunkSize.contentToString()}")
+            append(" totalNelems=$totalNelems elemSize=$elemSize")
         }
-        sbuff.append("] totalNelems=").append(totalNelems)
-        sbuff.append(" elemSize=").append(elemSize)
-        return sbuff.toString()
     }
 
     /** An iterator over DataChunk's  */

@@ -24,7 +24,7 @@ import java.util.*
  * Both dataSection and wantSection refer to the variable's overall shape.
  */
 class IndexChunkerTiled(dataSection: Section, wantSection: Section) {
-    private val dimList: MutableList<Dim> = ArrayList()
+    private val dimList = mutableListOf<Dim>()
     private val dataIndex : IndexLong // Index into the data source section - used to calculate chunk.filePos
     private val resultIndex : IndexLong // Index into the data result section - used to calculate chunk.startElem
     private var chunk: IndexChunker.Chunk? = null // gets returned on next().
@@ -46,7 +46,6 @@ class IndexChunkerTiled(dataSection: Section, wantSection: Section) {
      * @throws InvalidRangeException if ranges are malformed
      */
     init {
-
         // The actual wanted data we can get from this section
         val intersect: Section = dataSection.intersect(wantSection)
         totalNelems = intersect.computeSize()
@@ -100,8 +99,8 @@ class IndexChunkerTiled(dataSection: Section, wantSection: Section) {
         Preconditions.checkArgument(nchunks * nelems == totalNelems)
         if (debug) {
             println(
-                "RegularSectionLayout total = " + totalNelems + " nchunks= " + nchunks + " nelems= " + nelems
-                        + " dataSection= " + dataSection + " wantSection= " + wantSection + " intersect= " + intersect + this
+                "IndexChunkerTiled total = $totalNelems $nchunks= $nchunks $nelems= $nelems" +
+                        " dataSection= $dataSection wantSection= $wantSection intersect= $intersect $this"
             )
         }
     }
@@ -133,8 +132,7 @@ class IndexChunkerTiled(dataSection: Section, wantSection: Section) {
         }
 
         override fun toString(): String {
-            return ("  data = " + data + " want = " + want + " intersect = " + intersect + " ncontigElements = "
-                    + ncontigElements)
+            return ("data = $data want = $want intersect = $intersect ncontigElements = $ncontigElements")
         }
     } // Dim
 
@@ -166,11 +164,7 @@ class IndexChunkerTiled(dataSection: Section, wantSection: Section) {
 
     ////////////////////
     override fun toString(): String {
-        val f = Formatter()
-        for (elem in dimList) {
-            f.format("%s%n", elem)
-        }
-        return f.toString()
+        return dimList.toString()
     }
 
     companion object {

@@ -46,9 +46,24 @@ class NetchdfCompareCdl {
         }
     }
 
-    @Test
+    // @Test bug in Clib matches typedef hash, not address
     fun testProblem () {
-        openNetchdf("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
+    }
+
+    // @Test
+    fun testProblemSlow () {
+        openNetchdf("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vars.nc4")
+    }
+
+    @Test
+    fun testChunked2 () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc")
+    }
+
+    @Test
+    fun testChunked () {
+        openNetchdf("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/e562p1_fp.inst3_3d_asm_Nv.20100907_00z+20100909_1200z.nc4")
     }
 
     @Test
