@@ -98,4 +98,8 @@ class Tiling(varshape: IntArray, val chunk: IntArray) {
         val length = IntArray(rank) { idx -> limit[idx] - start[idx] + 1 }
         return IndexSpace(start, length)
     }
+
+    override fun toString(): String {
+        return "Tiling(chunk=${chunk.contentToString()}, tileShape=${tileShape.contentToString()}, indexShape=${indexShape.contentToString()})"
+    }
 }

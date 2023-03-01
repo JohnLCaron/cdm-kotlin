@@ -19,7 +19,7 @@ class TestOdometer {
             assertEquals(count, odo.element())
             count++
         }
-        assertEquals(dataSection.totalElements, count)
+        assertEquals(dataSection.totalElements, count.toLong())
     }
 
     @Test

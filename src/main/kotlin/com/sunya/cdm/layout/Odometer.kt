@@ -5,9 +5,9 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
     val rank = section.rank
     val current = section.start.copyOf()
     val limit = section.limit
-    val nelems = section.totalElements
+    val totalElements = section.totalElements
     val strider : IntArray
-    var done = false
+    var done = 0
 
     init {
         strider = IntArray(rank)
@@ -18,9 +18,21 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
         }
     }
 
-    fun isDone(): Boolean  = done
+    fun isDone(): Boolean  = (done >= totalElements)
     fun incr(): IntArray = current.incr()
     fun incr(incrdigit: Int): IntArray = current.incr(incrdigit)
+
+    fun add(count: Int) {
+        repeat(count) {incr() } // LOOK do something smarter
+    }
+
+    private fun setFromElement(element: Long) {
+        var total = element
+        for (dim in 0 until rank) {
+            current[dim] = (total / strider[dim]).toInt()
+            total -= (current[dim] * strider[dim]).toLong()
+        }
+    }
 
     // increment starting from the fastest digit
     fun IntArray.incr(): IntArray {
@@ -31,7 +43,7 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
             this[digit] = section.start[digit] // else, carry
             digit--
         }
-        if (digit < 0) done = true
+        done++
         return this
     }
 
@@ -45,21 +57,13 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
             this[digit] = section.start[digit] // else, carry
             digit--
         }
-        if (digit < 0) done = true
+        // LOOK we dont know when this is done. maybe this is an Index, not an odometer
         return this
     }
 
-    fun element() : Long = element(current, strider)
-
-    fun element(pt : IntArray, strider : IntArray) : Long {
-        var element = 0L
-        for (k in rank - 1 downTo 0) {
-            element += pt[k] * strider[k]
-        }
-        return element
+    fun element() : Long {
+        return current.zip(strider).map { it.first.toLong() * it.second }.sum()
     }
-
-
 
     override fun iterator() = OdoIterator()
     override fun toString(): String {
@@ -71,7 +75,7 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
         var first = true
 
         override fun computeNext() {
-            if (count >= nelems) {
+            if (count >= totalElements) {
                 return done()
             }
             if (!first) {

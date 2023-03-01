@@ -60,6 +60,11 @@ class H5headerTest {
         openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4")
     }
 
+    @Test
+    fun groupHasCycle() {
+        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/groupHasCycle.h5")
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun openH5(filename: String) {

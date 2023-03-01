@@ -49,7 +49,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         while (layout.hasNext()) {
             val chunk = layout.next()
             filePos.pos = chunk.srcPos()
-            val bytesRead = raf.readByteBuffer(filePos, vinfo.elemSize * chunk.nelems())
+            val bytesRead = raf.readByteBufferDirect(filePos, vinfo.elemSize * chunk.nelems())
             // extra copy
             System.arraycopy(bytesRead.array(), 0, values.array(), vinfo.elemSize * chunk.destElem().toInt(), vinfo.elemSize * chunk.nelems());
         }

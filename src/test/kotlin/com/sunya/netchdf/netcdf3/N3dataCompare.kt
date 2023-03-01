@@ -36,8 +36,8 @@ class N3dataCompare {
     }
 
     @Test
-    fun problem1() {
-        readN3dataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/c0tmp.nc")
+    fun awips() {
+        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/awips.nc", "uw")
     }
 
     @Test

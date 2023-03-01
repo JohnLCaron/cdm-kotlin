@@ -53,5 +53,23 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
         return "${makeSection()}"
     }
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is IndexSpace) return false
 
+        if (!start.contentEquals(other.start)) return false
+        if (!nelems.contentEquals(other.nelems)) return false
+        if (rank != other.rank) return false
+        if (totalElements != other.totalElements) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = start.contentHashCode()
+        result = 31 * result + nelems.contentHashCode()
+        result = 31 * result + rank
+        result = 31 * result + totalElements.hashCode()
+        return result
+    }
 }

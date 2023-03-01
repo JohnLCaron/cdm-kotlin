@@ -87,41 +87,40 @@ class ChunkedData(val btree1 : BTree1New) {
         return nextSibling.dataChunkEntries[0]
     }
 
-    fun findDataChunks(section : Section) : Iterable<BTree1New.DataChunkEntry> {
+    fun findDataChunks(wantSection : Section) : Iterable<BTree1New.DataChunkEntry> {
         val chunks = mutableListOf<BTree1New.DataChunkEntry>()
 
-        val tileSection = tiling.section( IndexSpace(section)) // section in tiles that we want
+        val tileSection = tiling.section( IndexSpace(wantSection)) // section in tiles that we want
         val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        val incrDigit = tiling.rank - 2 // increment the second fastest digit
         while (!tileOdometer.isDone()) {
             val firstTile = tileOdometer.current
             val firstKey = tiling.index(firstTile) // convert to index "keys"
             val firstChunk = findDataChunkContainingKey(rootNode, firstKey)!!
-            if (check) require(section.contains(firstChunk.key.offsets))
+            if (check) require(wantSection.intersects(IndexSpace(firstChunk.key.offsets, tiling.chunk).makeSection()))
             if (debugRow) print("tilesInRow = ${firstTile.contentToString()}")
-            addDataChunkRow(section, firstChunk, chunks) // can efficiently find the chunks along the first dimension
+            val chunksAdded = addDataChunkRow(wantSection, firstChunk, chunks) // can efficiently find the chunks along the first dimension
             if (debugRow) println()
-
-            if (incrDigit >= 0) {
-                tileOdometer.incr(incrDigit)
-            } else {
-                break
-            }
+            tileOdometer.add(chunksAdded)
+            // tileOdometer.incr(tiling.rank - 1)
         }
 
         return chunks
     }
 
     // add all the chunks along this row until section no longer contains them
-    fun addDataChunkRow(section : Section, starting : BTree1New.DataChunkEntry, chunks : MutableList<BTree1New.DataChunkEntry>) {
+    fun addDataChunkRow(wantSection : Section, starting : BTree1New.DataChunkEntry, chunks : MutableList<BTree1New.DataChunkEntry>) : Int {
+        var count = 0
         var useChunk = starting
         while (true) {
             chunks.add(useChunk)
+            count++
             val nextChunk = nextDataChunk(useChunk)
             if (nextChunk == null) {
                 break
             } else {
-                val needed = section.contains(nextChunk.key.offsets)
+                val nextIndexShape = IndexSpace(nextChunk.key.offsets, tiling.chunk)
+                val nextIndexSection = nextIndexShape.makeSection()
+                val needed = wantSection.intersects(nextIndexSection) // LOOK replace
                 if (!needed) {
                     break
                 } else if (debugRow) {
@@ -131,6 +130,12 @@ class ChunkedData(val btree1 : BTree1New) {
             }
             useChunk = nextChunk
         }
+        return count
     }
+
+    override fun toString(): String {
+        return "ChunkedData(chunk=${btree1.storageSize.contentToString()}, readHit=$readHit, readMiss=$readMiss)"
+    }
+
 
 }

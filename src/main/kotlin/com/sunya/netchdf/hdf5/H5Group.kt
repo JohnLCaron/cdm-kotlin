@@ -100,15 +100,20 @@ internal fun H5builder.readGroupNew(
 internal fun H5builder.readGroupOld(groupb: H5GroupBuilder, btreeAddress: Long, nameHeapAddress: Long) {
     // track by address for hard links
     hashGroups.put(btreeAddress, groupb)
-    if (debugHardLink) {
-        println("readGroupOld ${groupb.name}")
-    }
 
     val nameHeap = LocalHeap(this, nameHeapAddress)
-    val btree = Btree1(this, btreeAddress, groupb.name)
 
-    // now read all the entries in the btree : Level 1C
+    /* println("readGroupOld Btree1 name = '${groupb.name}' btreeAddress = $btreeAddress nameHeapAddress = $nameHeapAddress")
+    var count = 0
+    val btree = Btree1(this, btreeAddress, groupb.name)
     for (s in btree.symbolTableEntries) {
+        println("$count ${ nameHeap.getStringAt(s.nameOffset.toInt())}")
+        count++
+    } */
+
+    // println("readGroupOld GroupSymbolTable ")
+    val symbolTable = GroupSymbolTable(btreeAddress)
+    for (s in symbolTable.symbolTableEntries(this)) {
         val sname: String = nameHeap.getStringAt(s.nameOffset.toInt())
         if (debugSoftLink) {
             println(" Symbol name= ${sname}")
@@ -232,11 +237,26 @@ internal class H5GroupBuilder(
 ) {
     val nestedGroupsBuilders = mutableListOf<H5GroupBuilder>()
 
-
     // is this a child of that ?
     fun isChildOf(that: H5GroupBuilder): Boolean {
+        if (this == that) return true
         if (parent == null) return false
-        return if (parent === that) true else parent.isChildOf(that)
+        val parents = mutableSetOf<H5GroupBuilder>()
+        var useParent = this.parent
+        while (useParent != null) {
+            if (parents.contains(that)) return true
+            if (parents.contains(useParent)) {
+                println("HEY got a group loop")
+                break
+            }
+            parents.add(useParent)
+            useParent = useParent.parent
+            if (parents.size > 50) {
+                println("HEY nesting is too big")
+                break
+            }
+        }
+        return false
     }
 
     fun build() : H5Group {

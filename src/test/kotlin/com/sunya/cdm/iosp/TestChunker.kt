@@ -18,7 +18,7 @@ class TestChunker {
         println("Chunker dataChunk = ${dataChunk.makeSection()} wantSection = [$wantSection]")
 
         val layout = Chunker(dataChunk, 4, wantSection, merge)
-        val expectNelems = expectElems ?: dataChunk.totalElements.toInt() / expectNchunks
+        val expectNelems = expectElems ?: (dataChunk.totalElements.toInt() / expectNchunks)
         var count = 0
         var totalNelems = 0
         while (layout.hasNext()) {
