@@ -4,21 +4,62 @@ import java.io.Closeable
 import java.io.EOFException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.channels.FileChannel
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 /** An abstraction over a Java FileChannel. */
 data class OpenFile(val location : String) : Closeable {
     val raf : com.sunya.io.RandomAccessFile
+    val fileChannel : FileChannel
     val size : Long
     init {
         raf = com.sunya.io.RandomAccessFile(location, "r")
+        fileChannel = raf.fileChannel
         raf.order(ByteOrder.LITTLE_ENDIAN)
         size = raf.length()
     }
 
     override fun close() {
         raf.close()
+    }
+
+    fun readByteBufferDirect(state : OpenFileState, nbytes : Int): ByteBuffer {
+        if (nbytes < 4000) {
+            return readByteBuffer(state, nbytes)
+        }
+
+        val dst = ByteBuffer.allocate(nbytes)
+        if (state.pos > size) {
+            throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
+        }
+        val nread = fileChannel.read(dst, state.pos)
+        if (nread != dst.capacity()) {
+            throw EOFException("Only read $nread bytes of wanted ${dst.capacity()} bytes; starting at pos ${state.pos} EOF=${fileChannel.size()}")
+        }
+        dst.flip()
+        dst.order(state.byteOrder)
+        state.pos += nread
+        return dst
+    }
+
+    fun readIntoByteBufferDirect(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
+        if (nbytes < 4000) {
+            return readIntoByteBuffer(state, dst, dstPos, nbytes)
+        }
+
+        if (state.pos > fileChannel.size()) {
+            throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
+        }
+        // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
+        dst.limit(dstPos + nbytes)
+        dst.position(dstPos)
+        val nread =  fileChannel.read(dst, state.pos)
+        if (nread != nbytes) {
+            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
+        }
+        state.pos += nread
+        return nread
     }
 
     fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
@@ -40,7 +81,7 @@ data class OpenFile(val location : String) : Closeable {
         return bb
     }
 
-    // doesnt check the number of bytes read
+    // doesnt check the number of bytes read into dst, just returns the number.
     fun readBytesUnchecked(state : OpenFileState, dst : ByteArray) : Int {
         raf.seek(state.pos)
         raf.order(state.byteOrder)

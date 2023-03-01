@@ -75,6 +75,31 @@ class TestTiling {
 
     }
 
+    @Test
+    fun testProblem2() {
+        val varshape = intArrayOf(8395, 781, 385)
+        val chunk = intArrayOf(1, 30, 30)
+        val tiling = Tiling(varshape, chunk)
+        println("tiling = $tiling")
+
+        val indexSection = IndexSpace(Section("0:9, 0:780, 0:384"))
+        val tileSection = tiling.section(indexSection)
+        assertEquals(IndexSpace(Section("0:9,0:26,0:12")), tileSection)
+
+        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
+        val incrDigit = tiling.rank - 1 // increment the second fastest digit
+        var count = 0
+        while (!tileOdometer.isDone()) {
+            val tile = tileOdometer.current
+            val key = tiling.index(tile) // convert to index "keys"
+            // println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
+            tileOdometer.incr(incrDigit)
+            count++
+        }
+        println("tiles = $count")
+
+    }
+
     fun checkEquals(ia1 : IntArray, ia2 : IntArray) {
         if (!ia1.contentEquals(ia2)) {
             println("${ia1.contentToString()} != ${ia2.contentToString()}")

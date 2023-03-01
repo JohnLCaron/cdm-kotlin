@@ -58,7 +58,7 @@ class N4dataTest {
             ncvars.forEach { n4var ->
                 val ncdata = ncfile.readArrayData(n4var)
                 println("===============\n${n4var.name}")
-                println("ncdata = $ncdata")
+                if (debug) println("ncdata = $ncdata")
                 if (n4var.nelems > 8 && n4var.datatype != Datatype.CHAR) {
                     readMiddleSection(ncfile, n4var)
                 }
@@ -78,7 +78,7 @@ class N4dataTest {
         println(" ${ncvar.name}[$middleSection]")
         val ncdata = ncfile.readArrayData(ncvar, middleSection)
         println("===============\n${ncvar.name}")
-        println("ncdata = $ncdata")
+        if (debug) println("ncdata = $ncdata")
     }
 
 }

@@ -515,8 +515,7 @@ public class RandomAccessFile implements DataInput, DataOutput, Closeable {
    */
   public long readToByteChannel(WritableByteChannel dest, long offset, long nbytes) throws IOException {
 
-    if (fileChannel == null)
-      fileChannel = file.getChannel();
+    getFileChannel();
 
     long need = nbytes;
     while (need > 0) {
@@ -529,6 +528,12 @@ public class RandomAccessFile implements DataInput, DataOutput, Closeable {
     return nbytes - need;
   }
 
+  public java.nio.channels.FileChannel getFileChannel() {
+    if (fileChannel == null) {
+      fileChannel = file.getChannel();
+    }
+    return fileChannel;
+  }
 
   /**
    * Read directly from file, without going through the buffer.

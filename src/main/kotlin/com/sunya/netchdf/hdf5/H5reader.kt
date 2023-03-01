@@ -10,6 +10,7 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+private val debugChunkingDetail = false
 private val debugChunking = false
 
 // Handles reading attributes and regular layout Variables (eg contiguous, maybe compact)
@@ -113,7 +114,7 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     while (layout.hasNext()) {
         val chunk = layout.next()
         state.pos = chunk.srcPos()
-        raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
+        raf.readIntoByteBufferDirect(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
         count++
     }
     bb.position(0)
@@ -218,16 +219,16 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
     var count = 0
     val state = OpenFileState(0L, vinfo.h5type.endian)
     for (dataChunk in chunkedData.findDataChunks(wantSection)) { // : Iterable<BTree1New.DataChunkEntry>
-        if (debugChunking) println(" ${dataChunk.show(chunkedData.tiling)}")
+        if (debugChunkingDetail) println(" ${dataChunk.show(chunkedData.tiling)}")
         val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
         val chunker = Chunker(dataSection, elemSize, wantSection)
         state.pos = dataChunk.childAddress
-        val chunkData = raf.readByteBuffer(state, dataChunk.key.chunkSize)
+        val chunkData = raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
         val filteredData = filters.apply(chunkData, dataChunk)
         chunker.transfer(filteredData, bb)
         count++
     }
-    if (debugChunking) println(" New $count dataChunks; nodes: ${chunkedData}")
+    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData}")
 
     bb.position(0)
     bb.limit(bb.capacity())
@@ -255,10 +256,10 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
 }
 
 fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
-    if (debugChunking) println("  $this")
+    if (debugChunkingDetail) println("  $this")
     while (this.hasNext()) {
         val chunk = this.next()
-        if (debugChunking) println("   $chunk")
+        if (debugChunkingDetail) println("   $chunk")
         src.position(this.elemSize * chunk.srcElem.toInt())
         dst.position(this.elemSize * chunk.destElem.toInt())
         // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -296,11 +297,12 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: H5tiledL
             pos++
         } // LOOK bulk copy ?
         count++
-        if (debugChunking) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
+        if (debugChunkingDetail) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())
-    if (debugChunking) println(" Old $count dataChunks, nodes: readNodes = ${layout.readNodes()}, readChunks = ${layout.readChunks()}")
+    if (debugChunkingDetail or debugChunking)
+        println(" Old $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
