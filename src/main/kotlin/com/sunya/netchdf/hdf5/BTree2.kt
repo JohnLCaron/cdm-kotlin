@@ -24,8 +24,6 @@ import java.util.*
  * Used in readGroupNew(), readAttributesFromInfoMessage(), FractalHeap.
  */
 class BTree2(h5: H5builder, owner: String, address: Long) {
-    private val debugBtree2 = false
-    private val debugPos = false
     val btreeType: Int
     private val nodeSize: Int // size in bytes of btree nodes
     private val recordSize: Short// size in bytes of btree records
@@ -48,8 +46,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         nodeSize = raf.readInt(state)
         recordSize = raf.readShort(state)
         val treeDepth: Short = raf.readShort(state)
-        val split: Byte = raf.readByte(state)
-        val merge: Byte = raf.readByte(state)
+        state.pos += 2
         val rootNodeAddress: Long = h5.readOffset(state)
         val numRecordsRootNode: Short = raf.readShort(state)
         val totalRecords: Long = h5.readLength(state) // total in entire btree

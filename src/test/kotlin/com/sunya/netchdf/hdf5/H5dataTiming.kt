@@ -37,7 +37,7 @@ class H5dataTiming {
         readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:9, :, :"))
         readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:100, 0:30, 0:40"))
         readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, 0:40"))
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, 0:385"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:1000, 0:30, :"))
     }
 
     @Test

@@ -10,6 +10,8 @@ import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
+private val debugChunking = false
+
 // Handles reading attributes and regular layout Variables (eg contiguous, maybe compact)
 internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
     if (dc.mds.type == DataspaceType.Null) {
@@ -184,8 +186,21 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
 }
 
 // new way, find out timing
-internal fun H5builder.readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
+internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
     val vinfo = v2.spObject as DataContainerVariable
+    val h5type = vinfo.h5type
+
+    if (h5type.hdfType == Datatype5.Vlen) {
+        val layout = if (vinfo.mfp != null) H5tiledLayoutBB(this, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
+                            else H5tiledLayout(this, v2, wantSection, v2.datatype)
+        return readVlenData(vinfo, layout, wantSection)
+    }
+    if (h5type.hdfType == Datatype5.Compound) {
+        val layout = if (vinfo.mfp != null) H5tiledLayoutBB(this, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
+                            else H5tiledLayout(this, v2, wantSection, v2.datatype)
+        return readCompoundData(vinfo, layout, wantSection)
+    }
+
     val elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
 
     val sizeBytes = wantSection.computeSize() * elemSize
@@ -198,11 +213,12 @@ internal fun H5builder.readChunkedData(v2: Variable, wantSection : Section) : Ar
     val btreeNew =  BTree1New(this, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
     val chunkedData = ChunkedData(btreeNew)
     val filters = H5filters(vinfo.mfp, vinfo.h5type.endian)
+    if (debugChunking) println(" ${chunkedData.tiling}")
 
     var count = 0
     val state = OpenFileState(0L, vinfo.h5type.endian)
     for (dataChunk in chunkedData.findDataChunks(wantSection)) { // : Iterable<BTree1New.DataChunkEntry>
-        // println(" ${dataChunk.show(chunkedData.tiling)}")
+        if (debugChunking) println(" ${dataChunk.show(chunkedData.tiling)}")
         val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
         val chunker = Chunker(dataSection, elemSize, wantSection)
         state.pos = dataChunk.childAddress
@@ -211,7 +227,7 @@ internal fun H5builder.readChunkedData(v2: Variable, wantSection : Section) : Ar
         chunker.transfer(filteredData, bb)
         count++
     }
-    println(" New $count dataChunks; nodes: readCache = ${chunkedData.readHit}, readNodes = ${chunkedData.readMiss}")
+    if (debugChunking) println(" New $count dataChunks; nodes: ${chunkedData}")
 
     bb.position(0)
     bb.limit(bb.capacity())
@@ -239,8 +255,10 @@ internal fun H5builder.readChunkedData(v2: Variable, wantSection : Section) : Ar
 }
 
 fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
+    if (debugChunking) println("  $this")
     while (this.hasNext()) {
         val chunk = this.next()
+        if (debugChunking) println("   $chunk")
         src.position(this.elemSize * chunk.srcElem.toInt())
         dst.position(this.elemSize * chunk.destElem.toInt())
         // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -251,9 +269,6 @@ fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
             this.elemSize * chunk.destElem.toInt(),
             this.elemSize * chunk.nelems,
         )
-        //for (i in 0 until this.elemSize * chunk.nelems) {
-        //    dst.put(src.get())
-        //} // LOOK is there a bulk copy ? maybe duplicate ? maybe System.arraycopy ??
     }
 }
 
@@ -281,11 +296,11 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: H5tiledL
             pos++
         } // LOOK bulk copy ?
         count++
-        // println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
+        if (debugChunking) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())
-    // println(" Old $count dataChunks, nodes: readNodes = ${layout.readNodes()}, readChunks = ${layout.readChunks()}")
+    if (debugChunking) println(" Old $count dataChunks, nodes: readNodes = ${layout.readNodes()}, readChunks = ${layout.readChunks()}")
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)

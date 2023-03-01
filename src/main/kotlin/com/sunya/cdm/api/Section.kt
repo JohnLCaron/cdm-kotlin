@@ -260,9 +260,6 @@ class Section {
      */
     @Throws(InvalidRangeException::class)
     fun intersects(other: Section): Boolean {
-        if (!compatibleRank(other)) {
-            throw InvalidRangeException("Invalid Section rank")
-        }
         for (j in ranges.indices) {
             val base = ranges[j]
             val r = other.getRange(j)

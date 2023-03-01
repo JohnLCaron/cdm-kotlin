@@ -92,21 +92,15 @@ class ChunkedData(val btree1 : BTree1New) {
 
         val tileSection = tiling.section( IndexSpace(section)) // section in tiles that we want
         val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        val incrDigit = tiling.rank - 2 // increment the second fastest digit
         while (!tileOdometer.isDone()) {
             val firstTile = tileOdometer.current
             val firstKey = tiling.index(firstTile) // convert to index "keys"
             val firstChunk = findDataChunkContainingKey(rootNode, firstKey)!!
-            if (check) require(section.contains(firstChunk.key.offsets))
+            if (check) require(section.intersects(IndexSpace(firstChunk.key.offsets, tiling.chunk).makeSection()))
             if (debugRow) print("tilesInRow = ${firstTile.contentToString()}")
             addDataChunkRow(section, firstChunk, chunks) // can efficiently find the chunks along the first dimension
             if (debugRow) println()
-
-            if (incrDigit >= 0) {
-                tileOdometer.incr(incrDigit)
-            } else {
-                break
-            }
+            tileOdometer.incr(tiling.rank - 1)
         }
 
         return chunks
@@ -132,5 +126,10 @@ class ChunkedData(val btree1 : BTree1New) {
             useChunk = nextChunk
         }
     }
+
+    override fun toString(): String {
+        return "ChunkedData(chunk=${btree1.storageSize.contentToString()}, readHit=$readHit, readMiss=$readMiss)"
+    }
+
 
 }

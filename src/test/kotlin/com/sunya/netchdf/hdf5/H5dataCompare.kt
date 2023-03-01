@@ -52,7 +52,7 @@ class H5dataCompare {
     }
     @Test
     fun problem2() {
-        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/cdm_sea_soundings.nc4", "fun_soundings")
+        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/simple_xy_nc4.nc", "data")
     }
 
     @Test

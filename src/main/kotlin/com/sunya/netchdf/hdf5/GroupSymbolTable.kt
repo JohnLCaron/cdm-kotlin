@@ -5,21 +5,40 @@ import com.sunya.cdm.iosp.OpenFileState
 import java.nio.ByteOrder
 
 // each GroupOld has one of these, see readGroupOld() in H5Group
-// it uses a Btree1, which is not exposed
+// it uses a BTree1New, which is not exposed
 class GroupSymbolTable(val btreeAddress : Long) {
 
     fun symbolTableEntries(h5 : H5builder) : Iterable<SymbolTableEntry> {
         val btree = BTree1New(h5, btreeAddress, 0)
-        val sentries = mutableListOf<SymbolTableEntry>()
+        val symbols = mutableListOf<SymbolTableEntry>()
         btree.readGroupEntries().forEach {
-            sentries.add(h5.readSymbolTable(it.childAddress))
+            readSymbolTableNode(h5, it.childAddress, symbols)
         }
-        return sentries
+        return symbols
+    }
+
+    // level 1B Group Symbol Table Nodes
+    internal fun readSymbolTableNode(h5 : H5builder, address: Long, symbols: MutableList<SymbolTableEntry>) {
+        val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
+        val magic: String = h5.raf.readString(state,4)
+        check(magic == "SNOD") { "$magic should equal SNOD" }
+        state.pos += 2
+        val nentries = h5.raf.readShort(state)
+
+        var posEntry = state.pos
+        for (i in 0 until nentries) {
+            val entry = h5.readSymbolTable(state)
+            posEntry += entry.dataSize
+            if (entry.objectHeaderAddress != 0L) { // skip zeroes, probably a bug in HDF5 file format or docs, or me
+                symbols.add(entry)
+            } else {
+                println("   BAD objectHeaderAddress==0 !! $entry")
+            }
+        }
     }
 
     // Level 1C - Symbol Table Entry
-    internal fun H5builder.readSymbolTable(address : Long) : SymbolTableEntry {
-        val state = OpenFileState(address, ByteOrder.LITTLE_ENDIAN)
+    internal fun H5builder.readSymbolTable(state : OpenFileState) : SymbolTableEntry {
         val rootEntry =
             structdsl("SymbolTableEntry", raf, state) {
                 fld("linkNameOffset", sizeOffsets)
@@ -37,7 +56,8 @@ class GroupSymbolTable(val btreeAddress : Long) {
         var nameHeapAddress : Long? = null
         var linkOffset : Int? = null
         var isSymbolicLink = false
-        when (rootEntry.getInt("cacheType")) {
+        val cacheType = rootEntry.getInt("cacheType")
+        when (cacheType) {
             0 -> {
                 // no-op
             }
@@ -50,7 +70,7 @@ class GroupSymbolTable(val btreeAddress : Long) {
                 isSymbolicLink = true
             }
             else -> {
-                throw IllegalArgumentException("SymbolTableEntry has unknown cacheType '${rootEntry.getInt("cacheType")}")
+                throw IllegalArgumentException("SymbolTableEntry has unknown cacheType=$cacheType")
             }
         }
 

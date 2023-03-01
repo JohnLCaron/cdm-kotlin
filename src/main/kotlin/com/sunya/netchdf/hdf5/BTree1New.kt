@@ -36,7 +36,7 @@ class BTree1New(
         return emptyList<GroupEntry>().iterator()
     }
 
-    // Btree nodes
+    // Btree nodes Level 1A1 - Version 1 B-trees
     inner class Node(val address: Long, val parent: BTree1New.Node?) {
         val level: Int
         val nentries: Int
@@ -62,11 +62,11 @@ class BTree1New(
             leftAddress = h5.readOffset(state)
             rightAddress = h5.readOffset(state)
 
-            for (idx in 0..nentries) {
+            for (idx in 0 until nentries) {
                 if (type == 0) {
                     val key = h5.readLength(state) // 4 or 8 bytes
                     val address = h5.readOffset(state) // 4 or 8 bytes
-                    groupEntries.add(GroupEntry(key, address))
+                    if (address > 0) groupEntries.add(GroupEntry(key, address))
                 } else {
                     val chunkSize = h5.raf.readInt(state)
                     val filterMask = h5.raf.readInt(state)
