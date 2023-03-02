@@ -105,8 +105,8 @@ internal fun buildEnumTypedef(name : String, mess: DatatypeEnum): EnumTypedef {
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
-    if (typedef != null) {
-        println(" made attribute ${att5.name} from typedef ${typedef.name}@${att5.mdt.address}")
+    if (debugTypedefs and (typedef != null)) {
+        println(" made attribute ${att5.name} from typedef ${typedef!!.name}@${att5.mdt.address}")
     }
     val h5type = H5TypeInfo(att5.mdt)
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
@@ -431,7 +431,7 @@ private fun extendDimension(parent: Group.Builder, h5group: H5Group, name: Strin
 
 internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
     val lens: IntArray = h5variable.mds.dims
-    if (lens.size > 2) {
+    if (debugDimensionScales and (lens.size > 2)) {
         println("DIMENSION_LIST: dimension scale > 2 = ${h5variable.name}")
         return
     }
@@ -464,10 +464,10 @@ internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
         sbuff.append(match.name) // 2. if length matches and unique, use it
     } else {
         if (match == null) { // 3. if no length matches or multiple matches, then use anonymous
-            println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but no match")
+            if (debugDimensionScales) println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but no match")
             sbuff.append(want_len)
         } else {
-            println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but multiple matches")
+            if (debugDimensionScales) println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but multiple matches")
             sbuff.append(want_len)
         }
     }
@@ -488,7 +488,7 @@ internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group:
                 val att: Attribute = buildAttribute(matt) // this reads in the data
                 if (att.values.size != h5variable.mds.rank()) {
                     // some attempts to writing hdf5 directly fail here
-                    println("DIMENSION_LIST: must have same number of dimension scales as dimensions att=${att} on variable ${h5variable.name}")
+                    if (debugDimensionScales) println("DIMENSION_LIST: must have same number of dimension scales as dimensions att=${att} on variable ${h5variable.name}")
                 } else {
                     val sbuff = StringBuilder()
                     var i = 0

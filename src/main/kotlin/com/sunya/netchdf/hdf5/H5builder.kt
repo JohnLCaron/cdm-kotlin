@@ -16,6 +16,7 @@ import java.util.*
 val debugFlow = false
 private val debugStart = false
 private val debugSuperblock = false
+internal val debugTypedefs = false
 
 /**
  * Build the rootGroup for an HDF5 file.
@@ -254,11 +255,11 @@ class H5builder(val raf: OpenFile,
     // LOOK typedefs are global to the file, rather than being contained in a group. Barf.
     fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) : Boolean {
         if (typedefMdtHash[mdtHash] != null) {
-            println("already have typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
+            if (debugTypedefs) println("already have typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
             return false
         }
         typedefMap[mdtAddress] = typedef
-        println("add typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
+        if (debugTypedefs) println("add typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
         // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
         typedefMdtHash[mdtHash] = typedef
         return true

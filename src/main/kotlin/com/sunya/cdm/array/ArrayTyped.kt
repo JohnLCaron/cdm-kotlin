@@ -21,7 +21,10 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
             if (!array1.shape.contentEquals(array2.shape)) {
                 return false
             }
+            return valuesEqual(array1, array2)
+        }
 
+        fun valuesEqual(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>) : Boolean {
             val iter1 = array1.iterator()
             val iter2 = array2.iterator()
             var count = 0
@@ -50,7 +53,7 @@ class ArraySingle<T>(shape : IntArray, val datatype : Datatype, val fillValue : 
 
     override fun toString(): String {
         return buildString {
-            append("shape=${shape.contentToString()} data= $fillValue")
+            append("ArraySingle shape=${shape.contentToString()} data= $fillValue\n")
         }
     }
 }

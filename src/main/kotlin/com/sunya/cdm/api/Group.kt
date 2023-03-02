@@ -20,6 +20,17 @@ class Group(val name : String,
         return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
     }
 
+    fun allVariables() : List<Variable> {
+        val allVariables = mutableListOf<Variable>()
+        allVariables.addAll(variables)
+        groups.forEach  { allVariables.addAll(it.allVariables()) }
+        return allVariables
+    }
+
+    fun fullname() : String {
+        return if (parent == null) "" else "${parent.fullname()}/$name/"
+    }
+
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (other !is Group) return false

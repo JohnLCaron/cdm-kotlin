@@ -25,7 +25,7 @@ data class OpenFile(val location : String) : Closeable {
     }
 
     fun readByteBufferDirect(state : OpenFileState, nbytes : Int): ByteBuffer {
-        if (nbytes < 4000) {
+        if (nbytes < 8100) {
             return readByteBuffer(state, nbytes)
         }
 

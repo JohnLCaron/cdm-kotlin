@@ -62,7 +62,9 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
     }
 
     fun element() : Long {
-        return current.zip(strider).map { it.first.toLong() * it.second }.sum()
+        var total = 0L
+        for (idx in 0 until rank) { total += strider[idx] * current[idx] }
+        return total
     }
 
     override fun iterator() = OdoIterator()
