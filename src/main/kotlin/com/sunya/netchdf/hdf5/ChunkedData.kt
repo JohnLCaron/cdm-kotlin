@@ -64,10 +64,10 @@ class ChunkedData(val btree1 : BTree1New) {
         }
         if (parent.level == 0) {
             if (tiling.compare(key, foundEntry.key.offsets) != 0) {
-                throw RuntimeException("wtf")
+                println(" *** tile(s) missing")
+                return null
+                // throw RuntimeException("tile missing") // missing tile, ideally return fillvalue
             }
-            // is this true ?
-            require(tiling.compare(key, foundEntry.key.offsets) == 0)
             return foundEntry
         }
         val node= readNode(foundEntry.childAddress, parent)
@@ -95,13 +95,17 @@ class ChunkedData(val btree1 : BTree1New) {
         while (!tileOdometer.isDone()) {
             val firstTile = tileOdometer.current
             val firstKey = tiling.index(firstTile) // convert to index "keys"
-            val firstChunk = findDataChunkContainingKey(rootNode, firstKey)!!
-            if (check) require(wantSection.intersects(IndexSpace(firstChunk.key.offsets, tiling.chunk).makeSection()))
-            if (debugRow) print("tilesInRow = ${firstTile.contentToString()}")
-            val chunksAdded = addDataChunkRow(wantSection, firstChunk, chunks) // can efficiently find the chunks along the first dimension
-            if (debugRow) println()
-            tileOdometer.add(chunksAdded)
-            // tileOdometer.incr(tiling.rank - 1)
+            val firstChunk = findDataChunkContainingKey(rootNode, firstKey)
+            if (firstChunk != null) {
+                if (check) require(wantSection.intersects(IndexSpace(firstChunk.key.offsets, tiling.chunk).makeSection()))
+                if (debugRow) print("tilesInRow = ${firstTile.contentToString()}")
+                val chunksAdded = addDataChunkRow(wantSection, firstChunk, chunks) // can efficiently find the chunks along the first dimension
+                if (debugRow) println()
+                tileOdometer.add(chunksAdded)
+            } else {
+                break
+                // the remaining chunks are missing, TODO use fillvalue. for now, skipping will give 0's
+            }
         }
 
         return chunks

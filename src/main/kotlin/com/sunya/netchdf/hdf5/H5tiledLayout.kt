@@ -17,6 +17,7 @@ internal class H5tiledLayout(
     private val wantSection: Section // must be filled
     private val chunkSize : IntArray // from the StorageLayout message (exclude the elemSize)
     override val elemSize : Int  // last dimension of the StorageLayout message
+    private val btree : BTreeData
 
     /**
      * Constructor.
@@ -49,7 +50,7 @@ internal class H5tiledLayout(
         if (debug) println(" H5tiledLayout: $this")
 
         // create the data chunk iterator LOOK maybe vinfo.btree, to cache it ?
-        val btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
+        this.btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
         val iter: LayoutTiled.DataChunkIterator = btree.getDataChunkIteratorNoFilter(want, nChunkDims)
         delegate = LayoutTiled(iter, chunkSize, elemSize, wantSection)
     }
@@ -64,6 +65,9 @@ internal class H5tiledLayout(
     override operator fun next(): Layout.Chunk {
         return delegate.next()
     }
+
+    fun readNodes() = btree.readNodes
+    fun readChunks() = btree.readChunks
 
     override fun toString(): String {
         val sbuff = StringBuilder()

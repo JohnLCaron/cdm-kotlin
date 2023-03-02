@@ -95,7 +95,6 @@ fun ArrayStructureData.putStringsOnHeap(lamda : (Int) -> String) {
     members.filter { it.datatype == Datatype.STRING }.forEach { member ->
         this.forEach { sdata ->
             val sval = lamda(sdata.offset + member.offset)
-            println("string offset ${sdata.offset + member.offset} -> sval $sval")
             sdata.putOnHeap(member, sval)
         }
     }

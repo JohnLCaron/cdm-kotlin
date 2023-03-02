@@ -1,17 +1,9 @@
 package com.sunya.netchdf.netcdf4
 
-import com.sunya.cdm.api.Netcdf
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import java.util.*
-import java.util.stream.Stream
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
-
-import org.junit.jupiter.params.ParameterizedTest
-import org.junit.jupiter.params.provider.Arguments
-import org.junit.jupiter.params.provider.MethodSource
 
 // probably get rid of
 @Disabled

@@ -102,6 +102,7 @@ internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : La
 }
 
 // handles datatypes that are not compound or vlen or filtered
+// H5tiledLayout seems to be ~ 6/5 faster than readChunkedDataNew for reversed chunk size
 @Throws(IOException::class)
 internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo): ArrayTyped<*> {
     val sizeBytes = layout.totalNelems * layout.elemSize
@@ -116,6 +117,11 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
         state.pos = chunk.srcPos()
         raf.readIntoByteBufferDirect(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
         count++
+        if (debugChunkingDetail and (count < 20)) println("oldchunk = $chunk")
+    }
+    if (debugChunkingDetail or debugChunking) {
+        if (layout is H5tiledLayout)
+        println(" readNonHeapData $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())
@@ -213,13 +219,16 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
 
     val btreeNew =  BTree1New(this, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
     val chunkedData = ChunkedData(btreeNew)
-    val filters = H5filters(vinfo.mfp, vinfo.h5type.endian)
+    val filters = H5filters(v2.name, vinfo.mfp, vinfo.h5type.endian)
     if (debugChunking) println(" ${chunkedData.tiling}")
 
+    chunkers = 0
+    transfers = 0
     var count = 0
+    var transferChunks = 0
     val state = OpenFileState(0L, vinfo.h5type.endian)
     for (dataChunk in chunkedData.findDataChunks(wantSection)) { // : Iterable<BTree1New.DataChunkEntry>
-        if (debugChunkingDetail) println(" ${dataChunk.show(chunkedData.tiling)}")
+        if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(chunkedData.tiling)}")
         val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
         val chunker = Chunker(dataSection, elemSize, wantSection)
         state.pos = dataChunk.childAddress
@@ -227,8 +236,9 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
         val filteredData = filters.apply(chunkData, dataChunk)
         chunker.transfer(filteredData, bb)
         count++
+        transferChunks += chunker.transferChunks
     }
-    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData}")
+    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData} transferChunks = $transferChunks")
 
     bb.position(0)
     bb.limit(bb.capacity())
@@ -255,11 +265,13 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
     return result
 }
 
+var transfers = 0
+var chunkers = 0
 fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
-    if (debugChunkingDetail) println("  $this")
+    if (debugChunkingDetail and (chunkers < 5)) println("  $this")
     while (this.hasNext()) {
         val chunk = this.next()
-        if (debugChunkingDetail) println("   $chunk")
+        if (debugChunkingDetail and (transfers < 20)) println("   $chunk")
         src.position(this.elemSize * chunk.srcElem.toInt())
         dst.position(this.elemSize * chunk.destElem.toInt())
         // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -270,7 +282,9 @@ fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
             this.elemSize * chunk.destElem.toInt(),
             this.elemSize * chunk.nelems,
         )
+        transfers++
     }
+    chunkers++
 }
 
 
@@ -297,7 +311,7 @@ internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: H5tiledL
             pos++
         } // LOOK bulk copy ?
         count++
-        if (debugChunkingDetail) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
+        if (debugChunkingDetail and (count < 20)) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())

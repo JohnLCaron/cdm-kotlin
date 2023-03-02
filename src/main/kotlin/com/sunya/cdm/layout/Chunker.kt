@@ -18,6 +18,7 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSection: Section,
     private val srcOdometer : Odometer
     private val dstOdometer : Odometer
     private val incrDigit : Int
+    var transferChunks = 0
 
     init {
         val wantSpace = IndexSpace(wantSection)
@@ -80,6 +81,7 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSection: Section,
 
         done += nelems.toLong()
         first = false
+        transferChunks++
     }
 
     override fun toString(): String {

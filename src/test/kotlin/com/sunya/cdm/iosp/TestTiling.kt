@@ -65,12 +65,11 @@ class TestTiling {
         assertEquals(IndexSpace(Section("1:2,1:2")), tileSection)
         
         val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        val incrDigit = tiling.rank - 1 // increment the second fastest digit
         while (!tileOdometer.isDone()) {
             val tile = tileOdometer.current
             val key = tiling.index(tile) // convert to index "keys"
-            println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
-                tileOdometer.incr(incrDigit)
+            // println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
+            tileOdometer.incr()
         }
 
     }
@@ -87,17 +86,15 @@ class TestTiling {
         assertEquals(IndexSpace(Section("0:9,0:26,0:12")), tileSection)
 
         val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        val incrDigit = tiling.rank - 1 // increment the second fastest digit
         var count = 0
         while (!tileOdometer.isDone()) {
             val tile = tileOdometer.current
             val key = tiling.index(tile) // convert to index "keys"
             // println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
-            tileOdometer.incr(incrDigit)
+            tileOdometer.incr()
             count++
         }
-        println("tiles = $count")
-
+        println("tile count = $count")
     }
 
     fun checkEquals(ia1 : IntArray, ia2 : IntArray) {

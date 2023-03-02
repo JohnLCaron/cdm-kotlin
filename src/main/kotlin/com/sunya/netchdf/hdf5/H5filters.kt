@@ -11,13 +11,17 @@ import java.util.zip.InflaterInputStream
 
 /** Apply filters, if any. replaces H5tiledLayoutBB */
 class H5filters(
+    val varname : String,
     val mfp: FilterPipelineMessage?,
     val byteOrder: ByteOrder
 ) {
     val inflateBufferSize = 20_000 // LOOK make this settable
+    var first = true
 
     fun apply(rawdata: ByteBuffer, entry: BTree1New.DataChunkEntry): ByteBuffer {
         if (mfp == null) return rawdata
+        // if (first) println("  ** Filtered $varname ${mfp.filters.map { it.name}}")
+        first = false
 
         var data = rawdata.array()
         try {
