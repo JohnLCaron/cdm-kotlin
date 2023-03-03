@@ -17,7 +17,7 @@ class TestChunker {
                        expect : (Int) -> Pair<Int, Int>) {
         println("Chunker dataChunk = ${dataChunk.makeSection()} wantSection = [$wantSection]")
 
-        val layout = Chunker(dataChunk, 4, wantSection, merge)
+        val layout = Chunker(dataChunk, 4, IndexSpace(wantSection), merge)
         val expectNelems = expectElems ?: (dataChunk.totalElements.toInt() / expectNchunks)
         var count = 0
         var totalNelems = 0

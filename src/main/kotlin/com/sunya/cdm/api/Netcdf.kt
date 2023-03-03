@@ -6,4 +6,5 @@ import java.io.Closeable
 interface Netcdf : Closeable, Iosp {
     fun location() : String
     fun cdl(strict : Boolean = false) : String
+    fun type() : String
 }

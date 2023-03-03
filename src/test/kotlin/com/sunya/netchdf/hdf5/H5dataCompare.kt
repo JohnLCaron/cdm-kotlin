@@ -38,14 +38,14 @@ class H5dataCompare {
                     .build()
 
             val moar4 =
-                testFilesIn(oldTestDir + "formats/netcdf4")
+                testFilesIn(oldTestDir + "formats/netcdf4/new")
                     .withRecursion()
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("perverse.nc") } // too slow
                     .build()
 
-            // return stream1
-            return Stream.of(stream1, stream4, moar4).flatMap { i -> i};
+            return moar4
+            // return Stream.of(stream1, stream4, moar4).flatMap { i -> i};
         }
     }
 
@@ -69,6 +69,11 @@ class H5dataCompare {
         readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/c0.nc")
     }
 
+    @Test
+    fun problem2() {
+        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readH5dataCompareNC(filename: String) {
@@ -89,8 +94,8 @@ class H5dataCompare {
     }
 }
 
-var debugCompareNetcdf = true
 var showData = false
+var showFailedData = false
 
 fun compareNetcdf(myfile: Netcdf, ncfile: Netcdf, varname: String?, section: Section? = null) {
     if (varname != null) {
@@ -133,10 +138,14 @@ fun oneVar(myvar: Variable, h5file: Iosp, ncvar : Variable, ncfile: Iosp, sectio
         } else {
             if (!ArrayTyped.contentEquals(ncdata, mydata)) {
                 println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.name} ${ncvar.dimensions.map { it.name }}")
-                println("\n mydata = $mydata")
-                println(" ncdata = $ncdata")
-                ArrayTyped.contentEquals(ncdata, mydata)
-                assertTrue(false)
+                if (showFailedData) {
+                    println("\n mydata = $mydata")
+                    println(" ncdata = $ncdata")
+                    ArrayTyped.contentEquals(ncdata, mydata)
+                    assertTrue(false)
+                } else {
+                    println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
+                }
                 return
             } else {
                 if (showData) {
@@ -176,8 +185,12 @@ fun testMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Variab
     } else {
         if (!ArrayTyped.contentEquals(ncdata, mydata)) {
             println(" *** FAIL comparing middle section variable = ${ncvar}")
-            println(" mydata = $mydata")
-            println(" ncdata = $ncdata")
+            if (showFailedData) {
+                println(" mydata = $mydata")
+                println(" ncdata = $ncdata")
+            } else {
+            println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
+        }
             assertTrue(false)
             return
         }

@@ -45,12 +45,24 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
         return IndexSpace(IntArray(rank) { firstList[it] }, IntArray(rank) { lengthList[it] })
     }
 
+    fun intersects(other: IndexSpace): Boolean {
+        ranges.mapIndexed  { idx, range ->
+            val orange = other.ranges[idx]
+            val first = Math.max(range.first, orange.first)
+            val last = Math.min(range.last, orange.last)
+            if (first > last) {
+                return false
+            }
+        }
+        return true
+    }
+
     fun makeSection() : Section {
         return Section(start, nelems)
     }
 
     override fun toString(): String {
-        return "${makeSection()}"
+        return "${makeSection()} total=${totalElements}"
     }
 
     override fun equals(other: Any?): Boolean {

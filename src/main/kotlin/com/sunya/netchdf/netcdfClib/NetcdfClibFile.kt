@@ -1,16 +1,13 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
-import java.io.IOException
 import java.lang.foreign.*
 import java.lang.foreign.ValueLayout.*
 import java.nio.*
-import java.util.*
 
 /*
 apt-cache search netcdf
@@ -40,6 +37,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl(strict: Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun type() = "read from C library"
 
     override fun close() {
         // NOOP

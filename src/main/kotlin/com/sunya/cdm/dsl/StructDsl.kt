@@ -44,23 +44,31 @@ class StructDsl(val name : String, val bb : ByteBuffer, val flds : List<StructFl
 
     fun getLong(fldName : String) : Long {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
-        return bb.getLong(fld.pos)
+        return if (fld.elemSize == 4) bb.getInt(fld.pos).toLong()
+        else bb.getLong(fld.pos)
     }
     fun getInt(fldName : String) : Int {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
-        return bb.getInt(fld.pos)
+        return if (fld.elemSize == 8) bb.getLong(fld.pos).toInt()
+        else bb.getInt(fld.pos)
     }
     fun getByte(fldName : String) : Byte {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
+        require(fld.elemSize == 1) { fldName }
         return bb.get(fld.pos)
     }
     fun getShort(fldName : String) : Short {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
+        require(fld.elemSize == 2) { fldName }
         return bb.getShort(fld.pos)
     }
     fun getIntArray(fldName : String) : IntArray {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
-        return IntArray(fld.nelems) { idx -> bb.getInt(fld.pos + fld.elemSize * idx) } // LOOK what if long ?
+        return if (fld.elemSize == 4)
+            IntArray(fld.nelems) { idx -> bb.getInt(fld.pos + fld.elemSize * idx) }
+        else if (fld.elemSize == 8)
+            IntArray(fld.nelems) { idx -> bb.getLong(fld.pos + fld.elemSize * idx).toInt() }
+        else throw RuntimeException("$fld must be 4 or 8")
     }
     fun getByteBuffer(fldName : String) : ByteBuffer {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
@@ -139,7 +147,7 @@ data class StructFld(val fldName: String, val pos: Int, val elemSize: Int, val n
     constructor(fldName: String, pos: Int, length: Int) : this(fldName, pos, length, 1)
 
     override fun toString(): String {
-        return String.format("%-20s %2d,%2d", fldName,pos,elemSize)
+        return String.format("'%-20s' %2d,%2d", fldName, pos, elemSize)
     }
 }
 

@@ -3,6 +3,7 @@ package com.sunya.netchdf.netcdf3
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
+import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -25,6 +26,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun type() = NetchdfFileFormat.NC_FORMAT_CLASSIC.formatName()
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
@@ -43,6 +45,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
         val vinfo = v2.spObject as N3header.Vinfo
         val nbytes = (vinfo.elemSize * v2.nelems)
         require(nbytes < Int.MAX_VALUE)
+        require(nbytes < 100_000_000) { "${v2.name}[${wantSection}]"}
         val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
         val values = ByteBuffer.allocate(nbytes.toInt())
 

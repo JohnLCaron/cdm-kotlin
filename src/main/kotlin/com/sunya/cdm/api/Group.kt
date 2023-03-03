@@ -28,7 +28,7 @@ class Group(val name : String,
     }
 
     fun fullname() : String {
-        return if (parent == null) "" else "${parent.fullname()}/$name/"
+        return if (parent == null) "" else "${parent.fullname()}/$name"
     }
 
     override fun equals(other: Any?): Boolean {

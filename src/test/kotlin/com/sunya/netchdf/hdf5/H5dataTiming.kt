@@ -73,6 +73,13 @@ class H5dataTiming {
         readData(chunked2, "UpperDeschutes_t4p10_swemelt", Section("0:100, 0:30, 0:40"))
     }
 
+    @Test
+    fun hasMissing() {
+        val filename = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        readData(filename, "CMI", Section(":, :"))
+        readData(filename, "DQF", Section(":, :"))
+    }
+
     val showDetail = true
 
     fun readData(filename: String, varname: String, readSection : Section) {

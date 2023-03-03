@@ -636,7 +636,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
     val name = rawdata.getString("name") // this has terminating zero removed
     if (version == 1) {
         // use the full width to decide on padding
-        state.pos += padding(rawdata.getByte("nameLength").toInt(), 8)
+        state.pos += padding(rawdata.getShort("nameLength").toInt(), 8)
     }
 
     // read the datatype

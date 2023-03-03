@@ -30,7 +30,7 @@ class H5headerCompare {
             )
 
             val stream4 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/")
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .withRecursion()
                     .build()
@@ -42,14 +42,14 @@ class H5headerCompare {
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream4).flatMap { i -> i };
-            //return stream2
+            //. return Stream.of(stream4).flatMap { i -> i };
+            return stream4
         }
     }
 
     // @Test failing because differs from ncfile
     fun problem() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_grps.nc4")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_grps.nc4")
     }
     /*
     ncfile adds extra typedefs:
@@ -104,7 +104,7 @@ class H5headerCompare {
 
     @Test
     fun tst_compounds() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_compounds.nc4")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_compounds.nc4")
     }
     /*
 netcdf tst_compounds {
@@ -126,23 +126,23 @@ variables:
 
     @Test
     fun sharedObject() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc")
     }
 
     @Test
     fun fractalHeap() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_atomic_types.nc")
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/testCFGridWriter.nc4")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_atomic_types.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/testCFGridWriter.nc4")
     }
 
     @Test
     fun hasTimeDataType() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
     }
 
     @Test
     fun opaqueAttribute() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4")
     }
 /*
 netcdf tst_opaque_data {
@@ -158,7 +158,7 @@ variables:
 
     @Test
     fun attEnum() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_enums.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_enums.nc")
     }
     /*
 netcdf test_enum_type {
@@ -176,7 +176,7 @@ variables:
 
     @Test
     fun attVlen() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
         // openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_2.nc4")
     }
     /*
@@ -201,7 +201,7 @@ types:
 
     @Test
     fun varVlen() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/vlenInt.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/vlenInt.nc")
     }
     /*
 netcdf vlenInt {
@@ -214,7 +214,7 @@ variables:
 
     @Test
     fun outofOrder() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc")
     }
     /*
     snake@jlc:~$ ncdump -h /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/fpcs_1dwave_2.nc
@@ -253,7 +253,7 @@ variables:
 
     @Test
     fun attArrayStruct() {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_cmp.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_cmp.nc")
     }
     /*
 netcdf tst_solar_cmp {
@@ -270,7 +270,7 @@ types:
 
     @Test // currently fails
     fun charVar () {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
     }
 /*    netcdf dstr {
         variables:
@@ -280,7 +280,7 @@ types:
 
     @Test
     fun compoundInnerVlen () {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
     }
 /*
 netcdf IntTimSciSamp {
@@ -351,7 +351,7 @@ data:
 
     @Test
     fun attCompoundInnerString () {
-        openH5("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attributeStruct.nc")
 }
     /*
     netcdf attributeStruct {
@@ -395,9 +395,14 @@ variables:
 
      */
 
+    @Test
+    fun problem2() {
+        compareH5andNclib("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc")
+    }
+
     @ParameterizedTest
     @MethodSource("params")
-    fun openH5(filename: String) {
+    fun compareH5andNclib(filename: String) {
         println("=================")
         println(filename)
         val h5file = Hdf5File(filename, true)

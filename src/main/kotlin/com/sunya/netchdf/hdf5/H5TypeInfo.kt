@@ -16,6 +16,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     val elemSize: Int = mdt.elemSize
     val endian: ByteOrder = mdt.endian()
     val isVString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
+    val isRefObject = if (mdt is DatatypeReference) mdt.referenceType == 0 else false // is a vlen string
 
     var unsigned = false
     var base: H5TypeInfo? = null // used for vlen, array
@@ -74,7 +75,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose
             Datatype5.String -> Datatype.CHAR // fixed length strings. String is used for Vlen type = 1
-            Datatype5.Reference -> Datatype.STRING // LOOK could be something else; String's all weve seen, references are not supported
+            Datatype5.Reference -> Datatype.LONG // addresses; type 1 gets converted to object name
 
             Datatype5.Opaque -> {
                 val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)

@@ -8,6 +8,7 @@ import com.sunya.cdm.array.ArraySingle
 import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.*
+import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import java.io.IOException
 import java.nio.ByteBuffer
 
@@ -29,33 +30,38 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
     override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun type() = NetchdfFileFormat.HDF5.formatName()
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        // LOOK do we need to adjust wantSection for vinfo.storageDims? If so, we we need to adjust back ??
         val wantSection = Section.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable
-        if (vinfo.useFillValue) { // fill value only, no  data
+        if (vinfo.onlyFillValue) { // fill value only, no  data
             return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
         }
 
         if (vinfo.mfp != null) { // filtered
             Preconditions.checkArgument(vinfo.isChunked)
-            val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
             if (vinfo.h5type.isVString) {
+                val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
                 return readFilteredStringData(layout, wantSection)
             } else {
-                return if (useOld) header.readFilteredChunkedData(vinfo, layout, wantSection)
-                    else header.readChunkedDataNew(v2, wantSection)
+                val result = if (useOld) {
+                    val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
+                    header.readFilteredChunkedData(vinfo, layout, wantSection)
+                } else header.readChunkedDataNew(v2, wantSection)
+                return result
             }
         }
 
         try {
             if (vinfo.isChunked) {
-                val layout = H5tiledLayout(header, v2, wantSection, v2.datatype)
-                return if (useOld) header.readChunkedData(vinfo, layout, wantSection)
-                else header.readChunkedDataNew(v2, wantSection)
+                val result =  if (useOld) {
+                    val layout = H5tiledLayout(header, v2, wantSection, v2.datatype) // eager read
+                    header.readChunkedData(vinfo, layout, wantSection)
+                } else header.readChunkedDataNew(v2, wantSection)
+                return result
             } else {
                 return header.readRegularData(vinfo, wantSection)
             }

@@ -16,7 +16,7 @@ data class Variable(
             dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
     fun fullname() : String {
-        return group.fullname() + name
+        return if (group.fullname() == "") name else "${group.fullname()}/$name"
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////
