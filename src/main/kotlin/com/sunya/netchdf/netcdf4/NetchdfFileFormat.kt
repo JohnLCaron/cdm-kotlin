@@ -141,9 +141,9 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
     companion object {
         // from PnetCDF project
         // NCSTREAM(42, "ncstream"); // No assigned version, not part of C library.
-        private const val MAGIC_NUMBER_LEN = 8
-        private const val MAXHEADERPOS: Long = 500000 // header's gotta be within this range
-        private val H5HEAD = byteArrayOf(
+        const val MAGIC_NUMBER_LEN = 8
+        const val MAXHEADERPOS: Long = 500000 // header's gotta be within this range
+        val H5HEAD = byteArrayOf(
             0x89.toByte(),
             'H'.code.toByte(),
             'D'.code.toByte(),
@@ -248,6 +248,7 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
         private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetchdfFileFormat {
             // For HDF5, we need to search forward on 512 block sizes
             val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
+            var start = 0L
             var format : NetchdfFileFormat? = null
             while (filePos.pos < raf.size - 8 && filePos.pos < MAXHEADERPOS && format == null) {
                 if (raf.readBytesUnchecked(filePos, magic) < MAGIC_NUMBER_LEN) {
@@ -255,7 +256,8 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
                 } else if (memequal(H5HEAD, magic, H5HEAD.size)) {
                     format = NC_FORMAT_NETCDF4 // actually dont know here if its netcdf4 or just hdf5.
                 } else {
-                    filePos.pos = if (filePos.pos == 0L) 512 else 2 * filePos.pos
+                    start = if (start == 0L) 512 else 2 * start
+                    filePos.pos = start
                 }
             }
             return format ?: INVALID

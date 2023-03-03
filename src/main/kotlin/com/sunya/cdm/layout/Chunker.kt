@@ -11,7 +11,7 @@ import java.lang.Integer.max
  * @param dataChunkRaw the dataChunk index space, may have a trailing dimension that is ignored
  * @param wantSection the requested section of data
  */
-class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSection: Section, merge : Boolean = true) : AbstractIterator<TransferChunk>() {
+class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Boolean = true) : AbstractIterator<TransferChunk>() {
     val nelems : Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
 
@@ -21,7 +21,6 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSection: Section,
     var transferChunks = 0
 
     init {
-        val wantSpace = IndexSpace(wantSection)
         val intersectSpace = wantSpace.intersect(dataChunkRaw)
 
         // shift intersect to dataChunk and wantSection origins
@@ -85,6 +84,6 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSection: Section,
     }
 
     override fun toString(): String {
-        return "Chunker(nelems=$nelems, totalNelems=$totalNelems, srcOdometer=$srcOdometer, dstOdometer=$dstOdometer)"
+        return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
 }

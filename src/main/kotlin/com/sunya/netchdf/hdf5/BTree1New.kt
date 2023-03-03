@@ -76,7 +76,7 @@ class BTree1New(
                         loffset.toInt()
                     }
                     val key = DataChunkKey(chunkSize, filterMask, inner)
-                    val childPointer = h5.readOffset(state) // 4 or 8 bytes
+                    val childPointer = h5.readAddress(state) // 4 or 8 bytes, then add fileOffset
                     dataChunkEntries.add(DataChunkEntry(level, this, idx, key, childPointer))
                 }
             }
@@ -89,11 +89,25 @@ class BTree1New(
     /** @param key the byte offset into the local heap for the first object name in the subtree which that key describes. */
     data class GroupEntry(val key : Long, val childAddress : Long)
 
-    data class DataChunkKey(val chunkSize: Int, val filterMask : Int, val offsets: IntArray)
+    data class DataChunkKey(val chunkSize: Int, val filterMask : Int, val offsets: IntArray) {
+        override fun equals(other: Any?): Boolean {
+            if (this === other) return true
+            if (other !is DataChunkKey) return false
+
+            if (!offsets.contentEquals(other.offsets)) return false
+
+            return true
+        }
+
+        override fun hashCode(): Int {
+            return offsets.contentHashCode()
+        }
+    }
 
     // childAddress = data chunk (level 1) else a child node
     data class DataChunkEntry(val level : Int, val parent : Node, val idx : Int, val key : DataChunkKey, val childAddress : Long) {
-        fun show(tiling : Tiling) : String = "chunkSize=${key.chunkSize}, chunk=${key.offsets.contentToString()}" +
+        fun isMissing() = (childAddress == -1L)
+        fun show(tiling : Tiling) : String = "chunkSize=${key.chunkSize}, chunkStart=${key.offsets.contentToString()}" +
                 ", tile= ${tiling.tile(key.offsets).contentToString()}"
     }
 }

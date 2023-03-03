@@ -240,7 +240,7 @@ class BTreeData(
                 require(loffset < Int.MAX_VALUE)
                 offset[i] = loffset.toInt()
             }
-            filePos = if (last) -1 else h5.readAddress(state)
+            filePos = if (last) -1 else h5.readAddress(state) // note we add the file offset here as needed
             memTracker?.addByLen("Chunked Data ($owner)", filePos, size.toLong())
         }
 

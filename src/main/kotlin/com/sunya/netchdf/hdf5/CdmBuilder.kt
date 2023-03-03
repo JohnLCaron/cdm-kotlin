@@ -190,7 +190,7 @@ internal class DataContainerVariable(
 
     val isChunked : Boolean
     val elementSize : Int // total length in bytes on disk of one element
-    val useFillValue : Boolean
+    val onlyFillValue : Boolean // no data at all
     val fillValue : Any?
 
     init {
@@ -198,13 +198,13 @@ internal class DataContainerVariable(
         dataPos = when (mdl) {
             is DataLayoutContiguous -> h5.getFileOffset(mdl.dataAddress)
             is DataLayoutContiguous3 -> h5.getFileOffset(mdl.dataAddress)
-            is DataLayoutChunked -> h5.getFileOffset(mdl.btreeAddress)
+            is DataLayoutChunked -> mdl.btreeAddress // offset will be added in BTreeData
             else -> -1 // LOOK compact?
         }
 
         // deal with unallocated data
         fillValue = getFillValueNonDefault(h5, v5, h5type)
-        useFillValue = (dataPos == -1L)
+        onlyFillValue = (dataPos == -1L)
 
         isChunked = (mdl.layoutClass == LayoutClass.Chunked)
         when (mdl) {

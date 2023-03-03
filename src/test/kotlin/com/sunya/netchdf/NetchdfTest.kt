@@ -61,6 +61,7 @@ class NetchdfTest {
         }
 
         var countVariables = 0
+        var showData = false
     }
 
     @Test
@@ -199,6 +200,14 @@ h5dump
         )
     }
 
+    @Test
+    fun hasMissing() {
+        val filename =
+            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        readData(filename, "CMI", Section(":, :"))
+        readData(filename, "DQF", Section(":, :"))
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readDataForProfiling(filename: String) {
@@ -206,89 +215,90 @@ h5dump
         readData(filename)
         println()
     }
+}
 
-    fun readData(filename: String, varname: String? = null, section: Section? = null) {
-        openNetchdfFile(filename).use { myfile ->
-            if (myfile == null) {
-                println("*** not a netchdf file = $filename")
-                return
-            }
-
-            if (varname != null) {
-                val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
-                if (myvar == null) {
-                    println("cant find $varname")
-                    return
-                }
-                oneVar(myvar, myfile, section)
-            } else {
-                myfile.rootGroup().allVariables().forEachIndexed { idx, it ->
-                    oneVar(it, myfile, null)
-                }
-            }
-        }
-    }
-
-    fun oneVar(myvar: Variable, h5file: Iosp, section: Section?) {
-        countVariables++
-
-        val section = Section.fill(section, myvar.shape)
-        val nbytes = section.size() * myvar.datatype.size
-        if (nbytes > 100_000_000) {
-            println(" * ${myvar.fullname()} read too big = ${nbytes}")
-        } else {
-            val mydata = h5file.readArrayData(myvar, section)
-            println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
-                        "${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems" )
-            if (myvar.datatype == Datatype.CHAR) {
-                testCharShape(myvar.shape, mydata.shape)
-            } else {
-                assertTrue(myvar.shape.contentEquals(mydata.shape))
-            }
-            // println(mydata)
-        }
-
-        if (myvar.nelems > 8 && myvar.datatype != Datatype.CHAR) {
-            testMiddleSection(h5file, myvar, myvar.shape)
-        }
-    }
-
-    fun testCharShape(want: IntArray, got: IntArray) {
-        val org = want.contentEquals(got)
-        val removeLast = removeLast(want)
-        val removeLastOk = removeLast.contentEquals(got)
-        if (!org and !removeLastOk) {
-            println("HEY")
-        }
-        assertTrue(org or removeLastOk)
-    }
-
-    fun removeLast(org: IntArray): IntArray {
-        if (org.size < 1) return org
-        return IntArray(org.size - 1) { org[it] }
-    }
-
-    fun testMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
-        val orgSection = Section(shape)
-        val middleRanges = orgSection.ranges.map { range ->
-            if (range == null) throw RuntimeException("Range is null")
-            if (range.length < 9) range
-            else Range(range.first + range.length / 3, range.last - range.length / 3)
-        }
-        val middleSection = Section(middleRanges)
-        val nbytes = middleSection.size() * myvar.datatype.size
-        if (nbytes > 100_000_000) {
-            println("  * ${myvar.fullname()} read too big = ${nbytes}")
-            testMiddleSection(myfile, myvar, middleSection.shape)
+fun readData(filename: String, varname: String? = null, section: Section? = null) {
+    openNetchdfFile(filename).use { myfile ->
+        if (myfile == null) {
+            println("*** not a netchdf file = $filename")
             return
         }
 
-        val mydata = myfile.readArrayData(myvar, middleSection)
-        println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems")
-        if (myvar.datatype == Datatype.CHAR) {
-            testCharShape(middleSection.shape, mydata.shape)
+        // println(myfile.rootGroup().allVariables().map { it.fullname() })
+        if (varname != null) {
+            val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
+            if (myvar == null) {
+                println("cant find $varname")
+                return
+            }
+            oneVar(myvar, myfile, section)
         } else {
-            assertTrue(middleSection.shape.contentEquals(mydata.shape))
+            myfile.rootGroup().allVariables().forEachIndexed { idx, it ->
+                oneVar(it, myfile, null)
+            }
         }
+    }
+}
+
+
+fun oneVar(myvar: Variable, h5file: Iosp, section: Section?) {
+
+    val section = Section.fill(section, myvar.shape)
+    val nbytes = section.size() * myvar.datatype.size
+    if (nbytes > 100_000_000) {
+        println(" * ${myvar.fullname()} read too big = ${nbytes}")
+    } else {
+        val mydata = h5file.readArrayData(myvar, section)
+        println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
+                    "${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems" )
+        if (myvar.datatype == Datatype.CHAR) {
+            testCharShape(myvar.shape, mydata.shape)
+        } else {
+            assertTrue(myvar.shape.contentEquals(mydata.shape))
+        }
+        if (NetchdfTest.showData) println(mydata)
+    }
+
+    if (myvar.nelems > 8 && myvar.datatype != Datatype.CHAR) {
+        testMiddleSection(h5file, myvar, myvar.shape)
+    }
+}
+
+fun testCharShape(want: IntArray, got: IntArray) {
+    val org = want.contentEquals(got)
+    val removeLast = removeLast(want)
+    val removeLastOk = removeLast.contentEquals(got)
+    if (!org and !removeLastOk) {
+        println("HEY")
+    }
+    assertTrue(org or removeLastOk)
+}
+
+fun removeLast(org: IntArray): IntArray {
+    if (org.size < 1) return org
+    return IntArray(org.size - 1) { org[it] }
+}
+
+fun testMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
+    val orgSection = Section(shape)
+    val middleRanges = orgSection.ranges.map { range ->
+        if (range == null) throw RuntimeException("Range is null")
+        if (range.length < 9) range
+        else Range(range.first + range.length / 3, range.last - range.length / 3)
+    }
+    val middleSection = Section(middleRanges)
+    val nbytes = middleSection.size() * myvar.datatype.size
+    if (nbytes > 100_000_000) {
+        println("  * ${myvar.fullname()} read too big = ${nbytes}")
+        testMiddleSection(myfile, myvar, middleSection.shape)
+        return
+    }
+
+    val mydata = myfile.readArrayData(myvar, middleSection)
+    println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems")
+    if (myvar.datatype == Datatype.CHAR) {
+        testCharShape(middleSection.shape, mydata.shape)
+    } else {
+        assertTrue(middleSection.shape.contentEquals(mydata.shape))
     }
 }

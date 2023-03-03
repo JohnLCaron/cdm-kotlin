@@ -21,18 +21,9 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val h5type = dc.h5type
     val shape: IntArray = dc.storageDims
     val readDtype: Datatype = h5type.datatype(this)
+
     val endian: ByteOrder = h5type.endian
     val elemSize = h5type.elemSize
-
-    /* if (h5type.hdfType == Datatype5.String) { // char
-        if (h5type.elemSize > 1) {
-            val newShape = IntArray(shape.size + 1)
-            System.arraycopy(shape, 0, newShape, 0, shape.size)
-            newShape[shape.size] = h5type.elemSize
-            shape = newShape
-            elemSize = 1
-        }
-    } */
 
     val wantSection = Section.fill(section, shape)
     val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, wantSection)
@@ -144,6 +135,9 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     if (datatype == Datatype.CHAR) {
         return (result as ArrayUByte).makeStringsFromBytes()
     }
+    if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
+        return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
+    }
     return result
 }
 
@@ -162,12 +156,12 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
         return readCompoundData(vinfo, layout, section)
     }
 
-    var shape: IntArray = vinfo.mds.dims
-    val readDtype: Datatype = h5type.datatype(this)
     val endian: ByteOrder = h5type.endian
+    var shape: IntArray = vinfo.mds.dims
+    var readDtype: Datatype = h5type.datatype(this)
     var elemSize = h5type.elemSize
 
-    // LOOK isa this needed?
+    // LOOK is this needed?
     if (h5type.hdfType == Datatype5.String) { // char
         if (h5type.elemSize > 1) {
             val newShape = IntArray(shape.size + 1)
@@ -176,7 +170,6 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
             shape = newShape
             elemSize = 1 // LOOK why?
         }
-
     }
 
     val state = OpenFileState(0, endian) // pos set by layout
@@ -192,30 +185,36 @@ internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, lay
     return dataArray
 }
 
-// new way, find out timing
 internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
     val vinfo = v2.spObject as DataContainerVariable
     val h5type = vinfo.h5type
 
-    if (h5type.hdfType == Datatype5.Vlen) {
+    if ((h5type.hdfType == Datatype5.Vlen) or (h5type.hdfType == Datatype5.Compound)) {
         val layout = if (vinfo.mfp != null) H5tiledLayoutBB(this, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
                             else H5tiledLayout(this, v2, wantSection, v2.datatype)
-        return readVlenData(vinfo, layout, wantSection)
-    }
-    if (h5type.hdfType == Datatype5.Compound) {
-        val layout = if (vinfo.mfp != null) H5tiledLayoutBB(this, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                            else H5tiledLayout(this, v2, wantSection, v2.datatype)
-        return readCompoundData(vinfo, layout, wantSection)
+        when (h5type.hdfType) {
+            Datatype5.Vlen -> return readVlenData(vinfo, layout, wantSection)
+            Datatype5.Compound -> return readCompoundData(vinfo, layout, wantSection)
+            // Datatype5.Reference -> return readReferenceData(h5type, layout, wantSection)
+            else -> { } // fall through
+        }
     }
 
     val elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
+    val datatype = vinfo.h5type.datatype(this)
 
-    val sizeBytes = wantSection.computeSize() * elemSize
+    val wantSpace = IndexSpace(wantSection)
+    val sizeBytes = wantSpace.totalElements * elemSize
     if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
         throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
     }
     val bb = ByteBuffer.allocate(sizeBytes.toInt())
     bb.order(vinfo.h5type.endian)
+
+    /* val sbb = bb.asShortBuffer()
+    sbb.position(0)
+    val fill = vinfo.fillValue as Short
+    repeat(wantSpace.totalElements.toInt()) { bb.putShort(fill) } // performance ?? */
 
     val btreeNew =  BTree1New(this, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
     val chunkedData = ChunkedData(btreeNew)
@@ -224,27 +223,33 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
 
     chunkers = 0
     transfers = 0
+    missingChunks = 0
     var count = 0
     var transferChunks = 0
     val state = OpenFileState(0L, vinfo.h5type.endian)
-    for (dataChunk in chunkedData.findDataChunks(wantSection)) { // : Iterable<BTree1New.DataChunkEntry>
-        if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(chunkedData.tiling)}")
+    for (dataChunk in chunkedData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
         val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
-        val chunker = Chunker(dataSection, elemSize, wantSection)
-        state.pos = dataChunk.childAddress
-        val chunkData = raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
-        val filteredData = filters.apply(chunkData, dataChunk)
-        chunker.transfer(filteredData, bb)
+        val chunker = Chunker(dataSection, elemSize, wantSpace)
+        if (dataChunk.isMissing()) {
+            if (debugMissing) println(" ${dataChunk.show(chunkedData.tiling)}")
+            chunker.transferMissing(vinfo, datatype, bb)
+        } else {
+            if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(chunkedData.tiling)}")
+            state.pos = dataChunk.childAddress
+            val chunkData = raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
+            val filteredData = filters.apply(chunkData, dataChunk)
+            chunker.transfer(filteredData, bb)
+            transferChunks += chunker.transferChunks
+        }
         count++
-        transferChunks += chunker.transferChunks
     }
-    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData} transferChunks = $transferChunks")
+    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData} " +
+            "transferChunks = $transferChunks missing = $missingChunks, missingElems = $missingElems")
 
     bb.position(0)
     bb.limit(bb.capacity())
 
-    val shape = wantSection.shape
-    val datatype = vinfo.h5type.datatype(this)
+    val shape = wantSpace.nelems
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
         Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
@@ -262,11 +267,16 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
     if (datatype == Datatype.CHAR) {
         return (result as ArrayUByte).makeStringsFromBytes()
     }
+    if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
+        return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
+    }
     return result
 }
 
 var transfers = 0
+var transferMissing = 0
 var chunkers = 0
+var missingChunks = 0
 fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
     if (debugChunkingDetail and (chunkers < 5)) println("  $this")
     while (this.hasNext()) {
@@ -285,6 +295,41 @@ fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
         transfers++
     }
     chunkers++
+}
+
+val debugMissing = false
+var missingElems = 0L
+private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Datatype, dst : ByteBuffer) {
+    missingElems += this.totalNelems
+    if (vinfo.fillValue == null || debugMissing) {
+        // could use some default, but 0 is pretty good
+        return
+    }
+    while (this.hasNext()) {
+        val chunk = this.next()
+        dst.position(this.elemSize * chunk.destElem.toInt())
+        // println("  missing transfer $chunk")
+        when (datatype) {
+            Datatype.BYTE, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> {
+                val fill = vinfo.fillValue as Byte
+                repeat(chunk.nelems) { dst.put(fill) }
+            }
+            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(vinfo.fillValue as Short) }
+            Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
+            Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(vinfo.fillValue as Float) }
+            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
+            Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(vinfo.fillValue as Long) }
+            Datatype.OPAQUE -> {
+                val fill = vinfo.fillValue as ByteBuffer
+                repeat(chunk.nelems) {
+                    fill.position(0)
+                    dst.put(fill) }
+            }
+            else -> throw IllegalStateException("unimplemented type= $datatype")
+        }
+        transferMissing++
+    }
+    missingChunks++
 }
 
 
@@ -396,13 +441,11 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
             }
         }
         return ArrayString(wantedSection.shape, sarray)
-    }
 
-    // Vlen (non-String)
-    else {
+    } else {
         val base = dc.h5type.base!!
 
-        // variable length array of references, get translated into strings LOOK always?
+        // variable length array of references, get translated into strings LOOK always? NPP has reference regions
         if (base.hdfType == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             while (layout.hasNext()) {

@@ -41,7 +41,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
                 if (layoutClass != 0) { // not compact
                     fld("dataAddress", sizeOffsets)
                 }
-                array("dims", sizeLengths, "rank")
+                array("dims", 4, "rank")
                 if (layoutClass == 2) { // chunked
                     fld("chunkedElementSize", 4)
                 }

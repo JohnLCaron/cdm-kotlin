@@ -15,8 +15,8 @@ class NetcdfCdl(val location : String, val rootGroup : Group) : Netcdf {
     }
 
     override fun location() = location
-
     override fun cdl(strict: Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun type() = "Created from CDL"
 
     override fun close() {
     }

@@ -1,11 +1,13 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.array.ArrayLong
 import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.*
 import com.sunya.cdm.util.unsignedByteToShort
 import com.sunya.cdm.util.unsignedIntToLong
 import com.sunya.cdm.util.unsignedShortToInt
+import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import mu.KotlinLogging
 import java.io.IOException
 import java.nio.*
@@ -23,11 +25,12 @@ internal val debugTypedefs = false
  * @param strict  true = make it agree with nclib if possible
  * @param valueCharset used when reading HDF5 header. LOOK need example to test
  */
-class H5builder(val raf: OpenFile,
-                val strict : Boolean,
-                val valueCharset: Charset = StandardCharsets.UTF_8,
+class H5builder(
+    val raf: OpenFile,
+    val strict: Boolean,
+    val valueCharset: Charset = StandardCharsets.UTF_8,
 ) {
-    private var baseAddress: Long = 0 // may be offset for arbitrary metadata
+    private val superblockStart: Long // may be offset for arbitrary metadata
     var sizeOffsets: Int = 0
     var sizeLengths: Int = 0
     var sizeHeapId = 0
@@ -46,23 +49,24 @@ class H5builder(val raf: OpenFile,
     val cdmRoot : Group
 
     init {
-        // search for the superblock - no limits on how far into the file
+        // search for the superblock
         val state = OpenFileState(0L, ByteOrder.LITTLE_ENDIAN)
-        var filePos = 0L
-        while (filePos < raf.size - 8L) {
-            state.pos = filePos
+        var start = 0L
+        while (start < NetchdfFileFormat.MAXHEADERPOS) {
+            state.pos = start
             val testForMagic = raf.readByteBuffer(state, 8).array()
             if (testForMagic.contentEquals(magicHeader)) {
                 break
             }
-            filePos = if (filePos == 0L) 512 else 2 * filePos
+            start = if (start == 0L) 512 else 2 * start
         }
-        val superblockStart = filePos
+        if (start > NetchdfFileFormat.MAXHEADERPOS) {
+            throw java.lang.RuntimeException("Not an HDF5 file")
+        }
+        this.superblockStart = start
         if (debugStart) {
             println("H5builder opened file ${raf.location} at pos $superblockStart")
         }
-        if (debugTracker) memTracker.add("header", 0, superblockStart)
-        this.baseAddress = superblockStart
 
         val superBlockVersion = raf.readByte(state).toInt()
         val rootGroupBuilder = when {
@@ -85,15 +89,15 @@ class H5builder(val raf: OpenFile,
         // convert into CDM
         this.cdmRoot = this.buildCdm(h5rootGroup)
     }
+
     private fun readSuperBlock01(superblockStart : Long, state : OpenFileState, version : Int) : H5GroupBuilder {
-        // have to cheat a bit
+        // have to read ahead a bit
         state.pos = superblockStart + 13
         this.sizeOffsets = raf.readByte(state).toInt()
         this.sizeLengths = raf.readByte(state).toInt()
         this.isOffsetLong = (sizeOffsets == 8)
         this.isLengthLong = (sizeLengths == 8)
         this.sizeHeapId = 8 + sizeOffsets
-
         state.pos = superblockStart
 
       val superblock01 =
@@ -122,15 +126,13 @@ class H5builder(val raf: OpenFile,
         if (debugSuperblock) superblock01.show()
 
         // look for file truncation
-        var eofAddress : Long = superblock01.getLong("eofAddress")
-        if (superblock01.getLong("baseAddress") != superblockStart) {
+        val baseAddress = superblock01.getLong("baseAddress")
+        var eofAddress = superblock01.getLong("eofAddress")
+        if (baseAddress != this.superblockStart) {
             eofAddress += superblockStart
-            if (debugStart) {
-                println(" baseAddress set to superblockStart")
-            }
         }
         if (raf.size < eofAddress) throw IOException(
-            "File is truncated should be= $eofAddress actual ${raf.size} location= ${state.pos}")
+            "File is truncated should be= $eofAddress actual ${raf.size} baseAddress= ${baseAddress} superblockStart= $superblockStart")
 
         if (debugFlow) {
             println("superBlockVersion $version sizeOffsets = $sizeOffsets sizeLengths = $sizeLengths")
@@ -160,33 +162,27 @@ class H5builder(val raf: OpenFile,
         if (debugStart) {
             println(" fileFlags= 0x${Integer.toHexString(fileFlags.toInt())}")
         }
-        baseAddress = readOffset(state)
+        val baseAddress = readOffset(state)
         val extensionAddress = readOffset(state)
         var eofAddress = readOffset(state)
         val rootObjectAddress = readOffset(state)
         val checksum: Int = raf.readInt(state)
         if (debugStart) {
-            println(" baseAddress= 0x${java.lang.Long.toHexString(baseAddress)}")
+            println(" superblockStart= 0x${java.lang.Long.toHexString(this.superblockStart)}")
             println(" extensionAddress= 0x${java.lang.Long.toHexString(extensionAddress)}")
             println(" eof Address=$eofAddress")
             println(" raf length= ${raf.size}")
             println(" rootObjectAddress= 0x${java.lang.Long.toHexString(rootObjectAddress)}")
             println("")
         }
-        if (debugTracker) memTracker.add("superblock", superblockStart, state.pos)
-        if (baseAddress != superblockStart) {
-            baseAddress = superblockStart
-            eofAddress += superblockStart
-            if (debugStart) {
-                println(" baseAddress set to superblockStart")
-            }
-        }
 
         // look for file truncation
-        val fileSize: Long = raf.size
-        if (fileSize < eofAddress) {
-            throw IOException("File is truncated should be= $eofAddress actual = $fileSize")
+        if (baseAddress != this.superblockStart) {
+            eofAddress += superblockStart
         }
+        if (raf.size < eofAddress) throw IOException(
+            "File is truncated should be= $eofAddress actual ${raf.size} baseAddress= ${baseAddress} superblockStart= $superblockStart")
+
         if (debugFlow) {
             println("superBlockVersion $version sizeOffsets = $sizeOffsets sizeLengths = $sizeLengths")
         }
@@ -207,6 +203,11 @@ class H5builder(val raf: OpenFile,
 
     @Throws(IOException::class)
     fun convertReferencesToDataObjectName(refArray: Array<Long>): List<String> {
+        return refArray.map { convertReferenceToDataObjectName(it) }
+    }
+
+    @Throws(IOException::class)
+    fun convertReferencesToDataObjectName(refArray: ArrayLong): List<String> {
         return refArray.map { convertReferenceToDataObjectName(it) }
     }
 
@@ -284,7 +285,7 @@ class H5builder(val raf: OpenFile,
     }
 
     fun getFileOffset(address: Long): Long {
-        return baseAddress + address
+        return this.superblockStart + address
     }
 
     @Throws(IOException::class)

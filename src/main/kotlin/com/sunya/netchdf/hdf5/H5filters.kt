@@ -15,7 +15,7 @@ class H5filters(
     val mfp: FilterPipelineMessage?,
     val byteOrder: ByteOrder
 ) {
-    val inflateBufferSize = 20_000 // LOOK make this settable
+    val inflateBufferSize = 80_000 // LOOK make this settable
     var first = true
 
     fun apply(rawdata: ByteBuffer, entry: BTree1New.DataChunkEntry): ByteBuffer {
@@ -23,6 +23,7 @@ class H5filters(
         // if (first) println("  ** Filtered $varname ${mfp.filters.map { it.name}}")
         first = false
 
+        // LOOK can you hook the streams up rather than writing to bytearray at each step ??
         var data = rawdata.array()
         try {
             // apply filters backwards
