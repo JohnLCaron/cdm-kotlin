@@ -42,20 +42,22 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
     @Throws(IOException::class)
     private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
+        require(wantSection.size() == layout.totalNelems)
         val vinfo = v2.spObject as N3header.Vinfo
-        val nbytes = (vinfo.elemSize * v2.nelems)
-        require(nbytes < Int.MAX_VALUE)
-        require(nbytes < 100_000_000) { "${v2.name}[${wantSection}]"}
-        val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
-        val values = ByteBuffer.allocate(nbytes.toInt())
+        val totalNbytes = (vinfo.elemSize * layout.totalNelems)
+        require(totalNbytes < Int.MAX_VALUE)
+        val values = ByteBuffer.allocate(totalNbytes.toInt())
 
+        var bytesRead = 0
+        val filePos = OpenFileState(vinfo.begin, ByteOrder.BIG_ENDIAN)
         while (layout.hasNext()) {
             val chunk = layout.next()
             filePos.pos = chunk.srcPos()
-            val bytesRead = raf.readByteBufferDirect(filePos, vinfo.elemSize * chunk.nelems())
-            // extra copy
-            System.arraycopy(bytesRead.array(), 0, values.array(), vinfo.elemSize * chunk.destElem().toInt(), vinfo.elemSize * chunk.nelems());
+            val dstPos = (vinfo.elemSize * chunk.destElem()).toInt()
+            val chunkBytes = vinfo.elemSize * chunk.nelems()
+            bytesRead += raf.readIntoByteBufferDirect(filePos, values, dstPos, chunkBytes)
         }
+        require(bytesRead == totalNbytes.toInt())
 
         return when (v2.datatype) {
             Datatype.BYTE -> ArrayByte(wantSection.shape, values)

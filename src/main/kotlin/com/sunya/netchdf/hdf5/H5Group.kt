@@ -199,7 +199,7 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
 
     fun build(header: H5builder) {
         if (dataObject == null && address != null) {
-            dataObject = header.getDataObject(address!!, name)
+            dataObject = header.getDataObject(address!!, name)!!
         }
         val local = dataObject!!
         if (local.groupMessage != null || local.groupNewMessage != null) {

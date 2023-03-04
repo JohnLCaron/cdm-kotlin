@@ -30,7 +30,7 @@ data class OpenFile(val location : String) : Closeable {
         }
 
         val dst = ByteBuffer.allocate(nbytes)
-        if (state.pos > size) {
+        if (state.pos >= size) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
         val nread = fileChannel.read(dst, state.pos)
@@ -48,7 +48,7 @@ data class OpenFile(val location : String) : Closeable {
             return readIntoByteBuffer(state, dst, dstPos, nbytes)
         }
 
-        if (state.pos > fileChannel.size()) {
+        if (state.pos >= fileChannel.size()) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
         // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
@@ -63,7 +63,7 @@ data class OpenFile(val location : String) : Closeable {
     }
 
     fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
-        if (state.pos > size) {
+        if (state.pos >= size) {
             throw EOFException("Tried to read past EOF ${size} at pos ${state.pos} location $location")
         }
         val bb = readBytes(state, nbytes)

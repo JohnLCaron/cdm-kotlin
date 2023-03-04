@@ -8,10 +8,9 @@ import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfMode
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 import java.util.*
-
-private val debug = false
-private val debugFormat = false
 
 internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
 
@@ -61,23 +60,22 @@ class NCheader(val filename: String) {
     }
 
     private fun readGroup(session: MemorySession, g4: Group4) {
-        // groupBuilderHash[g4.gb] = g4.grpid
+        if (debug) println("group ${g4.gb.name}")
         readGroupDimensions(session, g4)
 
         readUserTypes(session, g4.grpid, g4.gb, userTypes)
 
         // group attributes
         val numAtts_p = session.allocate(C_INT, 0)
-        checkErr("nc_inq_natts", nc_inq_natts(g4.grpid, numAtts_p))
+        checkErr("nc_inq_natts", nc_inq_natts(g4.grpid, numAtts_p)) { "g4.grpid= ${g4.grpid}"}
         val numAtts = numAtts_p[C_INT, 0]
 
         if (numAtts > 0) {
-            if (debug) println(" root group")
+            if (debug) println(" group attributes")
             val gatts: List<Attribute.Builder> = readAttributes(session, g4.grpid, NC_GLOBAL(), numAtts)
             for (attb in gatts) {
                 val att = attb.build()
-                g4.gb.addAttribute(attb.build())
-                if (debug) println("  att = $att")
+                g4.gb.addAttribute(att)
             }
         }
 
@@ -205,15 +203,13 @@ class NCheader(val filename: String) {
 
             // read Variable attributes
             if (natts > 0) {
-                if (debug) println(" Variable $vname")
+                if (debug) println(" Variable attributes")
                 val atts: List<Attribute.Builder> = readAttributes(session, g4.grpid, varid, natts)
                 for (attb in atts) {
                     val att = attb.build()
-                    vb.attributes.add(attb.build())
-                    if (debug)  println("  att = $att")
+                    vb.attributes.add(att)
                 }
             }
-
             g4.gb.addVariable(vb)
         }
     }
@@ -382,6 +378,7 @@ class NCheader(val filename: String) {
                     val s2 : MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
                     if (s2 != MemoryAddress.NULL) {
                         val value = s2.getUtf8String(0)
+                        val tvalue = transcodeString(value)
                         result.add(value)
                     } else {
                         result.add("")
@@ -393,6 +390,11 @@ class NCheader(val filename: String) {
 
             else -> throw RuntimeException("Unsupported attribute data type == $datatype")
         }
+    }
+
+    private fun transcodeString(systemString: String): String {
+        val byteArray = systemString.toByteArray(Charset.defaultCharset())
+        return String(byteArray, StandardCharsets.UTF_8)
     }
 
     internal class ConvertedType internal constructor(val dt: Datatype) {
@@ -409,7 +411,12 @@ class NCheader(val filename: String) {
         }
 
         fun makeDimList(dimIds : IntArray) : List<Dimension> {
-            return dimIds.map { findDim(it)?: throw IllegalStateException() }
+            return dimIds.map {
+                val dim = findDim(it)
+                if (dim == null)
+                    println("HEY")
+                findDim(it) ?: Dimension("", it, false, false)
+            }
         }
 
         fun findDim(dimId : Int) : Dimension? {
@@ -419,6 +426,11 @@ class NCheader(val filename: String) {
     }
 
     internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int, val userType : UserType?)
+
+    companion object {
+        val debug = false
+        val debugFormat = false
+    }
 }
 
 fun convertType(type: Int): Datatype {
@@ -458,5 +470,11 @@ fun convertType(type: Int): Datatype {
 fun checkErr (where : String, ret: Int) {
     if (ret != 0) {
         throw IOException("$where return $ret = ${nc_strerror(ret).getUtf8String(0)}")
+    }
+}
+
+fun checkErr (where : String, ret: Int, extra : () -> String) {
+    if (ret != 0) {
+        throw IOException("$where return $ret = ${nc_strerror(ret).getUtf8String(0)} ${extra()}")
     }
 }

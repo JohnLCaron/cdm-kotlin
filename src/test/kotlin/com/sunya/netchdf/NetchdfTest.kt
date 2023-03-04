@@ -188,8 +188,8 @@ h5dump
     }
 
     @Test
-    fun testTooLarge() {
-        readDataForProfiling("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc")
+    fun testOneCdl() {
+        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
     }
 
     @Test
@@ -217,36 +217,50 @@ h5dump
     }
 }
 
-fun readData(filename: String, varname: String? = null, section: Section? = null) {
+fun readData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
             println("*** not a netchdf file = $filename")
             return
         }
+        readData(myfile,varname, section, showCdl)
+    }
+}
 
-        // println(myfile.rootGroup().allVariables().map { it.fullname() })
-        if (varname != null) {
-            val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
-            if (myvar == null) {
-                println("cant find $varname")
-                return
-            }
-            oneVar(myvar, myfile, section)
-        } else {
-            myfile.rootGroup().allVariables().forEachIndexed { idx, it ->
-                oneVar(it, myfile, null)
-            }
+fun readDataNc(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+    NetcdfClibFile(filename).use { ncfile ->
+        readData(ncfile, varname, section, showCdl)
+    }
+}
+
+fun readData(myfile: Netcdf, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+
+    if (showCdl) {
+        println(myfile.cdl())
+    }
+    // println(myfile.rootGroup().allVariables().map { it.fullname() })
+    if (varname != null) {
+        val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
+        if (myvar == null) {
+            println("cant find $varname")
+            return
+        }
+        oneVar(myvar, myfile, section)
+    } else {
+        myfile.rootGroup().allVariables().forEachIndexed { idx, it ->
+            oneVar(it, myfile, null)
         }
     }
 }
 
+const val maxBytes = 100_000_000
 
 fun oneVar(myvar: Variable, h5file: Iosp, section: Section?) {
 
     val section = Section.fill(section, myvar.shape)
     val nbytes = section.size() * myvar.datatype.size
-    if (nbytes > 100_000_000) {
-        println(" * ${myvar.fullname()} read too big = ${nbytes}")
+    if (nbytes > maxBytes) {
+        println(" * ${myvar.fullname()} read too big: ${nbytes} > $maxBytes")
     } else {
         val mydata = h5file.readArrayData(myvar, section)
         println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
@@ -288,8 +302,8 @@ fun testMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
     }
     val middleSection = Section(middleRanges)
     val nbytes = middleSection.size() * myvar.datatype.size
-    if (nbytes > 100_000_000) {
-        println("  * ${myvar.fullname()} read too big = ${nbytes}")
+    if (nbytes > maxBytes) {
+        println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
         testMiddleSection(myfile, myvar, middleSection.shape)
         return
     }

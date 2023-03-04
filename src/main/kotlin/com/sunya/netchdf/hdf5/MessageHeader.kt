@@ -138,7 +138,7 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
             return null
         }
         flags = rawdata1.getByte("flags").toInt()
-        messageSize = rawdata1.getShort("size").toInt()
+        messageSize = rawdata1.getShort("size").toUShort().toInt()
         headerSize = rawdata1.dataSize()
 
     } else { // Level 2A1 Version 2 Data Object Header Prefix - Common Header Message fields
@@ -152,9 +152,10 @@ fun H5builder.readHeaderMessage(state: OpenFileState, version: Int, hasCreationO
                 }
             }
         if (debugMessage) rawdata2.show()
-        mtype = MessageType.byNumber(rawdata2.getByte("type").toInt())
+        val rawtype = rawdata2.getByte("type").toInt()
+        mtype = MessageType.byNumber(rawtype)
         flags = rawdata2.getByte("flags").toInt()
-        messageSize = rawdata2.getShort("size").toInt()
+        messageSize = rawdata2.getShort("size").toUShort().toInt()
         headerSize = rawdata2.dataSize()
     }
 
@@ -547,7 +548,7 @@ fun H5builder.readFilterPipelineMessage(state: OpenFileState): FilterPipelineMes
     for (i in 0 until nfilters) {
         val filterId = raf.readShort(state).toInt()
         val filterType = fromId(filterId)
-        val nameSize = if (version > 1 && filterId < 256) 0 else raf.readShort(state).toInt()
+        val nameSize = if (version > 1 && filterId < 256) 0 else raf.readShort(state).toUShort().toInt()
         val flags = raf.readShort(state)
         val nValues = raf.readShort(state).toInt()
         val name = if (version == 1) {
@@ -641,7 +642,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 
     // read the datatype
     val startMdt = state.pos
-    var datatypeSize = rawdata.getShort("datatypeSize").toInt()
+    var datatypeSize = rawdata.getShort("datatypeSize").toUShort().toInt()
 
     var lamda : ((Long) -> DatatypeMessage)? = null
     var sharedMdtAddress : Long? = null
@@ -662,7 +663,7 @@ fun H5builder.readAttributeMessage(state: OpenFileState): AttributeMessage {
 
     // read the dataspace
     val startMds = state.pos
-    var dataspaceSize = rawdata.getShort("dataspaceSize").toInt()
+    var dataspaceSize = rawdata.getShort("dataspaceSize").toUShort().toInt()
     val mds = this.readDataspaceMessage(state)
     if (version == 1) {
         dataspaceSize += padding(dataspaceSize, 8)
@@ -778,7 +779,7 @@ fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): Da
     } else {
         // The address of the object header containing the message to be shared
         val address: Long = this.readOffset(state)
-        val dobj: DataObject = this.getDataObject(address, null) // cached here
+        val dobj: DataObject = this.getDataObject(address, null)!! // cached here
         if (mtype === MessageType.Datatype) {
             dobj.mdt!!.isShared = true
             return dobj

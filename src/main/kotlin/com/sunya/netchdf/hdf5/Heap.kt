@@ -31,8 +31,7 @@ internal class H5heap(val header: H5builder) {
 
     @Throws(IOException::class)
     fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype, endian: ByteOrder?): Array<*> {
-        val ho = heapId.getHeapObject()
-            ?: throw IllegalStateException("Illegal Heap address, HeapObject = $heapId")
+        val ho = heapId.getHeapObject() ?: return emptyArray<Any>()
 
         val typedef = datatype.typedef
         val valueDatatype = if (typedef != null) typedef.baseType else datatype
@@ -224,7 +223,9 @@ internal class LocalHeap(header : H5builder, address: Long) {
         val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
         // header
         val magic: String = header.raf.readString(state,4)
-        check(magic == "HEAP") { "$magic should equal HEAP" }
+        check(magic == "HEAP") {
+            "$magic should equal HEAP"
+        }
         version = header.raf.readByte(state)
         state.pos += 3
         size = header.readLength(state).toInt()

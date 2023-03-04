@@ -7,7 +7,7 @@ import java.util.*
 
 // "Data Object Header" Level 2A
 @Throws(IOException::class)
-fun H5builder.readDataObject(address: Long, name: String?) : DataObject {
+fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
     if (debugFlow) println("readDataObject= $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
@@ -33,7 +33,7 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject {
         // first byte was already read
         val testForMagic = raf.readByteBuffer(state, 3).array()
         if (!testForMagic.contentEquals("HDR".toByteArray())) {
-            throw IllegalStateException("DataObject doesnt start with OHDR")
+            return null
         }
         version = raf.readByte(state) // better be 2
         val flags = raf.readByte(state).toInt()

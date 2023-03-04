@@ -343,7 +343,7 @@ private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Da
             Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(vinfo.fillValue as Short) }
             Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
             Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(vinfo.fillValue as Float) }
-            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
+            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(vinfo.fillValue as Double) }
             Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(vinfo.fillValue as Long) }
             Datatype.OPAQUE -> {
                 val fill = vinfo.fillValue as ByteBuffer
@@ -419,7 +419,20 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
     } else {
         val base = dc.h5type.base!!
 
-        // variable length array of references, get translated into strings LOOK always? NPP has reference regions
+        /* variable length array of references, get translated into strings LOOK always? NPP has reference regions
+        if (base.hdfType == Datatype5.Reference) {
+            val refsList = mutableListOf<String>()
+            while (layout.hasNext()) {
+                val chunk: Layout.Chunk = layout.next()
+                for (i in 0 until chunk.nelems()) {
+                    val address: Long = chunk.srcPos() + layout.elemSize * i
+                    val refObjName = this.convertReferenceToDataObjectName(address)
+                    refsList.add(refObjName)
+                }
+            }
+            return ArrayString(wantedSection.shape, refsList)
+        } */
+
         if (base.hdfType == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             while (layout.hasNext()) {

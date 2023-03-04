@@ -32,9 +32,24 @@ class BTree1New(
         val root = Node(rootNodeAddress, null)
         if (root.level == 0) {
             return root.groupEntries.iterator()
+        } else {
+            val result = mutableListOf<GroupEntry>()
+            for (entry in root.groupEntries) {
+                readAllEntries(entry, root, result)
+            }
+            return result.iterator()
         }
-        // TODO recursion in case not contained in single node
-        return emptyList<GroupEntry>().iterator()
+    }
+
+    fun readAllEntries(entry : GroupEntry, parent : Node, list : MutableList<GroupEntry>) {
+        val node = Node(entry.childAddress, parent)
+        if (node.level == 0) {
+            list.addAll(node.groupEntries)
+        } else {
+            for (nested in node.groupEntries) {
+                readAllEntries(nested, node, list)
+            }
+        }
     }
 
     // Btree nodes Level 1A1 - Version 1 B-trees
