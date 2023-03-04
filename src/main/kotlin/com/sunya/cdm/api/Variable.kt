@@ -1,13 +1,16 @@
 package com.sunya.cdm.api
 
+import com.sunya.cdm.util.makeValidCdmObjectName
+
 data class Variable(
     val group : Group,
-    val name: String,
+    val orgName: String,
     val datatype: Datatype,
     val dimensions: List<Dimension>,
     val attributes: List<Attribute>,
     val spObject: Any?,
 ) {
+    val name = makeValidCdmObjectName(orgName)
     val rank : Int = dimensions.size
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
     val nelems : Long = computeSize(this.shape)
@@ -69,10 +72,12 @@ data class Variable(
 
         fun build(group : Group) : Variable {
             val useDimensions = if (dimList != null) dimList!!.map {
-                group.findDimension(it) ?: throw RuntimeException("Cant find dimension named '$it'")
+                group.findDimension(it) ?:
+                Dimension("", it.toInt(), false, false)
             } else dimensions
 
-            return Variable(group, name!!, datatype!!, useDimensions, attributes, spObject)
+            val useName = makeValidCdmObjectName(name!!)
+            return Variable(group, useName, datatype!!, useDimensions, attributes, spObject)
         }
     }
 }

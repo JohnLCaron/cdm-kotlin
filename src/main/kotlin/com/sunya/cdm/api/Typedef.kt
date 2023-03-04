@@ -4,10 +4,13 @@ import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.util.Indent
+import com.sunya.cdm.util.makeValidCdmObjectName
 
 enum class TypedefKind {Compound, Enum, Opaque, Vlen, Unknown}
 
-abstract class Typedef(val kind : TypedefKind, val name : String, val baseType : Datatype) {
+abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : Datatype) {
+    val name = makeValidCdmObjectName(orgName)
+
     abstract fun cdl(indent : Indent): String
 }
 

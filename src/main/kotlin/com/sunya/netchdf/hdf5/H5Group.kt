@@ -56,7 +56,7 @@ internal fun H5builder.readGroupNew(
     nestedObjects : MutableList<DataObjectFacade>,
 ) {
     if (groupNewMessage.fractalHeapAddress >= 0) {
-        val fractalHeap = FractalHeap(this, parent.name, groupNewMessage.fractalHeapAddress, memTracker)
+        val fractalHeap = FractalHeap(this, parent.name, groupNewMessage.fractalHeapAddress)
         val btreeAddress: Long = groupNewMessage.v2BtreeAddressCreationOrder ?: groupNewMessage.v2BtreeAddress
         check(btreeAddress >= 0) { "no valid btree for GroupNew with Fractal Heap" }
 
@@ -67,12 +67,12 @@ internal fun H5builder.readGroupNew(
             heapId = when (btree.btreeType) {
                 5 -> (e.record as BTree2.Record5).heapId
                 6 -> (e.record as BTree2.Record6).heapId
-                else -> continue
+                else -> throw RuntimeException("btree2 type ${btree.btreeType} mot supported")
             }
 
             // the heapId points to a Link message in the Fractal Heap
             val fractalHeapId: FractalHeap.DHeapId = fractalHeap.getFractalHeapId(heapId)
-            val pos: Long = fractalHeapId.getPos()
+            val pos: Long = fractalHeapId.computePosition()
             if (pos < 0) continue
             val state = OpenFileState(pos, ByteOrder.LITTLE_ENDIAN)
             val linkMessage = this.readLinkMessage(state)
@@ -130,6 +130,7 @@ internal fun H5builder.readGroupOld(groupb: H5GroupBuilder, btreeAddress: Long, 
     }
 }
 
+// I think this is preventing cycles in the graph, ie turning it into a tree
 internal fun H5builder.replaceSymbolicLinks(groupb: H5GroupBuilder) {
     val objList = groupb.nestedObjects
     var count = 0
@@ -198,7 +199,7 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
 
     fun build(header: H5builder) {
         if (dataObject == null && address != null) {
-            dataObject = header.getDataObject(address!!, name)
+            dataObject = header.getDataObject(address!!, name)!!
         }
         val local = dataObject!!
         if (local.groupMessage != null || local.groupNewMessage != null) {

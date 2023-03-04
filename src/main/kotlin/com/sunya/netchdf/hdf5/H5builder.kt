@@ -36,7 +36,6 @@ class H5builder(
     var sizeHeapId = 0
     var isOffsetLong = false
     var isLengthLong = false
-    val memTracker = MemTracker(raf.size)
 
     var isNetcdf4 = false
 
@@ -140,7 +139,7 @@ class H5builder(
 
         // extract the root group object, recursively read all objects
         val rootSymbolTableEntry = this.readSymbolTable(state)
-        val rootObject = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")
+        val rootObject = this.getDataObject(rootSymbolTableEntry.objectHeaderAddress, "root")!!
 
         return this.readH5Group(DataObjectFacade(null, "").setDataObject(rootObject))!!
     }
@@ -187,7 +186,7 @@ class H5builder(
             println("superBlockVersion $version sizeOffsets = $sizeOffsets sizeLengths = $sizeLengths")
         }
 
-        val rootObject = this.getDataObject(rootObjectAddress, "root")
+        val rootObject = this.getDataObject(rootObjectAddress, "root")!!
         val facade = DataObjectFacade(null, "").setDataObject( rootObject)
         return this.readH5Group(facade)!!
     }
@@ -220,7 +219,7 @@ class H5builder(
      */
     @Throws(IOException::class)
     fun getDataObjectName(objId: Long): String? {
-        return getDataObject(objId, null).name
+        return getDataObject(objId, null)?.name ?: "unknown"
     }
 
     /**
@@ -234,7 +233,7 @@ class H5builder(
      *   the DataObject doesnt know its name. Because its name is free to be something else. Cause thats how we roll.
      */
     @Throws(IOException::class)
-    fun getDataObject(address: Long, name: String?): DataObject {
+    fun getDataObject(address: Long, name: String?): DataObject? {
         // find it
         var dobj = dataObjectMap[address]
         if (dobj != null) {
@@ -249,7 +248,9 @@ class H5builder(
 
         // read and cache
         dobj = this.readDataObject(address, name)
-        dataObjectMap[address] = dobj
+        if (dobj != null) {
+            dataObjectMap[address] = dobj
+        }
         return dobj
     }
 
@@ -399,6 +400,9 @@ class H5builder(
         val HDF5_DIMENSION_LABELS = "DIMENSION_LABELS"
         val HDF5_DIMENSION_NAME = "NAME"
         val HDF5_REFERENCE_LIST = "REFERENCE_LIST"
+
+        val HDF5_SPECIAL_ATTS = listOf(HDF5_CLASS)
+
 
         // debugging
         private val debugVlen = false

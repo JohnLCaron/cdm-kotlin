@@ -155,17 +155,24 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
     // theres a "wart" that allows a file to be up to 3 bytes smaller than you expect.
     val calcSize = dataStart + nonRecordDataSize + recsize * numrecs
     if (calcSize > actualSize + 3) {
-      if (disallowFileTruncation) throw IOException("File is truncated, calculated size= $calcSize actual = $actualSize") else {
-        // logger.info("File is truncated calculated size= "+calcSize+" actual = "+actualSize);
-        raf.setExtendMode()
+      // can we fix this by setting the unlimited dimension size ?
+      val diff = calcSize - actualSize
+      val mod = diff % recsize
+      val nr = (diff / recsize).toInt()
+      if ((diff % recsize) == 0L) {
+        val extrarecords = (diff / recsize).toInt()
+        numrecs -= extrarecords
       }
+      //if (disallowFileTruncation) throw IOException("File is truncated, calculated size= $calcSize actual = $actualSize") else {
+        logger.info("File is truncated calculated size= "+calcSize+" actual = "+actualSize);
+        ///raf.setExtendMode()
+      //}
     }
 
     // add a record structure if asked to do so
     if (n3iospNew.useRecordStructure && uvars.size > 0) {
       makeRecordStructure(root, uvars)
     }
-
      */
   }
 

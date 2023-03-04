@@ -9,6 +9,7 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SPECIAL_ATTS
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
@@ -42,7 +43,8 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     if (strict) {
         val iter = groupb.attributes.iterator()
         while (iter.hasNext()) {
-            if (NETCDF4_SPECIAL_ATTS.contains(iter.next().name)) {
+            val attname = iter.next().name
+            if (NETCDF4_SPECIAL_ATTS.contains(attname) or HDF5_SPECIAL_ATTS.contains(attname)) {
                 iter.remove()
             }
         }
@@ -123,9 +125,10 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
 
     val h5type = H5TypeInfo(v5.mdt)
     builder.datatype = h5type.datatype(this) // typedefs added here
-    if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
-        builder.datatype = Datatype.STRING
-    }
+    // LOOK why doesnt h5type.datatype() do this ?
+    //if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
+    //    builder.datatype = Datatype.STRING
+    //}
 
     if (v5.dimList != null) {
         builder.dimList = v5.dimList!!.trim().split(" ")
@@ -140,7 +143,8 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     if (strict) {
         val iter = builder.attributes.iterator()
         while (iter.hasNext()) {
-            if (NETCDF4_SPECIAL_ATTS.contains(iter.next().name)) {
+            val attname = iter.next().name
+            if (NETCDF4_SPECIAL_ATTS.contains(attname) or HDF5_SPECIAL_ATTS.contains(attname)) {
                 iter.remove()
             }
         }
@@ -465,7 +469,8 @@ internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
     } else {
         if (match == null) { // 3. if no length matches or multiple matches, then use anonymous
             if (debugDimensionScales) println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but no match")
-            sbuff.append(want_len)
+            // based on /media/twobee/netch/gilmore/data.nc, just ignore this second dimension
+            // sbuff.append(want_len)
         } else {
             if (debugDimensionScales) println("DIMENSION_LIST: dimension scale ${h5variable.name} has second dimension ${want_len} but multiple matches")
             sbuff.append(want_len)
@@ -476,7 +481,6 @@ internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
 
 // look for references to dimension scales, ie the variables that use them
 // return true if this variable is compatible with netcdf4 data model
-// LOOK WTF ??
 @Throws(IOException::class)
 internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group: H5Group, h5variable: H5Variable): Boolean {
 

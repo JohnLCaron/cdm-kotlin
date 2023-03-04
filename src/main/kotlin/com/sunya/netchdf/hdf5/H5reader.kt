@@ -13,6 +13,119 @@ import java.nio.ByteOrder
 private val debugChunkingDetail = false
 private val debugChunking = false
 
+// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
+internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : Layout, section : Section): ArrayTyped<*> {
+    if (vinfo.mds.type == DataspaceType.Null) {
+        return ArrayString(intArrayOf(), listOf())
+    }
+    val h5type = vinfo.h5type
+
+    if (h5type.hdfType == Datatype5.Vlen) {
+        return readVlenData(vinfo, layout, section)
+    }
+    if (h5type.hdfType == Datatype5.Compound) {
+        return readCompoundData(vinfo, layout, section)
+    }
+
+    val readDtype: Datatype = h5type.datatype(this)
+    val endian: ByteOrder = h5type.endian
+
+    val state = OpenFileState(0, endian) // pos set by layout
+    val dataArray = readNonHeapData(state, layout, readDtype, section.shape, h5type)
+
+    // convert attributes to enum strings
+    if (h5type.hdfType == Datatype5.Enumerated) {
+        // hopefully this is shared and not replicated
+        val enumMsg = vinfo.mdt as DatatypeEnum
+        return dataArray.convertEnums(enumMsg.valuesMap)
+    }
+
+    return dataArray
+}
+
+// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
+// old way, use this to see what nj5 probably is doing
+internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, layout : H5tiledLayoutBB, section : Section): ArrayTyped<*> {
+    if (vinfo.mds.type == DataspaceType.Null) {
+        return ArrayString(intArrayOf(), listOf())
+    }
+    val h5type = vinfo.h5type
+
+    if (h5type.hdfType == Datatype5.Vlen) {
+        return readVlenData(vinfo, layout, section)
+    }
+    if (h5type.hdfType == Datatype5.Compound) {
+        return readCompoundData(vinfo, layout, section)
+    }
+
+    val endian: ByteOrder = h5type.endian
+    val readDtype: Datatype = h5type.datatype(this)
+
+    val state = OpenFileState(0, endian) // pos set by layout
+    val dataArray = readFilteredBBData(state, layout, readDtype, section.shape, h5type)
+
+    // convert attributes to enum strings
+    if (h5type.hdfType == Datatype5.Enumerated) {
+        // hopefully this is shared and not replicated
+        val enumMsg = vinfo.mdt as DatatypeEnum
+        return dataArray.convertEnums(enumMsg.valuesMap)
+    }
+
+    return dataArray
+}
+
+@Throws(IOException::class)
+internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: H5tiledLayoutBB, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo): ArrayTyped<*> {
+    val sizeBytes = layout.totalNelems * layout.elemSize
+    if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
+        throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
+    }
+    var count = 0
+    val bb = ByteBuffer.allocate(sizeBytes.toInt())
+    bb.order(state.byteOrder)
+    // the layout handles moving around in the file, adding the filter and giving back the finished results as a byte buffer
+    while (layout.hasNext()) {
+        val chunk : LayoutBB.Chunk = layout.next()
+        val chunkBB: ByteBuffer = chunk.byteBuffer
+        val srcElem = layout.elemSize * chunk.srcElem()
+        chunkBB.position(srcElem.toInt())
+        var pos = layout.elemSize * chunk.destElem().toInt()
+        val nelems = layout.elemSize * chunk.nelems()
+        for (i in 0 until nelems) {
+            bb.put(pos, chunkBB.get())
+            pos++
+        }
+        count++
+        if (debugChunkingDetail and (count < 20)) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
+    }
+    bb.position(0)
+    bb.limit(bb.capacity())
+    if (debugChunkingDetail or debugChunking)
+        println(" Old $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
+
+    val result = when (datatype) {
+        Datatype.BYTE -> ArrayByte(shape, bb)
+        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
+        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
+        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
+        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
+        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
+        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
+        Datatype.OPAQUE -> ArrayOpaque(shape, bb, h5type.elemSize)
+        else -> throw IllegalStateException("unimplemented type= $datatype")
+    }
+    // convert to array of Strings by reducing rank by 1
+    if (datatype == Datatype.CHAR) {
+        return (result as ArrayUByte).makeStringsFromBytes()
+    }
+    return result
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
 // Handles reading attributes and regular layout Variables (eg contiguous, maybe compact)
 internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
     if (dc.mds.type == DataspaceType.Null) {
@@ -48,50 +161,6 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     return dataArray
 }
 
-// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
-internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : Layout, section : Section): ArrayTyped<*> {
-    if (vinfo.mds.type == DataspaceType.Null) {
-        return ArrayString(intArrayOf(), listOf())
-    }
-    val h5type = vinfo.h5type
-
-    if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(vinfo, layout, section)
-    }
-    if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(vinfo, layout, section)
-    }
-
-    var shape: IntArray = vinfo.mds.dims
-    val readDtype: Datatype = h5type.datatype(this)
-    val endian: ByteOrder = h5type.endian
-    var elemSize = h5type.elemSize
-
-    // LOOK is this needed?
-    if (h5type.hdfType == Datatype5.String) { // char
-        if (h5type.elemSize > 1) {
-            val newShape = IntArray(shape.size + 1)
-            System.arraycopy(shape, 0, newShape, 0, shape.size)
-            newShape[shape.size] = h5type.elemSize
-            shape = newShape
-            elemSize = 1
-        }
-
-    }
-
-    val state = OpenFileState(0, endian) // pos set by layout
-    val dataArray = readNonHeapData(state, layout, readDtype, section.shape, h5type)
-
-    // convert attributes to enum strings
-    if (h5type.hdfType == Datatype5.Enumerated) {
-        // hopefully this is shared and not replicated
-        val enumMsg = vinfo.mdt as DatatypeEnum
-        return dataArray.convertEnums(enumMsg.valuesMap)
-    }
-
-    return dataArray
-}
-
 // handles datatypes that are not compound or vlen or filtered
 // H5tiledLayout seems to be ~ 6/5 faster than readChunkedDataNew for reversed chunk size
 @Throws(IOException::class)
@@ -112,7 +181,7 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     }
     if (debugChunkingDetail or debugChunking) {
         if (layout is H5tiledLayout)
-        println(" readNonHeapData $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
+            println(" readNonHeapData $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())
@@ -141,50 +210,6 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     return result
 }
 
-// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
-// old way, use this to see what nj5 probably is doing
-internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, layout : H5tiledLayoutBB, section : Section): ArrayTyped<*> {
-    if (vinfo.mds.type == DataspaceType.Null) {
-        return ArrayString(intArrayOf(), listOf())
-    }
-    val h5type = vinfo.h5type
-
-    if (h5type.hdfType == Datatype5.Vlen) {
-        return readVlenData(vinfo, layout, section)
-    }
-    if (h5type.hdfType == Datatype5.Compound) {
-        return readCompoundData(vinfo, layout, section)
-    }
-
-    val endian: ByteOrder = h5type.endian
-    var shape: IntArray = vinfo.mds.dims
-    var readDtype: Datatype = h5type.datatype(this)
-    var elemSize = h5type.elemSize
-
-    // LOOK is this needed?
-    if (h5type.hdfType == Datatype5.String) { // char
-        if (h5type.elemSize > 1) {
-            val newShape = IntArray(shape.size + 1)
-            System.arraycopy(shape, 0, newShape, 0, shape.size)
-            newShape[shape.size] = h5type.elemSize
-            shape = newShape
-            elemSize = 1 // LOOK why?
-        }
-    }
-
-    val state = OpenFileState(0, endian) // pos set by layout
-    val dataArray = readFilteredBBData(state, layout, readDtype, section.shape, h5type)
-
-    // convert attributes to enum strings
-    if (h5type.hdfType == Datatype5.Enumerated) {
-        // hopefully this is shared and not replicated
-        val enumMsg = vinfo.mdt as DatatypeEnum
-        return dataArray.convertEnums(enumMsg.valuesMap)
-    }
-
-    return dataArray
-}
-
 internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
     val vinfo = v2.spObject as DataContainerVariable
     val h5type = vinfo.h5type
@@ -211,13 +236,14 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
     val bb = ByteBuffer.allocate(sizeBytes.toInt())
     bb.order(vinfo.h5type.endian)
 
+    // prefill with fill value
     /* val sbb = bb.asShortBuffer()
     sbb.position(0)
     val fill = vinfo.fillValue as Short
     repeat(wantSpace.totalElements.toInt()) { bb.putShort(fill) } // performance ?? */
 
     val btreeNew =  BTree1New(this, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
-    val chunkedData = ChunkedData(btreeNew)
+    val chunkedData = TiledData(btreeNew)
     val filters = H5filters(v2.name, vinfo.mfp, vinfo.h5type.endian)
     if (debugChunking) println(" ${chunkedData.tiling}")
 
@@ -317,7 +343,7 @@ private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Da
             Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(vinfo.fillValue as Short) }
             Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
             Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(vinfo.fillValue as Float) }
-            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
+            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(vinfo.fillValue as Double) }
             Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(vinfo.fillValue as Long) }
             Datatype.OPAQUE -> {
                 val fill = vinfo.fillValue as ByteBuffer
@@ -330,58 +356,6 @@ private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Da
         transferMissing++
     }
     missingChunks++
-}
-
-
-// handles datatypes that are not compound or vlen or filtered
-@Throws(IOException::class)
-internal fun H5builder.readFilteredBBData(state: OpenFileState, layout: H5tiledLayoutBB, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo): ArrayTyped<*> {
-    val sizeBytes = layout.totalNelems * layout.elemSize
-    if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
-        throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
-    }
-    var count = 0
-    val bb = ByteBuffer.allocate(sizeBytes.toInt())
-    bb.order(state.byteOrder)
-    // the layout handles moving around in the file, adding the filter and giving back the finished results as a byte buffer
-    while (layout.hasNext()) {
-        val chunk : LayoutBB.Chunk = layout.next()
-        val chunkBB: ByteBuffer = chunk.byteBuffer
-        val srcElem = layout.elemSize * chunk.srcElem()
-        chunkBB.position(srcElem.toInt())
-        var pos = layout.elemSize * chunk.destElem().toInt()
-        val nelems = layout.elemSize * chunk.nelems()
-        for (i in 0 until nelems) {
-            bb.put(pos, chunkBB.get())
-            pos++
-        } // LOOK bulk copy ?
-        count++
-        if (debugChunkingDetail and (count < 20)) println("read at ${chunk.srcElem()} ${chunk.nelems()} elements to ${chunk.destElem()} pos = ${layout.elemSize * chunk.destElem().toInt()}")
-    }
-    bb.position(0)
-    bb.limit(bb.capacity())
-    if (debugChunkingDetail or debugChunking)
-        println(" Old $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
-
-    val result = when (datatype) {
-        Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
-        Datatype.OPAQUE -> ArrayOpaque(shape, bb, h5type.elemSize)
-        else -> throw IllegalStateException("unimplemented type= $datatype")
-    }
-    // convert to array of Strings by reducing rank by 1
-    if (datatype == Datatype.CHAR) {
-        return (result as ArrayUByte).makeStringsFromBytes()
-    }
-    return result
 }
 
 // The structure data is not on the heap, but the variable length members (vlen, string) are
@@ -445,7 +419,20 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
     } else {
         val base = dc.h5type.base!!
 
-        // variable length array of references, get translated into strings LOOK always? NPP has reference regions
+        /* variable length array of references, get translated into strings LOOK always? NPP has reference regions
+        if (base.hdfType == Datatype5.Reference) {
+            val refsList = mutableListOf<String>()
+            while (layout.hasNext()) {
+                val chunk: Layout.Chunk = layout.next()
+                for (i in 0 until chunk.nelems()) {
+                    val address: Long = chunk.srcPos() + layout.elemSize * i
+                    val refObjName = this.convertReferenceToDataObjectName(address)
+                    refsList.add(refObjName)
+                }
+            }
+            return ArrayString(wantedSection.shape, refsList)
+        } */
+
         if (base.hdfType == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             while (layout.hasNext()) {

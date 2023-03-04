@@ -1,6 +1,8 @@
 package com.sunya.cdm.api
 
-class Group(val name : String,
+import com.sunya.cdm.util.makeValidCdmObjectName
+
+class Group(orgName : String,
             val typedefs : List<Typedef>,
             val dimensions : List<Dimension>,
             val attributes : List<Attribute>,
@@ -8,10 +10,12 @@ class Group(val name : String,
             groupBuilders : List<Group.Builder>,
             val parent: Group?
     ) {
+    val name : String
     val variables : List<Variable>
     val groups : List<Group>
 
     init {
+        name = makeValidCdmObjectName(orgName)
         variables = variableBuilders.map { it.build(this) }
         groups = groupBuilders.map { it.build(this) }
     }
@@ -100,7 +104,8 @@ class Group(val name : String,
         }
 
         fun build(parent : Group?) : Group {
-            return Group(name, typedefs, dimensions, attributes, variables, groups, parent)
+            val useName = makeValidCdmObjectName(name)
+            return Group(useName, typedefs, dimensions, attributes, variables, groups, parent)
         }
     }
 }

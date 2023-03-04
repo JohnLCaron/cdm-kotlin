@@ -41,23 +41,23 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
         }
 
-        if (vinfo.mfp != null) { // filtered
-            Preconditions.checkArgument(vinfo.isChunked)
-            if (vinfo.h5type.isVString) {
-                val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                return readFilteredStringData(layout, wantSection)
-            } else {
-                val result = if (useOld) {
-                    val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                    header.readFilteredChunkedData(vinfo, layout, wantSection)
-                } else header.readChunkedDataNew(v2, wantSection)
-                return result
-            }
-        }
-
         try {
+            if (vinfo.mfp != null) { // filtered
+                Preconditions.checkArgument(vinfo.isChunked)
+                if (vinfo.h5type.isVString) {
+                    val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
+                    return readFilteredStringData(layout, wantSection)
+                } else {
+                    val result = if (useOld) {
+                        val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
+                        header.readFilteredChunkedData(vinfo, layout, wantSection)
+                    } else header.readChunkedDataNew(v2, wantSection)
+                    return result
+                }
+            }
+
             if (vinfo.isChunked) {
-                val result =  if (useOld) {
+                val result = if (useOld) {
                     val layout = H5tiledLayout(header, v2, wantSection, v2.datatype) // eager read
                     header.readChunkedData(vinfo, layout, wantSection)
                 } else header.readChunkedDataNew(v2, wantSection)
@@ -65,7 +65,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
             } else {
                 return header.readRegularData(vinfo, wantSection)
             }
-        } catch (ex : Exception) {
+        } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")
             throw ex
         }
