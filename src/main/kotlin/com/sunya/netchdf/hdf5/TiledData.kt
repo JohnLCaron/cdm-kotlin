@@ -9,7 +9,8 @@ private val debug = false
 private val debugRow = false
 
 // replaces H5tiledLayoutBB and H5tiledLayout
-class ChunkedData(val btree1 : BTree1New) {
+/** wraps BTree1New to handle iterating through tiled data (aka chunked data) */
+class TiledData(val btree1 : BTree1New) {
     val tiling = Tiling(btree1.varShape, btree1.storageSize)
     val rootNode : BTree1New.Node
 

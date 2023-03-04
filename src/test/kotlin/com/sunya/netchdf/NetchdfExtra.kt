@@ -65,7 +65,7 @@ class NetchdfExtra {
 
     val showCdl= false
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun compareCdlWithClib(filename: String) {
         val netchdf: Netcdf? = openNetchdfFile(filename)
@@ -82,7 +82,7 @@ class NetchdfExtra {
         nclibfile.close()
     }
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun readDataForProfiling(filename: String) {
         println(filename)

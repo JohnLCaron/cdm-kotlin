@@ -4,8 +4,7 @@ import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.OpenFileState
 import java.nio.ByteOrder
 
-// each GroupOld has one of these, see readGroupOld() in H5Group
-// it uses a BTree1New, which is not exposed
+/** Wraps a BTree1New, when its used to store symbol table nodes for GroupOld. */
 class GroupSymbolTable(val btreeAddress : Long) {
 
     fun symbolTableEntries(h5 : H5builder) : Iterable<SymbolTableEntry> {

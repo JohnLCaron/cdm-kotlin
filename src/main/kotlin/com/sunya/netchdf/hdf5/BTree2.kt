@@ -7,21 +7,9 @@ import java.nio.ByteOrder
 import java.util.*
 
 /**
- * // Level 1A2
- *
- * Version 2 B-trees are "traditional" B-trees, with one major difference. Instead of just using a simple pointer
- * (or address in the file) to a child of an internal node, the pointer to the child node contains two additional
- * pieces of information: the number of records in the child node itself, and the total number of records in the child
- * node and all its descendents. Storing this additional information allows fast array-like indexing to locate the n'th
- * record in the B-tree.
- *
- * The entry into a version 2 B-tree is a header which contains global information about the structure of the B-tree.
- * The root node address field in the header points to the B-tree root node, which is either an internal or leaf node,
- * depending on the value in the header's depth field. An internal node consists of records plus pointers to further
- * leaf or internal nodes in the tree. A leaf node consists of solely of records. The format of the records depends on
- * the B-tree type.
- *
- * Used in readGroupNew(), readAttributesFromInfoMessage(), FractalHeap.
+ * Level 1A2
+ * Used in readGroupNew( type 5 and 6), readAttributesFromInfoMessage(), FractalHeap.
+ * DHeapId(type 1,2,3,4)
  */
 class BTree2(h5: H5builder, owner: String, address: Long) {
     val btreeType: Int
@@ -51,6 +39,8 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val numRecordsRootNode: Short = raf.readShort(state)
         val totalRecords: Long = h5.readLength(state) // total in entire btree
         val checksum: Int = raf.readInt(state)
+
+        // eager reading of all nodes
         if (treeDepth > 0) {
             val node = InternalNode(rootNodeAddress, numRecordsRootNode, recordSize, treeDepth.toInt())
             node.recurse()
@@ -143,11 +133,11 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
 
             for (i in 0 until nrecords) {
                 val entry = Entry2()
-                entry.record = readRecord(state, btreeType.toInt())
+                entry.record = readRecord(state, btreeType)
                 entries.add(entry)
             }
 
-            // skip
+            // skip checksum i guess
             raf.readInt(state)
         }
 
@@ -165,22 +155,23 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
             4 -> Record4(state)
             5 -> Record5(state)
             6 -> Record6(state)
-            7 -> {
-                Record70(state) // TODO wrong
-            }
-
+            7 -> Record70(state) // TODO wrong
             8 -> Record8(state)
             9 -> Record9(state)
+            10 -> Record10(state, 0) // TODO wrong, whats ndims?
+            11 -> Record11(state, 0) // TODO wrong, whats ndims?
             else -> throw IllegalStateException()
         }
     }
 
+    // Type 1 Record Layout - Indirectly Accessed, Non-filtered, ‘Huge’ Fractal Heap Objects
     internal inner class Record1(state: OpenFileState) {
         val hugeObjectAddress = h5.readOffset(state)
         val hugeObjectLength = h5.readLength(state)
         val hugeObjectID = h5.readLength(state)
     }
 
+    // Type 2 Record Layout - Indirectly Accessed, Filtered, ‘Huge’ Fractal Heap Objects
     internal inner class Record2(state: OpenFileState) {
         val hugeObjectAddress = h5.readOffset(state)
         val hugeObjectLength = h5.readLength(state)
@@ -189,11 +180,13 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val hugeObjectID = h5.readLength(state)
     }
 
+    // Type 3 Record Layout - Directly Accessed, Non-filtered, ‘Huge’ Fractal Heap Objects
     internal inner class Record3(state: OpenFileState) {
         val hugeObjectAddress = h5.readOffset(state)
         val hugeObjectLength = h5.readLength(state)
     }
 
+    // Type 4 Record Layout - Directly Accessed, Filtered, ‘Huge’ Fractal Heap Objects
     internal inner class Record4(state: OpenFileState) {
         val hugeObjectAddress = h5.readOffset(state)
         val hugeObjectLength = h5.readLength(state)
@@ -201,30 +194,37 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val hugeObjectSize = h5.readLength(state)
     }
 
+    // Type 5 Record Layout - Link Name for Indexed Group
     inner class Record5(state: OpenFileState) {
         val nameHash = raf.readInt(state)
         val heapId = raf.readByteBuffer(state, 7).array()
     }
 
+    // Type 6 Record Layout - Creation Order for Indexed Group
     inner class Record6(state: OpenFileState) {
         val creationOrder = raf.readLong(state)
         val heapId = raf.readByteBuffer(state, 7).array()
     }
 
+    // Type 7 Record Layout - Shared Object Header Messages (Sub-type 0 - Message in Heap)
     internal inner class Record70(state: OpenFileState) {
         val location = raf.readByte(state)
+        val hash = raf.readInt(state)
         val refCount = raf.readInt(state)
         val id = raf.readByteBuffer(state, 8).array()
     }
 
+    // Type 7 Record Layout - Shared Object Header Messages (Sub-type 1 - Message in Object Header)
     internal inner class Record71(state: OpenFileState) {
         val location = raf.readByte(state)
+        val hash = raf.readInt(state)
         val skip = raf.readByte(state)
         val messtype = raf.readByte(state)
         val index = raf.readShort(state)
         val address = h5.readOffset(state)
     }
 
+    // Type 8 Record Layout - Attribute Name for Indexed Attributes
     inner class Record8(state: OpenFileState) {
         val heapId = raf.readByteBuffer(state, 8).array()
         val flags = raf.readByte(state)
@@ -232,9 +232,24 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
         val nameHash = raf.readInt(state)
     }
 
+    // Type 9 Record Layout - Creation Order for Indexed Attributes
     inner class Record9(state: OpenFileState) {
         val heapId = raf.readByteBuffer(state, 8).array()
         val flags = raf.readByte(state)
         val creationOrder = raf.readInt(state)
+    }
+
+    // Type 10 Record Layout - Non-filtered Dataset Chunks
+    inner class Record10(state: OpenFileState, ndims : Int) {
+        val address = h5.readOffset(state)
+        val dims = LongArray(ndims) { raf.readLong(state) }
+    }
+
+    // Type 11 Record Layout - Filtered Dataset Chunks
+    inner class Record11(state: OpenFileState, ndims : Int) {
+        val address = h5.readOffset(state)
+        val chunkSize = raf.readLong(state) // LOOK variable size based on what ?
+        val filterMask = raf.readInt(state)
+        val dims = LongArray(ndims) { raf.readLong(state) }
     }
 } // BTree2

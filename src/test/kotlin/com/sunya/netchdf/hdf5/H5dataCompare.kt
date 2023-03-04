@@ -44,8 +44,7 @@ class H5dataCompare {
                     .addNameFilter { name -> !name.endsWith("perverse.nc") } // too slow
                     .build()
 
-            return moar4
-            // return Stream.of(stream1, stream4, moar4).flatMap { i -> i};
+            return Stream.of(stream1, stream4, moar4).flatMap { i -> i};
         }
     }
 

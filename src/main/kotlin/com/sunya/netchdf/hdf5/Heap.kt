@@ -143,82 +143,82 @@ internal class H5heap(val header: H5builder) {
             if (isEmpty()) return null
             var gheap = heapMap[heapAddress]
             if (null == gheap) {
-                gheap = GlobalHeap(heapAddress)
+                gheap = GlobalHeap(header, heapAddress)
                 heapMap[heapAddress] = gheap
             }
             return gheap.getHeapObject(index.toShort()) ?: throw IllegalStateException("cant find HeapObject")
         }
     } // HeapIdentifier
+} // H5heap
 
-    // level 1E Global Heap
-    inner class GlobalHeap(address: Long) {
-        private val version: Byte
-        private val sizeBytes: Int
-        private val hos: MutableMap<Short, HeapObject> = HashMap()
+// level 1E Global Heap
+class GlobalHeap(h5: H5builder, address: Long) {
+    private val version: Byte
+    private val sizeBytes: Int
+    private val hos: MutableMap<Short, HeapObject> = HashMap()
 
-        init {
-            val filePos: Long = header.getFileOffset(address)
-            if (filePos < 0 || filePos >= raf.size) {
-                throw IllegalStateException("$filePos out of bounds; address=$address ")
-            }
-
-            // header information is in le byte order
-            val state = OpenFileState(address, ByteOrder.LITTLE_ENDIAN)
-
-            // header
-            val magic: String = raf.readString(state, 4)
-            check(magic == "GCOL") { "$magic should equal GCOL" }
-            version = raf.readByte(state)
-            state.pos += 3
-            sizeBytes = raf.readInt(state)
-            state.pos += 4  // pad to 8
-
-            var count = 0
-            var countBytes = 0
-            while (true) {
-                val startPos: Long = state.pos
-                val o = HeapObject()
-                o.id = raf.readShort(state)
-                if (o.id.toInt() == 0) break // ?? look
-                o.refCount = raf.readShort(state)
-                state.pos += 4
-                o.dataSize = header.readLength(state)
-                o.dataPos = state.pos
-                val dsize = o.dataSize.toInt() + padding(o.dataSize.toInt(), 8)
-                countBytes += dsize + 16
-                if (o.dataSize < 0) break // ran off the end, must be done
-                if (countBytes < 0) break // ran off the end, must be done
-                if (countBytes > sizeBytes) break // ran off the end
-                state.pos += dsize
-                hos[o.id] = o
-                count++
-                if (countBytes + 16 >= sizeBytes) break // ran off the end, must be done
-            }
+    init {
+        val filePos: Long = h5.getFileOffset(address)
+        if (filePos < 0 || filePos >= h5.raf.size) {
+            throw IllegalStateException("$filePos out of bounds; address=$address ")
         }
 
-        fun getHeapObject(id: Short): HeapObject? {
-            return hos[id]
-        }
+        // header information is in le byte order
+        val state = OpenFileState(address, ByteOrder.LITTLE_ENDIAN)
 
-        internal inner class HeapObject {
-            var id: Short = 0
-            var refCount: Short = 0
-            var dataSize: Long = 0
-            var dataPos: Long = 0
-            override fun toString(): String {
-                return "id=$id, refCount=$refCount, dataSize=$dataSize, dataPos=$dataPos"
-            }
+        // header
+        val magic: String = h5.raf.readString(state, 4)
+        check(magic == "GCOL") { "$magic should equal GCOL" }
+        version = h5.raf.readByte(state)
+        state.pos += 3
+        sizeBytes = h5.raf.readInt(state)
+        state.pos += 4  // pad to 8
+
+        var count = 0
+        var countBytes = 0
+        while (true) {
+            val startPos: Long = state.pos
+            val o = HeapObject()
+            o.id = h5.raf.readShort(state)
+            if (o.id.toInt() == 0) break // ?? look
+            o.refCount = h5.raf.readShort(state)
+            state.pos += 4
+            o.dataSize = h5.readLength(state)
+            o.dataPos = state.pos
+            val dsize = o.dataSize.toInt() + padding(o.dataSize.toInt(), 8)
+            countBytes += dsize + 16
+            if (o.dataSize < 0) break // ran off the end, must be done
+            if (countBytes < 0) break // ran off the end, must be done
+            if (countBytes > sizeBytes) break // ran off the end
+            state.pos += dsize
+            hos[o.id] = o
+            count++
+            if (countBytes + 16 >= sizeBytes) break // ran off the end, must be done
         }
-    } // GlobalHeap
+    }
+
+    internal fun getHeapObject(id: Short): HeapObject? {
+        return hos[id]
+    }
+
+    internal inner class HeapObject {
+        var id: Short = 0
+        var refCount: Short = 0
+        var dataSize: Long = 0
+        var dataPos: Long = 0
+        override fun toString(): String {
+            return "id=$id, refCount=$refCount, dataSize=$dataSize, dataPos=$dataPos"
+        }
+    }
 }
 
 // Level 1D - Local Heaps
 internal class LocalHeap(header : H5builder, address: Long) {
-    var size: Int
-    var freelistOffset: Long
-    var dataAddress: Long
-    var heap: ByteBuffer
-    var version: Byte
+    val size: Int
+    val freelistOffset: Long
+    val dataAddress: Long
+    val heap: ByteBuffer
+    val version: Byte
 
     init {
         val state = OpenFileState(header.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)

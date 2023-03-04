@@ -889,7 +889,7 @@ private fun H5builder.readAttributesFromInfoMessage(
     val btreeAddress: Long = attributeOrderBtreeAddress ?: attributeNameBtreeAddress
     if (btreeAddress < 0 || fractalHeapAddress < 0) return emptyList()
     val btree = BTree2(this, "AttributeInfoMessage", btreeAddress)
-    val fractalHeap = FractalHeap(this, "AttributeInfoMessage", fractalHeapAddress, memTracker)
+    val fractalHeap = FractalHeap(this, "AttributeInfoMessage", fractalHeapAddress)
 
     val list = mutableListOf<AttributeMessage>()
     for (e in btree.entryList) {
@@ -902,7 +902,7 @@ private fun H5builder.readAttributesFromInfoMessage(
 
         // the heapId points to an Attribute Message in the fractal Heap
         val fractalHeapId = fractalHeap.getFractalHeapId(heapId)
-        val state = OpenFileState(fractalHeapId.getPos(), ByteOrder.LITTLE_ENDIAN)
+        val state = OpenFileState(fractalHeapId.computePosition(), ByteOrder.LITTLE_ENDIAN)
         if (state.pos > 0) {
             val attMessage = this.readAttributeMessage(state)
             list.add(attMessage)

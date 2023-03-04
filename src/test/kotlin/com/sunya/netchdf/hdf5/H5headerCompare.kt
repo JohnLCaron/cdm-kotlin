@@ -31,6 +31,7 @@ class H5headerCompare {
 
             val stream4 =
                 testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .withRecursion()
                     .build()
@@ -42,8 +43,7 @@ class H5headerCompare {
                     .withRecursion()
                     .build()
 
-            //. return Stream.of(stream4).flatMap { i -> i };
-            return stream4
+            return Stream.of(stream4).flatMap { i -> i };
         }
     }
 

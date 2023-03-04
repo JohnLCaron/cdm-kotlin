@@ -25,7 +25,6 @@ class BTreeData(
     val rootNodeAddress: Long,
     varShape: IntArray,
     storageSize: IntArray,
-    val memTracker: MemTracker?
 ) {
     private val raf: OpenFile = h5.raf
     private val tiling: TilingOld = TilingOld(varShape, storageSize)
@@ -138,7 +137,6 @@ class BTreeData(
             nentries = raf.readShort(state).toInt()
             val size: Long =
                 8 + 2 * h5.sizeOffsets + nentries.toLong() * (8 + h5.sizeOffsets + 8 + ndimStorage)
-            memTracker?.addByLen("Data BTree ($owner)", address, size)
             val leftAddress: Long = h5.readOffset(state)
             val rightAddress: Long = h5.readOffset(state)
 
@@ -241,7 +239,6 @@ class BTreeData(
                 offset[i] = loffset.toInt()
             }
             filePos = if (last) -1 else h5.readAddress(state) // note we add the file offset here as needed
-            memTracker?.addByLen("Chunked Data ($owner)", filePos, size.toLong())
         }
 
         override fun toString(): String {

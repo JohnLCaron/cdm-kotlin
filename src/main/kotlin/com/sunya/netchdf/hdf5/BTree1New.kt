@@ -17,6 +17,7 @@ import java.nio.ByteOrder
  * The pointers in internal nodes point to sub-trees while the pointers in leaf nodes point to symbol nodes and
  * raw data chunks. Aside from that difference, internal nodes and leaf nodes are identical.
  */
+// replaces BTree1 and BTreeData
 class BTree1New(
     val h5: H5builder,
     val rootNodeAddress: Long,

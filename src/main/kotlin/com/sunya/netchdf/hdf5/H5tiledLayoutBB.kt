@@ -79,7 +79,7 @@ class H5tiledLayoutBB(
         elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
 
         // create the data chunk iterator
-        this.btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims, null)
+        this.btree = BTreeData(h5, vinfo.dataPos, v2.shape, vinfo.storageDims)
         val iter: BTreeData.DataChunkIterator = btree.getDataChunkIteratorFilter(want)
         val dcIter: DataChunkIterator = DataChunkIterator(iter)
         delegate = LayoutTiledBB(dcIter, chunkSize, elemSize, want)

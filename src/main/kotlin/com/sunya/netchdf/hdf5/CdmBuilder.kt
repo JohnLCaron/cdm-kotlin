@@ -123,6 +123,7 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
 
     val h5type = H5TypeInfo(v5.mdt)
     builder.datatype = h5type.datatype(this) // typedefs added here
+    // LOOK why doesnt h5type.datatype() do this ?
     if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
         builder.datatype = Datatype.STRING
     }
@@ -476,7 +477,6 @@ internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
 
 // look for references to dimension scales, ie the variables that use them
 // return true if this variable is compatible with netcdf4 data model
-// LOOK WTF ??
 @Throws(IOException::class)
 internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group: H5Group, h5variable: H5Variable): Boolean {
 

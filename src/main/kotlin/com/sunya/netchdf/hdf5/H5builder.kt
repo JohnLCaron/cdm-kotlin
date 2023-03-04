@@ -36,7 +36,6 @@ class H5builder(
     var sizeHeapId = 0
     var isOffsetLong = false
     var isLengthLong = false
-    val memTracker = MemTracker(raf.size)
 
     var isNetcdf4 = false
 

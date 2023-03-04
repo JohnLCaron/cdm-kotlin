@@ -7,10 +7,9 @@ import com.sunya.cdm.util.log2
 import java.io.IOException
 import java.nio.ByteOrder
 import java.util.*
-import kotlin.collections.ArrayList
 
 /** Level 1G - Fractal Heap  */
-class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemTracker?) {
+class FractalHeap(h5: H5builder, forWho: String, address: Long) {
     // level 1E "Fractal Heap" used for both Global and Local heaps in 1.8.0+
     /*
    * 1) the root indirect block knows how many rows it has from the header, which i can divide into
@@ -59,44 +58,42 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
     private val debugOut = System.out
     private val h5: H5builder
     private val raf: OpenFile
-    var version: Int
-    var heapIdLen: Short
-    var flags: Byte
-    var maxSizeOfObjects: Int
-    var nextHugeObjectId: Long
-    var freeSpace: Long
-    var managedSpace: Long
-    var allocatedManagedSpace: Long
-    var offsetDirectBlock: Long
-    var nManagedObjects: Long
-    var sizeHugeObjects: Long
-    var nHugeObjects: Long
-    var sizeTinyObjects: Long
-    var nTinyObjects: Long
-    var btreeAddressHugeObjects: Long
-    var freeSpaceTrackerAddress: Long
-    var maxHeapSize: Short
-    var startingNumRows: Short
-    var currentNumRows: Short
-    var maxDirectBlockSize: Long
-    var tableWidth: Short
-    var startingBlockSize: Long
-    var rootBlockAddress: Long
-    var rootBlock: IndirectBlock
+    val version: Int
+    val heapIdLen: Short
+    val flags: Byte
+    val maxSizeOfObjects: Int
+    val nextHugeObjectId: Long
+    val freeSpace: Long
+    val managedSpace: Long
+    val allocatedManagedSpace: Long
+    val offsetDirectBlock: Long
+    val nManagedObjects: Long
+    val sizeHugeObjects: Long
+    val nHugeObjects: Long
+    val sizeTinyObjects: Long
+    val nTinyObjects: Long
+    val btreeAddressHugeObjects: Long
+    val freeSpaceTrackerAddress: Long
+    val maxHeapSize: Short
+    val startingNumRows: Short
+    val currentNumRows: Short
+    val maxDirectBlockSize: Long
+    val tableWidth: Short
+    val startingBlockSize: Long
+    val rootBlockAddress: Long
+    val rootBlock: IndirectBlock
 
     // filters
-    var ioFilterLen: Short
-    var sizeFilteredRootDirectBlock: Long = 0
-    var ioFilterMask = 0
-    var doublingTable: DoublingTable
-    var btreeHugeObjects: BTree2? = null
+    val ioFilterLen: Short
+    val sizeFilteredRootDirectBlock: Long
+    val ioFilterMask : Int
+    val doublingTable: DoublingTable
+    val btreeHugeObjects: BTree2? = null
 
     init {
         this.h5 = h5
         raf = h5.raf
-
         val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)
-        if (debugDetail) debugOut.println("-- readFractalHeap position=" + state.pos)
 
         // header
         val magic: String = raf.readString(state,4)
@@ -129,37 +126,12 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
         // Indirect Block value is 0), or an indirect block.
         currentNumRows = raf.readShort(state) // current number of rows of the root indirect block, 0 = direct block
         val hasFilters = ioFilterLen > 0
-        if (hasFilters) {
-            sizeFilteredRootDirectBlock = h5.readLength(state)
-            ioFilterMask = raf.readInt(state)
-            val ioFilterInfo = raf.readByteBuffer(state, ioFilterLen.toInt()).array()
-        }
+        sizeFilteredRootDirectBlock = if (hasFilters) h5.readLength(state) else -1
+        ioFilterMask = if (hasFilters) raf.readInt(state) else -1
+        val ioFilterInfo = if (hasFilters) raf.readByteBuffer(state, ioFilterLen.toInt()).array() else null
+
         val checksum: Int = raf.readInt(state)
-        if (debugDetail || debugFractalHeap) {
-            debugOut.println(
-                "FractalHeap for " + forWho + " version=" + version + " heapIdLen=" + heapIdLen + " ioFilterLen="
-                        + ioFilterLen + " flags= " + flags
-            )
-            debugOut.println(
-                (" maxSizeOfObjects=" + maxSizeOfObjects + " nextHugeObjectId=" + nextHugeObjectId
-                        + " btreeAddress=" + btreeAddressHugeObjects + " managedSpace=" + managedSpace + " allocatedManagedSpace="
-                        + allocatedManagedSpace + " freeSpace=" + freeSpace)
-            )
-            debugOut.println(
-                (" nManagedObjects=" + nManagedObjects + " nHugeObjects= " + nHugeObjects + " nTinyObjects="
-                        + nTinyObjects + " maxDirectBlockSize=" + maxDirectBlockSize + " maxHeapSize= 2^" + maxHeapSize)
-            )
-            debugOut.println(" DoublingTable: tableWidth=$tableWidth startingBlockSize=$startingBlockSize")
-            debugOut.println(
-                (" rootBlockAddress=" + rootBlockAddress + " startingNumRows=" + startingNumRows
-                        + " currentNumRows=" + currentNumRows)
-            )
-        }
-        if (debugPos) debugOut.println("    *now at position=" + state.pos)
-        val pos: Long = state.pos
-        if (debugDetail) debugOut.println("-- end FractalHeap position=" + state.pos)
         val hsize: Int = 8 + (2 * h5.sizeLengths) + h5.sizeOffsets
-        memTracker?.add("Group FractalHeap ($forWho)", address, pos)
         doublingTable = DoublingTable(tableWidth.toInt(), startingBlockSize, allocatedManagedSpace, maxDirectBlockSize)
 
         // data
@@ -185,28 +157,6 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
         }
     }
 
-    fun showDetails(f: Formatter) {
-        f.format(
-            ("FractalHeap version=" + version + " heapIdLen=" + heapIdLen + " ioFilterLen=" + ioFilterLen + " flags= "
-                    + flags + "%n")
-        )
-        f.format(
-            (" maxSizeOfObjects=" + maxSizeOfObjects + " nextHugeObjectId=" + nextHugeObjectId + " btreeAddress="
-                    + btreeAddressHugeObjects + " managedSpace=" + managedSpace + " allocatedManagedSpace=" + allocatedManagedSpace
-                    + " freeSpace=" + freeSpace + "%n")
-        )
-        f.format(
-            (" nManagedObjects=" + nManagedObjects + " nHugeObjects= " + nHugeObjects + " nTinyObjects=" + nTinyObjects
-                    + " maxDirectBlockSize=" + maxDirectBlockSize + " maxHeapSize= 2^" + maxHeapSize + "%n")
-        )
-        f.format(
-            (" rootBlockAddress=" + rootBlockAddress + " startingNumRows=" + startingNumRows + " currentNumRows="
-                    + currentNumRows + "%n%n")
-        )
-        rootBlock.showDetails(f)
-        // doublingTable.showDetails(f);
-    }
-
     fun getFractalHeapId(heapId: ByteArray): DHeapId {
         return DHeapId(heapId)
     }
@@ -221,45 +171,50 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
 
         init {
             type = (heapId[0].toInt() and 0x30) shr 4
-            if (type == 0) {
-                n = maxHeapSize / 8
-                // The minimum number of bytes necessary to encode the Maximum Heap Size value
-                m = h5.getNumBytesFromMax(maxDirectBlockSize - 1)
-                // The length of the object in the heap, determined by taking the minimum value of
-                // Maximum Direct Block Size and Maximum Size of Managed Objects in the Fractal Heap Header.
-                // Again, the minimum number of bytes needed to encode that value is used for the size of this field.
-                offset = h5.makeIntFromBytes(heapId, 1, n)
-                size = h5.makeIntFromBytes(heapId, 1 + n, m)
-            } else if (type == 1) {
-                // how fun to guess the subtype
-                val hasBtree = (btreeAddressHugeObjects > 0)
-                val hasFilters = (ioFilterLen > 0)
-                if (hasBtree) subtype = if (hasFilters) 2 else 1 else subtype = if (hasFilters) 4 else 3
-                when (subtype) {
-                    1, 2 -> offset = h5.makeIntFromBytes(heapId, 1, (heapId.size - 1))
+            when (type) {
+                0 -> {
+                    n = maxHeapSize / 8
+                    // The minimum number of bytes necessary to encode the Maximum Heap Size value
+                    m = h5.getNumBytesFromMax(maxDirectBlockSize - 1)
+                    // The length of the object in the heap, determined by taking the minimum value of
+                    // Maximum Direct Block Size and Maximum Size of Managed Objects in the Fractal Heap Header.
+                    // Again, the minimum number of bytes needed to encode that value is used for the size of this field.
+                    offset = h5.makeIntFromBytes(heapId, 1, n)
+                    size = h5.makeIntFromBytes(heapId, 1 + n, m)
                 }
-            } else if (type == 2) {
-                // The sub-type for tiny heap IDs depends on whether the heap ID is large enough to store objects greater
-                // than T16 bytes or not. If the heap ID length is 18 bytes or smaller, the "normal" tiny heap ID form
-                // is used. If the heap ID length is greater than 18 bytes in length, the "extented" form is used.
-                subtype = if ((heapId.size <= 18)) 1 else 2 // 0 == normal, 1 = extended
-            } else {
-                throw UnsupportedOperationException() // "DHeapId subtype ="+subtype);
+                1 -> {
+                    // how fun to guess the subtype
+                    val hasBtree = (btreeAddressHugeObjects > 0)
+                    val hasFilters = (ioFilterLen > 0)
+                    if (hasBtree) subtype = if (hasFilters) 2 else 1 else subtype = if (hasFilters) 4 else 3
+                    when (subtype) {
+                        1, 2 -> offset = h5.makeIntFromBytes(heapId, 1, (heapId.size - 1))
+                    }
+                }
+                2 -> {
+                    // The sub-type for tiny heap IDs depends on whether the heap ID is large enough to store objects greater
+                    // than T16 bytes or not. If the heap ID length is 18 bytes or smaller, the "normal" tiny heap ID form
+                    // is used. If the heap ID length is greater than 18 bytes in length, the "extented" form is used.
+                    subtype = if ((heapId.size <= 18)) 1 else 2 // 0 == normal, 1 = extended
+                }
+                else -> {
+                    throw UnsupportedOperationException() // "DHeapId subtype ="+subtype);
+                }
             }
         }
 
-        fun getPos(): Long {
+        fun computePosition(): Long {
                 when (type) {
-                    0 -> return doublingTable.getPos(offset.toLong())
+                    0 -> return doublingTable.computePos(offset.toLong())
                     1 -> {
                         run {
                             when (subtype) {
                                 1, 2 -> {
                                     val btree = if (btreeHugeObjects == null) {
                                         val local = BTree2(h5, "FractalHeap btreeHugeObjects", btreeAddressHugeObjects)
-                                        require(local.btreeType.toInt() == subtype)
+                                        require(local.btreeType == subtype)
                                         local
-                                    } else btreeHugeObjects!!
+                                    } else btreeHugeObjects
 
                                     val record1: BTree2.Record1? = btree.getEntry1(offset)
                                     if (record1 == null) {
@@ -284,7 +239,7 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
 
         @Throws(IOException::class)
         fun show(f: Formatter) {
-            f.format("   %2d %2d %2d %6d %4d %8d", type, n, m, offset, size, getPos())
+            f.format("   %2d %2d %2d %6d %4d %8d", type, n, m, offset, size, computePosition())
         }
     }
 
@@ -318,7 +273,7 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
             }
         }
 
-        fun getPos(offset: Long): Long {
+        fun computePos(offset: Long): Long {
             var block = 0
             for (db: DataBlock in blockList) {
                 if (db.address < 0) continue
@@ -363,7 +318,6 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
                 directRows = maxrows_directBlocks
                 indirectRows = (nrows - maxrows_directBlocks)
             }
-            if (debugFractalHeap) debugOut.println("  readIndirectBlock directChildren$directRows indirectChildren= $indirectRows")
         }
 
         fun add(dblock: DataBlock) {
@@ -372,20 +326,6 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
 
         fun add(iblock: IndirectBlock) {
             indirectBlocks.add(iblock)
-        }
-
-        fun showDetails(f: Formatter) {
-            f.format(
-                "%n IndirectBlock: nrows= %d directRows = %d indirectRows=%d startingSize=%d%n", nrows, directRows,
-                indirectRows, size
-            )
-            f.format(" DataBlocks:%n")
-            f.format("  address            dataPos            offset size end%n")
-            for (dblock: DataBlock in directBlocks) f.format(
-                "  %#-18x %#-18x %5d  %4d %5d %n", dblock.address, dblock.dataPos, dblock.offset, dblock.size,
-                (dblock.offset + dblock.size)
-            )
-            for (iblock: IndirectBlock in indirectBlocks) iblock.showDetails(f)
         }
     }
 
@@ -414,11 +354,7 @@ class FractalHeap(h5: H5builder, forWho: String, address: Long, memTracker: MemT
         var nbytes = maxHeapSize / 8
         if (maxHeapSize % 8 != 0) nbytes++
         val blockOffset: Long = h5.readVariableSizeUnsigned(state, nbytes)
-        if (debugDetail || debugFractalHeap) {
-            debugOut.println(" -- FH IndirectBlock version=$version blockOffset= $blockOffset")
-        }
         val npos: Long = state.pos
-        if (debugPos) debugOut.println("    *now at position=$npos")
 
         // child direct blocks
         var blockSize = startingBlockSize
