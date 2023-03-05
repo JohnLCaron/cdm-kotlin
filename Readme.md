@@ -1,5 +1,5 @@
 # cdm-kotlin
-_last updated: Feb 16, 2023_
+_last updated: MAr 4, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -13,7 +13,7 @@ There is so much important scientific data stored in the NetCDF and HDF file for
 never go away. Its important that there be maintainable, independent libraries to read these files forever. 
 
 The goal of the Common Data Model (CDM) is to provide a single API to access these various file formats. This idea
-formed the basis of the Netcdf-Java library. The Netcdf-4 C library now implements this also.
+formed the basis of the Netcdf-Java library. The Netcdf-4 C library now implements their version of this.
 
 #### Why do we need an alternative library from the standard reference libraries?
 
@@ -25,9 +25,16 @@ scientific datasets.
 
 #### Why kotlin?
 
-Kotlin is a modern, statically typed language suitable for large development projects, with many new features for safer
-and more concise code.  It will attract serious programmers for at least the next 20 years. 
+Kotlin is a modern, statically typed language suitable for large development projects, 
+with many new features for safer and more concise code. Definite improvement over Java.
+Kotlin will attract serious programmers for at least the next 20 years. 
 Kotlin runs on the JVM, and interoperates with the entire Java ecosystem. Its fun and shiny.
+
+### What about performance?
+
+We are aiming to be within 2x of the C library. Preliminary tests indicate that's mostly within reach. For
+files that use deflate filters, the deflate library dominates the read time. Standard java deflate seems to be
+about 2X slower than native code.
 
 ### Testing
 
@@ -36,7 +43,9 @@ With these tools we have a good chance of keeping the cdm-kotlin library on par 
 
 ### The cdm-kotlin Data Model
 
-I expect this to diverge from the Netcdf-Java data model, and more closely align with the Netcdf, HDF5 and hdf-eos data models.
+The Netcdf-4 library does not try to include all HDF5 files not written with the Netcdf4 library API.
+Often it works, but sometimes things are missing or breaks. The CDM model has as a goal to give access
+to all HDF5 files. 
 
 (Work in progress)
 

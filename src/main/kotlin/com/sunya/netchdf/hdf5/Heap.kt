@@ -163,11 +163,13 @@ class GlobalHeap(h5: H5builder, address: Long) {
         }
 
         // header information is in le byte order
-        val state = OpenFileState(address, ByteOrder.LITTLE_ENDIAN)
+        val state = OpenFileState(filePos, ByteOrder.LITTLE_ENDIAN)
 
         // header
         val magic: String = h5.raf.readString(state, 4)
-        check(magic == "GCOL") { "$magic should equal GCOL" }
+        check(magic == "GCOL") {
+            "$magic should equal GCOL"
+        }
         version = h5.raf.readByte(state)
         state.pos += 3
         sizeBytes = h5.raf.readInt(state)

@@ -265,6 +265,12 @@ internal class H5GroupBuilder(
         val typedefs = mutableListOf<H5Typedef>()
 
         for (nested in nestedObjects) {
+            if (nested.dataObject == null && nested.address == null) {
+                // see "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5"
+                // has a name and a linkName, apparently makes name into an alias for linkName?
+                continue
+            }
+
             nested.build(header)
 
             if (nested.isGroup) {

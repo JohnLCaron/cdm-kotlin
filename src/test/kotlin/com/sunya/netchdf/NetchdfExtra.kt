@@ -15,9 +15,9 @@ import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 // Compare header using cdl(!strict) with Netchdf and NetcdfClibFile
+// mostly fails in handling of types. nclib doesnt pass over all the types.
 class NetchdfExtra {
 
     companion object {
@@ -62,7 +62,7 @@ class NetchdfExtra {
             // , "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
     }
 
-    @Test
+    // @Test
     fun problemData() { // causing seg fault on NClib
         readData("/media/twobee/netch/signell/his_20090306.nc")
             // "ocean_time", null, true)
@@ -80,7 +80,7 @@ class NetchdfExtra {
         compareCdlWithClib("/media/twobee/netch/npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
     }
 
-    @Test
+    // @Test
     fun problem() {
         compareCdlWithClib("/media/twobee/netch/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
     }
