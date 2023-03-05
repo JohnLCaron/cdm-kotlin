@@ -1,0 +1,72 @@
+package com.sunya.netchdf.hdf5
+
+import com.sunya.cdm.api.Netcdf
+import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import org.junit.jupiter.api.Test
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.Arguments
+import org.junit.jupiter.params.provider.MethodSource
+import test.util.testFilesIn
+import java.util.*
+import java.util.stream.Stream
+import kotlin.test.assertEquals
+
+// Compare header using cdl(!strict) with Hdf5File and NetcdfClibFile
+// sometime fail when they are not netcdf4 files, so nc4lib sees them as empty
+class Hdf5cdlCompare {
+
+    companion object {
+        @JvmStatic
+        fun params(): Stream<Arguments> {
+            // 11 of 114 fail
+
+            val moar4 =
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .withRecursion()
+                    .build()
+
+            val hdf5 =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5")
+                    .withRecursion()
+                    .build()
+
+            val moar5 =
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf5")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .addNameFilter { name -> !name.endsWith(".xml") } // bug in clib
+                    .withRecursion()
+                    .build()
+
+            return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
+        }
+    }
+
+    @Test
+    fun problem() {
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/dstrarr.h5")
+    }
+
+    @Test
+    fun problem2() {
+        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/i32be.h5")
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun compareH5andNclib(filename: String) {
+        println("=================")
+        println(filename)
+        val h5file = Hdf5File(filename, true)
+        println("\nh5file = ${h5file.cdl()}")
+
+        val nclibfile : Netcdf = NetcdfClibFile(filename)
+        println("ncfile = ${nclibfile.cdl()}")
+
+        assertEquals(nclibfile.cdl(), h5file.cdl())
+
+        h5file.close()
+        nclibfile.close()
+    }
+
+}

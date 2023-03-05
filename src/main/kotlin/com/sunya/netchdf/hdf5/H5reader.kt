@@ -133,7 +133,6 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     }
     val h5type = dc.h5type
     val shape: IntArray = dc.storageDims
-    val readDtype: Datatype = h5type.datatype(this)
 
     val endian: ByteOrder = h5type.endian
     val elemSize = h5type.elemSize
@@ -147,9 +146,10 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     if (h5type.hdfType == Datatype5.Compound) {
         return readCompoundData(dc, layout, wantSection)
     }
+    val datatype: Datatype = h5type.datatype(this)
 
     val state = OpenFileState(0, endian)
-    val dataArray = readNonHeapData(state, layout, readDtype, wantSection.shape, h5type)
+    val dataArray = readNonHeapData(state, layout, datatype, wantSection.shape, h5type)
 
     // convert attributes to enum strings
     if (h5type.hdfType == Datatype5.Enumerated) {
@@ -188,7 +188,7 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
         Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
         Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
         Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
@@ -201,7 +201,7 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }
     // convert to array of Strings by reducing rank by 1
-    if (datatype == Datatype.CHAR) {
+    if (h5type.hdfType == Datatype5.String) {
         return (result as ArrayUByte).makeStringsFromBytes()
     }
     if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
@@ -278,7 +278,7 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
     val shape = wantSpace.nelems
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
         Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
         Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
         Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
@@ -290,7 +290,7 @@ internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) :
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }
-    if (datatype == Datatype.CHAR) {
+    if (h5type.hdfType == Datatype5.String) {
         return (result as ArrayUByte).makeStringsFromBytes()
     }
     if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
@@ -336,7 +336,7 @@ private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Da
         dst.position(this.elemSize * chunk.destElem.toInt())
         // println("  missing transfer $chunk")
         when (datatype) {
-            Datatype.BYTE, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> {
+            Datatype.STRING, Datatype.CHAR, Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> {
                 val fill = vinfo.fillValue as Byte
                 repeat(chunk.nelems) { dst.put(fill) }
             }

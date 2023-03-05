@@ -3,6 +3,7 @@ package com.sunya.netchdf
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.iosp.Iosp
+import com.sunya.netchdf.hdf5.compareNetcdfData
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.AfterAll
@@ -12,6 +13,8 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import test.util.testFilesIn
+import java.io.File
+import java.io.RandomAccessFile
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -30,6 +33,7 @@ class NetchdfTest {
             val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
+                    .addNameFilter { name -> !name.endsWith("dstr.h5") } // char Char_Data(16) -> string Char_Data
                     .build()
 
             val moar3 =
@@ -39,15 +43,11 @@ class NetchdfTest {
                     .build()
 
             val moar4 =
-                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+            testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .withRecursion()
-                    .build()
-
-            val eos5 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5")
                     .build()
 
             // return moar3
@@ -68,6 +68,12 @@ class NetchdfTest {
     @Disabled
     fun hdfeos() {
         compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5/structmetadata_eos.h5")
+    }
+
+    // example where the data is really fixed char, but clib has converted to a string.
+    @Test
+    fun dstr() {
+        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
     }
 
     /*
@@ -171,25 +177,47 @@ h5dump
     fun compareCdlWithClib(filename: String) {
         println("=================")
         println(filename)
-        val netchdf: Netcdf? = openNetchdfFile(filename)
-        if (netchdf == null) {
-            println("*** not a netchdf file = $filename")
-            return
+        openNetchdfFile(filename).use { netchdf ->
+            if (netchdf == null) {
+                println("*** not a netchdf file = $filename")
+                return
+            }
+            println("\nnetchdf = ${netchdf.cdl()}")
+
+            NetcdfClibFile(filename).use { ncfile ->
+                assertEquals(ncfile.cdl(), netchdf.cdl())
+            }
         }
-        println("\nnetchdf = ${netchdf.cdl()}")
+    }
 
-        val nclibfile: Netcdf = NetcdfClibFile(filename)
-        //println("nclibfile = ${nclibfile.cdl()}")
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readH5dataCompareNC(filename: String) {
+        readDataCompareNC(filename, null)
+    }
 
-        assertEquals(nclibfile.cdl(), netchdf.cdl())
+    fun readDataCompareNC(filename: String, varname: String? = null, section: Section? = null) {
+        RandomAccessFile(File(filename), "r").use { raf ->
+            val size = raf.getChannel().size() / 1000.0 / 1000.0
+            println("$filename size ${"%.2f".format(size)} Mbytes")
+        }
+        openNetchdfFile(filename).use { netchdf ->
+            if (netchdf == null) {
+                println("*** not a netchdf file = $filename")
+                return
+            }
+            println("\nnetchdf = ${netchdf.cdl()}")
 
-        netchdf.close()
-        nclibfile.close()
+            NetcdfClibFile(filename).use { ncfile ->
+                compareNetcdfData(netchdf, ncfile, varname, section)
+            }
+        }
+        println()
     }
 
     @Test
     fun testOneCdl() {
-        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_vlen_data.nc4")
+        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dstr.h5")
     }
 
     @Test

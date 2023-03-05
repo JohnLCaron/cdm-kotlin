@@ -114,7 +114,7 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
     val values = this.readRegularData(dc, null)
     var useType = h5type.datatype(this)
-    if (useType == Datatype.CHAR) useType = Datatype.STRING // LOOK
+    if (useType == Datatype.CHAR) useType = Datatype.STRING // ok for attributes
     return Attribute(att5.name, useType, values.toList())
 }
 
@@ -125,14 +125,13 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
 
     val h5type = H5TypeInfo(v5.mdt)
     builder.datatype = h5type.datatype(this) // typedefs added here
-    // LOOK why doesnt h5type.datatype() do this ?
-    //if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
-    //    builder.datatype = Datatype.STRING
-    //}
+    if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
+        builder.datatype = Datatype.STRING
+    }
 
     if (v5.dimList != null) {
         builder.dimList = v5.dimList!!.trim().split(" ")
-    } else if (v5.mds.dims.size > 0) {
+    } else {
         // LOOK non-shared, integrate with shared ??
         v5.mds.dims.forEach{builder.dimensions.add(Dimension(it))}
     }
@@ -154,7 +153,6 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     require (v5.dataObject.mdl != null)
     val vdata = DataContainerVariable(builder.name!!, h5type, v5, this)
     builder.spObject = vdata
-
     return builder
 }
 
@@ -176,7 +174,6 @@ internal open class DataContainerAttribute(
     ) : DataContainer {
         override val storageDims = mds.dims
     }
-
 
 internal class DataContainerVariable(
     override val name: String,

@@ -74,7 +74,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose
-            Datatype5.String -> Datatype.CHAR // fixed length strings. String is used for Vlen type = 1
+            Datatype5.String -> Datatype.CHAR // fixed length strings. Variable strings are Datatype5.Vlen
             Datatype5.Reference -> Datatype.LONG // addresses; type 1 gets converted to object name
 
             Datatype5.Opaque -> {

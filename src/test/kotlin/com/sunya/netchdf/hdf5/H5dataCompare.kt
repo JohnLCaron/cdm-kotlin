@@ -44,7 +44,7 @@ class H5dataCompare {
                     .addNameFilter { name -> !name.endsWith("perverse.nc") } // too slow
                     .build()
 
-            return Stream.of(stream1, stream4, moar4).flatMap { i -> i};
+            return Stream.of(stream1, stream4).flatMap { i -> i};
         }
     }
 
@@ -86,7 +86,7 @@ class H5dataCompare {
         }
         val h5file = Hdf5File(filename)
         val ncfile = NetcdfClibFile(filename)
-        compareNetcdf(h5file, ncfile, varname, section)
+        compareNetcdfData(h5file, ncfile, varname, section)
         h5file.close()
         ncfile.close()
         println()
@@ -96,7 +96,7 @@ class H5dataCompare {
 var showData = false
 var showFailedData = false
 
-fun compareNetcdf(myfile: Netcdf, ncfile: Netcdf, varname: String?, section: Section? = null) {
+fun compareNetcdfData(myfile: Netcdf, ncfile: Netcdf, varname: String?, section: Section? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
