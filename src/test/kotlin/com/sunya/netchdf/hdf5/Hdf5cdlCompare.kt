@@ -10,6 +10,7 @@ import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 // Compare header using cdl(!strict) with Hdf5File and NetcdfClibFile
 // sometime fail when they are not netcdf4 files, so nc4lib sees them as empty
@@ -54,11 +55,20 @@ class Hdf5cdlCompare {
 
     @ParameterizedTest
     @MethodSource("params")
+    fun checkVersion(filename: String) {
+        Hdf5File(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            assertTrue((ncfile.type() == "hdf5") or (ncfile.type() == "netcdf4"))
+        }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
     fun compareH5andNclib(filename: String) {
         println("=================")
-        println(filename)
         val h5file = Hdf5File(filename, true)
-        println("\nh5file = ${h5file.cdl()}")
+        println("${h5file.type()} $filename ")
+        println("\n${h5file.cdl()}")
 
         val nclibfile : Netcdf = NetcdfClibFile(filename)
         println("ncfile = ${nclibfile.cdl()}")

@@ -30,7 +30,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
     override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
-    override fun type() = NetchdfFileFormat.HDF5.formatName()
+    override fun type() = header.formatType()
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
