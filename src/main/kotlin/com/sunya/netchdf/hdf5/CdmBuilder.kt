@@ -40,16 +40,17 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     group5.nestedGroups.forEach { groupb.addGroup( buildGroup( it )) }
 
-    if (strict) {
-        val iter = groupb.attributes.iterator()
-        while (iter.hasNext()) {
-            val attname = iter.next().name
-            if (NETCDF4_SPECIAL_ATTS.contains(attname) or HDF5_SPECIAL_ATTS.contains(attname)) {
-                iter.remove()
-            }
+    val iter = groupb.attributes.iterator()
+    while (iter.hasNext()) {
+        val attname = iter.next().name
+        if (NETCDF4_SPECIAL_ATTS.contains(attname)) {
+            if (strict) iter.remove()
+            isNetcdf4 = true
+        }
+        if (HDF5_SPECIAL_ATTS.contains(attname)) {
+            if (strict) iter.remove()
         }
     }
-
     return groupb
 }
 
@@ -122,6 +123,9 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     // what the cdm variable looks like
     val builder = Variable.Builder()
     builder.name = v5.name.substringAfter(NETCDF4_NON_COORD)
+    if (v5.name.startsWith(NETCDF4_NON_COORD)) {
+        isNetcdf4 = true
+    }
 
     val h5type = H5TypeInfo(v5.mdt)
     builder.datatype = h5type.datatype(this) // typedefs added here
@@ -139,13 +143,15 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     for (att5 in v5.attributes()) {
         builder.attributes.add(buildAttribute(att5))
     }
-    if (strict) {
-        val iter = builder.attributes.iterator()
-        while (iter.hasNext()) {
-            val attname = iter.next().name
-            if (NETCDF4_SPECIAL_ATTS.contains(attname) or HDF5_SPECIAL_ATTS.contains(attname)) {
-                iter.remove()
-            }
+    val iter = builder.attributes.iterator()
+    while (iter.hasNext()) {
+        val attname = iter.next().name
+        if (NETCDF4_SPECIAL_ATTS.contains(attname)) {
+            if (strict) iter.remove()
+            isNetcdf4 = true
+        }
+        if (HDF5_SPECIAL_ATTS.contains(attname)) {
+            if (strict) iter.remove()
         }
     }
 

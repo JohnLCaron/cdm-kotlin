@@ -17,6 +17,8 @@ internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
 // Really a builder of the root Group.
 class NCheader(val filename: String) {
     val rootGroup = Group.Builder("")
+    var formatType : String = ""
+
     private var ncid = 0
     private var format = 0
     private var formatx = 0
@@ -42,6 +44,7 @@ class NCheader(val filename: String) {
         checkErr("nc_inq_format", nc_inq_format(ncid, format_p))
         this.format = format_p[C_INT, 0]
         if (debugFormat) println(" nc_inq_format = ${netcdfFormat(this.format)}")
+        this.formatType = netcdfFormat(this.format).toString()
 
         // format extended
         val mode_p: MemorySegment = session.allocate(C_INT, 0)

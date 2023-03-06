@@ -351,6 +351,7 @@ internal class H5Typedef(val dataObject: DataObject) {
                 kind = TypedefKind.Unknown
             }
         }
+        if (debugTypedefs) println("H5Typedef mdtAddress=$mdtAddress mdtHash=$mdtHash kind=$kind")
     }
 }
 

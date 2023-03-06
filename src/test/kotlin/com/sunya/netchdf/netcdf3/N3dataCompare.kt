@@ -1,15 +1,15 @@
 package com.sunya.netchdf.netcdf3
 
-import com.sunya.netchdf.hdf5.compareNetcdfData
+import com.sunya.netchdf.compareNetcdfData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
-import test.util.oldTestDir
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
+import kotlin.test.assertTrue
 
 // Compare data reading for the same file with Netcdf3File and NetcdfClibFile
 class N3dataCompare {
@@ -17,21 +17,17 @@ class N3dataCompare {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream1 = Stream.of(
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/simple_xy.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/nctest_64bit_offset.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testSpecialChars.nc"),
-                )
-            val stream2 =
-                testFilesIn(oldTestDir + "formats/netcdf3")
-                    .withRecursion()
-                    .addNameFilter { name -> !name.endsWith("perverse.nc") } // too slow
+            val stream3 =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
                     .build()
 
-            return Stream.of(stream1, stream2).flatMap { i -> i};
+            val moar3 =
+                testFilesIn(test.util.oldTestDir + "formats/netcdf3")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .withRecursion()
+                    .build()
+            return Stream.of(stream3, moar3).flatMap { i -> i};
+
         }
     }
 
@@ -43,6 +39,15 @@ class N3dataCompare {
     @Test
     fun problem2() {
         readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc", "time")
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        NetcdfClibFile(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            assertTrue((ncfile.type() == "NC_FORMAT_CLASSIC") or (ncfile.type() == "NC_FORMAT_64BIT_OFFSET"))
+        }
     }
 
     @ParameterizedTest

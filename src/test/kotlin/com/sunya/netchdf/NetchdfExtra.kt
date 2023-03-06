@@ -94,13 +94,12 @@ class NetchdfExtra {
             println("Clib cant open npp $filename")
             return
         }
-        println("filename $filename")
         val netchdf: Netcdf? = openNetchdfFile(filename)
         if (netchdf == null) {
             println("*** not a netchdf file = $filename")
             return
         }
-        println("file type=${netchdf.type()}")
+        println("${netchdf.type()} $filename")
         if (showCdl) println("\nnetchdf = ${netchdf.cdl()}")
         val nclibfile: Netcdf = NetcdfClibFile(filename)
         assertEquals(nclibfile.cdl(), netchdf.cdl())

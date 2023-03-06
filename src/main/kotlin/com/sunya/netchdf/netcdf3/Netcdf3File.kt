@@ -26,7 +26,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
-    override fun type() = NetchdfFileFormat.NC_FORMAT_CLASSIC.formatName()
+    override fun type() = "netcdf3"
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {

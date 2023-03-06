@@ -46,6 +46,9 @@ class H5builder(
     private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
 
     val cdmRoot : Group
+    fun formatType() : String {
+        return if (isNetcdf4) "netcdf4" else "hdf5   "
+    }
 
     init {
         // search for the superblock
@@ -262,12 +265,12 @@ class H5builder(
         }
         typedefMap[mdtAddress] = typedef
         if (debugTypedefs) println("add typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
+
         // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
         typedefMdtHash[mdtHash] = typedef
         return true
     }
 
-    // LOOK could just pass the mdt ??
     fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
         return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
     }

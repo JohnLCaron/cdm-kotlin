@@ -207,6 +207,7 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
                 }
         }
 
+        // https://docs.unidata.ucar.edu/netcdf-c/current/netcdf_8h.html
         fun netcdfMode(mode : Int): String {
             return buildString {
                 if (mode and 1 == 1) {
@@ -233,7 +234,7 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
                 if ((mode and 0x200) == 0x200) {
                     append("NC_64BIT_OFFSET ")
                 }
-                if ((mode and 0x1000) == 0x1000) {
+                if ((mode and 0x1000) == 0x1000) { // "Use netCDF-4/HDF5 format". Not clear if written by nc4 library or not.
                     append("NC_NETCDF4 ")
                 }
                 if ((mode and 0x20000) == 0x20000) {

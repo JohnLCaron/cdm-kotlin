@@ -13,6 +13,7 @@ import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
+import kotlin.test.assertTrue
 
 class N4dataTest {
     val debug = false
@@ -20,19 +21,23 @@ class N4dataTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream1 = Stream.of(
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attstr.h5"),
-                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/dimScales.h5"),
-            )
-            val stream2 =
+            val stream4 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
+                    .build()
+
+            val moar4 =
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+                    .withPathFilter { p -> !p.toString().contains("exclude") }
+                    .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream1, stream2).flatMap { i -> i };
+            // return moar3
+            return Stream.of(stream4, moar4).flatMap { i -> i };
         }
     }
+
 
     @Test
     fun special() {
@@ -44,6 +49,15 @@ class N4dataTest {
     @Test
     fun problem() {
         readN4data("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc")
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        NetcdfClibFile(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            assertTrue((ncfile.type() == "NC_FORMAT_NETCDF4") or (ncfile.type() == "NC_FORMAT_NETCDF4_CLASSIC"))
+        }
     }
 
     @ParameterizedTest
