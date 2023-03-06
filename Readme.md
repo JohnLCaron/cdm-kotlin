@@ -1,5 +1,5 @@
 # cdm-kotlin
-_last updated: MAr 4, 2023_
+_last updated: Mar 4, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
