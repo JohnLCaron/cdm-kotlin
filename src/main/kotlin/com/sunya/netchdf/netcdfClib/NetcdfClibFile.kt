@@ -123,7 +123,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
                     checkErr("enum nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    with(datatype.typedef as EnumTypedef) {
+                    with (datatype.typedef as EnumTypedef) {
                         when (datatype) {
                             Datatype.ENUM1 -> return ArrayUByte(wantSection.shape, values).convertEnums()
                             Datatype.ENUM2 -> return ArrayUShort(wantSection.shape, values.asShortBuffer()).convertEnums()
