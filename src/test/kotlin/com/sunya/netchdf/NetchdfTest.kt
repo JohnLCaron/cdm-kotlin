@@ -61,6 +61,7 @@ class NetchdfTest {
 
         var countVariables = 0
         var showData = false
+        var showFailedData = false
         var showCdl = false
     }
 
@@ -327,13 +328,14 @@ fun readDataNc(filename: String, varname: String? = null, section: Section? = nu
 }
 
 //////////////////////////////////
-// just read data
+// just read data from myfile
+
 fun readData(myfile: Netcdf, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
     }
-    // println(myfile.rootGroup().allVariables().map { it.fullname() })
+    println(myfile.rootGroup().allVariables().map { it.fullname() })
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -410,13 +412,12 @@ fun readMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
     } else {
         assertTrue(middleSection.shape.contentEquals(mydata.shape))
     }
+    if (NetchdfTest.showData) println(mydata)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
 // compare data from two Netcdf files
 
-var showData = false
-var showFailedData = false
 
 fun compareNetcdfData(myfile: Netcdf, ncfile: Netcdf, varname: String?, section: Section? = null) {
     if (varname != null) {
@@ -459,7 +460,7 @@ fun compareOneVar(myvar: Variable, h5file: Iosp, ncvar : Variable, ncfile: Iosp,
         } else {
             if (!ArrayTyped.contentEquals(ncdata, mydata)) {
                 println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.name} ${ncvar.dimensions.map { it.name }}")
-                if (showFailedData) {
+                if (NetchdfTest.showFailedData) {
                     println("\n mydata = $mydata")
                     println(" ncdata = $ncdata")
                     ArrayTyped.contentEquals(ncdata, mydata)
@@ -469,7 +470,7 @@ fun compareOneVar(myvar: Variable, h5file: Iosp, ncvar : Variable, ncfile: Iosp,
                 }
                 return
             } else {
-                if (showData) {
+                if (NetchdfTest.showData) {
                     print(" ${ncvar.cdl()}, ")
                     print("\n mydata = $mydata")
                     print(" ncdata = $ncdata")
@@ -506,7 +507,7 @@ fun compareMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Var
     } else {
         if (!ArrayTyped.contentEquals(ncdata, mydata)) {
             println(" *** FAIL comparing middle section variable = ${ncvar}")
-            if (showFailedData) {
+            if (NetchdfTest.showFailedData) {
                 println(" mydata = $mydata")
                 println(" ncdata = $ncdata")
             } else {

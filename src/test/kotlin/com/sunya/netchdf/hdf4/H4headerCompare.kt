@@ -1,6 +1,8 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.netchdf.NetchdfTest
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.readData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -27,12 +29,21 @@ class H4headerCompare {
 
     @Test
     fun hasStruct() {
-        readH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        NetchdfTest.showData = true
+        readData("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf",
+            "Sea_Ice_Motion_Vectors_-_17766010")
+        NetchdfTest.showData = false
     }
 
     @Test
     fun special() {
         readH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf")
+    }
+
+    @Test
+    fun readData() {
+        readData("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf",
+            "O3.CONCENTRATION_INSITU", null, false)
     }
 
     @ParameterizedTest
@@ -43,6 +54,14 @@ class H4headerCompare {
         Hdf4File(filename).use { myfile ->
             println("actual = ${myfile.cdl()}")
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readDataForProfiling(filename: String) {
+        println(filename)
+        readData(filename)
+        println()
     }
 
     // @ParameterizedTest

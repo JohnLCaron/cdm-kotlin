@@ -833,7 +833,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         private var debugTag1 = false // show tags after read(), before read2().
         private var debugTag2 = false // show tags after everything is done.
         private var debugTagDetail = false // when showing tags, show detail or not
-        private var debugConstruct = true // show CDM objects as they are constructed
+        private var debugConstruct = false // show CDM objects as they are constructed
         private var debugAtt = false // show CDM attributes as they are constructed
         private var debugLinked = false // linked data
         private var debugChunkTable = false // chunked data
