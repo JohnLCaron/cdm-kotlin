@@ -2,9 +2,11 @@
 
 package com.sunya.netchdf.netcdfClib.ffm;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 public class nc_vlen_t {
 
     static final  GroupLayout $struct$LAYOUT = MemoryLayout.structLayout(
@@ -14,6 +16,7 @@ public class nc_vlen_t {
     public static MemoryLayout $LAYOUT() {
         return nc_vlen_t.$struct$LAYOUT;
     }
+    // added
     public static MemoryLayout VlenLayout() {
         return nc_vlen_t.$struct$LAYOUT;
     }
@@ -24,13 +27,13 @@ public class nc_vlen_t {
     public static long len$get(MemorySegment seg) {
         return (long)nc_vlen_t.len$VH.get(seg);
     }
-
     public static void len$set( MemorySegment seg, long x) {
         nc_vlen_t.len$VH.set(seg, x);
     }
     public static long len$get(MemorySegment seg, long index) {
         return (long)nc_vlen_t.len$VH.get(seg.asSlice(index*sizeof()));
     }
+    // added
     public static long getLength(MemorySegment seg, long index) {
         return (long)nc_vlen_t.len$VH.get(seg.asSlice(index*sizeof()));
     }
@@ -45,13 +48,13 @@ public class nc_vlen_t {
     public static MemoryAddress p$get(MemorySegment seg) {
         return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg);
     }
-
     public static void p$set( MemorySegment seg, MemoryAddress x) {
         nc_vlen_t.p$VH.set(seg, x);
     }
     public static MemoryAddress p$get(MemorySegment seg, long index) {
         return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg.asSlice(index*sizeof()));
     }
+    // added
     public static MemoryAddress getAddress(MemorySegment seg, long index) {
         return (java.lang.foreign.MemoryAddress)nc_vlen_t.p$VH.get(seg.asSlice(index*sizeof()));
     }

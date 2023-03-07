@@ -15,7 +15,14 @@ import java.lang.foreign.ValueLayout;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.io.File;
+import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Optional;
+import java.util.stream.Stream;
 
+import static java.lang.foreign.Linker.*;
 import static java.lang.foreign.ValueLayout.*;
 
 final class RuntimeHelper {
@@ -30,7 +37,7 @@ final class RuntimeHelper {
             (size, align) -> MemorySegment.allocateNative(size, align, MemorySession.openImplicit());
 
     static {
-        System.load("/usr/lib/x86_64-linux-gnu/libnetcdf.so");
+        System.load("/home/snake/install/netcdf4/lib/libnetcdf.so");
         SymbolLookup loaderLookup = SymbolLookup.loaderLookup();
         SYMBOL_LOOKUP = name -> loaderLookup.lookup(name).or(() -> LINKER.defaultLookup().lookup(name));
     }

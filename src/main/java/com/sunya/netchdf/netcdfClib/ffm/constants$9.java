@@ -3,10 +3,35 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$9 {
 
+    static final FunctionDescriptor nc_inq_enum$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_enum$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_enum",
+        constants$9.nc_inq_enum$FUNC
+    );
+    static final FunctionDescriptor nc_inq_enum_member$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_enum_member$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_enum_member",
+        constants$9.nc_inq_enum_member$FUNC
+    );
     static final FunctionDescriptor nc_inq_enum_ident$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -45,25 +70,6 @@ class constants$9 {
     static final MethodHandle nc_put_var$MH = RuntimeHelper.downcallHandle(
         "nc_put_var",
         constants$9.nc_put_var$FUNC
-    );
-    static final FunctionDescriptor nc_get_var$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_var$MH = RuntimeHelper.downcallHandle(
-        "nc_get_var",
-        constants$9.nc_get_var$FUNC
-    );
-    static final FunctionDescriptor nc_put_var1$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_var1$MH = RuntimeHelper.downcallHandle(
-        "nc_put_var1",
-        constants$9.nc_put_var1$FUNC
     );
 }
 

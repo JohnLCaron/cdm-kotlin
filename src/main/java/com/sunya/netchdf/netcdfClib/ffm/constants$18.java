@@ -3,10 +3,50 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$18 {
 
+    static final FunctionDescriptor nc_inq_dimname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_dimname$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_dimname",
+        constants$18.nc_inq_dimname$FUNC
+    );
+    static final FunctionDescriptor nc_inq_dimlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_dimlen$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_dimlen",
+        constants$18.nc_inq_dimlen$FUNC
+    );
+    static final FunctionDescriptor nc_rename_dim$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_rename_dim$MH = RuntimeHelper.downcallHandle(
+        "nc_rename_dim",
+        constants$18.nc_rename_dim$FUNC
+    );
+    static final FunctionDescriptor nc_inq_att$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_att$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_att",
+        constants$18.nc_inq_att$FUNC
+    );
     static final FunctionDescriptor nc_inq_attid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -26,47 +66,6 @@ class constants$18 {
     static final MethodHandle nc_inq_atttype$MH = RuntimeHelper.downcallHandle(
         "nc_inq_atttype",
         constants$18.nc_inq_atttype$FUNC
-    );
-    static final FunctionDescriptor nc_inq_attlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_attlen$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_attlen",
-        constants$18.nc_inq_attlen$FUNC
-    );
-    static final FunctionDescriptor nc_inq_attname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_attname$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_attname",
-        constants$18.nc_inq_attname$FUNC
-    );
-    static final FunctionDescriptor nc_copy_att$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT
-    );
-    static final MethodHandle nc_copy_att$MH = RuntimeHelper.downcallHandle(
-        "nc_copy_att",
-        constants$18.nc_copy_att$FUNC
-    );
-    static final FunctionDescriptor nc_rename_att$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_rename_att$MH = RuntimeHelper.downcallHandle(
-        "nc_rename_att",
-        constants$18.nc_rename_att$FUNC
     );
 }
 

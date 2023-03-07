@@ -10,7 +10,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-class H4builder(val raf : OpenFile, val valueCharset : Charset) {
+class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boolean) {
     val rootBuilder: Group.Builder = Group.Builder("")
     var isEos = false
     var fileVersion = "N/A"
@@ -157,7 +157,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         for (t: Tag in alltags) {
             if (t.code.toInt() == 30) {
                 fileVersion = (t as TagVersion).value()
-                rootBuilder.addAttribute(Attribute("HDF4_Version", fileVersion))
+                if (!strict) rootBuilder.addAttribute(Attribute("HDF4_Version", fileVersion))
                 t.isUsed = true
             } else if (t.code.toInt() == 100) {
                 rootBuilder.addAttribute(
@@ -313,7 +313,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                         }
                     } else {
                         val att: Attribute? = makeAttribute(vh)
-                        if (null != att) rootBuilder.addAttribute(att) // make into attribute in root group
+                        if (null != att) {
+                            rootBuilder.addAttribute(att)
+                        } // make into attribute in root group
                     }
                 }
             }

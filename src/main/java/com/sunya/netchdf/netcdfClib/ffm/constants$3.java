@@ -3,10 +3,30 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$3 {
 
+    static final FunctionDescriptor nc_inq_grp_ncid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_grp_ncid$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_grp_ncid",
+        constants$3.nc_inq_grp_ncid$FUNC
+    );
+    static final FunctionDescriptor nc_inq_grp_full_ncid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_grp_full_ncid$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_grp_full_ncid",
+        constants$3.nc_inq_grp_full_ncid$FUNC
+    );
     static final FunctionDescriptor nc_inq_varids$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT,
@@ -45,23 +65,6 @@ class constants$3 {
     static final MethodHandle nc_inq_type_equal$MH = RuntimeHelper.downcallHandle(
         "nc_inq_type_equal",
         constants$3.nc_inq_type_equal$FUNC
-    );
-    static final FunctionDescriptor nc_def_grp$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_def_grp$MH = RuntimeHelper.downcallHandle(
-        "nc_def_grp",
-        constants$3.nc_def_grp$FUNC
-    );
-    static final FunctionDescriptor nc_rename_grp$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_rename_grp$MH = RuntimeHelper.downcallHandle(
-        "nc_rename_grp",
-        constants$3.nc_rename_grp$FUNC
     );
 }
 

@@ -12,14 +12,14 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.zip.InflaterInputStream
 
-class Hdf4File(val filename : String) : Iosp, Netcdf {
+class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     private val raf: OpenFile = OpenFile(filename)
     private val header: H4builder
     private val rootGroup: Group
     var valueCharset: Charset = StandardCharsets.UTF_8
 
     init {
-        header = H4builder(raf, valueCharset)
+        header = H4builder(raf, valueCharset, strict)
         rootGroup = header.rootBuilder.build(null)
     }
 

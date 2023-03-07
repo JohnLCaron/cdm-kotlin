@@ -23,7 +23,17 @@ class H4headerCompare {
                     .withRecursion()
                     .build()
 
-            return Stream.of(hdf4).flatMap { i -> i};
+            val hdfeos2 =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2")
+                    .withRecursion()
+                    .build()
+
+            val moar4 =
+                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4")
+                    .withRecursion()
+                    .build()
+
+            return Stream.of(hdf4, hdfeos2, moar4).flatMap { i -> i};
         }
     }
 
@@ -37,7 +47,7 @@ class H4headerCompare {
 
     @Test
     fun special() {
-        readH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf")
+        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf")
     }
 
     @Test
@@ -64,17 +74,19 @@ class H4headerCompare {
         println()
     }
 
-    // @ParameterizedTest
+    // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
+    // https://docs.unidata.ucar.edu/nug/current/getting_and_building_netcdf.html#build_hdf4
+    @ParameterizedTest
     @MethodSource("params")
     fun compareH4header(filename : String) {
         println("=================")
         println(filename)
-        Hdf4File(filename).use { myfile ->
+        Hdf4File(filename, true).use { myfile ->
             NetcdfClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")
-                assertEquals(ncfile.cdl(), myfile.cdl())
-                // println(rootClib.cdlString())
+                assertEquals(ncfile.cdl(true), myfile.cdl(true))
+                println(myfile.cdl())
             }
         }
     }

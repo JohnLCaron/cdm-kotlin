@@ -2,9 +2,11 @@
 
 package com.sunya.netchdf.netcdfClib.ffm;
 
+import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 public class max_align_t {
 
     static final  GroupLayout $struct$LAYOUT = MemoryLayout.structLayout(

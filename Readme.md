@@ -1,9 +1,10 @@
 # cdm-kotlin
-_last updated: Mar 4, 2023_
+_last updated: Mar 7, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
-The intention is to create a maintainable, alternative, read-only implementation of the netcdf3, netcdf4, and hdf5 libraries. 
+The intention is to create a maintainable, alternative, read-only implementation of the netcdf3, netcdf4, 
+hdf4, hdf5, hdf-eos2 and hdf-eos5 libraries. 
 
 Please contact me if you'd like to help out. Especially needed are test datasets from all the important data archives!!
 
@@ -32,7 +33,7 @@ Kotlin runs on the JVM, and interoperates with the entire Java ecosystem. Its fu
 
 ### What about performance?
 
-We are aiming to be within 2x of the C library. Preliminary tests indicate that's mostly within reach. For
+We are aiming to be within 2x of the C library for reading data. Preliminary tests indicate that's mostly within reach. For
 files that use deflate filters, the deflate library dominates the read time. Standard java deflate seems to be
 about 2X slower than native code.
 
@@ -46,6 +47,9 @@ With these tools we have a good chance of keeping the cdm-kotlin library on par 
 The Netcdf-4 library does not try to include all HDF5 files not written with the Netcdf4 library API.
 Often it works, but sometimes things are missing or breaks. The CDM model has as a goal to give access
 to all HDF5 files. 
+
+Similarly, the Netcdf-4 library only works with HDF4 files written with the SDS api, while the CDM model has as a 
+goal to give access to all HDF4 and HDF-EOS files.
 
 (Work in progress)
 

@@ -3,10 +3,32 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$6 {
 
+    static final FunctionDescriptor nc_inq_compound_fieldname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_compound_fieldname$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_compound_fieldname",
+        constants$6.nc_inq_compound_fieldname$FUNC
+    );
+    static final FunctionDescriptor nc_inq_compound_fieldindex$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_compound_fieldindex$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_compound_fieldindex",
+        constants$6.nc_inq_compound_fieldindex$FUNC
+    );
     static final FunctionDescriptor nc_inq_compound_fieldoffset$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -46,27 +68,6 @@ class constants$6 {
     static final MethodHandle nc_inq_compound_fielddim_sizes$MH = RuntimeHelper.downcallHandle(
         "nc_inq_compound_fielddim_sizes",
         constants$6.nc_inq_compound_fielddim_sizes$FUNC
-    );
-    static final FunctionDescriptor nc_def_vlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_def_vlen$MH = RuntimeHelper.downcallHandle(
-        "nc_def_vlen",
-        constants$6.nc_def_vlen$FUNC
-    );
-    static final FunctionDescriptor nc_inq_vlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_vlen$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_vlen",
-        constants$6.nc_inq_vlen$FUNC
     );
 }
 

@@ -3,10 +3,48 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$46 {
 
+    static final FunctionDescriptor nc_get_var_ushort$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_var_ushort$MH = RuntimeHelper.downcallHandle(
+        "nc_get_var_ushort",
+        constants$46.nc_get_var_ushort$FUNC
+    );
+    static final FunctionDescriptor nc_put_var_uint$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_var_uint$MH = RuntimeHelper.downcallHandle(
+        "nc_put_var_uint",
+        constants$46.nc_put_var_uint$FUNC
+    );
+    static final FunctionDescriptor nc_get_var_uint$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_var_uint$MH = RuntimeHelper.downcallHandle(
+        "nc_get_var_uint",
+        constants$46.nc_get_var_uint$FUNC
+    );
+    static final FunctionDescriptor nc_put_var_longlong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_var_longlong$MH = RuntimeHelper.downcallHandle(
+        "nc_put_var_longlong",
+        constants$46.nc_put_var_longlong$FUNC
+    );
     static final FunctionDescriptor nc_get_var_longlong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -24,45 +62,6 @@ class constants$46 {
     static final MethodHandle nc_put_var_ulonglong$MH = RuntimeHelper.downcallHandle(
         "nc_put_var_ulonglong",
         constants$46.nc_put_var_ulonglong$FUNC
-    );
-    static final FunctionDescriptor nc_get_var_ulonglong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_var_ulonglong$MH = RuntimeHelper.downcallHandle(
-        "nc_get_var_ulonglong",
-        constants$46.nc_get_var_ulonglong$FUNC
-    );
-    static final FunctionDescriptor nc_put_var_string$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_var_string$MH = RuntimeHelper.downcallHandle(
-        "nc_put_var_string",
-        constants$46.nc_put_var_string$FUNC
-    );
-    static final FunctionDescriptor nc_get_var_string$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_var_string$MH = RuntimeHelper.downcallHandle(
-        "nc_get_var_string",
-        constants$46.nc_get_var_string$FUNC
-    );
-    static final FunctionDescriptor nc_put_att_ubyte$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_LONG_LONG$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_att_ubyte$MH = RuntimeHelper.downcallHandle(
-        "nc_put_att_ubyte",
-        constants$46.nc_put_att_ubyte$FUNC
     );
 }
 
