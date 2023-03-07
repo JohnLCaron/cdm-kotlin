@@ -67,6 +67,12 @@ data class Variable(
         var spObject: Any? = null
         var dimList: List<String>? = null
 
+        fun setDimensionsAnonymous(shape : IntArray) {
+            for (len in shape) {
+                dimensions.add(Dimension("", len, false, false))
+            }
+        }
+
         fun isUnlimited() = dimensions.isNotEmpty() &&
                 dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 

@@ -65,7 +65,7 @@ class Group(orgName : String,
         return if (parent == null) "root" else name
     }
 
-    class Builder(val name : String) {
+    class Builder(var name : String) {
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
         val typedefs = mutableListOf<Typedef>()
