@@ -3,8 +3,10 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$0 {
 
     static final FunctionDescriptor __errno_location$FUNC = FunctionDescriptor.of(Constants$root.C_POINTER$LAYOUT);
@@ -42,16 +44,13 @@ class constants$0 {
         "nc_inq_user_format",
         constants$0.nc_inq_user_format$FUNC
     );
-    static final FunctionDescriptor nc__create$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
+    static final FunctionDescriptor nc_set_alignment$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
-        Constants$root.C_LONG_LONG$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
+        Constants$root.C_INT$LAYOUT
     );
-    static final MethodHandle nc__create$MH = RuntimeHelper.downcallHandle(
-        "nc__create",
-        constants$0.nc__create$FUNC
+    static final MethodHandle nc_set_alignment$MH = RuntimeHelper.downcallHandle(
+        "nc_set_alignment",
+        constants$0.nc_set_alignment$FUNC
     );
 }
 

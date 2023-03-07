@@ -4,6 +4,7 @@ package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
 import static java.lang.foreign.ValueLayout.*;
 public class netcdf_h  {
@@ -638,6 +639,12 @@ public class netcdf_h  {
     public static int NC_INMEMORY() {
         return (int)32768L;
     }
+    public static int NC_NOATTCREORD() {
+        return (int)131072L;
+    }
+    public static int NC_NODIMSCALE_ATTACH() {
+        return (int)262144L;
+    }
     public static int NC_MAX_MAGIC_NUMBER_LEN() {
         return (int)8L;
     }
@@ -700,6 +707,24 @@ public class netcdf_h  {
     }
     public static int NC_MAX_DEFLATE_LEVEL() {
         return (int)9L;
+    }
+    public static int NC_SZIP_NN() {
+        return (int)32L;
+    }
+    public static int NC_SZIP_EC() {
+        return (int)4L;
+    }
+    public static int NC_NOQUANTIZE() {
+        return (int)0L;
+    }
+    public static int NC_QUANTIZE_BITGROOM() {
+        return (int)1L;
+    }
+    public static int NC_QUANTIZE_GRANULARBR() {
+        return (int)2L;
+    }
+    public static int NC_QUANTIZE_BITROUND() {
+        return (int)3L;
     }
     public static int NC_NOERR() {
         return (int)0L;
@@ -771,8 +796,30 @@ public class netcdf_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle nc_set_alignment$MH() {
+        return RuntimeHelper.requireNonNull(constants$0.nc_set_alignment$MH,"nc_set_alignment");
+    }
+    public static int nc_set_alignment ( int threshold,  int alignment) {
+        var mh$ = nc_set_alignment$MH();
+        try {
+            return (int)mh$.invokeExact(threshold, alignment);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_get_alignment$MH() {
+        return RuntimeHelper.requireNonNull(constants$1.nc_get_alignment$MH,"nc_get_alignment");
+    }
+    public static int nc_get_alignment ( Addressable thresholdp,  Addressable alignmentp) {
+        var mh$ = nc_get_alignment$MH();
+        try {
+            return (int)mh$.invokeExact(thresholdp, alignmentp);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MethodHandle nc__create$MH() {
-        return RuntimeHelper.requireNonNull(constants$0.nc__create$MH,"nc__create");
+        return RuntimeHelper.requireNonNull(constants$1.nc__create$MH,"nc__create");
     }
     public static int nc__create ( Addressable path,  int cmode,  long initialsz,  Addressable chunksizehintp,  Addressable ncidp) {
         var mh$ = nc__create$MH();
@@ -827,7 +874,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_ncid$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.nc_inq_ncid$MH,"nc_inq_ncid");
+        return RuntimeHelper.requireNonNull(constants$2.nc_inq_ncid$MH,"nc_inq_ncid");
     }
     public static int nc_inq_ncid ( int ncid,  Addressable name,  Addressable grp_ncid) {
         var mh$ = nc_inq_ncid$MH();
@@ -838,7 +885,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_grps$MH() {
-        return RuntimeHelper.requireNonNull(constants$1.nc_inq_grps$MH,"nc_inq_grps");
+        return RuntimeHelper.requireNonNull(constants$2.nc_inq_grps$MH,"nc_inq_grps");
     }
     public static int nc_inq_grps ( int ncid,  Addressable numgrps,  Addressable ncids) {
         var mh$ = nc_inq_grps$MH();
@@ -893,7 +940,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_grp_ncid$MH() {
-        return RuntimeHelper.requireNonNull(constants$2.nc_inq_grp_ncid$MH,"nc_inq_grp_ncid");
+        return RuntimeHelper.requireNonNull(constants$3.nc_inq_grp_ncid$MH,"nc_inq_grp_ncid");
     }
     public static int nc_inq_grp_ncid ( int ncid,  Addressable grp_name,  Addressable grp_ncid) {
         var mh$ = nc_inq_grp_ncid$MH();
@@ -904,7 +951,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_grp_full_ncid$MH() {
-        return RuntimeHelper.requireNonNull(constants$2.nc_inq_grp_full_ncid$MH,"nc_inq_grp_full_ncid");
+        return RuntimeHelper.requireNonNull(constants$3.nc_inq_grp_full_ncid$MH,"nc_inq_grp_full_ncid");
     }
     public static int nc_inq_grp_full_ncid ( int ncid,  Addressable full_name,  Addressable grp_ncid) {
         var mh$ = nc_inq_grp_full_ncid$MH();
@@ -959,7 +1006,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_grp$MH() {
-        return RuntimeHelper.requireNonNull(constants$3.nc_def_grp$MH,"nc_def_grp");
+        return RuntimeHelper.requireNonNull(constants$4.nc_def_grp$MH,"nc_def_grp");
     }
     public static int nc_def_grp ( int parent_ncid,  Addressable name,  Addressable new_ncid) {
         var mh$ = nc_def_grp$MH();
@@ -970,7 +1017,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_rename_grp$MH() {
-        return RuntimeHelper.requireNonNull(constants$3.nc_rename_grp$MH,"nc_rename_grp");
+        return RuntimeHelper.requireNonNull(constants$4.nc_rename_grp$MH,"nc_rename_grp");
     }
     public static int nc_rename_grp ( int grpid,  Addressable name) {
         var mh$ = nc_rename_grp$MH();
@@ -1025,7 +1072,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_typeid$MH() {
-        return RuntimeHelper.requireNonNull(constants$4.nc_inq_typeid$MH,"nc_inq_typeid");
+        return RuntimeHelper.requireNonNull(constants$5.nc_inq_typeid$MH,"nc_inq_typeid");
     }
     public static int nc_inq_typeid ( int ncid,  Addressable name,  Addressable typeidp) {
         var mh$ = nc_inq_typeid$MH();
@@ -1036,7 +1083,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_compound$MH() {
-        return RuntimeHelper.requireNonNull(constants$4.nc_inq_compound$MH,"nc_inq_compound");
+        return RuntimeHelper.requireNonNull(constants$5.nc_inq_compound$MH,"nc_inq_compound");
     }
     public static int nc_inq_compound ( int ncid,  int xtype,  Addressable name,  Addressable sizep,  Addressable nfieldsp) {
         var mh$ = nc_inq_compound$MH();
@@ -1091,7 +1138,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_compound_fieldname$MH() {
-        return RuntimeHelper.requireNonNull(constants$5.nc_inq_compound_fieldname$MH,"nc_inq_compound_fieldname");
+        return RuntimeHelper.requireNonNull(constants$6.nc_inq_compound_fieldname$MH,"nc_inq_compound_fieldname");
     }
     public static int nc_inq_compound_fieldname ( int ncid,  int xtype,  int fieldid,  Addressable name) {
         var mh$ = nc_inq_compound_fieldname$MH();
@@ -1102,7 +1149,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_compound_fieldindex$MH() {
-        return RuntimeHelper.requireNonNull(constants$5.nc_inq_compound_fieldindex$MH,"nc_inq_compound_fieldindex");
+        return RuntimeHelper.requireNonNull(constants$6.nc_inq_compound_fieldindex$MH,"nc_inq_compound_fieldindex");
     }
     public static int nc_inq_compound_fieldindex ( int ncid,  int xtype,  Addressable name,  Addressable fieldidp) {
         var mh$ = nc_inq_compound_fieldindex$MH();
@@ -1157,7 +1204,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_vlen$MH() {
-        return RuntimeHelper.requireNonNull(constants$6.nc_def_vlen$MH,"nc_def_vlen");
+        return RuntimeHelper.requireNonNull(constants$7.nc_def_vlen$MH,"nc_def_vlen");
     }
     public static int nc_def_vlen ( int ncid,  Addressable name,  int base_typeid,  Addressable xtypep) {
         var mh$ = nc_def_vlen$MH();
@@ -1168,7 +1215,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_vlen$MH() {
-        return RuntimeHelper.requireNonNull(constants$6.nc_inq_vlen$MH,"nc_inq_vlen");
+        return RuntimeHelper.requireNonNull(constants$7.nc_inq_vlen$MH,"nc_inq_vlen");
     }
     public static int nc_inq_vlen ( int ncid,  int xtype,  Addressable name,  Addressable datum_sizep,  Addressable base_nc_typep) {
         var mh$ = nc_inq_vlen$MH();
@@ -1223,7 +1270,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_free_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$7.nc_free_string$MH,"nc_free_string");
+        return RuntimeHelper.requireNonNull(constants$8.nc_free_string$MH,"nc_free_string");
     }
     public static int nc_free_string ( long len,  Addressable data) {
         var mh$ = nc_free_string$MH();
@@ -1234,7 +1281,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_user_type$MH() {
-        return RuntimeHelper.requireNonNull(constants$7.nc_inq_user_type$MH,"nc_inq_user_type");
+        return RuntimeHelper.requireNonNull(constants$8.nc_inq_user_type$MH,"nc_inq_user_type");
     }
     public static int nc_inq_user_type ( int ncid,  int xtype,  Addressable name,  Addressable size,  Addressable base_nc_typep,  Addressable nfieldsp,  Addressable classp) {
         var mh$ = nc_inq_user_type$MH();
@@ -1289,7 +1336,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_enum$MH() {
-        return RuntimeHelper.requireNonNull(constants$8.nc_inq_enum$MH,"nc_inq_enum");
+        return RuntimeHelper.requireNonNull(constants$9.nc_inq_enum$MH,"nc_inq_enum");
     }
     public static int nc_inq_enum ( int ncid,  int xtype,  Addressable name,  Addressable base_nc_typep,  Addressable base_sizep,  Addressable num_membersp) {
         var mh$ = nc_inq_enum$MH();
@@ -1300,7 +1347,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_enum_member$MH() {
-        return RuntimeHelper.requireNonNull(constants$8.nc_inq_enum_member$MH,"nc_inq_enum_member");
+        return RuntimeHelper.requireNonNull(constants$9.nc_inq_enum_member$MH,"nc_inq_enum_member");
     }
     public static int nc_inq_enum_member ( int ncid,  int xtype,  int idx,  Addressable name,  Addressable value) {
         var mh$ = nc_inq_enum_member$MH();
@@ -1355,7 +1402,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var$MH() {
-        return RuntimeHelper.requireNonNull(constants$9.nc_get_var$MH,"nc_get_var");
+        return RuntimeHelper.requireNonNull(constants$10.nc_get_var$MH,"nc_get_var");
     }
     public static int nc_get_var ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var$MH();
@@ -1366,7 +1413,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1$MH() {
-        return RuntimeHelper.requireNonNull(constants$9.nc_put_var1$MH,"nc_put_var1");
+        return RuntimeHelper.requireNonNull(constants$10.nc_put_var1$MH,"nc_put_var1");
     }
     public static int nc_put_var1 ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1$MH();
@@ -1421,7 +1468,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars$MH() {
-        return RuntimeHelper.requireNonNull(constants$10.nc_get_vars$MH,"nc_get_vars");
+        return RuntimeHelper.requireNonNull(constants$11.nc_get_vars$MH,"nc_get_vars");
     }
     public static int nc_get_vars ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars$MH();
@@ -1432,7 +1479,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm$MH() {
-        return RuntimeHelper.requireNonNull(constants$10.nc_put_varm$MH,"nc_put_varm");
+        return RuntimeHelper.requireNonNull(constants$11.nc_put_varm$MH,"nc_put_varm");
     }
     public static int nc_put_varm ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm$MH();
@@ -1453,6 +1500,28 @@ public class netcdf_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle nc_def_var_quantize$MH() {
+        return RuntimeHelper.requireNonNull(constants$11.nc_def_var_quantize$MH,"nc_def_var_quantize");
+    }
+    public static int nc_def_var_quantize ( int ncid,  int varid,  int quantize_mode,  int nsd) {
+        var mh$ = nc_def_var_quantize$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, varid, quantize_mode, nsd);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_inq_var_quantize$MH() {
+        return RuntimeHelper.requireNonNull(constants$11.nc_inq_var_quantize$MH,"nc_inq_var_quantize");
+    }
+    public static int nc_inq_var_quantize ( int ncid,  int varid,  Addressable quantize_modep,  Addressable nsdp) {
+        var mh$ = nc_inq_var_quantize$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, varid, quantize_modep, nsdp);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MethodHandle nc_def_var_deflate$MH() {
         return RuntimeHelper.requireNonNull(constants$11.nc_def_var_deflate$MH,"nc_def_var_deflate");
     }
@@ -1465,7 +1534,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var_deflate$MH() {
-        return RuntimeHelper.requireNonNull(constants$11.nc_inq_var_deflate$MH,"nc_inq_var_deflate");
+        return RuntimeHelper.requireNonNull(constants$12.nc_inq_var_deflate$MH,"nc_inq_var_deflate");
     }
     public static int nc_inq_var_deflate ( int ncid,  int varid,  Addressable shufflep,  Addressable deflatep,  Addressable deflate_levelp) {
         var mh$ = nc_inq_var_deflate$MH();
@@ -1476,7 +1545,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_var_szip$MH() {
-        return RuntimeHelper.requireNonNull(constants$11.nc_def_var_szip$MH,"nc_def_var_szip");
+        return RuntimeHelper.requireNonNull(constants$12.nc_def_var_szip$MH,"nc_def_var_szip");
     }
     public static int nc_def_var_szip ( int ncid,  int varid,  int options_mask,  int pixels_per_block) {
         var mh$ = nc_def_var_szip$MH();
@@ -1487,7 +1556,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var_szip$MH() {
-        return RuntimeHelper.requireNonNull(constants$11.nc_inq_var_szip$MH,"nc_inq_var_szip");
+        return RuntimeHelper.requireNonNull(constants$12.nc_inq_var_szip$MH,"nc_inq_var_szip");
     }
     public static int nc_inq_var_szip ( int ncid,  int varid,  Addressable options_maskp,  Addressable pixels_per_blockp) {
         var mh$ = nc_inq_var_szip$MH();
@@ -1498,7 +1567,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_var_fletcher32$MH() {
-        return RuntimeHelper.requireNonNull(constants$11.nc_def_var_fletcher32$MH,"nc_def_var_fletcher32");
+        return RuntimeHelper.requireNonNull(constants$12.nc_def_var_fletcher32$MH,"nc_def_var_fletcher32");
     }
     public static int nc_def_var_fletcher32 ( int ncid,  int varid,  int fletcher32) {
         var mh$ = nc_def_var_fletcher32$MH();
@@ -1531,7 +1600,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var_chunking$MH() {
-        return RuntimeHelper.requireNonNull(constants$12.nc_inq_var_chunking$MH,"nc_inq_var_chunking");
+        return RuntimeHelper.requireNonNull(constants$13.nc_inq_var_chunking$MH,"nc_inq_var_chunking");
     }
     public static int nc_inq_var_chunking ( int ncid,  int varid,  Addressable storagep,  Addressable chunksizesp) {
         var mh$ = nc_inq_var_chunking$MH();
@@ -1542,7 +1611,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_var_fill$MH() {
-        return RuntimeHelper.requireNonNull(constants$12.nc_def_var_fill$MH,"nc_def_var_fill");
+        return RuntimeHelper.requireNonNull(constants$13.nc_def_var_fill$MH,"nc_def_var_fill");
     }
     public static int nc_def_var_fill ( int ncid,  int varid,  int no_fill,  Addressable fill_value) {
         var mh$ = nc_def_var_fill$MH();
@@ -1553,7 +1622,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var_fill$MH() {
-        return RuntimeHelper.requireNonNull(constants$12.nc_inq_var_fill$MH,"nc_inq_var_fill");
+        return RuntimeHelper.requireNonNull(constants$13.nc_inq_var_fill$MH,"nc_inq_var_fill");
     }
     public static int nc_inq_var_fill ( int ncid,  int varid,  Addressable no_fill,  Addressable fill_valuep) {
         var mh$ = nc_inq_var_fill$MH();
@@ -1564,7 +1633,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_var_endian$MH() {
-        return RuntimeHelper.requireNonNull(constants$12.nc_def_var_endian$MH,"nc_def_var_endian");
+        return RuntimeHelper.requireNonNull(constants$13.nc_def_var_endian$MH,"nc_def_var_endian");
     }
     public static int nc_def_var_endian ( int ncid,  int varid,  int endian) {
         var mh$ = nc_def_var_endian$MH();
@@ -1597,7 +1666,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var_filter$MH() {
-        return RuntimeHelper.requireNonNull(constants$13.nc_inq_var_filter$MH,"nc_inq_var_filter");
+        return RuntimeHelper.requireNonNull(constants$14.nc_inq_var_filter$MH,"nc_inq_var_filter");
     }
     public static int nc_inq_var_filter ( int ncid,  int varid,  Addressable idp,  Addressable nparams,  Addressable params) {
         var mh$ = nc_inq_var_filter$MH();
@@ -1608,7 +1677,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_set_fill$MH() {
-        return RuntimeHelper.requireNonNull(constants$13.nc_set_fill$MH,"nc_set_fill");
+        return RuntimeHelper.requireNonNull(constants$14.nc_set_fill$MH,"nc_set_fill");
     }
     public static int nc_set_fill ( int ncid,  int fillmode,  Addressable old_modep) {
         var mh$ = nc_set_fill$MH();
@@ -1619,7 +1688,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_set_default_format$MH() {
-        return RuntimeHelper.requireNonNull(constants$13.nc_set_default_format$MH,"nc_set_default_format");
+        return RuntimeHelper.requireNonNull(constants$14.nc_set_default_format$MH,"nc_set_default_format");
     }
     public static int nc_set_default_format ( int format,  Addressable old_formatp) {
         var mh$ = nc_set_default_format$MH();
@@ -1630,7 +1699,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_set_chunk_cache$MH() {
-        return RuntimeHelper.requireNonNull(constants$13.nc_set_chunk_cache$MH,"nc_set_chunk_cache");
+        return RuntimeHelper.requireNonNull(constants$14.nc_set_chunk_cache$MH,"nc_set_chunk_cache");
     }
     public static int nc_set_chunk_cache ( long size,  long nelems,  float preemption) {
         var mh$ = nc_set_chunk_cache$MH();
@@ -1663,7 +1732,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_chunk_cache$MH() {
-        return RuntimeHelper.requireNonNull(constants$14.nc_get_var_chunk_cache$MH,"nc_get_var_chunk_cache");
+        return RuntimeHelper.requireNonNull(constants$15.nc_get_var_chunk_cache$MH,"nc_get_var_chunk_cache");
     }
     public static int nc_get_var_chunk_cache ( int ncid,  int varid,  Addressable sizep,  Addressable nelemsp,  Addressable preemptionp) {
         var mh$ = nc_get_var_chunk_cache$MH();
@@ -1674,7 +1743,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_redef$MH() {
-        return RuntimeHelper.requireNonNull(constants$14.nc_redef$MH,"nc_redef");
+        return RuntimeHelper.requireNonNull(constants$15.nc_redef$MH,"nc_redef");
     }
     public static int nc_redef ( int ncid) {
         var mh$ = nc_redef$MH();
@@ -1685,7 +1754,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc__enddef$MH() {
-        return RuntimeHelper.requireNonNull(constants$14.nc__enddef$MH,"nc__enddef");
+        return RuntimeHelper.requireNonNull(constants$15.nc__enddef$MH,"nc__enddef");
     }
     public static int nc__enddef ( int ncid,  long h_minfree,  long v_align,  long v_minfree,  long r_align) {
         var mh$ = nc__enddef$MH();
@@ -1696,7 +1765,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_enddef$MH() {
-        return RuntimeHelper.requireNonNull(constants$14.nc_enddef$MH,"nc_enddef");
+        return RuntimeHelper.requireNonNull(constants$15.nc_enddef$MH,"nc_enddef");
     }
     public static int nc_enddef ( int ncid) {
         var mh$ = nc_enddef$MH();
@@ -1729,7 +1798,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_close$MH() {
-        return RuntimeHelper.requireNonNull(constants$15.nc_close$MH,"nc_close");
+        return RuntimeHelper.requireNonNull(constants$16.nc_close$MH,"nc_close");
     }
     public static int nc_close ( int ncid) {
         var mh$ = nc_close$MH();
@@ -1740,7 +1809,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq$MH() {
-        return RuntimeHelper.requireNonNull(constants$15.nc_inq$MH,"nc_inq");
+        return RuntimeHelper.requireNonNull(constants$16.nc_inq$MH,"nc_inq");
     }
     public static int nc_inq ( int ncid,  Addressable ndimsp,  Addressable nvarsp,  Addressable nattsp,  Addressable unlimdimidp) {
         var mh$ = nc_inq$MH();
@@ -1751,7 +1820,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_ndims$MH() {
-        return RuntimeHelper.requireNonNull(constants$15.nc_inq_ndims$MH,"nc_inq_ndims");
+        return RuntimeHelper.requireNonNull(constants$16.nc_inq_ndims$MH,"nc_inq_ndims");
     }
     public static int nc_inq_ndims ( int ncid,  Addressable ndimsp) {
         var mh$ = nc_inq_ndims$MH();
@@ -1762,7 +1831,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_nvars$MH() {
-        return RuntimeHelper.requireNonNull(constants$15.nc_inq_nvars$MH,"nc_inq_nvars");
+        return RuntimeHelper.requireNonNull(constants$16.nc_inq_nvars$MH,"nc_inq_nvars");
     }
     public static int nc_inq_nvars ( int ncid,  Addressable nvarsp) {
         var mh$ = nc_inq_nvars$MH();
@@ -1795,7 +1864,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_unlimdims$MH() {
-        return RuntimeHelper.requireNonNull(constants$16.nc_inq_unlimdims$MH,"nc_inq_unlimdims");
+        return RuntimeHelper.requireNonNull(constants$17.nc_inq_unlimdims$MH,"nc_inq_unlimdims");
     }
     public static int nc_inq_unlimdims ( int ncid,  Addressable nunlimdimsp,  Addressable unlimdimidsp) {
         var mh$ = nc_inq_unlimdims$MH();
@@ -1806,7 +1875,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_format$MH() {
-        return RuntimeHelper.requireNonNull(constants$16.nc_inq_format$MH,"nc_inq_format");
+        return RuntimeHelper.requireNonNull(constants$17.nc_inq_format$MH,"nc_inq_format");
     }
     public static int nc_inq_format ( int ncid,  Addressable formatp) {
         var mh$ = nc_inq_format$MH();
@@ -1817,7 +1886,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_format_extended$MH() {
-        return RuntimeHelper.requireNonNull(constants$16.nc_inq_format_extended$MH,"nc_inq_format_extended");
+        return RuntimeHelper.requireNonNull(constants$17.nc_inq_format_extended$MH,"nc_inq_format_extended");
     }
     public static int nc_inq_format_extended ( int ncid,  Addressable formatp,  Addressable modep) {
         var mh$ = nc_inq_format_extended$MH();
@@ -1828,7 +1897,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_dim$MH() {
-        return RuntimeHelper.requireNonNull(constants$16.nc_def_dim$MH,"nc_def_dim");
+        return RuntimeHelper.requireNonNull(constants$17.nc_def_dim$MH,"nc_def_dim");
     }
     public static int nc_def_dim ( int ncid,  Addressable name,  long len,  Addressable idp) {
         var mh$ = nc_def_dim$MH();
@@ -1861,7 +1930,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_dimname$MH() {
-        return RuntimeHelper.requireNonNull(constants$17.nc_inq_dimname$MH,"nc_inq_dimname");
+        return RuntimeHelper.requireNonNull(constants$18.nc_inq_dimname$MH,"nc_inq_dimname");
     }
     public static int nc_inq_dimname ( int ncid,  int dimid,  Addressable name) {
         var mh$ = nc_inq_dimname$MH();
@@ -1872,7 +1941,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_dimlen$MH() {
-        return RuntimeHelper.requireNonNull(constants$17.nc_inq_dimlen$MH,"nc_inq_dimlen");
+        return RuntimeHelper.requireNonNull(constants$18.nc_inq_dimlen$MH,"nc_inq_dimlen");
     }
     public static int nc_inq_dimlen ( int ncid,  int dimid,  Addressable lenp) {
         var mh$ = nc_inq_dimlen$MH();
@@ -1883,7 +1952,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_rename_dim$MH() {
-        return RuntimeHelper.requireNonNull(constants$17.nc_rename_dim$MH,"nc_rename_dim");
+        return RuntimeHelper.requireNonNull(constants$18.nc_rename_dim$MH,"nc_rename_dim");
     }
     public static int nc_rename_dim ( int ncid,  int dimid,  Addressable name) {
         var mh$ = nc_rename_dim$MH();
@@ -1894,7 +1963,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_att$MH() {
-        return RuntimeHelper.requireNonNull(constants$17.nc_inq_att$MH,"nc_inq_att");
+        return RuntimeHelper.requireNonNull(constants$18.nc_inq_att$MH,"nc_inq_att");
     }
     public static int nc_inq_att ( int ncid,  int varid,  Addressable name,  Addressable xtypep,  Addressable lenp) {
         var mh$ = nc_inq_att$MH();
@@ -1927,7 +1996,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_attlen$MH() {
-        return RuntimeHelper.requireNonNull(constants$18.nc_inq_attlen$MH,"nc_inq_attlen");
+        return RuntimeHelper.requireNonNull(constants$19.nc_inq_attlen$MH,"nc_inq_attlen");
     }
     public static int nc_inq_attlen ( int ncid,  int varid,  Addressable name,  Addressable lenp) {
         var mh$ = nc_inq_attlen$MH();
@@ -1938,7 +2007,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_attname$MH() {
-        return RuntimeHelper.requireNonNull(constants$18.nc_inq_attname$MH,"nc_inq_attname");
+        return RuntimeHelper.requireNonNull(constants$19.nc_inq_attname$MH,"nc_inq_attname");
     }
     public static int nc_inq_attname ( int ncid,  int varid,  int attnum,  Addressable name) {
         var mh$ = nc_inq_attname$MH();
@@ -1949,7 +2018,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_copy_att$MH() {
-        return RuntimeHelper.requireNonNull(constants$18.nc_copy_att$MH,"nc_copy_att");
+        return RuntimeHelper.requireNonNull(constants$19.nc_copy_att$MH,"nc_copy_att");
     }
     public static int nc_copy_att ( int ncid_in,  int varid_in,  Addressable name,  int ncid_out,  int varid_out) {
         var mh$ = nc_copy_att$MH();
@@ -1960,7 +2029,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_rename_att$MH() {
-        return RuntimeHelper.requireNonNull(constants$18.nc_rename_att$MH,"nc_rename_att");
+        return RuntimeHelper.requireNonNull(constants$19.nc_rename_att$MH,"nc_rename_att");
     }
     public static int nc_rename_att ( int ncid,  int varid,  Addressable name,  Addressable newname) {
         var mh$ = nc_rename_att$MH();
@@ -1993,7 +2062,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$19.nc_get_att_text$MH,"nc_get_att_text");
+        return RuntimeHelper.requireNonNull(constants$20.nc_get_att_text$MH,"nc_get_att_text");
     }
     public static int nc_get_att_text ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_text$MH();
@@ -2004,7 +2073,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$19.nc_put_att_string$MH,"nc_put_att_string");
+        return RuntimeHelper.requireNonNull(constants$20.nc_put_att_string$MH,"nc_put_att_string");
     }
     public static int nc_put_att_string ( int ncid,  int varid,  Addressable name,  long len,  Addressable op) {
         var mh$ = nc_put_att_string$MH();
@@ -2015,7 +2084,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$19.nc_get_att_string$MH,"nc_get_att_string");
+        return RuntimeHelper.requireNonNull(constants$20.nc_get_att_string$MH,"nc_get_att_string");
     }
     public static int nc_get_att_string ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_string$MH();
@@ -2026,7 +2095,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$19.nc_put_att_uchar$MH,"nc_put_att_uchar");
+        return RuntimeHelper.requireNonNull(constants$20.nc_put_att_uchar$MH,"nc_put_att_uchar");
     }
     public static int nc_put_att_uchar ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_uchar$MH();
@@ -2059,7 +2128,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$20.nc_get_att_schar$MH,"nc_get_att_schar");
+        return RuntimeHelper.requireNonNull(constants$21.nc_get_att_schar$MH,"nc_get_att_schar");
     }
     public static int nc_get_att_schar ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_schar$MH();
@@ -2070,7 +2139,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$20.nc_put_att_short$MH,"nc_put_att_short");
+        return RuntimeHelper.requireNonNull(constants$21.nc_put_att_short$MH,"nc_put_att_short");
     }
     public static int nc_put_att_short ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_short$MH();
@@ -2081,7 +2150,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$20.nc_get_att_short$MH,"nc_get_att_short");
+        return RuntimeHelper.requireNonNull(constants$21.nc_get_att_short$MH,"nc_get_att_short");
     }
     public static int nc_get_att_short ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_short$MH();
@@ -2092,7 +2161,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$20.nc_put_att_int$MH,"nc_put_att_int");
+        return RuntimeHelper.requireNonNull(constants$21.nc_put_att_int$MH,"nc_put_att_int");
     }
     public static int nc_put_att_int ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_int$MH();
@@ -2125,7 +2194,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$21.nc_get_att_long$MH,"nc_get_att_long");
+        return RuntimeHelper.requireNonNull(constants$22.nc_get_att_long$MH,"nc_get_att_long");
     }
     public static int nc_get_att_long ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_long$MH();
@@ -2136,7 +2205,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$21.nc_put_att_float$MH,"nc_put_att_float");
+        return RuntimeHelper.requireNonNull(constants$22.nc_put_att_float$MH,"nc_put_att_float");
     }
     public static int nc_put_att_float ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_float$MH();
@@ -2147,7 +2216,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$21.nc_get_att_float$MH,"nc_get_att_float");
+        return RuntimeHelper.requireNonNull(constants$22.nc_get_att_float$MH,"nc_get_att_float");
     }
     public static int nc_get_att_float ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_float$MH();
@@ -2158,7 +2227,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$21.nc_put_att_double$MH,"nc_put_att_double");
+        return RuntimeHelper.requireNonNull(constants$22.nc_put_att_double$MH,"nc_put_att_double");
     }
     public static int nc_put_att_double ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_double$MH();
@@ -2191,7 +2260,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$22.nc_get_att_ushort$MH,"nc_get_att_ushort");
+        return RuntimeHelper.requireNonNull(constants$23.nc_get_att_ushort$MH,"nc_get_att_ushort");
     }
     public static int nc_get_att_ushort ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_ushort$MH();
@@ -2202,7 +2271,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$22.nc_put_att_uint$MH,"nc_put_att_uint");
+        return RuntimeHelper.requireNonNull(constants$23.nc_put_att_uint$MH,"nc_put_att_uint");
     }
     public static int nc_put_att_uint ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_uint$MH();
@@ -2213,7 +2282,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$22.nc_get_att_uint$MH,"nc_get_att_uint");
+        return RuntimeHelper.requireNonNull(constants$23.nc_get_att_uint$MH,"nc_get_att_uint");
     }
     public static int nc_get_att_uint ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_uint$MH();
@@ -2224,7 +2293,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_att_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$22.nc_put_att_longlong$MH,"nc_put_att_longlong");
+        return RuntimeHelper.requireNonNull(constants$23.nc_put_att_longlong$MH,"nc_put_att_longlong");
     }
     public static int nc_put_att_longlong ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_longlong$MH();
@@ -2257,7 +2326,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$23.nc_get_att_ulonglong$MH,"nc_get_att_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$24.nc_get_att_ulonglong$MH,"nc_get_att_ulonglong");
     }
     public static int nc_get_att_ulonglong ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_ulonglong$MH();
@@ -2268,7 +2337,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_def_var$MH() {
-        return RuntimeHelper.requireNonNull(constants$23.nc_def_var$MH,"nc_def_var");
+        return RuntimeHelper.requireNonNull(constants$24.nc_def_var$MH,"nc_def_var");
     }
     public static int nc_def_var ( int ncid,  Addressable name,  int xtype,  int ndims,  Addressable dimidsp,  Addressable varidp) {
         var mh$ = nc_def_var$MH();
@@ -2279,7 +2348,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_var$MH() {
-        return RuntimeHelper.requireNonNull(constants$23.nc_inq_var$MH,"nc_inq_var");
+        return RuntimeHelper.requireNonNull(constants$24.nc_inq_var$MH,"nc_inq_var");
     }
     public static int nc_inq_var ( int ncid,  int varid,  Addressable name,  Addressable xtypep,  Addressable ndimsp,  Addressable dimidsp,  Addressable nattsp) {
         var mh$ = nc_inq_var$MH();
@@ -2290,7 +2359,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_varid$MH() {
-        return RuntimeHelper.requireNonNull(constants$23.nc_inq_varid$MH,"nc_inq_varid");
+        return RuntimeHelper.requireNonNull(constants$24.nc_inq_varid$MH,"nc_inq_varid");
     }
     public static int nc_inq_varid ( int ncid,  Addressable name,  Addressable varidp) {
         var mh$ = nc_inq_varid$MH();
@@ -2323,7 +2392,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_varndims$MH() {
-        return RuntimeHelper.requireNonNull(constants$24.nc_inq_varndims$MH,"nc_inq_varndims");
+        return RuntimeHelper.requireNonNull(constants$25.nc_inq_varndims$MH,"nc_inq_varndims");
     }
     public static int nc_inq_varndims ( int ncid,  int varid,  Addressable ndimsp) {
         var mh$ = nc_inq_varndims$MH();
@@ -2334,7 +2403,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_vardimid$MH() {
-        return RuntimeHelper.requireNonNull(constants$24.nc_inq_vardimid$MH,"nc_inq_vardimid");
+        return RuntimeHelper.requireNonNull(constants$25.nc_inq_vardimid$MH,"nc_inq_vardimid");
     }
     public static int nc_inq_vardimid ( int ncid,  int varid,  Addressable dimidsp) {
         var mh$ = nc_inq_vardimid$MH();
@@ -2345,7 +2414,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_varnatts$MH() {
-        return RuntimeHelper.requireNonNull(constants$24.nc_inq_varnatts$MH,"nc_inq_varnatts");
+        return RuntimeHelper.requireNonNull(constants$25.nc_inq_varnatts$MH,"nc_inq_varnatts");
     }
     public static int nc_inq_varnatts ( int ncid,  int varid,  Addressable nattsp) {
         var mh$ = nc_inq_varnatts$MH();
@@ -2356,7 +2425,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_rename_var$MH() {
-        return RuntimeHelper.requireNonNull(constants$24.nc_rename_var$MH,"nc_rename_var");
+        return RuntimeHelper.requireNonNull(constants$25.nc_rename_var$MH,"nc_rename_var");
     }
     public static int nc_rename_var ( int ncid,  int varid,  Addressable name) {
         var mh$ = nc_rename_var$MH();
@@ -2389,7 +2458,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$25.nc_get_var1_text$MH,"nc_get_var1_text");
+        return RuntimeHelper.requireNonNull(constants$26.nc_get_var1_text$MH,"nc_get_var1_text");
     }
     public static int nc_get_var1_text ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_text$MH();
@@ -2400,7 +2469,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$25.nc_put_var1_uchar$MH,"nc_put_var1_uchar");
+        return RuntimeHelper.requireNonNull(constants$26.nc_put_var1_uchar$MH,"nc_put_var1_uchar");
     }
     public static int nc_put_var1_uchar ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_uchar$MH();
@@ -2411,7 +2480,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$25.nc_get_var1_uchar$MH,"nc_get_var1_uchar");
+        return RuntimeHelper.requireNonNull(constants$26.nc_get_var1_uchar$MH,"nc_get_var1_uchar");
     }
     public static int nc_get_var1_uchar ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_uchar$MH();
@@ -2422,7 +2491,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$25.nc_put_var1_schar$MH,"nc_put_var1_schar");
+        return RuntimeHelper.requireNonNull(constants$26.nc_put_var1_schar$MH,"nc_put_var1_schar");
     }
     public static int nc_put_var1_schar ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_schar$MH();
@@ -2455,7 +2524,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$26.nc_get_var1_short$MH,"nc_get_var1_short");
+        return RuntimeHelper.requireNonNull(constants$27.nc_get_var1_short$MH,"nc_get_var1_short");
     }
     public static int nc_get_var1_short ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_short$MH();
@@ -2466,7 +2535,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$26.nc_put_var1_int$MH,"nc_put_var1_int");
+        return RuntimeHelper.requireNonNull(constants$27.nc_put_var1_int$MH,"nc_put_var1_int");
     }
     public static int nc_put_var1_int ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_int$MH();
@@ -2477,7 +2546,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$26.nc_get_var1_int$MH,"nc_get_var1_int");
+        return RuntimeHelper.requireNonNull(constants$27.nc_get_var1_int$MH,"nc_get_var1_int");
     }
     public static int nc_get_var1_int ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_int$MH();
@@ -2488,7 +2557,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$26.nc_put_var1_long$MH,"nc_put_var1_long");
+        return RuntimeHelper.requireNonNull(constants$27.nc_put_var1_long$MH,"nc_put_var1_long");
     }
     public static int nc_put_var1_long ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_long$MH();
@@ -2521,7 +2590,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$27.nc_get_var1_float$MH,"nc_get_var1_float");
+        return RuntimeHelper.requireNonNull(constants$28.nc_get_var1_float$MH,"nc_get_var1_float");
     }
     public static int nc_get_var1_float ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_float$MH();
@@ -2532,7 +2601,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$27.nc_put_var1_double$MH,"nc_put_var1_double");
+        return RuntimeHelper.requireNonNull(constants$28.nc_put_var1_double$MH,"nc_put_var1_double");
     }
     public static int nc_put_var1_double ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_double$MH();
@@ -2543,7 +2612,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$27.nc_get_var1_double$MH,"nc_get_var1_double");
+        return RuntimeHelper.requireNonNull(constants$28.nc_get_var1_double$MH,"nc_get_var1_double");
     }
     public static int nc_get_var1_double ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_double$MH();
@@ -2554,7 +2623,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$27.nc_put_var1_ushort$MH,"nc_put_var1_ushort");
+        return RuntimeHelper.requireNonNull(constants$28.nc_put_var1_ushort$MH,"nc_put_var1_ushort");
     }
     public static int nc_put_var1_ushort ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_ushort$MH();
@@ -2587,7 +2656,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$28.nc_get_var1_uint$MH,"nc_get_var1_uint");
+        return RuntimeHelper.requireNonNull(constants$29.nc_get_var1_uint$MH,"nc_get_var1_uint");
     }
     public static int nc_get_var1_uint ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_uint$MH();
@@ -2598,7 +2667,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$28.nc_put_var1_longlong$MH,"nc_put_var1_longlong");
+        return RuntimeHelper.requireNonNull(constants$29.nc_put_var1_longlong$MH,"nc_put_var1_longlong");
     }
     public static int nc_put_var1_longlong ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_longlong$MH();
@@ -2609,7 +2678,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$28.nc_get_var1_longlong$MH,"nc_get_var1_longlong");
+        return RuntimeHelper.requireNonNull(constants$29.nc_get_var1_longlong$MH,"nc_get_var1_longlong");
     }
     public static int nc_get_var1_longlong ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_longlong$MH();
@@ -2620,7 +2689,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$28.nc_put_var1_ulonglong$MH,"nc_put_var1_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$29.nc_put_var1_ulonglong$MH,"nc_put_var1_ulonglong");
     }
     public static int nc_put_var1_ulonglong ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_ulonglong$MH();
@@ -2653,7 +2722,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$29.nc_get_var1_string$MH,"nc_get_var1_string");
+        return RuntimeHelper.requireNonNull(constants$30.nc_get_var1_string$MH,"nc_get_var1_string");
     }
     public static int nc_get_var1_string ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_string$MH();
@@ -2664,7 +2733,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$29.nc_put_vara_text$MH,"nc_put_vara_text");
+        return RuntimeHelper.requireNonNull(constants$30.nc_put_vara_text$MH,"nc_put_vara_text");
     }
     public static int nc_put_vara_text ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_text$MH();
@@ -2675,7 +2744,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$29.nc_get_vara_text$MH,"nc_get_vara_text");
+        return RuntimeHelper.requireNonNull(constants$30.nc_get_vara_text$MH,"nc_get_vara_text");
     }
     public static int nc_get_vara_text ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_text$MH();
@@ -2686,7 +2755,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$29.nc_put_vara_uchar$MH,"nc_put_vara_uchar");
+        return RuntimeHelper.requireNonNull(constants$30.nc_put_vara_uchar$MH,"nc_put_vara_uchar");
     }
     public static int nc_put_vara_uchar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_uchar$MH();
@@ -2719,7 +2788,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$30.nc_get_vara_schar$MH,"nc_get_vara_schar");
+        return RuntimeHelper.requireNonNull(constants$31.nc_get_vara_schar$MH,"nc_get_vara_schar");
     }
     public static int nc_get_vara_schar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_schar$MH();
@@ -2730,7 +2799,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$30.nc_put_vara_short$MH,"nc_put_vara_short");
+        return RuntimeHelper.requireNonNull(constants$31.nc_put_vara_short$MH,"nc_put_vara_short");
     }
     public static int nc_put_vara_short ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_short$MH();
@@ -2741,7 +2810,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$30.nc_get_vara_short$MH,"nc_get_vara_short");
+        return RuntimeHelper.requireNonNull(constants$31.nc_get_vara_short$MH,"nc_get_vara_short");
     }
     public static int nc_get_vara_short ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_short$MH();
@@ -2752,7 +2821,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$30.nc_put_vara_int$MH,"nc_put_vara_int");
+        return RuntimeHelper.requireNonNull(constants$31.nc_put_vara_int$MH,"nc_put_vara_int");
     }
     public static int nc_put_vara_int ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_int$MH();
@@ -2785,7 +2854,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$31.nc_get_vara_long$MH,"nc_get_vara_long");
+        return RuntimeHelper.requireNonNull(constants$32.nc_get_vara_long$MH,"nc_get_vara_long");
     }
     public static int nc_get_vara_long ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_long$MH();
@@ -2796,7 +2865,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$31.nc_put_vara_float$MH,"nc_put_vara_float");
+        return RuntimeHelper.requireNonNull(constants$32.nc_put_vara_float$MH,"nc_put_vara_float");
     }
     public static int nc_put_vara_float ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_float$MH();
@@ -2807,7 +2876,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$31.nc_get_vara_float$MH,"nc_get_vara_float");
+        return RuntimeHelper.requireNonNull(constants$32.nc_get_vara_float$MH,"nc_get_vara_float");
     }
     public static int nc_get_vara_float ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_float$MH();
@@ -2818,7 +2887,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$31.nc_put_vara_double$MH,"nc_put_vara_double");
+        return RuntimeHelper.requireNonNull(constants$32.nc_put_vara_double$MH,"nc_put_vara_double");
     }
     public static int nc_put_vara_double ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_double$MH();
@@ -2851,7 +2920,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$32.nc_get_vara_ushort$MH,"nc_get_vara_ushort");
+        return RuntimeHelper.requireNonNull(constants$33.nc_get_vara_ushort$MH,"nc_get_vara_ushort");
     }
     public static int nc_get_vara_ushort ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_ushort$MH();
@@ -2862,7 +2931,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$32.nc_put_vara_uint$MH,"nc_put_vara_uint");
+        return RuntimeHelper.requireNonNull(constants$33.nc_put_vara_uint$MH,"nc_put_vara_uint");
     }
     public static int nc_put_vara_uint ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_uint$MH();
@@ -2873,7 +2942,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$32.nc_get_vara_uint$MH,"nc_get_vara_uint");
+        return RuntimeHelper.requireNonNull(constants$33.nc_get_vara_uint$MH,"nc_get_vara_uint");
     }
     public static int nc_get_vara_uint ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_uint$MH();
@@ -2884,7 +2953,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$32.nc_put_vara_longlong$MH,"nc_put_vara_longlong");
+        return RuntimeHelper.requireNonNull(constants$33.nc_put_vara_longlong$MH,"nc_put_vara_longlong");
     }
     public static int nc_put_vara_longlong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_longlong$MH();
@@ -2917,7 +2986,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$33.nc_get_vara_ulonglong$MH,"nc_get_vara_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$34.nc_get_vara_ulonglong$MH,"nc_get_vara_ulonglong");
     }
     public static int nc_get_vara_ulonglong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_ulonglong$MH();
@@ -2928,7 +2997,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$33.nc_put_vara_string$MH,"nc_put_vara_string");
+        return RuntimeHelper.requireNonNull(constants$34.nc_put_vara_string$MH,"nc_put_vara_string");
     }
     public static int nc_put_vara_string ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_string$MH();
@@ -2939,7 +3008,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$33.nc_get_vara_string$MH,"nc_get_vara_string");
+        return RuntimeHelper.requireNonNull(constants$34.nc_get_vara_string$MH,"nc_get_vara_string");
     }
     public static int nc_get_vara_string ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_string$MH();
@@ -2950,7 +3019,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$33.nc_put_vars_text$MH,"nc_put_vars_text");
+        return RuntimeHelper.requireNonNull(constants$34.nc_put_vars_text$MH,"nc_put_vars_text");
     }
     public static int nc_put_vars_text ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_text$MH();
@@ -2983,7 +3052,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$34.nc_get_vars_uchar$MH,"nc_get_vars_uchar");
+        return RuntimeHelper.requireNonNull(constants$35.nc_get_vars_uchar$MH,"nc_get_vars_uchar");
     }
     public static int nc_get_vars_uchar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_uchar$MH();
@@ -2994,7 +3063,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$34.nc_put_vars_schar$MH,"nc_put_vars_schar");
+        return RuntimeHelper.requireNonNull(constants$35.nc_put_vars_schar$MH,"nc_put_vars_schar");
     }
     public static int nc_put_vars_schar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_schar$MH();
@@ -3005,7 +3074,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$34.nc_get_vars_schar$MH,"nc_get_vars_schar");
+        return RuntimeHelper.requireNonNull(constants$35.nc_get_vars_schar$MH,"nc_get_vars_schar");
     }
     public static int nc_get_vars_schar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_schar$MH();
@@ -3016,7 +3085,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$34.nc_put_vars_short$MH,"nc_put_vars_short");
+        return RuntimeHelper.requireNonNull(constants$35.nc_put_vars_short$MH,"nc_put_vars_short");
     }
     public static int nc_put_vars_short ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_short$MH();
@@ -3049,7 +3118,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$35.nc_get_vars_int$MH,"nc_get_vars_int");
+        return RuntimeHelper.requireNonNull(constants$36.nc_get_vars_int$MH,"nc_get_vars_int");
     }
     public static int nc_get_vars_int ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_int$MH();
@@ -3060,7 +3129,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$35.nc_put_vars_long$MH,"nc_put_vars_long");
+        return RuntimeHelper.requireNonNull(constants$36.nc_put_vars_long$MH,"nc_put_vars_long");
     }
     public static int nc_put_vars_long ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_long$MH();
@@ -3071,7 +3140,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$35.nc_get_vars_long$MH,"nc_get_vars_long");
+        return RuntimeHelper.requireNonNull(constants$36.nc_get_vars_long$MH,"nc_get_vars_long");
     }
     public static int nc_get_vars_long ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_long$MH();
@@ -3082,7 +3151,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$35.nc_put_vars_float$MH,"nc_put_vars_float");
+        return RuntimeHelper.requireNonNull(constants$36.nc_put_vars_float$MH,"nc_put_vars_float");
     }
     public static int nc_put_vars_float ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_float$MH();
@@ -3115,7 +3184,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$36.nc_get_vars_double$MH,"nc_get_vars_double");
+        return RuntimeHelper.requireNonNull(constants$37.nc_get_vars_double$MH,"nc_get_vars_double");
     }
     public static int nc_get_vars_double ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_double$MH();
@@ -3126,7 +3195,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$36.nc_put_vars_ushort$MH,"nc_put_vars_ushort");
+        return RuntimeHelper.requireNonNull(constants$37.nc_put_vars_ushort$MH,"nc_put_vars_ushort");
     }
     public static int nc_put_vars_ushort ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_ushort$MH();
@@ -3137,7 +3206,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$36.nc_get_vars_ushort$MH,"nc_get_vars_ushort");
+        return RuntimeHelper.requireNonNull(constants$37.nc_get_vars_ushort$MH,"nc_get_vars_ushort");
     }
     public static int nc_get_vars_ushort ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_ushort$MH();
@@ -3148,7 +3217,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$36.nc_put_vars_uint$MH,"nc_put_vars_uint");
+        return RuntimeHelper.requireNonNull(constants$37.nc_put_vars_uint$MH,"nc_put_vars_uint");
     }
     public static int nc_put_vars_uint ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_uint$MH();
@@ -3181,7 +3250,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$37.nc_get_vars_longlong$MH,"nc_get_vars_longlong");
+        return RuntimeHelper.requireNonNull(constants$38.nc_get_vars_longlong$MH,"nc_get_vars_longlong");
     }
     public static int nc_get_vars_longlong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_longlong$MH();
@@ -3192,7 +3261,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$37.nc_put_vars_ulonglong$MH,"nc_put_vars_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$38.nc_put_vars_ulonglong$MH,"nc_put_vars_ulonglong");
     }
     public static int nc_put_vars_ulonglong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_ulonglong$MH();
@@ -3203,7 +3272,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$37.nc_get_vars_ulonglong$MH,"nc_get_vars_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$38.nc_get_vars_ulonglong$MH,"nc_get_vars_ulonglong");
     }
     public static int nc_get_vars_ulonglong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_ulonglong$MH();
@@ -3214,7 +3283,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$37.nc_put_vars_string$MH,"nc_put_vars_string");
+        return RuntimeHelper.requireNonNull(constants$38.nc_put_vars_string$MH,"nc_put_vars_string");
     }
     public static int nc_put_vars_string ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_string$MH();
@@ -3247,7 +3316,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$38.nc_get_varm_text$MH,"nc_get_varm_text");
+        return RuntimeHelper.requireNonNull(constants$39.nc_get_varm_text$MH,"nc_get_varm_text");
     }
     public static int nc_get_varm_text ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_text$MH();
@@ -3258,7 +3327,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$38.nc_put_varm_uchar$MH,"nc_put_varm_uchar");
+        return RuntimeHelper.requireNonNull(constants$39.nc_put_varm_uchar$MH,"nc_put_varm_uchar");
     }
     public static int nc_put_varm_uchar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_uchar$MH();
@@ -3269,7 +3338,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$38.nc_get_varm_uchar$MH,"nc_get_varm_uchar");
+        return RuntimeHelper.requireNonNull(constants$39.nc_get_varm_uchar$MH,"nc_get_varm_uchar");
     }
     public static int nc_get_varm_uchar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_uchar$MH();
@@ -3280,7 +3349,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$38.nc_put_varm_schar$MH,"nc_put_varm_schar");
+        return RuntimeHelper.requireNonNull(constants$39.nc_put_varm_schar$MH,"nc_put_varm_schar");
     }
     public static int nc_put_varm_schar ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_schar$MH();
@@ -3313,7 +3382,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$39.nc_get_varm_short$MH,"nc_get_varm_short");
+        return RuntimeHelper.requireNonNull(constants$40.nc_get_varm_short$MH,"nc_get_varm_short");
     }
     public static int nc_get_varm_short ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_short$MH();
@@ -3324,7 +3393,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$39.nc_put_varm_int$MH,"nc_put_varm_int");
+        return RuntimeHelper.requireNonNull(constants$40.nc_put_varm_int$MH,"nc_put_varm_int");
     }
     public static int nc_put_varm_int ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_int$MH();
@@ -3335,7 +3404,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$39.nc_get_varm_int$MH,"nc_get_varm_int");
+        return RuntimeHelper.requireNonNull(constants$40.nc_get_varm_int$MH,"nc_get_varm_int");
     }
     public static int nc_get_varm_int ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_int$MH();
@@ -3346,7 +3415,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$39.nc_put_varm_long$MH,"nc_put_varm_long");
+        return RuntimeHelper.requireNonNull(constants$40.nc_put_varm_long$MH,"nc_put_varm_long");
     }
     public static int nc_put_varm_long ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_long$MH();
@@ -3379,7 +3448,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$40.nc_get_varm_float$MH,"nc_get_varm_float");
+        return RuntimeHelper.requireNonNull(constants$41.nc_get_varm_float$MH,"nc_get_varm_float");
     }
     public static int nc_get_varm_float ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_float$MH();
@@ -3390,7 +3459,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$40.nc_put_varm_double$MH,"nc_put_varm_double");
+        return RuntimeHelper.requireNonNull(constants$41.nc_put_varm_double$MH,"nc_put_varm_double");
     }
     public static int nc_put_varm_double ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_double$MH();
@@ -3401,7 +3470,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$40.nc_get_varm_double$MH,"nc_get_varm_double");
+        return RuntimeHelper.requireNonNull(constants$41.nc_get_varm_double$MH,"nc_get_varm_double");
     }
     public static int nc_get_varm_double ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_double$MH();
@@ -3412,7 +3481,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$40.nc_put_varm_ushort$MH,"nc_put_varm_ushort");
+        return RuntimeHelper.requireNonNull(constants$41.nc_put_varm_ushort$MH,"nc_put_varm_ushort");
     }
     public static int nc_put_varm_ushort ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_ushort$MH();
@@ -3445,7 +3514,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$41.nc_get_varm_uint$MH,"nc_get_varm_uint");
+        return RuntimeHelper.requireNonNull(constants$42.nc_get_varm_uint$MH,"nc_get_varm_uint");
     }
     public static int nc_get_varm_uint ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_uint$MH();
@@ -3456,7 +3525,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$41.nc_put_varm_longlong$MH,"nc_put_varm_longlong");
+        return RuntimeHelper.requireNonNull(constants$42.nc_put_varm_longlong$MH,"nc_put_varm_longlong");
     }
     public static int nc_put_varm_longlong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_longlong$MH();
@@ -3467,7 +3536,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$41.nc_get_varm_longlong$MH,"nc_get_varm_longlong");
+        return RuntimeHelper.requireNonNull(constants$42.nc_get_varm_longlong$MH,"nc_get_varm_longlong");
     }
     public static int nc_get_varm_longlong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_longlong$MH();
@@ -3478,7 +3547,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$41.nc_put_varm_ulonglong$MH,"nc_put_varm_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$42.nc_put_varm_ulonglong$MH,"nc_put_varm_ulonglong");
     }
     public static int nc_put_varm_ulonglong ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_ulonglong$MH();
@@ -3511,7 +3580,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$42.nc_get_varm_string$MH,"nc_get_varm_string");
+        return RuntimeHelper.requireNonNull(constants$43.nc_get_varm_string$MH,"nc_get_varm_string");
     }
     public static int nc_get_varm_string ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_string$MH();
@@ -3522,7 +3591,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$42.nc_put_var_text$MH,"nc_put_var_text");
+        return RuntimeHelper.requireNonNull(constants$43.nc_put_var_text$MH,"nc_put_var_text");
     }
     public static int nc_put_var_text ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_text$MH();
@@ -3533,7 +3602,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_text$MH() {
-        return RuntimeHelper.requireNonNull(constants$42.nc_get_var_text$MH,"nc_get_var_text");
+        return RuntimeHelper.requireNonNull(constants$43.nc_get_var_text$MH,"nc_get_var_text");
     }
     public static int nc_get_var_text ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_text$MH();
@@ -3544,7 +3613,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_uchar$MH() {
-        return RuntimeHelper.requireNonNull(constants$42.nc_put_var_uchar$MH,"nc_put_var_uchar");
+        return RuntimeHelper.requireNonNull(constants$43.nc_put_var_uchar$MH,"nc_put_var_uchar");
     }
     public static int nc_put_var_uchar ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_uchar$MH();
@@ -3577,7 +3646,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_schar$MH() {
-        return RuntimeHelper.requireNonNull(constants$43.nc_get_var_schar$MH,"nc_get_var_schar");
+        return RuntimeHelper.requireNonNull(constants$44.nc_get_var_schar$MH,"nc_get_var_schar");
     }
     public static int nc_get_var_schar ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_schar$MH();
@@ -3588,7 +3657,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$43.nc_put_var_short$MH,"nc_put_var_short");
+        return RuntimeHelper.requireNonNull(constants$44.nc_put_var_short$MH,"nc_put_var_short");
     }
     public static int nc_put_var_short ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_short$MH();
@@ -3599,7 +3668,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_short$MH() {
-        return RuntimeHelper.requireNonNull(constants$43.nc_get_var_short$MH,"nc_get_var_short");
+        return RuntimeHelper.requireNonNull(constants$44.nc_get_var_short$MH,"nc_get_var_short");
     }
     public static int nc_get_var_short ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_short$MH();
@@ -3610,7 +3679,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_int$MH() {
-        return RuntimeHelper.requireNonNull(constants$43.nc_put_var_int$MH,"nc_put_var_int");
+        return RuntimeHelper.requireNonNull(constants$44.nc_put_var_int$MH,"nc_put_var_int");
     }
     public static int nc_put_var_int ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_int$MH();
@@ -3643,7 +3712,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_long$MH() {
-        return RuntimeHelper.requireNonNull(constants$44.nc_get_var_long$MH,"nc_get_var_long");
+        return RuntimeHelper.requireNonNull(constants$45.nc_get_var_long$MH,"nc_get_var_long");
     }
     public static int nc_get_var_long ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_long$MH();
@@ -3654,7 +3723,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$44.nc_put_var_float$MH,"nc_put_var_float");
+        return RuntimeHelper.requireNonNull(constants$45.nc_put_var_float$MH,"nc_put_var_float");
     }
     public static int nc_put_var_float ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_float$MH();
@@ -3665,7 +3734,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_float$MH() {
-        return RuntimeHelper.requireNonNull(constants$44.nc_get_var_float$MH,"nc_get_var_float");
+        return RuntimeHelper.requireNonNull(constants$45.nc_get_var_float$MH,"nc_get_var_float");
     }
     public static int nc_get_var_float ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_float$MH();
@@ -3676,7 +3745,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_double$MH() {
-        return RuntimeHelper.requireNonNull(constants$44.nc_put_var_double$MH,"nc_put_var_double");
+        return RuntimeHelper.requireNonNull(constants$45.nc_put_var_double$MH,"nc_put_var_double");
     }
     public static int nc_put_var_double ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_double$MH();
@@ -3709,7 +3778,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_ushort$MH() {
-        return RuntimeHelper.requireNonNull(constants$45.nc_get_var_ushort$MH,"nc_get_var_ushort");
+        return RuntimeHelper.requireNonNull(constants$46.nc_get_var_ushort$MH,"nc_get_var_ushort");
     }
     public static int nc_get_var_ushort ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_ushort$MH();
@@ -3720,7 +3789,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$45.nc_put_var_uint$MH,"nc_put_var_uint");
+        return RuntimeHelper.requireNonNull(constants$46.nc_put_var_uint$MH,"nc_put_var_uint");
     }
     public static int nc_put_var_uint ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_uint$MH();
@@ -3731,7 +3800,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_uint$MH() {
-        return RuntimeHelper.requireNonNull(constants$45.nc_get_var_uint$MH,"nc_get_var_uint");
+        return RuntimeHelper.requireNonNull(constants$46.nc_get_var_uint$MH,"nc_get_var_uint");
     }
     public static int nc_get_var_uint ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_uint$MH();
@@ -3742,7 +3811,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_longlong$MH() {
-        return RuntimeHelper.requireNonNull(constants$45.nc_put_var_longlong$MH,"nc_put_var_longlong");
+        return RuntimeHelper.requireNonNull(constants$46.nc_put_var_longlong$MH,"nc_put_var_longlong");
     }
     public static int nc_put_var_longlong ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_longlong$MH();
@@ -3775,7 +3844,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_ulonglong$MH() {
-        return RuntimeHelper.requireNonNull(constants$46.nc_get_var_ulonglong$MH,"nc_get_var_ulonglong");
+        return RuntimeHelper.requireNonNull(constants$47.nc_get_var_ulonglong$MH,"nc_get_var_ulonglong");
     }
     public static int nc_get_var_ulonglong ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_ulonglong$MH();
@@ -3786,7 +3855,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$46.nc_put_var_string$MH,"nc_put_var_string");
+        return RuntimeHelper.requireNonNull(constants$47.nc_put_var_string$MH,"nc_put_var_string");
     }
     public static int nc_put_var_string ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_string$MH();
@@ -3797,7 +3866,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_string$MH() {
-        return RuntimeHelper.requireNonNull(constants$46.nc_get_var_string$MH,"nc_get_var_string");
+        return RuntimeHelper.requireNonNull(constants$47.nc_get_var_string$MH,"nc_get_var_string");
     }
     public static int nc_get_var_string ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_string$MH();
@@ -3807,8 +3876,63 @@ public class netcdf_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle nc_reclaim_data$MH() {
+        return RuntimeHelper.requireNonNull(constants$47.nc_reclaim_data$MH,"nc_reclaim_data");
+    }
+    public static int nc_reclaim_data ( int ncid,  int xtypeid,  Addressable memory,  long count) {
+        var mh$ = nc_reclaim_data$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, xtypeid, memory, count);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_reclaim_data_all$MH() {
+        return RuntimeHelper.requireNonNull(constants$47.nc_reclaim_data_all$MH,"nc_reclaim_data_all");
+    }
+    public static int nc_reclaim_data_all ( int ncid,  int xtypeid,  Addressable memory,  long count) {
+        var mh$ = nc_reclaim_data_all$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, xtypeid, memory, count);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_copy_data$MH() {
+        return RuntimeHelper.requireNonNull(constants$47.nc_copy_data$MH,"nc_copy_data");
+    }
+    public static int nc_copy_data ( int ncid,  int xtypeid,  Addressable memory,  long count,  Addressable copy) {
+        var mh$ = nc_copy_data$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, xtypeid, memory, count, copy);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_copy_data_all$MH() {
+        return RuntimeHelper.requireNonNull(constants$48.nc_copy_data_all$MH,"nc_copy_data_all");
+    }
+    public static int nc_copy_data_all ( int ncid,  int xtypeid,  Addressable memory,  long count,  Addressable copyp) {
+        var mh$ = nc_copy_data_all$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, xtypeid, memory, count, copyp);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_dump_data$MH() {
+        return RuntimeHelper.requireNonNull(constants$48.nc_dump_data$MH,"nc_dump_data");
+    }
+    public static int nc_dump_data ( int ncid,  int xtypeid,  Addressable memory,  long count,  Addressable buf) {
+        var mh$ = nc_dump_data$MH();
+        try {
+            return (int)mh$.invokeExact(ncid, xtypeid, memory, count, buf);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MethodHandle nc_put_att_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$46.nc_put_att_ubyte$MH,"nc_put_att_ubyte");
+        return RuntimeHelper.requireNonNull(constants$48.nc_put_att_ubyte$MH,"nc_put_att_ubyte");
     }
     public static int nc_put_att_ubyte ( int ncid,  int varid,  Addressable name,  int xtype,  long len,  Addressable op) {
         var mh$ = nc_put_att_ubyte$MH();
@@ -3819,7 +3943,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_att_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_get_att_ubyte$MH,"nc_get_att_ubyte");
+        return RuntimeHelper.requireNonNull(constants$48.nc_get_att_ubyte$MH,"nc_get_att_ubyte");
     }
     public static int nc_get_att_ubyte ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = nc_get_att_ubyte$MH();
@@ -3830,7 +3954,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var1_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_put_var1_ubyte$MH,"nc_put_var1_ubyte");
+        return RuntimeHelper.requireNonNull(constants$48.nc_put_var1_ubyte$MH,"nc_put_var1_ubyte");
     }
     public static int nc_put_var1_ubyte ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = nc_put_var1_ubyte$MH();
@@ -3841,7 +3965,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var1_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_get_var1_ubyte$MH,"nc_get_var1_ubyte");
+        return RuntimeHelper.requireNonNull(constants$48.nc_get_var1_ubyte$MH,"nc_get_var1_ubyte");
     }
     public static int nc_get_var1_ubyte ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = nc_get_var1_ubyte$MH();
@@ -3852,7 +3976,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vara_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_put_vara_ubyte$MH,"nc_put_vara_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_put_vara_ubyte$MH,"nc_put_vara_ubyte");
     }
     public static int nc_put_vara_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = nc_put_vara_ubyte$MH();
@@ -3863,7 +3987,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vara_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_get_vara_ubyte$MH,"nc_get_vara_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_get_vara_ubyte$MH,"nc_get_vara_ubyte");
     }
     public static int nc_get_vara_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = nc_get_vara_ubyte$MH();
@@ -3874,7 +3998,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_vars_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$47.nc_put_vars_ubyte$MH,"nc_put_vars_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_put_vars_ubyte$MH,"nc_put_vars_ubyte");
     }
     public static int nc_put_vars_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = nc_put_vars_ubyte$MH();
@@ -3885,7 +4009,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_vars_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_get_vars_ubyte$MH,"nc_get_vars_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_get_vars_ubyte$MH,"nc_get_vars_ubyte");
     }
     public static int nc_get_vars_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = nc_get_vars_ubyte$MH();
@@ -3896,7 +4020,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_varm_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_put_varm_ubyte$MH,"nc_put_varm_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_put_varm_ubyte$MH,"nc_put_varm_ubyte");
     }
     public static int nc_put_varm_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = nc_put_varm_ubyte$MH();
@@ -3907,7 +4031,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_varm_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_get_varm_ubyte$MH,"nc_get_varm_ubyte");
+        return RuntimeHelper.requireNonNull(constants$49.nc_get_varm_ubyte$MH,"nc_get_varm_ubyte");
     }
     public static int nc_get_varm_ubyte ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = nc_get_varm_ubyte$MH();
@@ -3918,7 +4042,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_put_var_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_put_var_ubyte$MH,"nc_put_var_ubyte");
+        return RuntimeHelper.requireNonNull(constants$50.nc_put_var_ubyte$MH,"nc_put_var_ubyte");
     }
     public static int nc_put_var_ubyte ( int ncid,  int varid,  Addressable op) {
         var mh$ = nc_put_var_ubyte$MH();
@@ -3929,7 +4053,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_get_var_ubyte$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_get_var_ubyte$MH,"nc_get_var_ubyte");
+        return RuntimeHelper.requireNonNull(constants$50.nc_get_var_ubyte$MH,"nc_get_var_ubyte");
     }
     public static int nc_get_var_ubyte ( int ncid,  int varid,  Addressable ip) {
         var mh$ = nc_get_var_ubyte$MH();
@@ -3940,7 +4064,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_set_log_level$MH() {
-        return RuntimeHelper.requireNonNull(constants$48.nc_set_log_level$MH,"nc_set_log_level");
+        return RuntimeHelper.requireNonNull(constants$50.nc_set_log_level$MH,"nc_set_log_level");
     }
     public static int nc_set_log_level ( int new_level) {
         var mh$ = nc_set_log_level$MH();
@@ -3951,7 +4075,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_show_metadata$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc_show_metadata$MH,"nc_show_metadata");
+        return RuntimeHelper.requireNonNull(constants$50.nc_show_metadata$MH,"nc_show_metadata");
     }
     public static int nc_show_metadata ( int ncid) {
         var mh$ = nc_show_metadata$MH();
@@ -3962,7 +4086,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_delete$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc_delete$MH,"nc_delete");
+        return RuntimeHelper.requireNonNull(constants$50.nc_delete$MH,"nc_delete");
     }
     public static int nc_delete ( Addressable path) {
         var mh$ = nc_delete$MH();
@@ -3973,7 +4097,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc__create_mp$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc__create_mp$MH,"nc__create_mp");
+        return RuntimeHelper.requireNonNull(constants$50.nc__create_mp$MH,"nc__create_mp");
     }
     public static int nc__create_mp ( Addressable path,  int cmode,  long initialsz,  int basepe,  Addressable chunksizehintp,  Addressable ncidp) {
         var mh$ = nc__create_mp$MH();
@@ -3984,7 +4108,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc__open_mp$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc__open_mp$MH,"nc__open_mp");
+        return RuntimeHelper.requireNonNull(constants$51.nc__open_mp$MH,"nc__open_mp");
     }
     public static int nc__open_mp ( Addressable path,  int mode,  int basepe,  Addressable chunksizehintp,  Addressable ncidp) {
         var mh$ = nc__open_mp$MH();
@@ -3995,7 +4119,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_delete_mp$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc_delete_mp$MH,"nc_delete_mp");
+        return RuntimeHelper.requireNonNull(constants$51.nc_delete_mp$MH,"nc_delete_mp");
     }
     public static int nc_delete_mp ( Addressable path,  int basepe) {
         var mh$ = nc_delete_mp$MH();
@@ -4006,7 +4130,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_set_base_pe$MH() {
-        return RuntimeHelper.requireNonNull(constants$49.nc_set_base_pe$MH,"nc_set_base_pe");
+        return RuntimeHelper.requireNonNull(constants$51.nc_set_base_pe$MH,"nc_set_base_pe");
     }
     public static int nc_set_base_pe ( int ncid,  int pe) {
         var mh$ = nc_set_base_pe$MH();
@@ -4017,7 +4141,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_inq_base_pe$MH() {
-        return RuntimeHelper.requireNonNull(constants$50.nc_inq_base_pe$MH,"nc_inq_base_pe");
+        return RuntimeHelper.requireNonNull(constants$51.nc_inq_base_pe$MH,"nc_inq_base_pe");
     }
     public static int nc_inq_base_pe ( int ncid,  Addressable pe) {
         var mh$ = nc_inq_base_pe$MH();
@@ -4028,7 +4152,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nctypelen$MH() {
-        return RuntimeHelper.requireNonNull(constants$50.nctypelen$MH,"nctypelen");
+        return RuntimeHelper.requireNonNull(constants$51.nctypelen$MH,"nctypelen");
     }
     public static int nctypelen ( int datatype) {
         var mh$ = nctypelen$MH();
@@ -4039,37 +4163,37 @@ public class netcdf_h  {
         }
     }
     public static MemoryLayout ncerr$LAYOUT() {
-        return constants$50.ncerr$LAYOUT;
+        return constants$51.ncerr$LAYOUT;
     }
     public static VarHandle ncerr$VH() {
-        return constants$50.ncerr$VH;
+        return constants$51.ncerr$VH;
     }
     public static MemorySegment ncerr$SEGMENT() {
-        return RuntimeHelper.requireNonNull(constants$50.ncerr$SEGMENT,"ncerr");
+        return RuntimeHelper.requireNonNull(constants$51.ncerr$SEGMENT,"ncerr");
     }
     public static int ncerr$get() {
-        return (int) constants$50.ncerr$VH.get(RuntimeHelper.requireNonNull(constants$50.ncerr$SEGMENT, "ncerr"));
+        return (int) constants$51.ncerr$VH.get(RuntimeHelper.requireNonNull(constants$51.ncerr$SEGMENT, "ncerr"));
     }
     public static void ncerr$set( int x) {
-        constants$50.ncerr$VH.set(RuntimeHelper.requireNonNull(constants$50.ncerr$SEGMENT, "ncerr"), x);
+        constants$51.ncerr$VH.set(RuntimeHelper.requireNonNull(constants$51.ncerr$SEGMENT, "ncerr"), x);
     }
     public static MemoryLayout ncopts$LAYOUT() {
-        return constants$50.ncopts$LAYOUT;
+        return constants$52.ncopts$LAYOUT;
     }
     public static VarHandle ncopts$VH() {
-        return constants$50.ncopts$VH;
+        return constants$52.ncopts$VH;
     }
     public static MemorySegment ncopts$SEGMENT() {
-        return RuntimeHelper.requireNonNull(constants$50.ncopts$SEGMENT,"ncopts");
+        return RuntimeHelper.requireNonNull(constants$52.ncopts$SEGMENT,"ncopts");
     }
     public static int ncopts$get() {
-        return (int) constants$50.ncopts$VH.get(RuntimeHelper.requireNonNull(constants$50.ncopts$SEGMENT, "ncopts"));
+        return (int) constants$52.ncopts$VH.get(RuntimeHelper.requireNonNull(constants$52.ncopts$SEGMENT, "ncopts"));
     }
     public static void ncopts$set( int x) {
-        constants$50.ncopts$VH.set(RuntimeHelper.requireNonNull(constants$50.ncopts$SEGMENT, "ncopts"), x);
+        constants$52.ncopts$VH.set(RuntimeHelper.requireNonNull(constants$52.ncopts$SEGMENT, "ncopts"), x);
     }
     public static MethodHandle nc_advise$MH() {
-        return RuntimeHelper.requireNonNull(constants$50.nc_advise$MH,"nc_advise");
+        return RuntimeHelper.requireNonNull(constants$52.nc_advise$MH,"nc_advise");
     }
     public static void nc_advise ( Addressable cdf_routine_name,  int err,  Addressable fmt, Object... x3) {
         var mh$ = nc_advise$MH();
@@ -4081,7 +4205,7 @@ public class netcdf_h  {
     }
     public static OfInt nclong = Constants$root.C_INT$LAYOUT;
     public static MethodHandle nccreate$MH() {
-        return RuntimeHelper.requireNonNull(constants$50.nccreate$MH,"nccreate");
+        return RuntimeHelper.requireNonNull(constants$52.nccreate$MH,"nccreate");
     }
     public static int nccreate ( Addressable path,  int cmode) {
         var mh$ = nccreate$MH();
@@ -4092,7 +4216,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncopen$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncopen$MH,"ncopen");
+        return RuntimeHelper.requireNonNull(constants$52.ncopen$MH,"ncopen");
     }
     public static int ncopen ( Addressable path,  int mode) {
         var mh$ = ncopen$MH();
@@ -4103,7 +4227,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncsetfill$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncsetfill$MH,"ncsetfill");
+        return RuntimeHelper.requireNonNull(constants$52.ncsetfill$MH,"ncsetfill");
     }
     public static int ncsetfill ( int ncid,  int fillmode) {
         var mh$ = ncsetfill$MH();
@@ -4114,7 +4238,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncredef$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncredef$MH,"ncredef");
+        return RuntimeHelper.requireNonNull(constants$52.ncredef$MH,"ncredef");
     }
     public static int ncredef ( int ncid) {
         var mh$ = ncredef$MH();
@@ -4125,7 +4249,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncendef$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncendef$MH,"ncendef");
+        return RuntimeHelper.requireNonNull(constants$53.ncendef$MH,"ncendef");
     }
     public static int ncendef ( int ncid) {
         var mh$ = ncendef$MH();
@@ -4136,7 +4260,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncsync$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncsync$MH,"ncsync");
+        return RuntimeHelper.requireNonNull(constants$53.ncsync$MH,"ncsync");
     }
     public static int ncsync ( int ncid) {
         var mh$ = ncsync$MH();
@@ -4147,7 +4271,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncabort$MH() {
-        return RuntimeHelper.requireNonNull(constants$51.ncabort$MH,"ncabort");
+        return RuntimeHelper.requireNonNull(constants$53.ncabort$MH,"ncabort");
     }
     public static int ncabort ( int ncid) {
         var mh$ = ncabort$MH();
@@ -4158,7 +4282,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncclose$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncclose$MH,"ncclose");
+        return RuntimeHelper.requireNonNull(constants$53.ncclose$MH,"ncclose");
     }
     public static int ncclose ( int ncid) {
         var mh$ = ncclose$MH();
@@ -4169,7 +4293,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncinquire$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncinquire$MH,"ncinquire");
+        return RuntimeHelper.requireNonNull(constants$53.ncinquire$MH,"ncinquire");
     }
     public static int ncinquire ( int ncid,  Addressable ndimsp,  Addressable nvarsp,  Addressable nattsp,  Addressable unlimdimp) {
         var mh$ = ncinquire$MH();
@@ -4180,7 +4304,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncdimdef$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncdimdef$MH,"ncdimdef");
+        return RuntimeHelper.requireNonNull(constants$53.ncdimdef$MH,"ncdimdef");
     }
     public static int ncdimdef ( int ncid,  Addressable name,  long len) {
         var mh$ = ncdimdef$MH();
@@ -4191,7 +4315,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncdimid$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncdimid$MH,"ncdimid");
+        return RuntimeHelper.requireNonNull(constants$54.ncdimid$MH,"ncdimid");
     }
     public static int ncdimid ( int ncid,  Addressable name) {
         var mh$ = ncdimid$MH();
@@ -4202,7 +4326,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncdiminq$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncdiminq$MH,"ncdiminq");
+        return RuntimeHelper.requireNonNull(constants$54.ncdiminq$MH,"ncdiminq");
     }
     public static int ncdiminq ( int ncid,  int dimid,  Addressable name,  Addressable lenp) {
         var mh$ = ncdiminq$MH();
@@ -4213,7 +4337,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncdimrename$MH() {
-        return RuntimeHelper.requireNonNull(constants$52.ncdimrename$MH,"ncdimrename");
+        return RuntimeHelper.requireNonNull(constants$54.ncdimrename$MH,"ncdimrename");
     }
     public static int ncdimrename ( int ncid,  int dimid,  Addressable name) {
         var mh$ = ncdimrename$MH();
@@ -4224,7 +4348,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattput$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattput$MH,"ncattput");
+        return RuntimeHelper.requireNonNull(constants$54.ncattput$MH,"ncattput");
     }
     public static int ncattput ( int ncid,  int varid,  Addressable name,  int xtype,  int len,  Addressable op) {
         var mh$ = ncattput$MH();
@@ -4235,7 +4359,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattinq$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattinq$MH,"ncattinq");
+        return RuntimeHelper.requireNonNull(constants$54.ncattinq$MH,"ncattinq");
     }
     public static int ncattinq ( int ncid,  int varid,  Addressable name,  Addressable xtypep,  Addressable lenp) {
         var mh$ = ncattinq$MH();
@@ -4246,7 +4370,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattget$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattget$MH,"ncattget");
+        return RuntimeHelper.requireNonNull(constants$54.ncattget$MH,"ncattget");
     }
     public static int ncattget ( int ncid,  int varid,  Addressable name,  Addressable ip) {
         var mh$ = ncattget$MH();
@@ -4257,7 +4381,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattcopy$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattcopy$MH,"ncattcopy");
+        return RuntimeHelper.requireNonNull(constants$55.ncattcopy$MH,"ncattcopy");
     }
     public static int ncattcopy ( int ncid_in,  int varid_in,  Addressable name,  int ncid_out,  int varid_out) {
         var mh$ = ncattcopy$MH();
@@ -4268,7 +4392,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattname$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattname$MH,"ncattname");
+        return RuntimeHelper.requireNonNull(constants$55.ncattname$MH,"ncattname");
     }
     public static int ncattname ( int ncid,  int varid,  int attnum,  Addressable name) {
         var mh$ = ncattname$MH();
@@ -4279,7 +4403,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattrename$MH() {
-        return RuntimeHelper.requireNonNull(constants$53.ncattrename$MH,"ncattrename");
+        return RuntimeHelper.requireNonNull(constants$55.ncattrename$MH,"ncattrename");
     }
     public static int ncattrename ( int ncid,  int varid,  Addressable name,  Addressable newname) {
         var mh$ = ncattrename$MH();
@@ -4290,7 +4414,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncattdel$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncattdel$MH,"ncattdel");
+        return RuntimeHelper.requireNonNull(constants$55.ncattdel$MH,"ncattdel");
     }
     public static int ncattdel ( int ncid,  int varid,  Addressable name) {
         var mh$ = ncattdel$MH();
@@ -4301,7 +4425,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvardef$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncvardef$MH,"ncvardef");
+        return RuntimeHelper.requireNonNull(constants$55.ncvardef$MH,"ncvardef");
     }
     public static int ncvardef ( int ncid,  Addressable name,  int xtype,  int ndims,  Addressable dimidsp) {
         var mh$ = ncvardef$MH();
@@ -4312,7 +4436,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarid$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncvarid$MH,"ncvarid");
+        return RuntimeHelper.requireNonNull(constants$55.ncvarid$MH,"ncvarid");
     }
     public static int ncvarid ( int ncid,  Addressable name) {
         var mh$ = ncvarid$MH();
@@ -4323,7 +4447,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarinq$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncvarinq$MH,"ncvarinq");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarinq$MH,"ncvarinq");
     }
     public static int ncvarinq ( int ncid,  int varid,  Addressable name,  Addressable xtypep,  Addressable ndimsp,  Addressable dimidsp,  Addressable nattsp) {
         var mh$ = ncvarinq$MH();
@@ -4334,7 +4458,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarput1$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncvarput1$MH,"ncvarput1");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarput1$MH,"ncvarput1");
     }
     public static int ncvarput1 ( int ncid,  int varid,  Addressable indexp,  Addressable op) {
         var mh$ = ncvarput1$MH();
@@ -4345,7 +4469,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarget1$MH() {
-        return RuntimeHelper.requireNonNull(constants$54.ncvarget1$MH,"ncvarget1");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarget1$MH,"ncvarget1");
     }
     public static int ncvarget1 ( int ncid,  int varid,  Addressable indexp,  Addressable ip) {
         var mh$ = ncvarget1$MH();
@@ -4356,7 +4480,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarput$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvarput$MH,"ncvarput");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarput$MH,"ncvarput");
     }
     public static int ncvarput ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable op) {
         var mh$ = ncvarput$MH();
@@ -4367,7 +4491,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarget$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvarget$MH,"ncvarget");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarget$MH,"ncvarget");
     }
     public static int ncvarget ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable ip) {
         var mh$ = ncvarget$MH();
@@ -4378,7 +4502,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarputs$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvarputs$MH,"ncvarputs");
+        return RuntimeHelper.requireNonNull(constants$56.ncvarputs$MH,"ncvarputs");
     }
     public static int ncvarputs ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable op) {
         var mh$ = ncvarputs$MH();
@@ -4389,7 +4513,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvargets$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvargets$MH,"ncvargets");
+        return RuntimeHelper.requireNonNull(constants$57.ncvargets$MH,"ncvargets");
     }
     public static int ncvargets ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable ip) {
         var mh$ = ncvargets$MH();
@@ -4400,7 +4524,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarputg$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvarputg$MH,"ncvarputg");
+        return RuntimeHelper.requireNonNull(constants$57.ncvarputg$MH,"ncvarputg");
     }
     public static int ncvarputg ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable op) {
         var mh$ = ncvarputg$MH();
@@ -4411,7 +4535,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvargetg$MH() {
-        return RuntimeHelper.requireNonNull(constants$55.ncvargetg$MH,"ncvargetg");
+        return RuntimeHelper.requireNonNull(constants$57.ncvargetg$MH,"ncvargetg");
     }
     public static int ncvargetg ( int ncid,  int varid,  Addressable startp,  Addressable countp,  Addressable stridep,  Addressable imapp,  Addressable ip) {
         var mh$ = ncvargetg$MH();
@@ -4422,7 +4546,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncvarrename$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.ncvarrename$MH,"ncvarrename");
+        return RuntimeHelper.requireNonNull(constants$57.ncvarrename$MH,"ncvarrename");
     }
     public static int ncvarrename ( int ncid,  int varid,  Addressable name) {
         var mh$ = ncvarrename$MH();
@@ -4433,7 +4557,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncrecinq$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.ncrecinq$MH,"ncrecinq");
+        return RuntimeHelper.requireNonNull(constants$57.ncrecinq$MH,"ncrecinq");
     }
     public static int ncrecinq ( int ncid,  Addressable nrecvarsp,  Addressable recvaridsp,  Addressable recsizesp) {
         var mh$ = ncrecinq$MH();
@@ -4444,7 +4568,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncrecget$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.ncrecget$MH,"ncrecget");
+        return RuntimeHelper.requireNonNull(constants$57.ncrecget$MH,"ncrecget");
     }
     public static int ncrecget ( int ncid,  long recnum,  Addressable datap) {
         var mh$ = ncrecget$MH();
@@ -4455,7 +4579,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle ncrecput$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.ncrecput$MH,"ncrecput");
+        return RuntimeHelper.requireNonNull(constants$58.ncrecput$MH,"ncrecput");
     }
     public static int ncrecput ( int ncid,  long recnum,  Addressable datap) {
         var mh$ = ncrecput$MH();
@@ -4466,7 +4590,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_initialize$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.nc_initialize$MH,"nc_initialize");
+        return RuntimeHelper.requireNonNull(constants$58.nc_initialize$MH,"nc_initialize");
     }
     public static int nc_initialize () {
         var mh$ = nc_initialize$MH();
@@ -4477,7 +4601,7 @@ public class netcdf_h  {
         }
     }
     public static MethodHandle nc_finalize$MH() {
-        return RuntimeHelper.requireNonNull(constants$56.nc_finalize$MH,"nc_finalize");
+        return RuntimeHelper.requireNonNull(constants$58.nc_finalize$MH,"nc_finalize");
     }
     public static int nc_finalize () {
         var mh$ = nc_finalize$MH();
@@ -4487,8 +4611,30 @@ public class netcdf_h  {
             throw new AssertionError("should not reach here", ex$);
         }
     }
+    public static MethodHandle nc_rc_get$MH() {
+        return RuntimeHelper.requireNonNull(constants$58.nc_rc_get$MH,"nc_rc_get");
+    }
+    public static MemoryAddress nc_rc_get ( Addressable key) {
+        var mh$ = nc_rc_get$MH();
+        try {
+            return (java.lang.foreign.MemoryAddress)mh$.invokeExact(key);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle nc_rc_set$MH() {
+        return RuntimeHelper.requireNonNull(constants$58.nc_rc_set$MH,"nc_rc_set");
+    }
+    public static int nc_rc_set ( Addressable key,  Addressable value) {
+        var mh$ = nc_rc_set$MH();
+        try {
+            return (int)mh$.invokeExact(key, value);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
     public static MemoryAddress NULL() {
-        return constants$57.NULL$ADDR;
+        return constants$58.NULL$ADDR;
     }
     public static long _POSIX_C_SOURCE() {
         return 200809L;
@@ -4593,7 +4739,7 @@ public class netcdf_h  {
         return -1L;
     }
     public static MemorySegment _FillValue() {
-        return constants$57._FillValue$SEGMENT;
+        return constants$59._FillValue$SEGMENT;
     }
     public static int NC_CDF5() {
         return (int)32L;
@@ -4696,6 +4842,27 @@ public class netcdf_h  {
     }
     public static int NC_MAX_HDF4_NAME() {
         return (int)256L;
+    }
+    public static MemorySegment NC_QUANTIZE_BITGROOM_ATT_NAME() {
+        return constants$59.NC_QUANTIZE_BITGROOM_ATT_NAME$SEGMENT;
+    }
+    public static MemorySegment NC_QUANTIZE_GRANULARBR_ATT_NAME() {
+        return constants$59.NC_QUANTIZE_GRANULARBR_ATT_NAME$SEGMENT;
+    }
+    public static MemorySegment NC_QUANTIZE_BITROUND_ATT_NAME() {
+        return constants$59.NC_QUANTIZE_BITROUND_ATT_NAME$SEGMENT;
+    }
+    public static int NC_QUANTIZE_MAX_FLOAT_NSD() {
+        return (int)7L;
+    }
+    public static int NC_QUANTIZE_MAX_FLOAT_NSB() {
+        return (int)23L;
+    }
+    public static int NC_QUANTIZE_MAX_DOUBLE_NSD() {
+        return (int)15L;
+    }
+    public static int NC_QUANTIZE_MAX_DOUBLE_NSB() {
+        return (int)52L;
     }
     public static int NC2_ERR() {
         return (int)-1L;
@@ -4995,7 +5162,10 @@ public class netcdf_h  {
         return (int)-75L;
     }
     public static MemorySegment DIM_WITHOUT_VARIABLE() {
-        return constants$57.DIM_WITHOUT_VARIABLE$SEGMENT;
+        return constants$59.DIM_WITHOUT_VARIABLE$SEGMENT;
+    }
+    public static MemorySegment NC_UNDEFINED_ENUM_IDENT() {
+        return constants$59.NC_UNDEFINED_ENUM_IDENT$SEGMENT;
     }
     public static int NC_TURN_OFF_LOGGING() {
         return (int)-1L;

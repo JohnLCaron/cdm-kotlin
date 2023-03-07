@@ -8,7 +8,6 @@ import com.sunya.cdm.array.ArraySingle
 import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import java.io.IOException
 import java.nio.ByteBuffer
 
@@ -37,7 +36,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
         val wantSection = Section.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable
-        if (vinfo.onlyFillValue) { // fill value only, no  data
+        if (vinfo.onlyFillValue) { // fill value only, no data
             return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
         }
 

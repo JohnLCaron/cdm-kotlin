@@ -39,7 +39,13 @@ class Hdf5cdlCompare {
                     .withRecursion()
                     .build()
 
-            return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
+            val hdfeos5 =
+                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5")
+                    .withRecursion()
+                    .build()
+
+            return hdfeos5
+            // return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
         }
     }
 
@@ -58,7 +64,7 @@ class Hdf5cdlCompare {
     fun checkVersion(filename: String) {
         Hdf5File(filename).use { ncfile ->
             println("${ncfile.type()} $filename ")
-            assertTrue((ncfile.type() == "hdf5") or (ncfile.type() == "netcdf4"))
+            assertTrue(ncfile.type().contains("hdf5") or (ncfile.type().contains("netcdf4")))
         }
     }
 

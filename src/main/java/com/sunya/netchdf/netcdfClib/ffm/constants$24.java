@@ -3,10 +3,56 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$24 {
 
+    static final FunctionDescriptor nc_get_att_ulonglong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_att_ulonglong$MH = RuntimeHelper.downcallHandle(
+        "nc_get_att_ulonglong",
+        constants$24.nc_get_att_ulonglong$FUNC
+    );
+    static final FunctionDescriptor nc_def_var$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_def_var$MH = RuntimeHelper.downcallHandle(
+        "nc_def_var",
+        constants$24.nc_def_var$FUNC
+    );
+    static final FunctionDescriptor nc_inq_var$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_var$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_var",
+        constants$24.nc_inq_var$FUNC
+    );
+    static final FunctionDescriptor nc_inq_varid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_varid$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_varid",
+        constants$24.nc_inq_varid$FUNC
+    );
     static final FunctionDescriptor nc_inq_varname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -24,42 +70,6 @@ class constants$24 {
     static final MethodHandle nc_inq_vartype$MH = RuntimeHelper.downcallHandle(
         "nc_inq_vartype",
         constants$24.nc_inq_vartype$FUNC
-    );
-    static final FunctionDescriptor nc_inq_varndims$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_varndims$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_varndims",
-        constants$24.nc_inq_varndims$FUNC
-    );
-    static final FunctionDescriptor nc_inq_vardimid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_vardimid$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_vardimid",
-        constants$24.nc_inq_vardimid$FUNC
-    );
-    static final FunctionDescriptor nc_inq_varnatts$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_varnatts$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_varnatts",
-        constants$24.nc_inq_varnatts$FUNC
-    );
-    static final FunctionDescriptor nc_rename_var$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_rename_var$MH = RuntimeHelper.downcallHandle(
-        "nc_rename_var",
-        constants$24.nc_rename_var$FUNC
     );
 }
 

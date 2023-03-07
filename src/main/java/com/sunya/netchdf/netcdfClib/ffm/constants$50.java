@@ -4,47 +4,61 @@ package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
 import static java.lang.foreign.ValueLayout.*;
 class constants$50 {
 
-    static final FunctionDescriptor nc_inq_base_pe$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+    static final FunctionDescriptor nc_put_var_ubyte$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle nc_inq_base_pe$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_base_pe",
-        constants$50.nc_inq_base_pe$FUNC
+    static final MethodHandle nc_put_var_ubyte$MH = RuntimeHelper.downcallHandle(
+        "nc_put_var_ubyte",
+        constants$50.nc_put_var_ubyte$FUNC
     );
-    static final FunctionDescriptor nctypelen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT
-    );
-    static final MethodHandle nctypelen$MH = RuntimeHelper.downcallHandle(
-        "nctypelen",
-        constants$50.nctypelen$FUNC
-    );
-    static final  OfInt ncerr$LAYOUT = Constants$root.C_INT$LAYOUT;
-    static final VarHandle ncerr$VH = constants$50.ncerr$LAYOUT.varHandle();
-    static final MemorySegment ncerr$SEGMENT = RuntimeHelper.lookupGlobalVariable("ncerr", constants$50.ncerr$LAYOUT);
-    static final  OfInt ncopts$LAYOUT = Constants$root.C_INT$LAYOUT;
-    static final VarHandle ncopts$VH = constants$50.ncopts$LAYOUT.varHandle();
-    static final MemorySegment ncopts$SEGMENT = RuntimeHelper.lookupGlobalVariable("ncopts", constants$50.ncopts$LAYOUT);
-    static final FunctionDescriptor nc_advise$FUNC = FunctionDescriptor.ofVoid(
-        Constants$root.C_POINTER$LAYOUT,
+    static final FunctionDescriptor nc_get_var_ubyte$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle nc_advise$MH = RuntimeHelper.downcallHandleVariadic(
-        "nc_advise",
-        constants$50.nc_advise$FUNC
+    static final MethodHandle nc_get_var_ubyte$MH = RuntimeHelper.downcallHandle(
+        "nc_get_var_ubyte",
+        constants$50.nc_get_var_ubyte$FUNC
     );
-    static final FunctionDescriptor nccreate$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
+    static final FunctionDescriptor nc_set_log_level$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT
     );
-    static final MethodHandle nccreate$MH = RuntimeHelper.downcallHandle(
-        "nccreate",
-        constants$50.nccreate$FUNC
+    static final MethodHandle nc_set_log_level$MH = RuntimeHelper.downcallHandle(
+        "nc_set_log_level",
+        constants$50.nc_set_log_level$FUNC
+    );
+    static final FunctionDescriptor nc_show_metadata$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT
+    );
+    static final MethodHandle nc_show_metadata$MH = RuntimeHelper.downcallHandle(
+        "nc_show_metadata",
+        constants$50.nc_show_metadata$FUNC
+    );
+    static final FunctionDescriptor nc_delete$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_delete$MH = RuntimeHelper.downcallHandle(
+        "nc_delete",
+        constants$50.nc_delete$FUNC
+    );
+    static final FunctionDescriptor nc__create_mp$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_LONG_LONG$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc__create_mp$MH = RuntimeHelper.downcallHandle(
+        "nc__create_mp",
+        constants$50.nc__create_mp$FUNC
     );
 }
 

@@ -14,12 +14,12 @@ import java.nio.*
 class LayoutTiledBB(
     val chunkIterator: DataChunkIterator, // iterator over all data chunks
     val chunkSize: IntArray, // all chunks assumed to be the same size
-    val elemSize: Int, // size of an element in bytes.
+    override val elemSize: Int, // size of an element in bytes.
     val wantSection: Section // the wanted section of data, contains a List of Range objects. Must be complete.
-) {
+) : Layout {
 
     // track the overall iteration
-    val totalNelems: Long
+    override val totalNelems: Long
     private var totalNelemsDone: Long
     private var index: IndexChunkerTiled? = null // iterate within a chunk
     private var next: Chunk? = null
@@ -30,7 +30,7 @@ class LayoutTiledBB(
         totalNelemsDone = 0
     }
 
-    fun hasNext(): Boolean { // have to actually fetch the thing
+    override fun hasNext(): Boolean { // have to actually fetch the thing
         if (totalNelemsDone >= totalNelems) return false
         if (index == null || !index!!.hasNext()) { // get new data node
             var dataSection: Section
@@ -69,7 +69,7 @@ class LayoutTiledBB(
         return true
     }
 
-    fun next(): LayoutBB.Chunk {
+    override fun next(): LayoutBB.Chunk {
         return next!!
     }
 

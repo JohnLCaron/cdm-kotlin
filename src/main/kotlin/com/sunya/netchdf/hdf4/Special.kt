@@ -24,7 +24,7 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
     val fill_value: ByteArray
     val sp_tag_header: ByteArray
 
-    internal var dataChunks: MutableList<DataChunk>? = null
+    internal var dataChunks: MutableList<SpecialDataChunk>? = null
 
     init {
         head_len = raf.readInt(state)
@@ -52,9 +52,9 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
         sp_tag_header = raf.readBytes(state, sp_header_len)
     }
 
-    internal fun getDataChunks(h4: H4builder, ncfile: Netcdf): List<DataChunk> {
+    internal fun getDataChunks(h4: H4builder, ncfile: Netcdf): List<SpecialDataChunk> {
         if (dataChunks == null) {
-            dataChunks = mutableListOf<DataChunk>()
+            dataChunks = mutableListOf<SpecialDataChunk>()
 
             /* TODO read the chunk table - stored as a Structure in the data
             val chunkTableTag = h4.tagidMap[H4builder.tagid(chunk_tbl_ref, chunk_tbl_tag)] as TagVH
@@ -106,7 +106,7 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
     }
 }
 
-internal class DataChunk(
+internal class SpecialDataChunk(
     originA: Array<Int>,
     chunk_length: IntArray,
     val data: TagData

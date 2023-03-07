@@ -29,7 +29,7 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
     var segSize = IntArray(0)
 
     // chunked
-    var chunks: List<DataChunk>? = null
+    var chunks: List<SpecialDataChunk>? = null
     var chunkSize = IntArray(0)
 
     fun setVariable(v: Variable.Builder) {
@@ -103,7 +103,7 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
         }
     }
 
-    fun readChunks(h4 : H4builder, ncfile : Netcdf): List<DataChunk> {
+    fun readChunks(h4 : H4builder, ncfile : Netcdf): List<SpecialDataChunk> {
         return data?.chunked?.getDataChunks(h4, ncfile) ?: emptyList()
     }
 

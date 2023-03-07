@@ -3,10 +3,56 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$31 {
 
+    static final FunctionDescriptor nc_get_vara_schar$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_vara_schar$MH = RuntimeHelper.downcallHandle(
+        "nc_get_vara_schar",
+        constants$31.nc_get_vara_schar$FUNC
+    );
+    static final FunctionDescriptor nc_put_vara_short$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_vara_short$MH = RuntimeHelper.downcallHandle(
+        "nc_put_vara_short",
+        constants$31.nc_put_vara_short$FUNC
+    );
+    static final FunctionDescriptor nc_get_vara_short$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_vara_short$MH = RuntimeHelper.downcallHandle(
+        "nc_get_vara_short",
+        constants$31.nc_get_vara_short$FUNC
+    );
+    static final FunctionDescriptor nc_put_vara_int$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_vara_int$MH = RuntimeHelper.downcallHandle(
+        "nc_put_vara_int",
+        constants$31.nc_put_vara_int$FUNC
+    );
     static final FunctionDescriptor nc_get_vara_int$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -28,50 +74,6 @@ class constants$31 {
     static final MethodHandle nc_put_vara_long$MH = RuntimeHelper.downcallHandle(
         "nc_put_vara_long",
         constants$31.nc_put_vara_long$FUNC
-    );
-    static final FunctionDescriptor nc_get_vara_long$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_vara_long$MH = RuntimeHelper.downcallHandle(
-        "nc_get_vara_long",
-        constants$31.nc_get_vara_long$FUNC
-    );
-    static final FunctionDescriptor nc_put_vara_float$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_vara_float$MH = RuntimeHelper.downcallHandle(
-        "nc_put_vara_float",
-        constants$31.nc_put_vara_float$FUNC
-    );
-    static final FunctionDescriptor nc_get_vara_float$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_vara_float$MH = RuntimeHelper.downcallHandle(
-        "nc_get_vara_float",
-        constants$31.nc_get_vara_float$FUNC
-    );
-    static final FunctionDescriptor nc_put_vara_double$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_vara_double$MH = RuntimeHelper.downcallHandle(
-        "nc_put_vara_double",
-        constants$31.nc_put_vara_double$FUNC
     );
 }
 

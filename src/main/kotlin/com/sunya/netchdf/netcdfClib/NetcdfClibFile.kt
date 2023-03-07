@@ -21,6 +21,8 @@ dpkg -L libhdf5-dev
  /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
 
 cd /home/snake/install/jextract-19/bin
+
+netcdf library version 4.8.1 of Sep 29 2021 09:36:14
 ./jextract --source \
     --header-class-name netcdf_h \
     --target-package sunya.cdm.netcdf4.ffm \
@@ -28,6 +30,14 @@ cd /home/snake/install/jextract-19/bin
     -l /usr/lib/x86_64-linux-gnu/libnetcdf.so \
     --output /home/snake/dev/github/cdm-kotlin/src/main/java \
     /usr/include/netcdf.h
+
+./jextract --source \
+    --header-class-name netcdf_h \
+    --target-package com.sunya.netchdf.netcdfClib.ffm \
+    -I /home/snake/install/netcdf4/include/netcdf.h \
+    -l /home/snake/install/netcdf4/lib/libnetcdf.so \
+    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
+    /home/snake/install/netcdf4/include/netcdf.h
  */
 
 class NetcdfClibFile(val filename: String) : Iosp, Netcdf {

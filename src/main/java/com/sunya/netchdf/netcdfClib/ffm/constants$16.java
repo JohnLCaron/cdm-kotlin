@@ -3,10 +3,46 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$16 {
 
+    static final FunctionDescriptor nc_close$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT
+    );
+    static final MethodHandle nc_close$MH = RuntimeHelper.downcallHandle(
+        "nc_close",
+        constants$16.nc_close$FUNC
+    );
+    static final FunctionDescriptor nc_inq$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq$MH = RuntimeHelper.downcallHandle(
+        "nc_inq",
+        constants$16.nc_inq$FUNC
+    );
+    static final FunctionDescriptor nc_inq_ndims$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_ndims$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_ndims",
+        constants$16.nc_inq_ndims$FUNC
+    );
+    static final FunctionDescriptor nc_inq_nvars$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_nvars$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_nvars",
+        constants$16.nc_inq_nvars$FUNC
+    );
     static final FunctionDescriptor nc_inq_natts$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
@@ -22,42 +58,6 @@ class constants$16 {
     static final MethodHandle nc_inq_unlimdim$MH = RuntimeHelper.downcallHandle(
         "nc_inq_unlimdim",
         constants$16.nc_inq_unlimdim$FUNC
-    );
-    static final FunctionDescriptor nc_inq_unlimdims$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_unlimdims$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_unlimdims",
-        constants$16.nc_inq_unlimdims$FUNC
-    );
-    static final FunctionDescriptor nc_inq_format$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_format$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_format",
-        constants$16.nc_inq_format$FUNC
-    );
-    static final FunctionDescriptor nc_inq_format_extended$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_format_extended$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_format_extended",
-        constants$16.nc_inq_format_extended$FUNC
-    );
-    static final FunctionDescriptor nc_def_dim$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_LONG_LONG$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_def_dim$MH = RuntimeHelper.downcallHandle(
-        "nc_def_dim",
-        constants$16.nc_def_dim$FUNC
     );
 }
 

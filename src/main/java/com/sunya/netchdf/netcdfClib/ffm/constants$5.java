@@ -3,10 +3,32 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$5 {
 
+    static final FunctionDescriptor nc_inq_typeid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_typeid$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_typeid",
+        constants$5.nc_inq_typeid$FUNC
+    );
+    static final FunctionDescriptor nc_inq_compound$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_compound$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_compound",
+        constants$5.nc_inq_compound$FUNC
+    );
     static final FunctionDescriptor nc_inq_compound_name$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -47,26 +69,6 @@ class constants$5 {
     static final MethodHandle nc_inq_compound_field$MH = RuntimeHelper.downcallHandle(
         "nc_inq_compound_field",
         constants$5.nc_inq_compound_field$FUNC
-    );
-    static final FunctionDescriptor nc_inq_compound_fieldname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_compound_fieldname$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_compound_fieldname",
-        constants$5.nc_inq_compound_fieldname$FUNC
-    );
-    static final FunctionDescriptor nc_inq_compound_fieldindex$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_compound_fieldindex$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_compound_fieldindex",
-        constants$5.nc_inq_compound_fieldindex$FUNC
     );
 }
 

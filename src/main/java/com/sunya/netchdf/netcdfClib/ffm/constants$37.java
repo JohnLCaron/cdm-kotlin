@@ -3,10 +3,60 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$37 {
 
+    static final FunctionDescriptor nc_get_vars_double$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_vars_double$MH = RuntimeHelper.downcallHandle(
+        "nc_get_vars_double",
+        constants$37.nc_get_vars_double$FUNC
+    );
+    static final FunctionDescriptor nc_put_vars_ushort$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_vars_ushort$MH = RuntimeHelper.downcallHandle(
+        "nc_put_vars_ushort",
+        constants$37.nc_put_vars_ushort$FUNC
+    );
+    static final FunctionDescriptor nc_get_vars_ushort$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_vars_ushort$MH = RuntimeHelper.downcallHandle(
+        "nc_get_vars_ushort",
+        constants$37.nc_get_vars_ushort$FUNC
+    );
+    static final FunctionDescriptor nc_put_vars_uint$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_vars_uint$MH = RuntimeHelper.downcallHandle(
+        "nc_put_vars_uint",
+        constants$37.nc_put_vars_uint$FUNC
+    );
     static final FunctionDescriptor nc_get_vars_uint$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -30,54 +80,6 @@ class constants$37 {
     static final MethodHandle nc_put_vars_longlong$MH = RuntimeHelper.downcallHandle(
         "nc_put_vars_longlong",
         constants$37.nc_put_vars_longlong$FUNC
-    );
-    static final FunctionDescriptor nc_get_vars_longlong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_vars_longlong$MH = RuntimeHelper.downcallHandle(
-        "nc_get_vars_longlong",
-        constants$37.nc_get_vars_longlong$FUNC
-    );
-    static final FunctionDescriptor nc_put_vars_ulonglong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_vars_ulonglong$MH = RuntimeHelper.downcallHandle(
-        "nc_put_vars_ulonglong",
-        constants$37.nc_put_vars_ulonglong$FUNC
-    );
-    static final FunctionDescriptor nc_get_vars_ulonglong$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_vars_ulonglong$MH = RuntimeHelper.downcallHandle(
-        "nc_get_vars_ulonglong",
-        constants$37.nc_get_vars_ulonglong$FUNC
-    );
-    static final FunctionDescriptor nc_put_vars_string$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_vars_string$MH = RuntimeHelper.downcallHandle(
-        "nc_put_vars_string",
-        constants$37.nc_put_vars_string$FUNC
     );
 }
 

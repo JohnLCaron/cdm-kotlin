@@ -4,6 +4,7 @@ import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
+import java.nio.charset.StandardCharsets
 
 /*
  * From https://www.unidata.ucar.edu/software/netcdf/docs/netcdf_8h_source.html on 3/26/2020
@@ -117,7 +118,8 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
     NC_FORMAT_NETCDF4(3, "NetCDF-4"),  // This is really just HDF-5, dont know yet if its written by netcdf4.
     NC_FORMAT_NETCDF4_CLASSIC(4, "netcdf-4 classic"),  // psuedo format I think
     NC_FORMAT_64BIT_DATA(5, "netcdf-5"),
-    HDF5(5, "hdf5"); // not a netcdf4 file
+    HDF5(5, "hdf5"), // not written by netcdf C library
+    HDF4(6, "hdf4"); // not written by netcdf C library
 
     fun version(): Int {
         return version
@@ -153,6 +155,9 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
             0x1a.toByte(),
             '\n'.code.toByte()
         )
+        private val H4HEAD = byteArrayOf(0x0e.toByte(), 0x03.toByte(), 0x13.toByte(), 0x01.toByte())
+        private val H4HEAD_STRING = String(H4HEAD, StandardCharsets.UTF_8)
+
         private val CDF1HEAD = byteArrayOf('C'.code.toByte(), 'D'.code.toByte(), 'F'.code.toByte(), 0x01.toByte())
         private val CDF2HEAD = byteArrayOf('C'.code.toByte(), 'D'.code.toByte(), 'F'.code.toByte(), 0x02.toByte())
         private val CDF5HEAD = byteArrayOf('C'.code.toByte(), 'D'.code.toByte(), 'F'.code.toByte(), 0x05.toByte())
@@ -173,10 +178,18 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
 
             // If this is not an HDF5 file, then the magic number is at position 0;
             // If it is an HDF5 file, then we need to search forward for it.
-            return if (memequal(CDF1HEAD, magic, CDF1HEAD.size)) NC_FORMAT_CLASSIC
+            val nctype = if (memequal(CDF1HEAD, magic, CDF1HEAD.size)) NC_FORMAT_CLASSIC
                 else if (memequal(CDF2HEAD, magic, CDF2HEAD.size)) NC_FORMAT_64BIT_OFFSET
                 else if (memequal(CDF5HEAD, magic, CDF5HEAD.size)) NC_FORMAT_64BIT_DATA
-                else searchForwardHdf5(raf, magic)
+                else null
+
+            if (nctype != null) return nctype
+
+            val h5type = searchForwardHdf5(raf, magic)
+            if (h5type != null) return h5type
+
+            val h4type = searchForwardHdf4(raf, magic)
+            return h4type ?: INVALID
         }
 
         fun netcdfFormat(format : Int): NetchdfFileFormat {
@@ -246,22 +259,33 @@ enum class NetchdfFileFormat(private val version: Int, private val formatName: S
             }
         }
 
-        private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetchdfFileFormat {
-            // For HDF5, we need to search forward on 512 block sizes
+        private fun searchForwardHdf5(raf: OpenFile, magic: ByteArray): NetchdfFileFormat? {
             val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
             var start = 0L
-            var format : NetchdfFileFormat? = null
-            while (filePos.pos < raf.size - 8 && filePos.pos < MAXHEADERPOS && format == null) {
+            while (filePos.pos < raf.size - 8 && filePos.pos < MAXHEADERPOS) {
                 if (raf.readBytesUnchecked(filePos, magic) < MAGIC_NUMBER_LEN) {
-                    format = INVALID
+                    return null
                 } else if (memequal(H5HEAD, magic, H5HEAD.size)) {
-                    format = NC_FORMAT_NETCDF4 // actually dont know here if its netcdf4 or just hdf5.
+                    return NC_FORMAT_NETCDF4 // actually dont know here if its netcdf4 or just hdf5.
                 } else {
                     start = if (start == 0L) 512 else 2 * start
                     filePos.pos = start
                 }
             }
-            return format ?: INVALID
+            return null
+        }
+
+        private fun searchForwardHdf4(raf: OpenFile, want: ByteArray): NetchdfFileFormat? {
+            val size: Long = raf.size
+            val state = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
+            var startPos = 0L
+            while ((startPos < (size - H4HEAD.size)) && (startPos < MAXHEADERPOS)) {
+                state.pos = startPos
+                val magic: String = raf.readString(state, H4HEAD.size)
+                if ((magic == H4HEAD_STRING)) return NetchdfFileFormat.HDF4
+                startPos = if ((startPos == 0L)) 512 else 2 * startPos
+            }
+            return null
         }
     }
 }

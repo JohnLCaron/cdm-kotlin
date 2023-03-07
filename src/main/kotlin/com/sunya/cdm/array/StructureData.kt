@@ -41,7 +41,17 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
     }
 
     override fun toString(): String {
-        return "ArrayStructureData(sizeElem=$sizeElem, members=$members, nelems=$nelems)"
+        return buildString {
+            append("ArrayStructureData(sizeElem=$sizeElem, members=$members, nelems=$nelems)\n")
+            for (member in this@ArrayStructureData.members) {
+                append("${"%12s".format(member.name)}, ")
+            }
+            append("\n")
+            for (sdata in this@ArrayStructureData) {
+                append(sdata.memberValues())
+                append("\n")
+            }
+        }
     }
 
     inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
@@ -55,6 +65,16 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
                     if (value is String) append("\"$value\"") else append("$value")
                 }
                 append("}")
+            }
+        }
+
+        fun memberValues(): String {
+            return buildString {
+                members.forEachIndexed { idx, m ->
+                    if (idx > 0) append(", ")
+                    val value = m.value(this@StructureData)
+                    if (value is String) append("\"${"%12s".format(value.toString())}\"") else append("%12s".format(value.toString()))
+                }
             }
         }
 

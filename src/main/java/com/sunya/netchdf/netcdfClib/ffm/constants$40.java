@@ -3,10 +3,64 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$40 {
 
+    static final FunctionDescriptor nc_get_varm_short$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_varm_short$MH = RuntimeHelper.downcallHandle(
+        "nc_get_varm_short",
+        constants$40.nc_get_varm_short$FUNC
+    );
+    static final FunctionDescriptor nc_put_varm_int$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_varm_int$MH = RuntimeHelper.downcallHandle(
+        "nc_put_varm_int",
+        constants$40.nc_put_varm_int$FUNC
+    );
+    static final FunctionDescriptor nc_get_varm_int$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_get_varm_int$MH = RuntimeHelper.downcallHandle(
+        "nc_get_varm_int",
+        constants$40.nc_get_varm_int$FUNC
+    );
+    static final FunctionDescriptor nc_put_varm_long$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_put_varm_long$MH = RuntimeHelper.downcallHandle(
+        "nc_put_varm_long",
+        constants$40.nc_put_varm_long$FUNC
+    );
     static final FunctionDescriptor nc_get_varm_long$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -32,58 +86,6 @@ class constants$40 {
     static final MethodHandle nc_put_varm_float$MH = RuntimeHelper.downcallHandle(
         "nc_put_varm_float",
         constants$40.nc_put_varm_float$FUNC
-    );
-    static final FunctionDescriptor nc_get_varm_float$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_varm_float$MH = RuntimeHelper.downcallHandle(
-        "nc_get_varm_float",
-        constants$40.nc_get_varm_float$FUNC
-    );
-    static final FunctionDescriptor nc_put_varm_double$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_varm_double$MH = RuntimeHelper.downcallHandle(
-        "nc_put_varm_double",
-        constants$40.nc_put_varm_double$FUNC
-    );
-    static final FunctionDescriptor nc_get_varm_double$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_get_varm_double$MH = RuntimeHelper.downcallHandle(
-        "nc_get_varm_double",
-        constants$40.nc_get_varm_double$FUNC
-    );
-    static final FunctionDescriptor nc_put_varm_ushort$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_put_varm_ushort$MH = RuntimeHelper.downcallHandle(
-        "nc_put_varm_ushort",
-        constants$40.nc_put_varm_ushort$FUNC
     );
 }
 

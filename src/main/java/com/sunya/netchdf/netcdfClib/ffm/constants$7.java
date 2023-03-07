@@ -3,10 +3,33 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$7 {
 
+    static final FunctionDescriptor nc_def_vlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_def_vlen$MH = RuntimeHelper.downcallHandle(
+        "nc_def_vlen",
+        constants$7.nc_def_vlen$FUNC
+    );
+    static final FunctionDescriptor nc_inq_vlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_vlen$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_vlen",
+        constants$7.nc_inq_vlen$FUNC
+    );
     static final FunctionDescriptor nc_free_vlen$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
@@ -43,27 +66,6 @@ class constants$7 {
     static final MethodHandle nc_get_vlen_element$MH = RuntimeHelper.downcallHandle(
         "nc_get_vlen_element",
         constants$7.nc_get_vlen_element$FUNC
-    );
-    static final FunctionDescriptor nc_free_string$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_LONG_LONG$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_free_string$MH = RuntimeHelper.downcallHandle(
-        "nc_free_string",
-        constants$7.nc_free_string$FUNC
-    );
-    static final FunctionDescriptor nc_inq_user_type$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_user_type$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_user_type",
-        constants$7.nc_inq_user_type$FUNC
     );
 }
 

@@ -3,10 +3,33 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$8 {
 
+    static final FunctionDescriptor nc_free_string$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_LONG_LONG$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_free_string$MH = RuntimeHelper.downcallHandle(
+        "nc_free_string",
+        constants$8.nc_free_string$FUNC
+    );
+    static final FunctionDescriptor nc_inq_user_type$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle nc_inq_user_type$MH = RuntimeHelper.downcallHandle(
+        "nc_inq_user_type",
+        constants$8.nc_inq_user_type$FUNC
+    );
     static final FunctionDescriptor nc_put_att$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
@@ -48,29 +71,6 @@ class constants$8 {
     static final MethodHandle nc_insert_enum$MH = RuntimeHelper.downcallHandle(
         "nc_insert_enum",
         constants$8.nc_insert_enum$FUNC
-    );
-    static final FunctionDescriptor nc_inq_enum$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_enum$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_enum",
-        constants$8.nc_inq_enum$FUNC
-    );
-    static final FunctionDescriptor nc_inq_enum_member$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle nc_inq_enum_member$MH = RuntimeHelper.downcallHandle(
-        "nc_inq_enum_member",
-        constants$8.nc_inq_enum_member$FUNC
     );
 }
 

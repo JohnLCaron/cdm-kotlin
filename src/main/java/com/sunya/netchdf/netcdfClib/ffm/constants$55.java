@@ -3,81 +3,70 @@
 package com.sunya.netchdf.netcdfClib.ffm;
 
 import java.lang.invoke.MethodHandle;
+import java.lang.invoke.VarHandle;
+import java.nio.ByteOrder;
 import java.lang.foreign.*;
-
+import static java.lang.foreign.ValueLayout.*;
 class constants$55 {
 
-    static final FunctionDescriptor ncvarput$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+    static final FunctionDescriptor ncattcopy$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT
+    );
+    static final MethodHandle ncattcopy$MH = RuntimeHelper.downcallHandle(
+        "ncattcopy",
+        constants$55.ncattcopy$FUNC
+    );
+    static final FunctionDescriptor ncattname$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT
+    );
+    static final MethodHandle ncattname$MH = RuntimeHelper.downcallHandle(
+        "ncattname",
+        constants$55.ncattname$FUNC
+    );
+    static final FunctionDescriptor ncattrename$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
         Constants$root.C_POINTER$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle ncvarput$MH = RuntimeHelper.downcallHandle(
-        "ncvarput",
-        constants$55.ncvarput$FUNC
+    static final MethodHandle ncattrename$MH = RuntimeHelper.downcallHandle(
+        "ncattrename",
+        constants$55.ncattrename$FUNC
     );
-    static final FunctionDescriptor ncvarget$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+    static final FunctionDescriptor ncattdel$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle ncvarget$MH = RuntimeHelper.downcallHandle(
-        "ncvarget",
-        constants$55.ncvarget$FUNC
+    static final MethodHandle ncattdel$MH = RuntimeHelper.downcallHandle(
+        "ncattdel",
+        constants$55.ncattdel$FUNC
     );
-    static final FunctionDescriptor ncvarputs$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+    static final FunctionDescriptor ncvardef$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+        Constants$root.C_INT$LAYOUT,
+        Constants$root.C_POINTER$LAYOUT,
         Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle ncvarputs$MH = RuntimeHelper.downcallHandle(
-        "ncvarputs",
-        constants$55.ncvarputs$FUNC
+    static final MethodHandle ncvardef$MH = RuntimeHelper.downcallHandle(
+        "ncvardef",
+        constants$55.ncvardef$FUNC
     );
-    static final FunctionDescriptor ncvargets$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
+    static final FunctionDescriptor ncvarid$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
         Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
         Constants$root.C_POINTER$LAYOUT
     );
-    static final MethodHandle ncvargets$MH = RuntimeHelper.downcallHandle(
-        "ncvargets",
-        constants$55.ncvargets$FUNC
-    );
-    static final FunctionDescriptor ncvarputg$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle ncvarputg$MH = RuntimeHelper.downcallHandle(
-        "ncvarputg",
-        constants$55.ncvarputg$FUNC
-    );
-    static final FunctionDescriptor ncvargetg$FUNC = FunctionDescriptor.of(Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_INT$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT,
-        Constants$root.C_POINTER$LAYOUT
-    );
-    static final MethodHandle ncvargetg$MH = RuntimeHelper.downcallHandle(
-        "ncvargetg",
-        constants$55.ncvargetg$FUNC
+    static final MethodHandle ncvarid$MH = RuntimeHelper.downcallHandle(
+        "ncvarid",
+        constants$55.ncvarid$FUNC
     );
 }
 
