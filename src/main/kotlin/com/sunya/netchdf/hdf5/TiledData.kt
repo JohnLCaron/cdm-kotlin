@@ -70,48 +70,6 @@ class TiledData(val btree1 : BTree1New) {
         return findEntryContainingKey(node, key)
     }
 
-    /*
-    fun findEntryContainingKey(lastEntry : BTree1New.DataChunkEntry, key : IntArray) : BTree1New.DataChunkEntry? {
-        if (tiling.compare(key, lastEntry.key.offsets) == 0) {
-            return lastEntry
-        }
-        if (tiling.compare(key, lastEntry.key.offsets) < 0) {
-            return null // missing
-        }
-        var useEntry : BTree1New.DataChunkEntry = lastEntry
-        while (tiling.compare(key, useEntry.key.offsets) > 0) {
-            useEntry = nextEntry(useEntry)?: return null
-       }
-
-        val parent = lastEntry?.parent ?: rootNode
-        var foundEntry : BTree1New.DataChunkEntry? = null
-        for (idx in 0 until parent.nentries) {
-            foundEntry = parent.dataChunkEntries[idx]
-            if (idx < parent.nentries - 1) {
-                val nextEntry = parent.dataChunkEntries[idx + 1] // look at the next one
-                if (tiling.compare(key, nextEntry.key.offsets) < 0) {
-                    break
-                }
-            }
-        }
-        if (foundEntry == null) {
-            throw RuntimeException("wtf")
-        }
-        if (parent.level == 0) {
-            if (tiling.compare(key, foundEntry.key.offsets) != 0) {
-                println(" *** tile missing")
-                // (val level : Int, val parent : Node, val idx : Int, val key : DataChunkKey, val childAddress : Long)
-                // (val chunkSize: Int, val filterMask : Int, val offsets: IntArray)
-                // a "missing data chunk"
-                return BTree1New.DataChunkEntry(0, parent, -1, BTree1New.DataChunkKey(-1, 0, key), -1L)
-                // throw RuntimeException("tile missing") // missing tile, TODO return fillvalue
-            }
-            return foundEntry
-        }
-        val node= readNode(foundEntry.childAddress, parent)
-        return findEntryContainingKey(node, key)
-    } */
-
     // find the next entry in the btree
     fun nextEntry(entry : BTree1New.DataChunkEntry) : BTree1New.DataChunkEntry? {
         if (entry.isMissing()) {
@@ -149,42 +107,8 @@ class TiledData(val btree1 : BTree1New) {
         return chunks
     }
 
-    /* add all the chunks along this row until section no longer contains them
-    fun addDataChunkRow(wantSpace : IndexSpace, starting : BTree1New.DataChunkEntry,
-                        chunks : MutableList<BTree1New.DataChunkEntry>,
-                        chunkMap : MutableMap<BTree1New.DataChunkKey, BTree1New.DataChunkEntry>,
-                        ) : Int {
-        var count = 0
-        var useChunk = starting
-        while (true) {
-            val dup = chunkMap[useChunk.key]
-            if (dup != null) {
-                println("duplicate")
-            }
-            chunks.add(useChunk)
-            chunkMap[useChunk.key] = useChunk
-
-            count++
-            val nextChunk = nextEntry(useChunk)
-            if (nextChunk == null) {
-                break
-            } else {
-                val nextIndexShape = IndexSpace(nextChunk.key.offsets, tiling.chunk)
-                val needed = wantSpace.intersects(nextIndexShape)
-                if (!needed) {
-                    break
-                } else if (debugRow) {
-                    print(", ${tiling.tile(nextChunk.key.offsets).contentToString()}")
-                }
-            }
-            useChunk = nextChunk
-        }
-        return count
-    } */
-
     override fun toString(): String {
-        return "ChunkedData(chunk=${btree1.storageSize.contentToString()}, readHit=$readHit, readMiss=$readMiss)"
+        return "TiledData(chunk=${btree1.storageSize.contentToString()}, readHit=$readHit, readMiss=$readMiss)"
     }
-
 
 }

@@ -4,8 +4,6 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.cdm.layout.Chunker
-import com.sunya.cdm.layout.IndexSpace
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -13,7 +11,7 @@ import java.nio.ByteOrder
 private val debugChunkingDetail = false
 private val debugChunking = false
 
-// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
+// Handles non-filtered chunked layout Variables
 internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : Layout, section : Section): ArrayTyped<*> {
     if (vinfo.mds.type == DataspaceType.Null) {
         return ArrayString(intArrayOf(), listOf())
@@ -43,7 +41,7 @@ internal fun H5builder.readChunkedData(vinfo: DataContainerVariable, layout : La
     return dataArray
 }
 
-// Handles non-filtered chunked layout Variables (eg contiguous, maybe compact)
+// Handles filtered chunked layout Variables
 // old way, use this to see what nj5 probably is doing
 internal fun H5builder.readFilteredChunkedData(vinfo: DataContainerVariable, layout : H5tiledLayoutBB, section : Section): ArrayTyped<*> {
     if (vinfo.mds.type == DataspaceType.Null) {
@@ -208,154 +206,6 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
         return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
     }
     return result
-}
-
-internal fun H5builder.readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
-    val vinfo = v2.spObject as DataContainerVariable
-    val h5type = vinfo.h5type
-
-    if ((h5type.hdfType == Datatype5.Vlen) or (h5type.hdfType == Datatype5.Compound)) {
-        val layout = if (vinfo.mfp != null) H5tiledLayoutBB(this, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                            else H5tiledLayout(this, v2, wantSection, v2.datatype)
-        when (h5type.hdfType) {
-            Datatype5.Vlen -> return readVlenData(vinfo, layout, wantSection)
-            Datatype5.Compound -> return readCompoundData(vinfo, layout, wantSection)
-            // Datatype5.Reference -> return readReferenceData(h5type, layout, wantSection)
-            else -> { } // fall through
-        }
-    }
-
-    val elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
-    val datatype = vinfo.h5type.datatype(this)
-
-    val wantSpace = IndexSpace(wantSection)
-    val sizeBytes = wantSpace.totalElements * elemSize
-    if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
-        throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
-    }
-    val bb = ByteBuffer.allocate(sizeBytes.toInt())
-    bb.order(vinfo.h5type.endian)
-
-    // prefill with fill value
-    /* val sbb = bb.asShortBuffer()
-    sbb.position(0)
-    val fill = vinfo.fillValue as Short
-    repeat(wantSpace.totalElements.toInt()) { bb.putShort(fill) } // performance ?? */
-
-    val btreeNew =  BTree1New(this, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
-    val chunkedData = TiledData(btreeNew)
-    val filters = H5filters(v2.name, vinfo.mfp, vinfo.h5type.endian)
-    if (debugChunking) println(" ${chunkedData.tiling}")
-
-    chunkers = 0
-    transfers = 0
-    missingChunks = 0
-    var count = 0
-    var transferChunks = 0
-    val state = OpenFileState(0L, vinfo.h5type.endian)
-    for (dataChunk in chunkedData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
-        val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
-        val chunker = Chunker(dataSection, elemSize, wantSpace)
-        if (dataChunk.isMissing()) {
-            if (debugMissing) println(" ${dataChunk.show(chunkedData.tiling)}")
-            chunker.transferMissing(vinfo, datatype, bb)
-        } else {
-            if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(chunkedData.tiling)}")
-            state.pos = dataChunk.childAddress
-            val chunkData = raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
-            val filteredData = filters.apply(chunkData, dataChunk)
-            chunker.transfer(filteredData, bb)
-            transferChunks += chunker.transferChunks
-        }
-        count++
-    }
-    if (debugChunkingDetail or debugChunking) println(" New $count dataChunks; nodes: ${chunkedData} " +
-            "transferChunks = $transferChunks missing = $missingChunks, missingElems = $missingElems")
-
-    bb.position(0)
-    bb.limit(bb.capacity())
-
-    val shape = wantSpace.nelems
-    val result = when (datatype) {
-        Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
-        Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
-        else -> throw IllegalStateException("unimplemented type= $datatype")
-    }
-    if (h5type.hdfType == Datatype5.String) {
-        return (result as ArrayUByte).makeStringsFromBytes()
-    }
-    if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
-        return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
-    }
-    return result
-}
-
-var transfers = 0
-var transferMissing = 0
-var chunkers = 0
-var missingChunks = 0
-fun Chunker.transfer(src : ByteBuffer, dst : ByteBuffer) {
-    if (debugChunkingDetail and (chunkers < 5)) println("  $this")
-    while (this.hasNext()) {
-        val chunk = this.next()
-        if (debugChunkingDetail and (transfers < 20)) println("   $chunk")
-        src.position(this.elemSize * chunk.srcElem.toInt())
-        dst.position(this.elemSize * chunk.destElem.toInt())
-        // Object src,  int  srcPos, Object dest, int destPos, int length
-        System.arraycopy(
-            src.array(),
-            this.elemSize * chunk.srcElem.toInt(),
-            dst.array(),
-            this.elemSize * chunk.destElem.toInt(),
-            this.elemSize * chunk.nelems,
-        )
-        transfers++
-    }
-    chunkers++
-}
-
-val debugMissing = false
-var missingElems = 0L
-private fun Chunker.transferMissing(vinfo : DataContainerVariable, datatype : Datatype, dst : ByteBuffer) {
-    missingElems += this.totalNelems
-    if (vinfo.fillValue == null || debugMissing) {
-        // could use some default, but 0 is pretty good
-        return
-    }
-    while (this.hasNext()) {
-        val chunk = this.next()
-        dst.position(this.elemSize * chunk.destElem.toInt())
-        // println("  missing transfer $chunk")
-        when (datatype) {
-            Datatype.STRING, Datatype.CHAR, Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> {
-                val fill = vinfo.fillValue as Byte
-                repeat(chunk.nelems) { dst.put(fill) }
-            }
-            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(vinfo.fillValue as Short) }
-            Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(vinfo.fillValue as Int) }
-            Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(vinfo.fillValue as Float) }
-            Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(vinfo.fillValue as Double) }
-            Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(vinfo.fillValue as Long) }
-            Datatype.OPAQUE -> {
-                val fill = vinfo.fillValue as ByteBuffer
-                repeat(chunk.nelems) {
-                    fill.position(0)
-                    dst.put(fill) }
-            }
-            else -> throw IllegalStateException("unimplemented type= $datatype")
-        }
-        transferMissing++
-    }
-    missingChunks++
 }
 
 // The structure data is not on the heap, but the variable length members (vlen, string) are

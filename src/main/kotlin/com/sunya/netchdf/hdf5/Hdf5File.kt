@@ -50,7 +50,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                     val result = if (useOld) {
                         val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
                         header.readFilteredChunkedData(vinfo, layout, wantSection)
-                    } else header.readChunkedDataNew(v2, wantSection)
+                    } else H5chunkReader(header).readChunkedDataNew(v2, wantSection)
                     return result
                 }
             }
@@ -59,7 +59,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                 val result = if (useOld) {
                     val layout = H5tiledLayout(header, v2, wantSection, v2.datatype) // eager read
                     header.readChunkedData(vinfo, layout, wantSection)
-                } else header.readChunkedDataNew(v2, wantSection)
+                } else H5chunkReader(header).readChunkedDataNew(v2, wantSection)
                 return result
             } else {
                 return header.readRegularData(vinfo, wantSection)

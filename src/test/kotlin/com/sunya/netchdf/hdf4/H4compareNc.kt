@@ -3,6 +3,7 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.api.Section
 import com.sunya.netchdf.NetchdfTest
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.readDataCompareHC
 import com.sunya.netchdf.readMyData
 import com.sunya.netchdf.readDataCompareNC
 import org.junit.jupiter.api.Test
@@ -63,7 +64,7 @@ class H4compareNc {
 
     @Test
     fun problem() {
-        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2/MISR_AM1_GP_GMP_P040_O003734_05.eos")
+        readDataCompareHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf")
     }
 
     // compress_type = 0
@@ -80,10 +81,9 @@ class H4compareNc {
 
     @Test
     fun chunkedCompressed() {
-        readDataCompareNC(
-            "/media/twobee/netch/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf",
-            "chlor_a", Section("0:361,0:361")
-        )
+        // readH4header("/media/twobee/netch/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf")
+        readDataCompareHC("/media/twobee/netch/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf",
+            "chlor_a", Section("0:1533,0:1000"))
     }
 
     @ParameterizedTest
@@ -105,8 +105,16 @@ class H4compareNc {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readDataCompare(filename: String) {
+    fun readDataCompareWithNC(filename: String) {
         readDataCompareNC(filename)
+        println()
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readDataCompareWithHC(filename: String) {
+        readDataCompareHC(filename)
         println()
     }
 

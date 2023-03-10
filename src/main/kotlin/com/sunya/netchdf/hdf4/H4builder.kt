@@ -263,11 +263,14 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         return dims
     }
 
-    private fun makeDimension(group: TagVGroup) {
+    private fun makeDimension(vtags: TagVGroup) {
+        if (vtags.name == "time") {
+            println()
+        }
         val dims = mutableListOf<TagVH>()
         var data: Tag? = null
-        for (i in 0 until group.nelems) {
-            val tag: Tag = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))] ?: throw IllegalStateException()
+        for (i in 0 until vtags.nelems) {
+            val tag: Tag = tagidMap[tagid(vtags.elem_ref.get(i), vtags.elem_tag.get(i))] ?: throw IllegalStateException()
             if (tag.code == 1962) dims.add(tag as TagVH)
             if (tag.code == 1963) data = tag
         }
@@ -286,7 +289,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                     data.isUsed = true
                     val state = OpenFileState(data.offset, ByteOrder.BIG_ENDIAN)
                     val length2: Int = raf.readInt(state)
-                    if (debugConstruct) println("dimension length=" + length2 + " for TagVGroup= " + group + " using data " + data.refno)
+                    if (debugConstruct) println("dimension length=" + length2 + " for TagVGroup= " + vtags + " using data " + data.refno)
                     if (length2 > 0) {
                         length = length2
                         break
@@ -295,14 +298,14 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             }
         }
         if (data == null) {
-            log.error("**no data for dimension TagVGroup= $group")
+            log.error("**no data for dimension TagVGroup= $vtags")
             return
         }
         if (length <= 0) {
-            log.warn("**dimension length=" + length + " for TagVGroup= " + group + " using data " + data.refno)
+            log.warn("**dimension length=" + length + " for TagVGroup= " + vtags + " using data " + data.refno)
         }
         val isUnlimited = length == 0
-        val dim = Dimension(group.name, length, isUnlimited, true)
+        val dim = Dimension(vtags.name, length, isUnlimited, true)
         rootBuilder.addDimension(dim)
     }
 

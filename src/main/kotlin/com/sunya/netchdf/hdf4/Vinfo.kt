@@ -12,6 +12,7 @@ import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_USHORT
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT64
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT64
+import java.nio.ByteOrder
 
 internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     var vb: Variable.Builder? = null
@@ -39,7 +40,9 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 
     // chunked
     var chunks: List<SpecialDataChunk>? = null
-    var chunkSize = IntArray(0)
+    var chunkLengths = IntArray(0)
+
+    var endian = ByteOrder.BIG_ENDIAN // LOOK at nt ??
 
     fun setVariable(v: Variable.Builder) {
         vb = v
@@ -47,7 +50,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     }
 
     override fun compareTo(other: Vinfo?): Int {
-        return java.lang.Integer.compare(refno, other!!.refno)
+        return Integer.compare(refno, other!!.refno)
     }
 
     fun setData(data: TagData?, elemSize: Int) {
@@ -107,7 +110,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
         } else if (null != useData.chunked) {
             isChunked = true
             chunks = useData.chunked!!.getDataChunks(h4file)
-            chunkSize = useData.chunked!!.chunkLength
+            chunkLengths = useData.chunked!!.chunkLength
             isCompressed = useData.chunked!!.isCompressed
         } else {
             start = useData.offset

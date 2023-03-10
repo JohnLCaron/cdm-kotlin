@@ -47,13 +47,16 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
         fun countDiff(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>) : Int {
             val iter1 = array1.iterator()
             val iter2 = array2.iterator()
+            var allcount = 0
             var count = 0
             while (iter1.hasNext() && iter2.hasNext()) {
                 val v1 = iter1.next()
                 val v2 = iter2.next()
                 if (v1 != v2) {
+                    // println("$allcount $v1 != $v2")
                     count++
                 }
+                allcount++
             }
             return count
         }

@@ -1,5 +1,8 @@
 package com.sunya.cdm.layout
 
+import com.sunya.cdm.api.Datatype
+import java.nio.ByteBuffer
+
 /**
  * from iosp.IndexChunker
  * Finds contiguous chunks of data to copy from dataChunk to destination
@@ -84,5 +87,51 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
 
     override fun toString(): String {
         return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
+    }
+
+    fun transfer(src : ByteBuffer, dst : ByteBuffer) {
+        while (this.hasNext()) {
+            val chunk = this.next()
+            src.position(this.elemSize * chunk.srcElem.toInt())
+            dst.position(this.elemSize * chunk.destElem.toInt())
+            // Object src,  int  srcPos, Object dest, int destPos, int length
+            System.arraycopy(
+                src.array(),
+                this.elemSize * chunk.srcElem.toInt(),
+                dst.array(),
+                this.elemSize * chunk.destElem.toInt(),
+                this.elemSize * chunk.nelems,
+            )
+        }
+    }
+
+    internal fun transferMissing(fillValue : Any?, datatype : Datatype, dst : ByteBuffer) {
+        if (fillValue == null) {
+            // could use some default, but 0 is pretty good
+            return
+        }
+        while (this.hasNext()) {
+            val chunk = this.next()
+            dst.position(this.elemSize * chunk.destElem.toInt())
+            // println("  missing transfer $chunk")
+            when (datatype) {
+                Datatype.STRING, Datatype.CHAR, Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> {
+                    val fill = fillValue as Byte
+                    repeat(chunk.nelems) { dst.put(fill) }
+                }
+                Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(fillValue as Short) }
+                Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(fillValue as Int) }
+                Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(fillValue as Float) }
+                Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(fillValue as Double) }
+                Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(fillValue as Long) }
+                Datatype.OPAQUE -> {
+                    val fill = fillValue as ByteBuffer
+                    repeat(chunk.nelems) {
+                        fill.position(0)
+                        dst.put(fill) }
+                }
+                else -> throw IllegalStateException("unimplemented type= $datatype")
+            }
+        }
     }
 }

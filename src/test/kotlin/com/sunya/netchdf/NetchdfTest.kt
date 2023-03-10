@@ -4,6 +4,8 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.Iosp
+import com.sunya.netchdf.hdf4.Hdf4File
+import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.AfterAll
@@ -329,6 +331,26 @@ fun readDataCompareNC(filename: String, varname: String? = null, section: Sectio
     }
 }
 
+fun readDataCompareHC(filename: String, varname: String? = null, section: Section? = null) {
+    var size = 0.0
+    RandomAccessFile(File(filename), "r").use { raf ->
+        size = raf.getChannel().size() / 1000.0 / 1000.0
+    }
+    println("=============================================================")
+    Hdf4File(filename).use { netchdf ->
+        if (netchdf == null) {
+            println("*** not a hdf4 file = $filename")
+            return
+        }
+        println("${netchdf.type()} $filename ${"%.2f".format(size)} Mbytes")
+        if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
+
+        Hdf4ClibFile(filename).use { ncfile ->
+            compareNetcdfData(netchdf, ncfile, varname, section)
+        }
+    }
+}
+
 //////////////////////////////////
 // just read data from myfile
 
@@ -485,7 +507,7 @@ fun compareOneVar(myvar: Variable, myfile: Iosp, ncvar : Variable, ncfile: Iosp,
         }
     }
     if (ncvar.nelems > 8 && ncvar.datatype != Datatype.CHAR) {
-        // compareMiddleSection(myfile, myvar, ncfile, ncvar, ncvar.shape)
+        compareMiddleSection(myfile, myvar, ncfile, ncvar, ncvar.shape)
     }
 }
 
