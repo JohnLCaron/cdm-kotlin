@@ -97,8 +97,8 @@ variables:
     fun testCdlParser(filename: String, cdl: String) {
         println("$cdl")
         val netcdf = CdlParser.parseToEnd(cdl)
-        println("${netcdf.cdl(true)}")
-        assertEquals(normalize(cdl), normalize(netcdf.cdl(true)))
+        println("${netcdf.cdl()}")
+        assertEquals(normalize(cdl), normalize(netcdf.cdl()))
 
         val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
         when (val parseResult = cdlGrammer.tryParseToEnd(cdl)) {

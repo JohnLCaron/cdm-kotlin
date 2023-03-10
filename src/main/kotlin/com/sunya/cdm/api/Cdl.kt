@@ -4,16 +4,13 @@ import com.sunya.cdm.util.Indent
 import java.nio.ByteBuffer
 import java.util.*
 
-fun cdl(netcdf : Netcdf, strict : Boolean = false) : String {
+/** strict = make cdl agree with clib if possible. also sort, so its easier to compare equAL */
+fun cdl(netcdf : Netcdf) : String {
     val filename = netcdf.location().substringAfterLast('/')
     val name = filename.substringBefore('.')
     return buildString{
         append("netcdf $name {\n")
-        if (strict) {
-            append(netcdf.rootGroup().cdlStrict(true, Indent(2, 1)))
-        } else {
-            append(netcdf.rootGroup().cdl(true, Indent(2, 1)))
-        }
+        append(netcdf.rootGroup().cdl(true, Indent(2, 1)))
         append("}")
     }
 }
@@ -40,35 +37,6 @@ fun Group.cdl(isRoot : Boolean, indent : Indent = Indent(2)) : String {
         }
         if (groups.isNotEmpty()) {
             groups.sortedBy { it.name }.forEach {
-                append("\n${indent}group: ${it.name} {\n")
-                append(it.cdl(false, indent.incr()))
-                append("${indent}}\n")
-            }
-        }
-    }
-}
-fun Group.cdlStrict(isRoot : Boolean, indent : Indent = Indent(2)) : String {
-    return buildString{
-        if (typedefs.isNotEmpty()) {
-            append("${indent}types:\n")
-            typedefs.forEach { append("${it.cdl(indent.incr())}\n") }
-        }
-        if (dimensions.isNotEmpty()) {
-            append("${indent}dimensions:\n")
-            dimensions.forEach { append("${it.cdl(indent.incr())}\n") }
-        }
-        if (variables.isNotEmpty()) {
-            append("${indent}variables:\n")
-            variables.map { append(it.cdlStrict(indent.incr())) }
-        }
-        if (attributes.isNotEmpty()) {
-            val nindent = if (isRoot) indent else indent.incr()
-            val text = if (isRoot) "global" else "group"
-            append("\n${nindent}// $text attributes:\n")
-            attributes.forEach { append("${it.cdlStrict("", indent)}\n") }
-        }
-        if (groups.isNotEmpty()) {
-            groups.forEach {
                 append("\n${indent}group: ${it.name} {\n")
                 append(it.cdl(false, indent.incr()))
                 append("${indent}}\n")
@@ -106,59 +74,7 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
     }
 }
 
-fun Variable.cdlStrict(indent : Indent = Indent(2)) : String {
-    val typedef = datatype.typedef
-    val typename = if (typedef != null) typedef.name else datatype.cdlName
-    return buildString {
-        append("${indent}${typename} ${escapeName(name)}")
-        if (dimensions.isNotEmpty()) {
-            append("(")
-            dimensions.forEachIndexed { idx, it ->
-                if (idx > 0) append(", ")
-                if (!it.isShared) append("${it.length}") else append(it.name)
-            }
-            append(")")
-        }
-        append(" ;")
-        if (attributes.isNotEmpty()) {
-            append("\n")
-            attributes.forEach { append("${it.cdlStrict(escapeName(name), indent.incr())}\n") }
-        } else {
-            append("\n")
-        }
-    }
-}
-
 fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
-    val typedef = datatype.typedef
-    val typename = if (typedef != null) typedef.name else datatype.cdlName
-    val valueDatatype = if (typedef != null) typedef.baseType else datatype
-    return buildString {
-        append("${indent}${typename} $varname:$name = ")
-        if (values.isEmpty()) {
-            append("NIL")
-        }
-        if (datatype == Datatype.OPAQUE) {
-            append("${(values[0] as ByteBuffer).toHex()}")
-        } else {
-            values.forEachIndexed { idx, it ->
-                if (idx != 0) {
-                    append(", ")
-                }
-                when (valueDatatype) {
-                    Datatype.STRING -> append("\"${escapeCdl(it as String)}\"")
-                    Datatype.FLOAT -> append("${it}f")
-                    Datatype.SHORT -> append("${it}s")
-                    Datatype.BYTE -> append("${it}b")
-                    else -> append("$it")
-                }
-            }
-        }
-        append(" ;")
-    }
-}
-
-fun Attribute.cdlStrict(varname: String, indent : Indent = Indent(2)) : String {
     val typedef = datatype.typedef
     val typename = if (typedef != null) typedef.name else "" // datatype.cdlName
     val valueDatatype = if (typedef != null) typedef.baseType else datatype

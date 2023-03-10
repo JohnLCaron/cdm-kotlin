@@ -1,6 +1,6 @@
 package com.sunya.netchdf.hdf4
 
-enum class TagEnum(val desc: String, val code: Short) {
+enum class TagEnum(val desc: String, val code: Int) {
     NONE("", 0),
     NULL("", 1),
     RLE("Run length encoding", 11),
@@ -66,12 +66,12 @@ enum class TagEnum(val desc: String, val code: Short) {
     BREQ("Beginning of required tags", 799),
     SDRAG("List of ragged array line lengths", 781),
     EREQ("Current end of the range", 780),
-    VG("Vgroup", 1965),
     VH("Vdata Header", 1962),
-    VS("Vdata Storage", 1963);
+    VS("Vdata Storage", 1963),
+    VG("Vgroup", 1965),
+    ;
 
     companion object {
-        private var hashCodes : MutableMap<Short, TagEnum>? = null
         const val SPECIAL_LINKED = 1 /* Fixed-size Linked blocks */
         const val SPECIAL_EXT = 2 /* External */
         const val SPECIAL_COMP = 3 /* Compressed */
@@ -87,7 +87,8 @@ enum class TagEnum(val desc: String, val code: Short) {
         const val COMP_CODE_DEFLATE = 4 // for gzip 'deflate' encoding
         const val COMP_CODE_SZIP = 5 // for szip encoding
 
-        fun byCode(code: Short): TagEnum {
+        private var hashCodes : MutableMap<Int, TagEnum>? = null
+        fun byCode(code: Int): TagEnum {
             if (hashCodes == null) {
                 hashCodes = mutableMapOf()
                 values().forEach { hashCodes!![it.code] = it}
@@ -99,7 +100,7 @@ enum class TagEnum(val desc: String, val code: Short) {
     }
 
     override fun toString(): String {
-        return "$name ($code) $desc"
+        return "DFTAG_$name ($code) $desc"
     }
 
 }

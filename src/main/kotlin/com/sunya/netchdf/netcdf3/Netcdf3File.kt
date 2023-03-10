@@ -25,7 +25,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = "netcdf3"
 
     @Throws(IOException::class)

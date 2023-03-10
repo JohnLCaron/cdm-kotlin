@@ -2,15 +2,24 @@ package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_BYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_DOUBLE
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_FLOAT
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_SHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UBYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_USHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT64
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT64
 
-internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
+internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     var vb: Variable.Builder? = null
     var group: Group.Builder? = null
-    val tags: MutableList<Tag> =
-        ArrayList<Tag>()
+    val tags = mutableListOf<Tag>()
 
     // info about reading the data
-    var data: TagData? = null
+    var tagData: TagData? = null
     var elemSize = 0 // for Structures, this is recsize
     var fillValue: Any? = null
 
@@ -38,11 +47,11 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
     }
 
     override fun compareTo(other: Vinfo?): Int {
-        return java.lang.Short.compare(refno, other!!.refno)
+        return java.lang.Integer.compare(refno, other!!.refno)
     }
 
     fun setData(data: TagData?, elemSize: Int) {
-        this.data = data
+        this.tagData = data
         this.elemSize = elemSize
         hasNoData = (data == null)
     }
@@ -56,22 +65,40 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
         }
     }
 
+    fun getFillValueOrDefault() : Any {
+        return if (fillValue != null) fillValue!! else {
+            when (vb!!.datatype) {
+                Datatype.BYTE -> NC_FILL_BYTE
+                Datatype.CHAR, Datatype.UBYTE -> NC_FILL_UBYTE
+                Datatype.SHORT -> NC_FILL_SHORT
+                Datatype.USHORT -> NC_FILL_USHORT
+                Datatype.INT -> NC_FILL_INT
+                Datatype.UINT -> NC_FILL_UINT
+                Datatype.FLOAT -> NC_FILL_FLOAT
+                Datatype.DOUBLE -> NC_FILL_DOUBLE
+                Datatype.LONG -> NC_FILL_INT64
+                Datatype.ULONG -> NC_FILL_UINT64
+                else -> 0
+            }
+        }
+    }
+
     // make sure needed info is present : call this when variable needs to be read
     // this allows us to defer getting layout info until then
-    fun setLayoutInfo(h4: H4builder, ncfile: Netcdf) {
-        if (data == null) return
-        val useData = data!!
+    fun setLayoutInfo(h4file: Hdf4File) {
+        if (tagData == null) return
+        val useData = tagData!!
         if (null != useData.linked) {
             isLinked = true
-            useData.linked!!.getLinkedDataBlocks(h4)?.let { setDataBlocks(it, elemSize) }
+            setDataBlocks(useData.linked!!.getLinkedDataBlocks(h4file.header), elemSize)
 
         } else if (null != useData.compress) {
             isCompressed = true
-            val compData: TagData = useData.compress!!.getDataTag(h4)
+            val compData: TagData = useData.compress!!.getDataTag(h4file.header)
             tags.add(compData)
             isLinked = (compData.linked != null)
             if (isLinked) {
-                compData.linked!!.getLinkedDataBlocks(h4)?.let { setDataBlocks(it, elemSize) }
+                setDataBlocks(compData.linked!!.getLinkedDataBlocks(h4file.header), elemSize)
             } else {
                 start = compData.offset
                 length = compData.length
@@ -79,8 +106,8 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
             }
         } else if (null != useData.chunked) {
             isChunked = true
-            chunks = useData.chunked!!.getDataChunks(h4, ncfile)
-            chunkSize = useData.chunked!!.chunk_length
+            chunks = useData.chunked!!.getDataChunks(h4file)
+            chunkSize = useData.chunked!!.chunkLength
             isCompressed = useData.chunked!!.isCompressed
         } else {
             start = useData.offset
@@ -97,20 +124,20 @@ internal class Vinfo(val refno: Short) : Comparable<Vinfo?> {
         segSize = IntArray(nsegs)
         var count = 0
         for (tag: TagLinkedBlock in linkedBlocks) {
-            segPos[count] = tag.offset.toLong()
+            segPos[count] = tag.offset
             segSize[count] = tag.length
             count++
         }
     }
 
-    fun readChunks(h4 : H4builder, ncfile : Netcdf): List<SpecialDataChunk> {
-        return data?.chunked?.getDataChunks(h4, ncfile) ?: emptyList()
+    fun readChunks(ncfile : Hdf4File): List<SpecialDataChunk> {
+        return tagData?.chunked?.getDataChunks(ncfile) ?: emptyList()
     }
 
     fun read(h4 : H4builder): String {
-        requireNotNull(data)
-        val state = OpenFileState(data!!.offset)
-        return h4.raf.readString(state, data!!.length, h4.valueCharset)
+        requireNotNull(tagData)
+        val state = OpenFileState(tagData!!.offset)
+        return h4.raf.readString(state, tagData!!.length, h4.valueCharset)
     }
 
     override fun toString(): String {

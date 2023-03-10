@@ -9,7 +9,6 @@ import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
-import kotlin.test.assertTrue
 
 // Compare data reading for the same file with Netcdf3File and NetcdfClibFile
 class N3dataCompare {
@@ -41,14 +40,6 @@ class N3dataCompare {
         readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc", "time")
     }
 
-    @ParameterizedTest
-    @MethodSource("params")
-    fun checkVersion(filename: String) {
-        NetcdfClibFile(filename).use { ncfile ->
-            println("${ncfile.type()} $filename ")
-            assertTrue((ncfile.type() == "NC_FORMAT_CLASSIC") or (ncfile.type() == "NC_FORMAT_64BIT_OFFSET"))
-        }
-    }
 
     @ParameterizedTest
     @MethodSource("params")

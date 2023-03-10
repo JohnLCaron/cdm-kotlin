@@ -46,7 +46,7 @@ class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl(strict: Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = header.formatType
 
     override fun close() {

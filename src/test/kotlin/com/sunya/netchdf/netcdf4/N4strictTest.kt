@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-// probably get rid of
+// trying to compare output with ncdump - h; probably get rid of
 @Disabled
 class N4strictTest {
 
@@ -195,7 +195,7 @@ variables:
         NetcdfClibFile(filename).use { ncfile ->
             //println("actual = ${ncfile.cdlStrict().normalize()}")
             //println("expect = ${expect.normalize()}")
-            assertEquals(normalize(expect), normalize(ncfile.cdl(true)))
+            assertEquals(normalize(expect), normalize(ncfile.cdl()))
         }
     }
 

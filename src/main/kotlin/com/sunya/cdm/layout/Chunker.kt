@@ -1,8 +1,5 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.Section
-import java.lang.Integer.max
-
 /**
  * from iosp.IndexChunker
  * Finds contiguous chunks of data to copy from dataChunk to destination
@@ -11,7 +8,9 @@ import java.lang.Integer.max
  * @param dataChunkRaw the dataChunk index space, may have a trailing dimension that is ignored
  * @param wantSection the requested section of data
  */
-class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Boolean = true) : AbstractIterator<TransferChunk>() {
+class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Boolean = true)
+    : AbstractIterator<TransferChunk>() {
+
     val nelems : Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
 

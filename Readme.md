@@ -14,7 +14,7 @@ There is so much important scientific data stored in the NetCDF and HDF file for
 never go away. Its important that there be maintainable, independent libraries to read these files forever. 
 
 The goal of the Common Data Model (CDM) is to provide a single API to access these various file formats. This idea
-formed the basis of the Netcdf-Java library. The Netcdf-4 C library now implements their version of this.
+formed the basis of the Netcdf-Java library. The Netcdf-4 C library now implements a version of this.
 
 #### Why do we need an alternative library from the standard reference libraries?
 
@@ -27,14 +27,14 @@ scientific datasets.
 #### Why kotlin?
 
 Kotlin is a modern, statically typed language suitable for large development projects, 
-with many new features for safer and more concise code. Definite improvement over Java.
-Kotlin will attract serious programmers for at least the next 20 years. 
-Kotlin runs on the JVM, and interoperates with the entire Java ecosystem. Its fun and shiny.
+with many new features for safer and more concise code. It is a clear improvement over Java, without giving
+up any of Java's strengths. Kotlin will attract the next generation of serious programmers. 
+Its fun and shiny.
 
 ### What about performance?
 
-We are aiming to be within 2x of the C library for reading data. Preliminary tests indicate that's mostly within reach. For
-files that use deflate filters, the deflate library dominates the read time. Standard java deflate seems to be
+We are aiming to be within 2x of the C library for reading data. Preliminary tests indicate that's mostly within reach. 
+For HDF5 files using deflate filters, the deflate library dominates the read time. Standard java deflate seems to be
 about 2X slower than native code.
 
 ### Testing
@@ -42,14 +42,15 @@ about 2X slower than native code.
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C library. 
 With these tools we have a good chance of keeping the cdm-kotlin library on par with the reference libraries.
 
-### The cdm-kotlin Data Model
+### Scope
 
-The Netcdf-4 library does not try to include all HDF5 files not written with the Netcdf4 library API.
-Often it works, but sometimes things are missing or breaks. The CDM model has as a goal to give access
-to all HDF5 files. 
+The Netcdf-4 library does not work with all HDF5 files not written with the Netcdf4 library API.
+The CDM model has the goal to give access to all HDF5 files.
 
-Similarly, the Netcdf-4 library only works with HDF4 files written with the SDS api, while the CDM model has as a 
+Similarly, the Netcdf-4 library only works with HDF4 files written with the SDS api, while the CDM model has the
 goal to give access to all HDF4 and HDF-EOS files.
+
+### The cdm-kotlin Data Model
 
 (Work in progress)
 

@@ -5,8 +5,6 @@ import java.nio.ByteBuffer
 
 // LOOK not dealing with n > 1
 class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(shape) {
-    private val nelems = shape.computeSize()
-
     init {
         require(nelems * size <= values.capacity())
     }

@@ -5,6 +5,8 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.Layout
+import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.iosp.ReaderIntoByteArray
 import java.io.DataInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -15,7 +17,7 @@ import java.nio.ByteBuffer
  * The position must always increase, no going backwards.
  * Note cant handle byte order yet - assume big endian(?).
  */
-class PositioningDataInputStream(input: InputStream) {
+class PositioningDataInputStream(input: InputStream) : ReaderIntoByteArray {
     private val delegate: DataInputStream
     private var cpos: Long = 0
 
@@ -31,14 +33,15 @@ class PositioningDataInputStream(input: InputStream) {
         cpos = pos
     }
 
-    fun readIntoByteArray(pos : Long, dest : ByteArray, destPos : Int, nbytes : Int) : Int {
-        seek(pos)
+    override fun readIntoByteArray(state : OpenFileState, dest : ByteArray, destPos : Int, nbytes : Int) : Int {
+        seek(state.pos)
         delegate.readFully(dest, destPos, nbytes)
         cpos += nbytes.toLong()
         return nbytes
      }
 }
 
+/*
 fun readDataFromPositioningStream(input: PositioningDataInputStream, layout: Layout, v2: Variable, fillValue : Any?, wantSection : Section)
         : ArrayTyped<*> {
     require(wantSection.size() == layout.totalNelems)
@@ -68,3 +71,5 @@ fun readDataFromPositioningStream(input: PositioningDataInputStream, layout: Lay
         else -> throw IllegalArgumentException("datatype ${v2.datatype}")
     }
 }
+
+ */
