@@ -16,7 +16,7 @@ class LayoutTiledBB(
     val chunkSize: IntArray, // all chunks assumed to be the same size
     override val elemSize: Int, // size of an element in bytes.
     val wantSection: Section // the wanted section of data, contains a List of Range objects. Must be complete.
-) : Layout {
+) : LayoutBB {
 
     // track the overall iteration
     override val totalNelems: Long

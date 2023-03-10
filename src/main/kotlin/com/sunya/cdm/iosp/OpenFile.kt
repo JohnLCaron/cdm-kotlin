@@ -9,7 +9,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 /** An abstraction over a Java FileChannel. */
-data class OpenFile(val location : String) : Closeable {
+data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
     val raf : com.sunya.io.RandomAccessFile
     val fileChannel : FileChannel
     val size : Long
@@ -60,6 +60,10 @@ data class OpenFile(val location : String) : Closeable {
         }
         state.pos += nread
         return nread
+    }
+
+    override fun readIntoByteArray(state : OpenFileState, dest : ByteArray, destPos : Int, nbytes : Int) : Int {
+        return readIntoByteBufferDirect(state, ByteBuffer.wrap(dest), destPos, nbytes)
     }
 
     fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {

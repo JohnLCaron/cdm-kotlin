@@ -4,36 +4,37 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.iosp.IndexChunker
 import com.sunya.cdm.iosp.Layout
+import kotlin.math.min
+
 
 /**
- * LayoutSegmented has data stored in segments.
- * Assume that each segment size is a multiple of elemSize.
- * Used by HDF4.
- * 
+ * LayoutSegmented has data stored in sequential segments.
+ * Each segment size must be a multiple of elemSize.
+ * The total segment size may be large than the variable's total size.
+ *
  * @param segPos starting address of each segment.
- * @param segSize number of bytes in each segment. Assume multiple of elemSize
+ * @param segSize number of bytes in each segment, multiple of elemSize
  * @param elemSize size of an element in bytes.
- * @param srcShape shape of the entire data array.
- * @param wantSection the wanted section of data
+ * @param srcShape shape of the entire variables' data (in elements)
+ * @param wantSection the wanted section of data (in elements)
  */
-class LayoutSegmented(segPos: LongArray, segSize: IntArray, elemSize: Int, srcShape: IntArray, wantSection: Section?) :
-    Layout {
-    override val totalNelems: Long
-    override val elemSize : Int // size of each element
-    private val segPos : LongArray // bytes
-    private val segMax : LongArray// bytes
-    private val segMin : LongArray// bytes
+class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, srcShape: IntArray, wantSection: Section?)
+    : Layout {
 
-    // outer chunk
-    private val chunker: IndexChunker
-    private var chunkOuter: IndexChunker.Chunk = IndexChunker.Chunk(0, 0, 0)
+    override val totalNelems: Long
+    private val segPos : LongArray // bytes
+    private val segMin : LongArray // elems
+    private val segMax : LongArray // elems
+
+    // outer chunk deals with the wanted section of data
+    private val chunker = IndexChunker(srcShape, wantSection)
+    private var chunkOuter: IndexChunker.Chunk = IndexChunker.Chunk(0, 0, 0) // fake
 
     // inner chunk = deal with segmentation
     private val chunkInner = IndexChunker.Chunk(0, 0, 0)
-    private var done: Long
-    private var needInner = 0
-    private var doneInner = 0
-    
+    private var done: Long = 0    // number elements done overall
+    private var needOuter = 0 // remaining elements to do in the outer chunk
+
     init {
         require(segPos.size == segSize.size)
         this.segPos = segPos
@@ -45,71 +46,67 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, elemSize: Int, srcSh
             require(segPos[i] >= 0)
             require(segSize[i] > 0)
             require(segSize[i] % elemSize == 0)
-            segMin[i] = totalBytes
+            segMin[i] = totalBytes / elemSize
             totalBytes += segSize[i].toLong()
-            segMax[i] = totalBytes
+            segMax[i] = totalBytes / elemSize
         }
         require(totalBytes >= computeSize(srcShape) * elemSize)
-        chunker = IndexChunker(srcShape, wantSection)
         totalNelems = chunker.totalNelems
-        done = 0
-        this.elemSize = elemSize
     }
 
     override fun hasNext(): Boolean {
         return done < totalNelems
     }
 
-    ///////////////////
-    private fun getFilePos(elem: Long): Long {
+    // get starting position in the file of the wanted element
+    private fun getStartPos(wantElem: Long): Long {
         var segno = 0
-        while (elem >= segMax[segno]) segno++
-        return segPos[segno] + elem - segMin[segno]
+        while (wantElem >= segMax[segno]) {
+            segno++
+        }
+        return segPos[segno] + elemSize * (wantElem - segMin[segno])
     }
 
-    // how many more bytes are in this segment ?
-    private fun getMaxBytes(start: Long): Int {
+    // how many more elements are in the segment from startElm?
+    private fun getMaxElemsInSeg(startElem: Long): Int {
         var segno = 0
-        while (start >= segMax[segno]) segno++
-        return (segMax[segno] - start).toInt()
+        while (startElem >= segMax[segno]) segno++
+        return (segMax[segno] - startElem).toInt()
     }
 
     override fun next(): Layout.Chunk {
-        var result: IndexChunker.Chunk
-        if (needInner > 0) {
-            result = nextInner(false, 0)
+        val innerChunk = if (needOuter <= 0) {
+            chunkOuter = nextOuter()
+            nextInner(true)
         } else {
-            result = nextOuter()
-            val nbytes = getMaxBytes(chunkOuter.srcElem * elemSize)
-            if (nbytes < result.nelems * elemSize) result = nextInner(true, nbytes)
+            nextInner(false)
         }
-        done += result.nelems
-        doneInner += result.nelems
-        needInner -= result.nelems
-        if (debugNext) println(" next chunk: $result")
-        return result
+        done += innerChunk.nelems
+        needOuter -= innerChunk.nelems
+        if (debugNext) println(" next chunk: $innerChunk")
+        return innerChunk
     }
 
-    private fun nextInner(first: Boolean, nbytes: Int): IndexChunker.Chunk {
+    private fun nextInner(first: Boolean): IndexChunker.Chunk {
         if (first) {
-            chunkInner.nelems = (nbytes / elemSize)
+            val maxElemsInSeg = getMaxElemsInSeg(chunkOuter.srcElem)
+            chunkInner.nelems = min(maxElemsInSeg, needOuter)
             chunkInner.destElem = chunkOuter.destElem
-            needInner = chunkOuter.nelems
-            doneInner = 0
+            chunkInner.srcElem = chunkOuter.srcElem
         } else {
-            chunkInner.incrDestElem(chunkInner.nelems) // increment using last chunks' value
-            var chunkBytes = getMaxBytes((chunkOuter.srcElem + doneInner) * elemSize)
-            chunkBytes = Math.min(chunkBytes, needInner * elemSize)
-            chunkInner.nelems = (chunkBytes / elemSize) // set this chunk's value
+            chunkInner.destElem += chunkInner.nelems // increment using last chunks' value
+            chunkInner.srcElem += chunkInner.nelems
+            val maxElemsInSeg = getMaxElemsInSeg(chunkInner.srcElem)
+            chunkInner.nelems = min(maxElemsInSeg, needOuter)
         }
-        chunkInner.srcPos = (getFilePos((chunkOuter.srcElem + doneInner) * elemSize))
+        chunkInner.srcPos = getStartPos(chunkInner.srcElem)
         return chunkInner
     }
 
     fun nextOuter(): IndexChunker.Chunk {
         val chunkOuter = chunker.next()
-        val srcPos = getFilePos(chunkOuter.srcElem * elemSize)
-        chunkOuter.srcPos = (srcPos)
+        chunkOuter.srcPos = getStartPos(chunkOuter.srcElem)
+        needOuter = chunkOuter.nelems
         return chunkOuter
     }
 

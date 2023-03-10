@@ -1,12 +1,8 @@
 package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.Section.Companion.computeSize
-import com.sunya.cdm.iosp.Iosp
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
-import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -57,14 +53,14 @@ class NetchdfExtra {
     @Test
     fun h5npp() {
         NetchdfTest.showData = false
-        readData(topdir + "npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
-        readData(topdir + "npp/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
+        readMyData(topdir + "npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
+        readMyData(topdir + "npp/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
             // , "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
     }
 
     // @Test
     fun problemData() { // causing seg fault on NClib
-        readData("/media/twobee/netch/signell/his_20090306.nc")
+        readMyData("/media/twobee/netch/signell/his_20090306.nc")
             // "ocean_time", null, true)
     }
 
@@ -94,7 +90,7 @@ class NetchdfExtra {
             println("Clib cant open npp $filename")
             return
         }
-        val netchdf: Netcdf? = openNetchdfFile(filename)
+        val netchdf: Netcdf? = openNetchdfFile(filename, true)
         if (netchdf == null) {
             println("*** not a netchdf file = $filename")
             return
@@ -112,7 +108,7 @@ class NetchdfExtra {
     @MethodSource("params")
     fun readDataForProfiling(filename: String) {
         println(filename)
-        readData(filename)
+        readMyData(filename)
         println()
     }
 }

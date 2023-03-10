@@ -44,11 +44,11 @@ class CdlReadAndParseTest {
             return
         }
 
-        val cdl = netchdf.cdl(true)
+        val cdl = netchdf.cdl()
         println("org = $cdl")
         val netcdfCdl = CdlParser.parseToEnd(cdl)
-        println("parse = ${netcdfCdl.cdl(true)}")
-        assertEquals(normalize(cdl), normalize(netcdfCdl.cdl(true)))
+        println("parse = ${netcdfCdl.cdl()}")
+        assertEquals(normalize(cdl), normalize(netcdfCdl.cdl()))
         assertTrue(netchdf.rootGroup() == netcdfCdl.rootGroup())
         assertTrue(netchdf.rootGroup().hashCode() == netcdfCdl.rootGroup().hashCode())
     }

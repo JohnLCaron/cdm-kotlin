@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import mu.KotlinLogging
@@ -16,7 +15,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
     var fileVersion = "N/A"
     val alltags = mutableListOf<Tag>()
     val tagidMap = mutableMapOf<Int, Tag>()
-    private val refnoMap = mutableMapOf<Short, Vinfo>()
+    private val refnoMap = mutableMapOf<Int, Vinfo>()
 
     init {
         // header information is in big endian byte order
@@ -38,7 +37,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                 val tag: Tag = readTag(raf, state)
                 pos += 12
                 state.pos = pos // tag usually changed the file pointer
-                if (tag.code > 1) alltags.add(tag)
+                if (tag.code > 1) alltags.add(tag) // ignore NONE, NULL
             }
         }
 
@@ -48,6 +47,20 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             val tagid = tagid(tag.refno, tag.code)
             tagidMap[tagid] = tag // track all tags in a map, key is the "tag id".
             if (debugTag1) println(if (debugTagDetail) tag.detail() else tag)
+        }
+
+        if (debugTag2) {
+            val summ = mutableMapOf<Int, MutableList<Int>>()
+            alltags.forEach {
+                val tags = summ.getOrPut(it.code) { mutableListOf() }
+                tags.add(it.refno)
+            }
+            println("alltags = ${alltags.size} unique = ${summ.size} ")
+            summ.toSortedMap().forEach { (key, list) ->
+                val tagEnum = TagEnum.byCode(key)
+                println(" $tagEnum (${list.size} tags)")
+                // if (list.size < 100) println("  $list")
+            }
         }
 
         // construct the netcdf objects
@@ -75,10 +88,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
 
         // pass 1 : Vgroups with special classes
         for (t: Tag in alltags) {
-            if (t.code.toInt() == 306) { // raster image
+            if (t.code == 306) { // raster image
                 val v: Variable.Builder? = makeImage(t as TagGroup)
                 if (v != null) vars.add(v)
-            } else if (t.code.toInt() == 1965) {
+            } else if (t.code == 1965) {
                 val vgroup: TagVGroup = t as TagVGroup
                 if (vgroup.className.startsWith("Dim") || vgroup.className.startsWith("UDim")) {
                     makeDimension(vgroup)
@@ -96,13 +109,13 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // pass 2 - VHeaders, NDG
         for (t: Tag in alltags) {
             if (t.isUsed) continue
-            if (t.code.toInt() == 1962) { // VHeader
+            if (t.code == 1962) { // VHeader
                 val tagVH: TagVH = t as TagVH
                 if (tagVH.className.startsWith("Data")) {
                     val v = makeVariable(tagVH)
                     if (v != null) vars.add(v)
                 }
-            } else if (t.code.toInt() == 720) { // numeric data group
+            } else if (t.code == 720) { // numeric data group
                 val v = makeVariable(t as TagGroup)
                 vars.add(v)
             }
@@ -111,7 +124,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // pass 3 - misc not claimed yet
         for (t: Tag in alltags) {
             if (t.isUsed) continue
-            if (t.code.toInt() == 1962) { // VHeader
+            if (t.code == 1962) { // VHeader
                 val vh: TagVH = t as TagVH
                 if (!vh.className.startsWith("Att") && !vh.className.startsWith("_HDF_CHK_TBL")) {
                     val v = makeVariable(vh)
@@ -123,7 +136,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // pass 4 - Groups
         for (t: Tag in alltags) {
             if (t.isUsed) continue
-            if (t.code.toInt() == 1965) { // VGroup
+            if (t.code == 1965) { // VGroup
                 val vgroup: TagVGroup = t as TagVGroup
                 makeGroup(vgroup, rootBuilder)
             }
@@ -144,7 +157,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                 val vinfo: Vinfo? = refnoMap[t.obj_refno]
                 vinfo?.vb?.attributes?.add(
                     Attribute(
-                        if (t.code.toInt() == 105) "description" else CDM.LONG_NAME,
+                        if (t.code == 105) "description" else CDM.LONG_NAME,
                         t.text
                     )
                 )
@@ -155,11 +168,11 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // misc global attributes
         // root.addAttribute(Attribute("_History", "Direct read of HDF4 file through Netchdf library"))
         for (t: Tag in alltags) {
-            if (t.code.toInt() == 30) {
+            if (t.code == 30) {
                 fileVersion = (t as TagVersion).value()
                 if (!strict) rootBuilder.addAttribute(Attribute("HDF4_Version", fileVersion))
                 t.isUsed = true
-            } else if (t.code.toInt() == 100) {
+            } else if (t.code == 100) {
                 rootBuilder.addAttribute(
                     Attribute(
                         "Title-" + t.refno,
@@ -167,7 +180,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                     )
                 )
                 t.isUsed = true
-            } else if (t.code.toInt() == 101) {
+            } else if (t.code == 101) {
                 rootBuilder.addAttribute(
                     Attribute(
                         "Description-" + t.refno,
@@ -255,8 +268,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         var data: Tag? = null
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))] ?: throw IllegalStateException()
-            if (tag.code.toInt() == 1962) dims.add(tag as TagVH)
-            if (tag.code.toInt() == 1963) data = tag
+            if (tag.code == 1962) dims.add(tag as TagVH)
+            if (tag.code == 1963) data = tag
         }
         if (dims.isEmpty()) throw IllegalStateException()
         
@@ -297,11 +310,11 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // look for attributes
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))] ?: throw IllegalStateException()
-            if (tag.code.toInt() == 1962) {
+            if (tag.code == 1962) {
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val lowername: String = vh.name.lowercase(Locale.getDefault())
-                    if (vh.nfields.toInt() == 1 && 
+                    if (vh.nfields == 1.toShort() &&
                         H4type.getDataType(vh.fld_type[0].toInt()) === Datatype.CHAR
                         && (vh.fld_isize[0] > 4000 || lowername.startsWith("archivemetadata")
                                 || lowername.startsWith("coremetadata") || lowername.startsWith("productmetadata")
@@ -394,13 +407,13 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                 continue
             }
             
-            if (tag.code.toInt() == 720) { // NG - prob var
+            if (tag.code == 720) { // NG - prob var
                 if (tag.vinfo != null) {
                     val v  = tag.vinfo!!.vb
                     if (v != null) addVariableToGroup(group, v, tag) else log.error("Missing variable " + tag.refno)
                 }
             }
-            if (tag.code.toInt() == 1962) { // Vheader - may be an att or a var
+            if (tag.code == 1962) { // Vheader - may be an att or a var
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val att: Attribute? = makeAttribute(vh)
@@ -411,7 +424,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                 }
             }
 
-            if (tag.code.toInt() == 1965) { // VGroup - prob a Group
+            if (tag.code == 1965) { // VGroup - prob a Group
                 val vg: TagVGroup = tag as TagVGroup
                 if ((vg.group != null)) { // && (vg.group.parent === root)) {
                     addGroupToGroup(group, vg.group!!, vg)
@@ -465,8 +478,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             vinfo.tags.add(tag)
             tag.vinfo = vinfo // track which variable this tag belongs to
             tag.isUsed = true // assume if contained in Group, then used, to avoid redundant variables
-            if (tag.code.toInt() == 300) dimTag = tag as TagRIDimension
-            if (tag.code.toInt() == 302) data = tag
+            if (tag.code == 300) dimTag = tag as TagRIDimension
+            if (tag.code == 302) data = tag
         }
         if (dimTag == null) {
             log.warn("Image Group " + group.tag() + " missing dimension tag")
@@ -508,43 +521,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         return Dimension(dimName, len, false ,false)
     }
 
-    /* TODO test this
-    fun makeChunkVariable(ncfile: Netcdf, vh: TagVH): Structure? {
-        val vinfo = Vinfo(vh.refno)
-        vinfo.tags.add(vh)
-        vh.vinfo = vinfo
-        vh.isUsed = true
-        val data: TagData? =
-            tagidMap[tagid(vh.refno, TagEnum.VS.code)] as TagData?
-        if (data == null) {
-            log.error(("Cant find tag " + vh.refno + "/" + TagEnum.VS.code).toString() + " for TagVH=" + vh.detail())
-            return null
-        }
-        vinfo.tags.add(data)
-        data.isUsed = true
-        data.vinfo = vinfo
-        if (vh.nfields < 1) throw IllegalStateException()
-        val sb: Structure.Builder<*> = Structure.builder().setName(vh.name)
-        vinfo.setVariable(sb)
-        sb.setSPobject(vinfo)
-        sb.setNcfile(ncfile)
-        if (vh.nvert > 1) sb.setDimensionsAnonymous(intArrayOf(vh.nvert)) else sb.setIsScalar()
-        for (fld in 0 until vh.nfields) {
-            val m = Variable.Builder()
-            m.name = vh.fld_name.get(fld)
-            val type = vh.fld_type[fld].toInt()
-            val nelems = vh.fld_order[fld]
-            m.datatype = H4type.getDataType(type)
-            if (nelems > 1) m.setDimensionsAnonymous(intArrayOf(nelems.toInt())) else m.setIsScalar()
-            m.spObject = Minfo(vh.fld_offset.get(fld))
-            sb.addMemberVariable(m)
-        }
-        vinfo.setData(data, vh.ivsize)
-        return sb.build(ncfile.getRootGroup())
-    }
-
-     */
-
     private fun makeVariable(tagVH: TagVH): Variable.Builder? {
         val vinfo = Vinfo(tagVH.refno)
         vinfo.tags.add(tagVH)
@@ -553,7 +529,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         val data: TagData? =
             tagidMap[tagid(tagVH.refno, TagEnum.VS.code)] as TagData?
         if (data == null) {
-            log.error(("Cant find tag " + tagVH.refno + "/" + TagEnum.VS.code).toString() + " for TagVH=" + tagVH.detail())
+            log.error(("Cant find tag " + tagVH.refno + "/" + TagEnum.VS.code) + " for TagVH=" + tagVH.detail())
             return null
         }
         vinfo.tags.add(data)
@@ -585,21 +561,12 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             }
             vinfo.setData(data, vb.datatype!!.size)
         } else {
-            val members = mutableListOf<StructureMember>()
-            // vinfo.recsize = tagVH.ivsize;
             if (tagVH.nvert > 1) {
                 vb.setDimensionsAnonymous(intArrayOf(tagVH.nvert))
             } else {
                 vb.dimensions.clear()
             }
-            for (fld in 0 until tagVH.nfields) {
-                val type = tagVH.fld_type[fld].toInt()
-                val fdatatype = H4type.getDataType(type)
-                val nelems = tagVH.fld_order[fld].toInt()
-                // val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray
-                val m = StructureMember(tagVH.fld_name[fld], fdatatype, tagVH.fld_offset[fld], intArrayOf(nelems))
-                members.add(m)
-            }
+            val members = tagVH.readStructureMembers()
             val typedef = CompoundTypedef(tagVH.name, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
             vinfo.setData(data, tagVH.ivsize)
@@ -612,7 +579,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
     }
 
     fun makeVinfoForDimensionMapVariable(parent: Group.Builder, v: Variable.Builder) {
-        val vinfo: Vinfo = makeVinfo((-1.toShort()).toShort())
+        val vinfo: Vinfo = makeVinfo(-1)
         vinfo.group = parent
         vinfo.setVariable(v)
     }
@@ -632,10 +599,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         var dim: TagSDDimension? = null
         var ntag: TagNumberType? = null
         var data: TagData? = null
+
         val dims = mutableListOf<Dimension>()
         for (i in 0 until group.nelems) {
-            val tag: Tag? =
-                tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))]
+            val tag: Tag? = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))]
             if (tag == null) {
                 log.error("Reference tag missing= " + group.elem_ref.get(i) + "/" + group.elem_tag.get(i))
                 continue
@@ -643,10 +610,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             vinfo.tags.add(tag)
             tag.vinfo = vinfo // track which variable this tag belongs to
             tag.isUsed = true // assume if contained in Vgroup, then not needed, to avoid redundant variables
-            if (tag.code.toInt() == 106) ntag = tag as TagNumberType
-            if (tag.code.toInt() == 701) dim = tag as TagSDDimension
-            if (tag.code.toInt() == 702) data = tag as TagData
-            if (tag.code.toInt() == 1965) {
+            if (tag.code == 106) ntag = tag as TagNumberType
+            if (tag.code == 701) dim = tag as TagSDDimension
+            if (tag.code == 702) data = tag as TagData
+            if (tag.code == 1965) {
                 val vg: TagVGroup = tag as TagVGroup
                 if (vg.className.startsWith("Dim") || vg.className.startsWith("UDim")) {
                     val dimName: String = vg.name
@@ -667,6 +634,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             log.warn("data tag missing vgroup= " + group.refno + " " + group.name)
             // return null;
         }
+
         val vb = Variable.Builder()
         vb.name = group.name
         vb.dimensions.addAll(dims)
@@ -705,22 +673,24 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         val vinfo = Vinfo(group.refno)
         vinfo.tags.add(group)
         group.isUsed = true
+
+        // dimensions
         var dim: TagSDDimension? = null
         var data: TagData? = null
         for (i in 0 until group.nelems) {
-            val tag: Tag? =
-                tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))]
+            val tag: Tag? = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))]
             if (tag == null) {
                 log.error("Cant find tag " + group.elem_ref.get(i) + "/" + group.elem_tag.get(i) + " for group=" + group.refno)
                 continue
             }
             vinfo.tags.add(tag)
             tag.vinfo = vinfo // track which variable this tag belongs to
-            tag.isUsed = true // assume if contained in Group, then used, to avoid redundant variables
-            if (tag.code.toInt() == 701) dim = tag as TagSDDimension
-            if (tag.code.toInt() == 702) data = tag as TagData
+            tag.isUsed = true // assume if contained in Group, then its used, in order to avoid redundant variables
+            if (tag.code == 701) dim = tag as TagSDDimension
+            if (tag.code == 702) data = tag as TagData
         }
         if ((dim == null) || (data == null)) throw IllegalStateException()
+
         val nt: TagNumberType = tagidMap.get(tagid(dim.nt_ref, TagEnum.NT.code)) as TagNumberType? ?: throw IllegalStateException()
         val vb = Variable.Builder()
         vb.name = "SDS-" + group.refno
@@ -730,29 +700,35 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         vinfo.setVariable(vb)
         vinfo.setData(data, dataType.size)
 
+        // fill value?
+        val tagFV = tagidMap.get(tagid(dim.nt_ref, TagEnum.FV.code))
+        if ((tagFV != null) and (tagFV is TagFV)) {
+            vinfo.fillValue = (tagFV as TagFV).readFillValue(this, dataType)
+        }
+
         // now that we know n, read attribute tags
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap.get(tagid(group.elem_ref.get(i), group.elem_tag.get(i))) ?: throw IllegalStateException()
-            if (tag.code.toInt() == 704) {
+            if (tag.code == 704) {
                 val labels: TagTextN = tag as TagTextN
                 labels.readTag(this, dim.rank.toInt())
                 tag.isUsed = true
                 vb.attributes.add(Attribute(CDM.LONG_NAME, Datatype.STRING, labels.text))
             }
-            if (tag.code.toInt() == 705) {
+            if (tag.code == 705) {
                 val units: TagTextN = tag as TagTextN
                 units.readTag(this, dim.rank.toInt())
                 tag.isUsed = true
                 vb.attributes.add(Attribute(CDM.UNITS, Datatype.STRING, units.text))
             }
-            if (tag.code.toInt() == 706) {
+            if (tag.code == 706) {
                 val formats: TagTextN =
                     tag as TagTextN
                 formats.readTag(this, dim.rank.toInt())
                 tag.isUsed = true
                 vb.attributes.add(Attribute("formats", Datatype.STRING, formats.text))
             }
-            if (tag.code.toInt() == 707) {
+            if (tag.code == 707) {
                 val minmax: TagSDminmax = tag as TagSDminmax
                 tag.isUsed = true
                 vb.attributes.add(Attribute("min", dataType, listOf(minmax.getMin(dataType))))
@@ -763,7 +739,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // look for VH style attributes - dunno if they are actually used
         addVariableAttributes(group, vinfo)
         if (debugConstruct) {
-            println(("added variable " + vb.name).toString() + " from Group " + group)
+            println(("added variable " + vb.name) + " from Group " + group)
             println("  SDdim= " + dim.detail())
         }
         return vb
@@ -773,7 +749,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // look for attributes
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap.get(tagid(group.elem_ref.get(i), group.elem_tag.get(i))) ?: throw IllegalStateException()
-            if (tag.code.toInt() == 1962) {
+            if (tag.code == 1962) {
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val att: Attribute? = makeAttribute(vh)
@@ -790,7 +766,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // look for attributes
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap.get(tagid(group.elem_ref.get(i), group.elem_tag.get(i))) ?: throw IllegalStateException()
-            if (tag.code.toInt() == 1962) {
+            if (tag.code == 1962) {
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val att: Attribute? = makeAttribute(vh)
@@ -804,7 +780,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
     }
 
     //////////////////////////////////////////////////////////////////////
-    internal fun makeVinfo(refno: Short): Vinfo {
+    internal fun makeVinfo(refno: Int): Vinfo {
         val vinfo = Vinfo(refno)
         this.refnoMap[refno] = vinfo
         return vinfo
@@ -833,7 +809,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
 
         private var debugTag1 = false // show tags after read(), before read2().
-        private var debugTag2 = false // show tags after everything is done.
+        private var debugTag2 = true // show tags after everything is done.
         private var debugTagDetail = false // when showing tags, show detail or not
         private var debugConstruct = false // show CDM objects as they are constructed
         private var debugAtt = false // show CDM attributes as they are constructed
@@ -848,9 +824,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             useHdfEos = `val`
         }
 
-        fun tagid(refno: Short, code: Short): Int {
-            val result = (code.toInt() and 0x3FFF) shl 16
-            val result2 = (refno.toInt() and 0xffff)
+        // this is a unique id for a message in a file
+        fun tagid(refno: Int, code: Int): Int {
+            val result = (code and 0x3FFF) // why not FFFF ?
+            val result2 = (refno and 0xffff) shl 16
             return result + result2
         }
     }

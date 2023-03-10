@@ -14,7 +14,7 @@ import java.nio.ByteBuffer
 /**
  * @param strict true = make it agree with nclib if possible
  */
-class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
+class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     private val raf : OpenFile = OpenFile(filename)
     private val header : H5builder
 
@@ -28,7 +28,7 @@ class Hdf5File(val filename : String, strict : Boolean = true) : Iosp, Netcdf {
 
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
-    override fun cdl(strict : Boolean) = com.sunya.cdm.api.cdl(this, strict)
+    override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = header.formatType()
 
     @Throws(IOException::class)

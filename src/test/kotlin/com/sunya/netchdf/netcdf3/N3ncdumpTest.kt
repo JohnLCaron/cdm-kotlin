@@ -41,8 +41,8 @@ class N3ncdumpTest {
         val ncdumpOutput = ncdump(filename)
         println("expect = \"$ncdumpOutput\"")
         Netcdf3File(filename).use { ncfile ->
-            println("actual = \"${ncfile.cdl(true)}\"")
-            assertEquals(normalize(ncdumpOutput), normalize(ncfile.cdl(true)))
+            println("actual = \"${ncfile.cdl()}\"")
+            assertEquals(normalize(ncdumpOutput), normalize(ncfile.cdl()))
         }
     }
 

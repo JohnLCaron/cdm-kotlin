@@ -68,6 +68,7 @@ data class Variable(
         var dimList: List<String>? = null
 
         fun setDimensionsAnonymous(shape : IntArray) {
+            dimensions.clear()
             for (len in shape) {
                 dimensions.add(Dimension("", len, false, false))
             }

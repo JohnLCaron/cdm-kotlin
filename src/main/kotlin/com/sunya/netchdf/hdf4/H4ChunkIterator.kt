@@ -12,12 +12,12 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.InflaterInputStream
 
-internal class H4ChunkIterator(val h4 : H4builder, vinfo: Vinfo) : LayoutTiled.DataChunkIterator {
+internal class H4ChunkIterator(h4file : Hdf4File, vinfo: Vinfo) : LayoutTiled.DataChunkIterator {
     val chunks: List<SpecialDataChunk>
     var chunkNo = 0
 
     init {
-        chunks = vinfo.chunks!!
+        chunks = vinfo.readChunks(h4file)
     }
 
     override operator fun hasNext(): Boolean {
@@ -47,7 +47,7 @@ internal class H4CompressedChunkIterator(val h4 : H4builder, vinfo: Vinfo) : Lay
     override operator fun next(): LayoutTiledBB.DataChunk {
         val chunk = chunks[chunkNo]
         val chunkData: TagData = chunk.data
-        require(chunkData.ext_type == TagEnum.SPECIAL_COMP)
+        require(chunkData.extendedTag == TagEnum.SPECIAL_COMP)
         requireNotNull(chunkData.compress)
         chunkNo++
         return H4DataChunkCompressed(h4, chunk.origin, chunkData.compress!!)

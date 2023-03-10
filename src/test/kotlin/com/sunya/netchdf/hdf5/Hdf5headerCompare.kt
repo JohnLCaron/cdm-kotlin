@@ -14,7 +14,7 @@ import kotlin.test.assertTrue
 
 // Compare header using cdl(!strict) with Hdf5File and NetcdfClibFile
 // sometime fail when they are not netcdf4 files, so nc4lib sees them as empty
-class Hdf5cdlCompare {
+class Hdf5headerCompare {
 
     companion object {
         @JvmStatic

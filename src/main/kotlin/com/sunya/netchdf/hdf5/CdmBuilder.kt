@@ -10,6 +10,7 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SPECIAL_ATTS
+import com.sunya.netchdf.netcdf4.Netcdf4
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
@@ -244,7 +245,7 @@ internal class DataContainerVariable(
     }
 }
 
-internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5TypeInfo): Any? {
+internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5TypeInfo): Any {
     // look for fill value message
     var fillValueBB : ByteBuffer? = null
     for (mess in v5.dataObject.messages) {
@@ -260,12 +261,13 @@ internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5T
             }
         }
     }
-    if (fillValueBB == null) return null
+    val datatype = h5type.datatype(h5)
+    if (fillValueBB == null) return getFillValueDefault(datatype)
     fillValueBB.position(0)
     fillValueBB.order(h5type.endian)
 
     // a single data value, same datatype as the dataset
-    return when (h5type.datatype(h5)) {
+    return when (datatype) {
         Datatype.BYTE -> fillValueBB.get()
         Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> fillValueBB.get().toUByte()
         Datatype.SHORT -> fillValueBB.getShort()
@@ -277,7 +279,25 @@ internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5T
         Datatype.LONG -> fillValueBB.getLong()
         Datatype.ULONG -> fillValueBB.getLong().toULong()
         Datatype.OPAQUE -> fillValueBB
-        else -> null
+        else -> getFillValueDefault(datatype)
+    }
+}
+
+internal fun getFillValueDefault(datatype : Datatype): Any {
+    // a single data value, same datatype as the dataset
+    return when (datatype) {
+        Datatype.BYTE -> 0.toByte()
+        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> 0.toUByte()
+        Datatype.SHORT -> 0.toShort()
+        Datatype.USHORT, Datatype.ENUM2 -> 0.toUShort()
+        Datatype.INT -> 0
+        Datatype.UINT, Datatype.ENUM4 -> 0.toUInt()
+        Datatype.FLOAT -> 0.0f
+        Datatype.DOUBLE -> 0.0
+        Datatype.LONG -> 0L
+        Datatype.ULONG -> 0.toULong()
+        Datatype.OPAQUE -> ByteBuffer.allocate(1)
+        else -> 0
     }
 }
 

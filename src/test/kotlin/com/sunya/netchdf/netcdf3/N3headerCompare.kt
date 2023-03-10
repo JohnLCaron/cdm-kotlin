@@ -10,6 +10,7 @@ import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
+import kotlin.test.assertTrue
 
 // Compare header using cdl(strict) with Netcdf3File and NetcdfClibFile
 class N3headerCompare {
@@ -39,10 +40,19 @@ class N3headerCompare {
         readN3header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/nc_test_classic.nc4")
     }
 
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        NetcdfClibFile(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            assertTrue((ncfile.type() == "NC_FORMAT_CLASSIC") or (ncfile.type() == "NC_FORMAT_64BIT_OFFSET"))
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readN3header(filename : String) {
-        println("=================")
         println(filename)
         Netcdf3File(filename).use { n3file ->
             NetcdfClibFile(filename).use { ncfile ->

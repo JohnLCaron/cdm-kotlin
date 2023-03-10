@@ -11,8 +11,6 @@ import java.nio.charset.StandardCharsets
 class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : Int, val members : List<StructureMember>)
     : ArrayTyped<ArrayStructureData.StructureData>(shape) {
 
-    val nelems = Section(shape).computeSize().toInt()
-
     fun get(idx : Int) = StructureData(bb, sizeElem * idx, members)
 
     override fun iterator(): Iterator<StructureData> = BufferIterator()
@@ -42,7 +40,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
 
     override fun toString(): String {
         return buildString {
-            append("ArrayStructureData(sizeElem=$sizeElem, members=$members, nelems=$nelems)\n")
+            append("ArrayStructureData(nelems=$nelems sizeElem=$sizeElem, members=$members)\n")
             for (member in this@ArrayStructureData.members) {
                 append("${"%12s".format(member.name)}, ")
             }
@@ -73,7 +71,9 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
                 members.forEachIndexed { idx, m ->
                     if (idx > 0) append(", ")
                     val value = m.value(this@StructureData)
-                    if (value is String) append("\"${"%12s".format(value.toString())}\"") else append("%12s".format(value.toString()))
+                    if (value is ArrayTyped<*>) append(value.values())
+                    else if (value is String) append("\"${"%12s".format(value.toString())}\"")
+                    else append("%12s".format(value.toString()))
                 }
             }
         }
@@ -137,6 +137,29 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
         val offset = sdata.offset + this.offset
+        if (nelems > 1) {
+            val memberBB = ByteBuffer.allocate(nelems * datatype.size)
+            repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
+            return when (datatype) {
+                Datatype.BYTE -> ByteArray(nelems) { bb.get(offset + it) }
+                Datatype.SHORT -> ShortArray(nelems) { bb.getShort(offset + it * 2) }
+                Datatype.INT -> ArrayInt(dims, memberBB.asIntBuffer())
+                Datatype.LONG -> bb.getLong(offset)
+                Datatype.UBYTE -> bb.get(offset).toUByte()
+                Datatype.USHORT -> bb.getShort(offset).toUShort()
+                Datatype.UINT -> bb.getInt(offset).toUInt()
+                Datatype.ULONG -> bb.getLong(offset).toULong()
+                Datatype.FLOAT -> bb.getFloat(offset)
+                Datatype.DOUBLE -> bb.getDouble(offset)
+                Datatype.CHAR -> makeStringZ(bb, offset, nelems)
+                Datatype.STRING -> {
+                    val ret = sdata.getFromHeap(offset)
+                    if (ret == null) "unknown" else ret as String
+                }
+                else -> throw RuntimeException("unimplemented array of $datatype")
+            }
+        }
+
         return when (datatype) {
             Datatype.BYTE -> bb.get(offset)
             Datatype.SHORT -> bb.getShort(offset)
