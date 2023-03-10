@@ -1,8 +1,9 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.iosp.LayoutTiled
-import com.sunya.cdm.iosp.LayoutTiledBB
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.Odometer
+import com.sunya.cdm.layout.Tiling
 import com.sunya.cdm.util.IOcopyB
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -12,63 +13,57 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.zip.InflaterInputStream
 
-internal class H4ChunkIterator(h4file : Hdf4File, vinfo: Vinfo) : LayoutTiled.DataChunkIterator {
-    val chunks: List<SpecialDataChunk>
-    var chunkNo = 0
-
-    init {
-        chunks = vinfo.readChunks(h4file)
-    }
-
-    override operator fun hasNext(): Boolean {
-        return chunkNo < chunks.size
-    }
-
-    override operator fun next(): LayoutTiled.DataChunk {
-        val chunk: SpecialDataChunk = chunks[chunkNo]
-        val chunkData: TagData = chunk.data
-        chunkNo++
-        return LayoutTiled.DataChunk(chunk.origin, chunkData.offset)
-    }
-}
-
-internal class H4CompressedChunkIterator(val h4 : H4builder, vinfo: Vinfo) : LayoutTiledBB.DataChunkIterator {
-    val chunks: List<SpecialDataChunk>
-    var chunkNo = 0
-
-    init {
-        chunks = vinfo.chunks!!
-    }
-
-    override operator fun hasNext(): Boolean {
-        return chunkNo < chunks.size
-    }
-
-    override operator fun next(): LayoutTiledBB.DataChunk {
-        val chunk = chunks[chunkNo]
-        val chunkData: TagData = chunk.data
-        require(chunkData.extendedTag == TagEnum.SPECIAL_COMP)
-        requireNotNull(chunkData.compress)
-        chunkNo++
-        return H4DataChunkCompressed(h4, chunk.origin, chunkData.compress!!)
-    }
-}
-
 private const val defaultBufferSize = 50_000
 
-private class H4DataChunkCompressed(
+
+// replace H4ChunkIterator, LayoutBB
+internal class H4tiledData(val h4 : H4builder, varShape : IntArray, chunk : IntArray, val chunks: List<SpecialDataChunk>) {
+    val tiling = Tiling(varShape, chunk)
+
+    // optimize later
+    fun findEntryContainingKey(want : IntArray) : SpecialDataChunk? {
+        chunks.forEach { chunk ->
+            if (chunk.origin.contentEquals(want)) return chunk
+        }
+        return null
+    }
+
+    fun findDataChunks(wantSpace : IndexSpace) : Iterable<H4CompressedDataChunk> {
+        val chunks = mutableListOf<H4CompressedDataChunk>()
+
+        val tileSection = tiling.section( wantSpace) // section in tiles that we want
+        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
+        // println("tileSection = ${tileSection}")
+
+        while (!tileOdometer.isDone()) {
+            val wantTile = tileOdometer.current
+            val wantKey = tiling.index(wantTile) // convert to chunk origin
+            val chunk = findEntryContainingKey(wantKey)
+            val useEntry = if (chunk != null) H4CompressedDataChunk(h4, chunk.origin, chunk.data.compress)
+                else H4CompressedDataChunk(h4, wantKey, null)
+            chunks.add(useEntry)
+            tileOdometer.incr()
+        }
+        return chunks
+    }
+}
+
+internal class H4CompressedDataChunk(
     val h4 : H4builder,
-    override val offset: IntArray,  // offset index of this chunk, reletive to entire array
-    private val compress: SpecialComp
-) : LayoutTiledBB.DataChunk {
-    
+    val offsets: IntArray,  // offset index of this chunk, reletive to entire array
+    private val compress: SpecialComp?
+) {
+    fun isMissing() = (compress == null)
+
     private var bb: ByteBuffer? = null // the data is placed into here
 
     @Throws(IOException::class)
-    override fun getByteBuffer(expectedSizeBytes: Int): ByteBuffer {
-        if (bb == null) {
+    fun getByteBuffer(): ByteBuffer {
+        if (bb != null) return bb!!
+        if (compress == null) {
+        } else {
             // read compressed data in
-            val cdata = compress.getDataTag(h4)
+            val cdata = compress!!.getDataTag(h4)
             val input: InputStream
 
             // compressed data stored in one place
@@ -105,4 +100,8 @@ private class H4DataChunkCompressed(
         bb!!.position(0)
         return bb!!
     }
+
+    fun show(tiling : Tiling) =
+        "chunkStart=${offsets.contentToString()}, tile= ${tiling.tile(offsets).contentToString()}"
+
 }

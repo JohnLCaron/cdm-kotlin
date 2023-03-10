@@ -20,6 +20,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     internal val header: H4builder
     private val rootGroup: Group
     var valueCharset: Charset = StandardCharsets.UTF_8
+    val useOld = false
 
     init {
         header = H4builder(raf, valueCharset, strict)
@@ -63,10 +64,13 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                println("***CHUNKED chunkSize = ${vinfo.chunkSize.contentToString()}")
-                val chunkIterator = H4ChunkIterator(this, vinfo)
-                val layout = LayoutTiled(chunkIterator, vinfo.chunkSize, vinfo.elemSize, section)
-                return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
+                if (useOld) {
+                    val chunkIterator = H4ChunkIterator(this, vinfo)
+                    val layout = LayoutTiled(chunkIterator, vinfo.chunkLengths, vinfo.elemSize, section)
+                    return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
+                } else {
+                    return H4chunkReader(header).readChunkedDataNew(v, section)
+                }
             }
         } else {
             if (!vinfo.isLinked && !vinfo.isChunked) {
@@ -82,10 +86,13 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                println("***CHUNKED chunkSize = ${vinfo.chunkSize.contentToString()}")
-                val chunkIterator = H4CompressedChunkIterator(header, vinfo)
-                val layout = LayoutTiledBB(chunkIterator, vinfo.chunkSize, vinfo.elemSize, section)
-                return readCompressedDataWithFill(raf, layout, v, vinfo.fillValue, section)
+                if (useOld) {
+                    val chunkIterator = H4CompressedChunkIterator(header, vinfo)
+                    val layout = LayoutTiledBB(chunkIterator, vinfo.chunkLengths, vinfo.elemSize, section)
+                    return readCompressedDataWithFill(raf, layout, v, vinfo.fillValue, section)
+                } else {
+                    return H4chunkReader(header).readChunkedDataNew(v, section)
+                }
             }
         }
         throw IllegalStateException()
@@ -142,9 +149,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
         var count = 0
         while (layout.hasNext()) {
             val chunk = layout.next()
-            require(chunk.srcElem().toInt() == chunk.nelems() * count)
-            require(chunk.destElem().toInt() == chunk.nelems() * count)
-            if (count < 100) println("$count chunk = $chunk")
+            // if (count < 100) println("$count chunk = $chunk")
             val chunkBB = chunk.byteBuffer
             chunkBB.position(0)
             // copy these bytes into destination

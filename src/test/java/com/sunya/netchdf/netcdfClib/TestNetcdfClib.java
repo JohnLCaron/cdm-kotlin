@@ -1,4 +1,4 @@
-package com.sunya.cdm.netcdf4.ffm;
+package com.sunya.netchdf.netcdfClib;
 
 import java.io.IOException;
 import java.lang.foreign.MemorySegment;
@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 import static com.sunya.netchdf.netcdfClib.ffm.netcdf_h.C_INT;
 import static com.sunya.netchdf.netcdfClib.ffm.netcdf_h.nc_open;
 
-public class TestNetcdfH {
+public class TestNetcdfClib {
 
   @Test
   public void cantOpenProblem() throws IOException {
