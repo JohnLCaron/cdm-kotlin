@@ -1,8 +1,7 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.Section
-import com.sunya.netchdf.NetchdfTest
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.readDataCompareHC
 import com.sunya.netchdf.readMyData
 import com.sunya.netchdf.readDataCompareNC
@@ -50,21 +49,20 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            return Stream.of(sds, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i};
+            return hdf4
+            // return Stream.of(sds, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i};
         }
     }
 
     @Test
     fun hasStruct() {
-        NetchdfTest.showData = true
-        readMyData("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf",
-            "Sea_Ice_Motion_Vectors_-_17766010")
-        NetchdfTest.showData = false
+        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+ //           "Sea_Ice_Motion_Vectors_-_17766010")
     }
 
     @Test
     fun problem() {
-        readDataCompareHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf")
+        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF")
     }
 
     // compress_type = 0
@@ -130,13 +128,14 @@ class H4compareNc {
 
     // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
     // https://docs.unidata.ucar.edu/nug/current/getting_and_building_netcdf.html#build_hdf4
-    // @ParameterizedTest
+    @ParameterizedTest
     @MethodSource("params")
     fun compareH4header(filename : String) {
         println("=================")
         println(filename)
         Hdf4File(filename, true).use { myfile ->
-            NetcdfClibFile(filename).use { ncfile ->
+            println("Hdf4File = ${myfile.cdl()}")
+            Hdf4ClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")
                 assertEquals(ncfile.cdl(), myfile.cdl())

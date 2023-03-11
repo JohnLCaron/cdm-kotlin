@@ -42,7 +42,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     var chunks: List<SpecialDataChunk>? = null
     var chunkLengths = IntArray(0)
 
-    var endian = ByteOrder.BIG_ENDIAN // LOOK at nt ??
+    var endian = ByteOrder.BIG_ENDIAN // LOOK TABLE 2H Little-Endian Format Data Type Definitions
 
     fun setVariable(v: Variable.Builder) {
         vb = v
