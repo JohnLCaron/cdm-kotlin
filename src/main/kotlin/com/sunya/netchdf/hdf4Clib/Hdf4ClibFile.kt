@@ -24,6 +24,14 @@ cd /home/snake/install/jextract-19/bin
     --output /home/snake/dev/github/cdm-kotlin/src/main/java \
     /home/snake/install/hdf4/include/mfhdf.h
 
+    ./jextract --source \
+    --header-class-name hdf_h \
+    --target-package com.sunya.netchdf.hdfClib.ffm \
+    -I /home/snake/install/hdf4/include/hdf.h \
+    -l /home/snake/install/hdf4/lib/libmfhdf.so \
+    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
+    /home/snake/install/hdf4/include/hdf.h
+
  */
 
 
@@ -72,7 +80,7 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
             }
             val data_p = session.allocate(nbytes)
 
-            val sds_id = SDselect(header.hcid, vinfo.sds_index)
+            val sds_id = SDselect(header.sd_id, vinfo.sds_index)
             checkErr("SDreaddata", SDreaddata(sds_id, origin_p, stride_p, shape_p, data_p))
             SDendaccess(sds_id)
 

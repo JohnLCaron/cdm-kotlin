@@ -7,6 +7,7 @@ import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.netchdf.hdf4.H4builder.Companion.tagid
+import com.sunya.netchdf.hdf4.TagEnum.Companion.obsolete
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
@@ -29,8 +30,9 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         TagEnum.DIL, TagEnum.DIA -> return TagAnnotate(xtag, refno, offset, length)
         TagEnum.NT -> return TagNumberType(xtag, refno, offset, length)
         TagEnum.ID, TagEnum.LD, TagEnum.MD -> return TagRIDimension(xtag, refno, offset, length)
-        TagEnum.LUT -> return TagRIPalette(xtag, refno, offset, length)
-        TagEnum.RIG, TagEnum.NDG -> return TagGroup(xtag, refno, offset, length)
+        TagEnum.LUT -> return TagLookupTable(xtag, refno, offset, length)
+        TagEnum.RI -> return TagRasterImage(xtag, refno, offset, length)
+        TagEnum.RIG, TagEnum.NDG -> return TagRasterImageGroup(xtag, refno, offset, length)
         TagEnum.SDD -> return TagSDDimension(xtag, refno, offset, length)
         TagEnum.SDL, TagEnum.SDU, TagEnum.SDF -> return TagTextN(xtag, refno, offset, length)
         TagEnum.SDM -> return TagSDminmax(xtag, refno, offset, length)
@@ -39,7 +41,7 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         TagEnum.VG -> return TagVGroup(xtag, refno, offset, length)
         // wtf? 17086 -> return TagVGroup(icode, refno, offset, length)
         else -> {
-            if (xtag > 1) println(" Unknown $tagEnum xtag=($xtag) refno=$refno")
+            if ((xtag > 1) and !obsolete.contains(tagEnum)) println(" Unknown $tagEnum xtag=($xtag) refno=$refno")
             return Tag(xtag, refno, offset, length)
         }
     }
@@ -62,7 +64,7 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
     }
 
     override fun toString(): String {
-        return "${if (isUsed) " " else "*"} refno=$refno tag=${tagName()} ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
+        return "${if (isUsed) " " else "*"} tag=${tagName()}  vclass=${vClass()} refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
                 " length=$length"
     }
 
@@ -80,8 +82,8 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
 
     fun vClass() : String {
         return when (this) {
-            is TagVGroup -> this.className?: ""
-            is TagVH -> this.className?: ""
+            is TagVGroup -> this.className
+            is TagVH -> this.className
             else -> ""
         }
     }
@@ -262,6 +264,7 @@ class TagRIDimension(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
+        // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. p 321
         xdim = h4.raf.readInt(state)
         ydim = h4.raf.readInt(state)
         state.pos += 2
@@ -278,19 +281,29 @@ class TagRIDimension(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
     }
 }
 
-// 301 p121
-class TagRIPalette(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+// 301 p.124
+class TagRasterImage(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+    var raster = ByteArray(0)
+
+    fun read(h4 : H4builder, nx: Int, ny: Int, ntsize : Int) {
+        val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
+        raster = h4.raf.readBytes(state, nx * ny * ntsize)
+    }
+}
+
+// 302 p.125
+class TagLookupTable(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var table: IntArray = IntArray(0)
 
     // cant read without info from other tags
-    fun H4builder.read(h4 : H4builder, nx: Int, ny: Int) {
+    fun read(h4 : H4builder, nx: Int, ny: Int) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         table = IntArray(nx * ny) { h4.raf.readInt(state) }
     }
 }
 
 // 306 p118; 720 p 127
-class TagGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+class TagRasterImageGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     val nelems = length / 4
     var elem_tag = IntArray(0)
     var elem_ref = IntArray(0)
