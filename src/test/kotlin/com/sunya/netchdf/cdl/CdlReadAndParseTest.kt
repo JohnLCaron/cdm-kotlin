@@ -10,6 +10,7 @@ import com.github.h0tk3y.betterParse.st.liftToSyntaxTreeGrammar
 import com.sunya.cdm.api.Netcdf
 import com.sunya.netchdf.netcdf4.normalize
 import com.sunya.netchdf.netcdf4.openNetchdfFile
+import com.sunya.netchdf.parser.CdlParser
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals

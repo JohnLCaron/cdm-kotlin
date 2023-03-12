@@ -32,7 +32,7 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         TagEnum.ID, TagEnum.LD, TagEnum.MD -> return TagRIDimension(xtag, refno, offset, length)
         TagEnum.LUT -> return TagLookupTable(xtag, refno, offset, length)
         TagEnum.RI -> return TagRasterImage(xtag, refno, offset, length)
-        TagEnum.RIG, TagEnum.NDG -> return TagRasterImageGroup(xtag, refno, offset, length)
+        TagEnum.RIG, TagEnum.NDG -> return TagDataGroup(xtag, refno, offset, length)
         TagEnum.SDD -> return TagSDDimension(xtag, refno, offset, length)
         TagEnum.SDL, TagEnum.SDU, TagEnum.SDF -> return TagTextN(xtag, refno, offset, length)
         TagEnum.SDM -> return TagSDminmax(xtag, refno, offset, length)
@@ -302,8 +302,8 @@ class TagLookupTable(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
     }
 }
 
-// 306 p118; 720 p 127
-class TagRasterImageGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+// TagEnum.RIG (306), TagEnum.NDG (720) lists of other tags
+class TagDataGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     val nelems = length / 4
     var elem_tag = IntArray(0)
     var elem_ref = IntArray(0)

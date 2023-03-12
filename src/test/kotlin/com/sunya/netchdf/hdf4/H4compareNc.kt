@@ -19,7 +19,7 @@ class H4compareNc {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val sds = Stream.of(
+            val sdsNotEos = Stream.of(
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/MAC07S0.A2008230.1250.002.2008233222357.hdf"),
                 Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf"),
@@ -49,8 +49,8 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            return hdf4
-            // return Stream.of(sds, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i};
+            return moar42
+            // return Stream.of(sdsNotEos, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i};
         }
     }
 
@@ -62,7 +62,7 @@ class H4compareNc {
 
     @Test
     fun problem() {
-        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF")
+        compareH4header("/media/twobee/netch/hdf4/jeffmc/swath.hdf")
     }
 
     // compress_type = 0
@@ -122,8 +122,8 @@ class H4compareNc {
     }
 
     @Test
-    fun problemData() {
-        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/CAL_LID_L1-Launch-V1-06.2006-07-07T21-20-40ZD.hdf")
+    fun groups() {
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L3_DailyLand_B04_20080101.hdf")
     }
 
     // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
@@ -134,7 +134,7 @@ class H4compareNc {
         println("=================")
         println(filename)
         Hdf4File(filename, true).use { myfile ->
-            println("Hdf4File = ${myfile.cdl()}")
+            // println("Hdf4File = ${myfile.cdl()}")
             Hdf4ClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")

@@ -103,6 +103,11 @@ class Group(orgName : String,
             groups.add(group)
         }
 
+        fun removeGroupIfExists(groupName: String): Boolean {
+            val egroup = groups.find {it.name == groupName }
+            return if (egroup == null) false else groups.remove(egroup)
+        }
+
         fun build(parent : Group?) : Group {
             val useName = makeValidCdmObjectName(name)
             return Group(useName, typedefs, dimensions, attributes, variables, groups, parent)

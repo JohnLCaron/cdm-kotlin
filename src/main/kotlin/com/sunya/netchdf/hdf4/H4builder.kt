@@ -90,7 +90,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         // pass 1 : Vgroups with special classes
         for (t: Tag in alltags) {
             if (t.code == 306) { // raster image group
-                val v: Variable.Builder? = makeRasterImage(t as TagRasterImageGroup)
+                val v: Variable.Builder? = makeRasterImage(t as TagDataGroup)
                 if (v != null) vars.add(v)
             } else if (t.code == 1965) {
                 val vgroup: TagVGroup = t as TagVGroup
@@ -117,7 +117,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                     if (v != null) vars.add(v)
                 }
             } else if (t.code == 720) { // numeric data group
-                val v = makeRasterImageVariable(t as TagRasterImageGroup)
+                val v = makeRasterImageVariable(t as TagDataGroup)
                 vars.add(v)
             }
         }
@@ -460,14 +460,14 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
 
     private fun addGroupToGroup(parent: Group.Builder, gb: Group.Builder, tag: Tag) {
         // may have to reparent the group
-        // root.removeGroup(g.name) ??
+        rootBuilder.removeGroupIfExists(gb.name)
 
         val groupExisting = parent.groups.find { it.name == gb.name }
         if (groupExisting != null) groupExisting.name += tag.refno // disambiguate
         parent.addGroup(gb)
     }
 
-    private fun makeRasterImage(group: TagRasterImageGroup): Variable.Builder? {
+    private fun makeRasterImage(group: TagDataGroup): Variable.Builder? {
         var dimTag: TagRIDimension? = null
         val ntag: TagNumberType
         var data: Tag? = null
@@ -625,7 +625,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
                 val vg: TagVGroup = tag as TagVGroup
                 if (vg.className.startsWith("Dim") || vg.className.startsWith("UDim")) {
                     val dimName: String = vg.name
-                    val d: Dimension = rootBuilder.dimensions.find{it.name == dimName } ?: throw IllegalStateException()
+                    val d: Dimension = rootBuilder.dimensions.find{it.orgName == dimName } ?: throw IllegalStateException()
                     dims.add(d)
                 }
             }
@@ -677,7 +677,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         return vb
     }
 
-    private fun makeRasterImageVariable(group: TagRasterImageGroup): Variable.Builder {
+    private fun makeRasterImageVariable(group: TagDataGroup): Variable.Builder {
         val vinfo = Vinfo(group.refno)
         vinfo.tags.add(group)
         group.isUsed = true
@@ -753,7 +753,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         return vb
     }
 
-    private fun addVariableAttributes(group: TagRasterImageGroup, vinfo: Vinfo) {
+    private fun addVariableAttributes(group: TagDataGroup, vinfo: Vinfo) {
         // look for attributes
         for (i in 0 until group.nelems) {
             val tag: Tag = tagidMap.get(tagid(group.elem_ref.get(i), group.elem_tag.get(i))) ?: throw IllegalStateException()
@@ -816,8 +816,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             return false
         }
 
-        private var debugTag1 = true // show tags after read(), before read2().
-        private var debugTag2 = false // show tags after everything is done.
+        private var debugTag1 = false // show tags after read(), before read2().
+        private var debugTag2 = true // show tags after everything is done.
         private var debugTagDetail = false // when showing tags, show detail or not
         private var debugConstruct = false // show CDM objects as they are constructed
         private var debugAtt = false // show CDM attributes as they are constructed

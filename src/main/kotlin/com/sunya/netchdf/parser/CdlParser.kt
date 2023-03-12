@@ -1,4 +1,4 @@
-package com.sunya.netchdf.cdl
+package com.sunya.netchdf.parser
 
 import com.github.h0tk3y.betterParse.combinators.*
 import com.github.h0tk3y.betterParse.grammar.Grammar
@@ -59,7 +59,7 @@ object CdlParser : Grammar<Netcdf>() {
             (name, _, _, _, length) ->
         Dimension(name, length, true, true)
     }
-    val dimensions by (DIMENSIONS and zeroOrMore(regularDimension or unlimitedDimension)).map {(_, dims) ->
+    val dimensions by (DIMENSIONS and zeroOrMore(regularDimension or unlimitedDimension)).map { (_, dims) ->
         dims
     }
 
@@ -73,7 +73,7 @@ object CdlParser : Grammar<Netcdf>() {
         val name = attname.text.substringAfter(':')
         Attribute(name, value.text)
     }
-    val attributes by (zeroOrMore(attribute or attributeQuoted)).map {atts ->
+    val attributes by (zeroOrMore(attribute or attributeQuoted)).map { atts ->
         atts
     }
 
@@ -88,7 +88,7 @@ object CdlParser : Grammar<Netcdf>() {
         atts.forEach { vb.attributes.add(it) }
         vb
     }
-    val variables by (VARIABLES and zeroOrMore(variable)).map {(_, variables) ->
+    val variables by (VARIABLES and zeroOrMore(variable)).map { (_, variables) ->
         variables
     }
 
