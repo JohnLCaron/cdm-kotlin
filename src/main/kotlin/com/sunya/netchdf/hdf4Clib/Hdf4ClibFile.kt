@@ -45,16 +45,17 @@ import java.lang.foreign.MemorySession
 import java.lang.foreign.ValueLayout
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import java.nio.charset.Charset
+import java.nio.charset.StandardCharsets
 
 class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
     private val header: HCheader = HCheader(filename)
-    private val rootGroup: Group = header.rootGroup.build(null)
 
-    override fun rootGroup() = rootGroup
+    override fun rootGroup() = header.rootGroup
 
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)
-    override fun type() = header.formatType
+    override fun type() = "hdf4Clib"
 
     override fun close() {
         header.close()
@@ -80,7 +81,7 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
             }
             val data_p = session.allocate(nbytes)
 
-            val sds_id = SDselect(header.sd_id, vinfo.sds_index)
+            val sds_id = SDselect(header.sds_id, vinfo.sds_index)
             checkErr("SDreaddata", SDreaddata(sds_id, origin_p, stride_p, shape_p, data_p))
             SDendaccess(sds_id)
 
@@ -103,6 +104,10 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
                 else -> throw IllegalArgumentException("datatype ${v2.datatype}")
             }
         }
+    }
+
+    companion object {
+        var valueCharset: Charset = StandardCharsets.UTF_8
     }
 
 }

@@ -1,4 +1,4 @@
-package com.sunya.netchdf.cdl
+package com.sunya.netchdf.parser
 
 import com.sunya.cdm.api.Group
 import com.sunya.cdm.api.Netcdf
