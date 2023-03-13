@@ -107,15 +107,15 @@ object CdlParser : Grammar<Netcdf>() {
     override val rootParser by netcdf
 }
 
-fun printSyntaxTree(cdl: String) {
+fun printCdlSyntaxTree(cdl: String) {
     val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
     when (val result = cdlGrammer.tryParseToEnd(cdl)) {
         is ErrorResult -> println("Could not parse expression: $result")
-        is Parsed<SyntaxTree<Netcdf>> -> printSyntaxTree(cdl, result.value)
+        is Parsed<SyntaxTree<Netcdf>> -> printCdlSyntaxTree(cdl, result.value)
     }
 }
 
-fun printSyntaxTree(expr: String, syntaxTree: SyntaxTree<*>) {
+fun printCdlSyntaxTree(expr: String, syntaxTree: SyntaxTree<*>) {
     println("printSyntaxTree:")
     var currentLayer: List<SyntaxTree<*>> = listOf(syntaxTree)
     while (currentLayer.isNotEmpty()) {
@@ -129,7 +129,7 @@ fun printSyntaxTree(expr: String, syntaxTree: SyntaxTree<*>) {
     }
 }
 
-fun charByTree(index : Int, tree: SyntaxTree<*>) : Char {
+private fun charByTree(index : Int, tree: SyntaxTree<*>) : Char {
     with (CdlParser) {
         return when (tree.parser) {
             NETCDF -> 'N'
