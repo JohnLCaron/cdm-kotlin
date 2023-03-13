@@ -95,7 +95,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             } else if (t.code == 1965) {
                 val vgroup: TagVGroup = t as TagVGroup
                 if (vgroup.className.startsWith("Dim") || vgroup.className.startsWith("UDim")) {
-                    makeDimension(vgroup)
+                    makeDimension(rootBuilder, vgroup) // LOOK
 
                 } else if (vgroup.className.startsWith("Var")) {
                     val v = makeVariable(vgroup)
@@ -266,7 +266,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         return dims
     }
 
-    private fun makeDimension(vtags: TagVGroup) {
+    private fun makeDimension(gb : Group.Builder, vtags: TagVGroup) {
         if (vtags.name == "time") {
             println()
         }
@@ -310,7 +310,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
         val isUnlimited = length == 0 // LOOK wrong, not detecting unlimites
         val dim = Dimension(vtags.name, length, isUnlimited, true)
-        rootBuilder.addDimension(dim)
+        gb.addDimension(dim)
     }
 
     private fun addGlobalAttributes(group: TagVGroup) {

@@ -1,25 +1,20 @@
-package com.sunya.netchdf.cdl
+package com.sunya.netchdf.parser
 
 import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.tryParseToEnd
-import com.github.h0tk3y.betterParse.lexer.RegexToken
 import com.github.h0tk3y.betterParse.parser.ErrorResult
 import com.github.h0tk3y.betterParse.parser.Parsed
 import com.github.h0tk3y.betterParse.st.SyntaxTree
 import com.github.h0tk3y.betterParse.st.liftToSyntaxTreeGrammar
 import com.sunya.cdm.api.Netcdf
 import com.sunya.netchdf.netcdf4.normalize
-import com.sunya.netchdf.parser.CdlParser
-import com.sunya.netchdf.parser.printSyntaxTree
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
-import kotlin.test.assertTrue
 
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import java.util.regex.Matcher
 
 class CdlParseTest {
 
@@ -105,7 +100,7 @@ variables:
         val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
         when (val parseResult = cdlGrammer.tryParseToEnd(cdl)) {
             is ErrorResult -> println("Could not parse expression: $parseResult")
-            is Parsed<SyntaxTree<Netcdf>> -> printSyntaxTree(cdl, parseResult.value)
+            is Parsed<SyntaxTree<Netcdf>> -> printCdlSyntaxTree(cdl, parseResult.value)
         }
 
        //val syntaxTree = cdlSyntaxTree.parseToEnd(expect)

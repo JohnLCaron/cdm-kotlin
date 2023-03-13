@@ -79,6 +79,7 @@ data class Variable(
 
         fun build(group : Group) : Variable {
             val useDimensions = if (dimList != null) dimList!!.map {
+                val test = group.findDimension(it)
                 group.findDimension(it) ?:
                 Dimension("", it.toInt(), false, false)
             } else dimensions

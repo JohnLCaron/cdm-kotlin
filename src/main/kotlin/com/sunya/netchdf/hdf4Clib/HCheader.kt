@@ -32,6 +32,8 @@ class HCheader(val filename: String) {
     internal var sds_id = 0
     private var fileid = 0
     private var grs_id = 0
+    private val metadata = mutableListOf<Attribute>()
+    private var structMetadata : String? = null
 
     init {
         MemorySession.openConfined().use { session ->
@@ -61,6 +63,11 @@ class HCheader(val filename: String) {
             iterateVdata(session, rootGroup4, this.fileid)
         }
         iterateGRs(session, rootGroup4, this.grs_id)
+
+        // hdfeos
+        if (structMetadata != null) {
+            rootGroup4.gb = applyStructMetadata(structMetadata!!)
+        }
     }
 
     fun close() {
@@ -450,8 +457,13 @@ class HCheader(val filename: String) {
 
         repeat(nattrs) {
             val attr = readAttribute(session, sd_id, it)
-            if ((attr.name != "ProductMetadata.0") and (attr.name != "CoreMetadata.0") and (attr.name != "StructMetadata.0")){ // jeesh
-                g4.gb.attributes.add(readAttribute(session, sd_id, it))
+            if ((attr.name != "ProductMetadata.0") and (attr.name != "CoreMetadata.0") and (attr.name != "StructMetadata.0")) {
+                g4.gb.attributes.add(attr)
+            } else {
+                this.metadata.add(attr)
+                if (attr.name == "StructMetadata.0") {
+                    this.structMetadata = attr.values[0] as String
+                }
             }
         }
 
@@ -629,6 +641,47 @@ class HCheader(val filename: String) {
         }
         return Attribute(aname, datatype, values.toList())
     }
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////
+    fun applyStructMetadata(structMetadata : String) : Group.Builder {
+        val odl = ODLparser().parseFromString((structMetadata))
+        println("$odl")
+        val odlt = ODLtransform().transform(odl)
+        println("$odlt")
+        val root = Group.Builder("")
+        odlt.applyStructMetadata(root)
+        val test = root.build(null)
+        println("testRoot = ${test.cdl(true)}")
+        return root
+    }
+
+    fun ODLgroup.applyStructMetadata(parent : Group.Builder) {
+        val nested = Group.Builder(this.name)
+        parent.addGroup(nested)
+        this.variables.forEach { v ->
+            if (v.name == "Dimensions") {
+                v.attributes.forEach { att ->
+                    nested.addDimension(Dimension(att.component1(), att.component2().toInt()))
+                }
+            }
+            if (v.name == "Variables") {
+                v.attributes.forEach { att ->
+                    val name = att.component1()
+                    val dimList = att.component2().split(",")
+                    val vb = rootGroup4.gb.variables.find { it.name == name }
+                    if (vb == null) {
+                        println("Cant find variable $name")
+                    } else {
+                        vb.dimList = dimList
+                        vb.dimensions.clear()
+                        nested.addVariable(vb)
+                    }
+                }
+            }
+        }
+        this.nested.forEach { it.applyStructMetadata(nested)}
+    }
+
 }
 
 fun checkErr (where : String, ret: Int) {
@@ -638,7 +691,7 @@ fun checkErr (where : String, ret: Int) {
 }
 
 data class Group4(val name : String, val parent: Group4?) {
-    val gb = Group.Builder(name)
+    var gb = Group.Builder(name)
     init {
         parent?.gb?.addGroup(gb)
     }
