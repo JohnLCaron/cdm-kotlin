@@ -49,8 +49,8 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            return moar42
-            // return Stream.of(sdsNotEos, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i};
+            // return Stream.of(hdfeos2, moar4, moar42).flatMap { i -> i}
+            return Stream.of(sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
     }
 
@@ -61,8 +61,13 @@ class H4compareNc {
     }
 
     @Test
-    fun problem() {
+    fun swath() {
         compareH4header("/media/twobee/netch/hdf4/jeffmc/swath.hdf")
+    }
+
+    @Test
+    fun problem() {
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/MOD021KM.A2004328.1735.004.2004329164007.hdf")
     }
 
     // compress_type = 0
@@ -118,7 +123,7 @@ class H4compareNc {
 
     @Test
     fun problemHeader() {
-        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/CAL_LID_L1-Launch-V1-06.2006-07-07T21-20-40ZD.hdf")
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/MYD29.A2009152.0000.005.2009153124331.hdf")
     }
 
     @Test

@@ -59,7 +59,7 @@ enum class TagEnum(val desc: String, val code: Int) {
     SDM("Max/Min", 707),
     SDC("Coord sys", 708),
     SDT("Transpose", 709), // obsolete
-    SDLNK("Links related to the dataset", 710),
+    SDLNK("Links related to the dataset", 710), // links SDG and NDG
     NDG("Numeric Data Group", 720),
     CAL("Calibration information", 731),
     FV("Fill Value information", 732),

@@ -61,7 +61,7 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
             vinfo.tagData = h4file.header.tagidMap[H4builder.tagid(chunkTableTag.refno, TagEnum.VS.code)] as TagData
             vinfo.elemSize = chunkTableTag.ivsize
             vinfo.setLayoutInfo(h4file)
-            val shape = intArrayOf (chunkTableTag.nvert)
+            val shape = intArrayOf (chunkTableTag.nelems)
 
             val members = chunkTableTag.readStructureMembers()
             val sdataArray = readStructureDataArray(h4file.header, vinfo, shape, members)

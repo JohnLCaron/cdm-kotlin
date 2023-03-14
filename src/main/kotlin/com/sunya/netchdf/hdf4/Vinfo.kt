@@ -60,12 +60,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     }
 
     fun setFillValue(att: Attribute) {
-        // see IospHelper.makePrimitiveArray(int size, DataType dataType, Object fillValue)
-        fillValue = if ((vb!!.datatype === Datatype.STRING)) {
-            att.values[0] as String
-        } else {
-            att.values[0] as Number
-        }
+        fillValue = att.values[0]
     }
 
     fun getFillValueOrDefault() : Any {

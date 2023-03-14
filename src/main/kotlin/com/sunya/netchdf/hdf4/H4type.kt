@@ -35,11 +35,11 @@ object H4type {
    */
     fun getDataType(type: Int): Datatype {
         return when (type) {
-            3, 21 -> Datatype.UBYTE
-            4 -> Datatype.CHAR
+            3, 4 -> Datatype.CHAR
             5 -> Datatype.FLOAT
             6 -> Datatype.DOUBLE
             20 -> Datatype.BYTE
+            21 -> Datatype.UBYTE
             22 -> Datatype.SHORT
             23 -> Datatype.USHORT
             24 -> Datatype.INT

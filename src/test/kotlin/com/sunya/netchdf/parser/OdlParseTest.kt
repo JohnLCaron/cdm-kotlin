@@ -1,5 +1,6 @@
 package com.sunya.netchdf.parser
 
+import com.sunya.netchdf.hdf4.ODLparseFromString
 import com.sunya.netchdf.hdf4.ODLtransform
 import com.sunya.netchdf.hdf4.ODLparser
 import java.util.*
@@ -31,70 +32,132 @@ END
 
  */
 
-            Arguments.of(
-                "/media/twobee/netch/hdf4/jeffmc/swath.hdf",
+            Arguments.of("whatever",
 """
 GROUP=SwathStructure
-    GROUP=SWATH_1
-		SwathName="L2B Rainfall Products"
+END_GROUP=SwathStructure
+GROUP=GridStructure
+	GROUP=GRID_1
+		GridName="GeometricParameters"
+		XDim=8
+		YDim=32
+		UpperLeftPointMtrs=(7460750.000000,1090650.000000)
+		LowerRightMtrs=(7601550.000000,527450.000000)
+		Projection=GCTP_SOM
+		ProjParams=(6378137,-0.006694,0,98018013.750000,67030010.880000,0,0,0,98.880000,0,0,180,0)
+		SphereCode=12
+		PixelRegistration=HDFE_CENTER
 		GROUP=Dimension
 			OBJECT=Dimension_1
-				DimensionName="npix"
-				Size=392
+				DimensionName="SOMBlockDim"
+				Size=180
 			END_OBJECT=Dimension_1
-			OBJECT=Dimension_2
-				DimensionName="nscan"
-				Size=2002
-			END_OBJECT=Dimension_2
 		END_GROUP=Dimension
-		GROUP=DimensionMap
-		END_GROUP=DimensionMap
-		GROUP=IndexDimensionMap
-		END_GROUP=IndexDimensionMap
-		GROUP=GeoField
-			OBJECT=GeoField_1
-				GeoFieldName="Time"
-				DataType=DFNT_FLOAT64
-				DimList=("nscan")
-			END_OBJECT=GeoField_1
-			OBJECT=GeoField_2
-				GeoFieldName="Latitude"
-				DataType=DFNT_FLOAT32
-				DimList=("nscan","npix")
-			END_OBJECT=GeoField_2
-			OBJECT=GeoField_3
-				GeoFieldName="Longitude"
-				DataType=DFNT_FLOAT32
-				DimList=("nscan","npix")
-			END_OBJECT=GeoField_3
-		END_GROUP=GeoField
 		GROUP=DataField
 			OBJECT=DataField_1
-				DataFieldName="Rain Status"
-				DataType=DFNT_INT16
-				DimList=("nscan","npix")
+				DataFieldName="SolarAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
 			END_OBJECT=DataField_1
 			OBJECT=DataField_2
-				DataFieldName="Rain Rate"
-				DataType=DFNT_INT16
-				DimList=("nscan","npix")
+				DataFieldName="SolarZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
 			END_OBJECT=DataField_2
 			OBJECT=DataField_3
-				DataFieldName="Rain Type"
-				DataType=DFNT_INT8
-				DimList=("nscan","npix")
+				DataFieldName="DfAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
 			END_OBJECT=DataField_3
 			OBJECT=DataField_4
-				DataFieldName="Surface Type"
-				DataType=DFNT_INT8
-				DimList=("nscan","npix")
+				DataFieldName="DfZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
 			END_OBJECT=DataField_4
+			OBJECT=DataField_5
+				DataFieldName="CfAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_5
+			OBJECT=DataField_6
+				DataFieldName="CfZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_6
+			OBJECT=DataField_7
+				DataFieldName="BfAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_7
+			OBJECT=DataField_8
+				DataFieldName="BfZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_8
+			OBJECT=DataField_9
+				DataFieldName="AfAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_9
+			OBJECT=DataField_10
+				DataFieldName="AfZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_10
+			OBJECT=DataField_11
+				DataFieldName="AnAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_11
+			OBJECT=DataField_12
+				DataFieldName="AnZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_12
+			OBJECT=DataField_13
+				DataFieldName="AaAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_13
+			OBJECT=DataField_14
+				DataFieldName="AaZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_14
+			OBJECT=DataField_15
+				DataFieldName="BaAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_15
+			OBJECT=DataField_16
+				DataFieldName="BaZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_16
+			OBJECT=DataField_17
+				DataFieldName="CaAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_17
+			OBJECT=DataField_18
+				DataFieldName="CaZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_18
+			OBJECT=DataField_19
+				DataFieldName="DaAzimuth"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_19
+			OBJECT=DataField_20
+				DataFieldName="DaZenith"
+				DataType=DFNT_FLOAT64
+				DimList=("SOMBlockDim","XDim","YDim")
+			END_OBJECT=DataField_20
 		END_GROUP=DataField
 		GROUP=MergedFields
 		END_GROUP=MergedFields
-	END_GROUP=SWATH_1
-END_GROUP=SwathStructure
-GROUP=GridStructure
+	END_GROUP=GRID_1
 END_GROUP=GridStructure
 GROUP=PointStructure
 END_GROUP=PointStructure
@@ -106,13 +169,13 @@ END
 
     @ParameterizedTest
     @MethodSource("params")
-    fun testOdlParser(filename: String, odl: String) {
-        println("$odl")
+    fun testOdlParser(filename: String, structMetatdata: String) {
+        println("$structMetatdata")
         // val odlstruct = OdlParser.parseToEnd(odl)
-        val odlstruct = ODLparser().parseFromString(odl)
+        val odlstruct = ODLparseFromString(structMetatdata)
         println("org = \n${odlstruct}")
-        val odlt = ODLtransform().transform(odlstruct)
-        println("massage = \n${odlt}")
+        val odlt = ODLtransform(odlstruct)
+        println("transformed = \n${odlt}")
     }
 
 }

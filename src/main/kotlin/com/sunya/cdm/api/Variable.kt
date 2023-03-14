@@ -69,6 +69,7 @@ data class Variable(
 
         fun setDimensionsAnonymous(shape : IntArray) {
             dimensions.clear()
+            dimList = null
             for (len in shape) {
                 dimensions.add(Dimension("", len, false, false))
             }
@@ -79,9 +80,13 @@ data class Variable(
 
         fun build(group : Group) : Variable {
             val useDimensions = if (dimList != null) dimList!!.map {
-                val test = group.findDimension(it)
-                group.findDimension(it) ?:
-                Dimension("", it.toInt(), false, false)
+                val name = makeValidCdmObjectName(it)
+                try {
+                    group.findDimension(name) ?: Dimension("", it.toInt(), false, false)
+                } catch (e : Exception){
+                    println("wtf")
+                    throw e
+                }
             } else dimensions
 
             val useName = makeValidCdmObjectName(name!!)
