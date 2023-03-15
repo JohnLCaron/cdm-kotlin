@@ -34,6 +34,7 @@ class H4compareNc {
             val hdfeos2 =
                 testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2")
                     .withRecursion()
+                    .addNameFilter { name -> !name.endsWith("MISR_AM1_GP_GMP_P040_O003734_05.eos") } // corrupted ??
                     .build()
 
             val moar4 =
@@ -49,8 +50,7 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            // return Stream.of(hdfeos2, moar4, moar42).flatMap { i -> i}
-            return Stream.of(sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
+            return Stream.of(sdsNotEos, hdf4, hdfeos2, moar4, moar42).flatMap { i -> i}
         }
     }
 
@@ -68,6 +68,11 @@ class H4compareNc {
     @Test
     fun problem() {
         compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/MOD021KM.A2004328.1735.004.2004329164007.hdf")
+    }
+
+    @Test
+    fun eos2() {
+        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2/MISR_AM1_GP_GMP_P040_O003734_05.eos")
     }
 
     // compress_type = 0
@@ -139,7 +144,7 @@ class H4compareNc {
         println("=================")
         println(filename)
         Hdf4File(filename, true).use { myfile ->
-            // println("Hdf4File = ${myfile.cdl()}")
+            println("Hdf4File = ${myfile.cdl()}")
             Hdf4ClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")

@@ -15,10 +15,11 @@ import java.util.*
 private val debugVGroup = true
 private val debugVGroupDetails = true
 private val debugVSdata = true
-private val debugVSdetails = false
+private val debugVSdetails = true
 private val debugSD = true
-private val debugSDdetails = false
-private val debugGR = false
+private val debugSDdetails = true
+private val debugGR = true
+private val debugAttributeBug = false
 
 private val MAX_NAME = 255L
 private val MAX_FIELDS_NAME = 1000L
@@ -166,6 +167,7 @@ class HCheader(val filename: String) {
             } else if (vclass == "Var0.0") { // ??
                 VgroupVar(session, g4, ref_array, tag_array)
             } else if (vclass == "CDF0.0") {
+                // LOOK ignoring the contents of the VGroup, and looking at the attributes on the group
                 VgroupCDF(session, g4, vgroup_id)
             }
         }
@@ -239,7 +241,8 @@ class HCheader(val filename: String) {
     private fun VgroupCDF(session: MemorySession, g4: Group4, vgroup_id: Int) {
         val nattrs2 = Vnattrs2(vgroup_id)
         repeat(nattrs2) { idx ->
-            val attr = VgroupReadAttribute(session, vgroup_id, idx)
+            // val attr = VgroupReadAttribute(session, vgroup_id, idx)
+            val attr = VgroupReadAttribute2(session, vgroup_id, idx)
             if (debugVGroupDetails) println("     read attribute ${attr.name}")
             val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > 4000
             if (EOS.isMetadata(attr.name) || moveup) {
@@ -262,17 +265,50 @@ class HCheader(val filename: String) {
         val flds_p = session.allocate(C_INT, 0)
         val refnum_p = session.allocate(C_SHORT, 0)
 
+        val ret = Vattrinfo(vgroup_id, idx, name_p, datatype_p, count_p, size_p)
+        if (ret != 0) {
+            println("VgroupReadAttribute ret = $ret bailing out")
+            return Attribute("what", "the")
+        }
+        val aname: String = name_p.getUtf8String(0)
+        val datatype4 = datatype_p[C_INT, 0]
+        val datatype = H4type.getDataType(datatype4)
+        val nelems = count_p[C_INT, 0]
+        val size = size_p[C_INT, 0] // LOOK bug where size returns nelems instead
+        println("VgroupReadAttribute $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
+
+        val data_p: MemorySegment = session.allocate(nelems * datatype.size.toLong())
+        // checkErr("Vgetattr2", Vgetattr2(vgroup_id, idx, data_p)) // LOOK malloc(): corrupted top size
+        checkErr("Vgetattr", Vgetattr(vgroup_id, idx, data_p)) // Vgetattr return -1
+        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+        val bb = ByteBuffer.wrap(raw)
+        bb.order(ByteOrder.LITTLE_ENDIAN) // ??
+        bb.position(0)
+        bb.limit(bb.capacity())
+
+        return processAttribute(aname, nelems, datatype, bb)
+    }
+
+    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, idx: Int): Attribute {
+        val name_p: MemorySegment = session.allocate(MAX_NAME)
+        val datatype_p = session.allocate(C_INT, 0)
+        val count_p = session.allocate(C_INT, 0)
+        val size_p = session.allocate(C_INT, 0)
+        val flds_p = session.allocate(C_INT, 0)
+        val refnum_p = session.allocate(C_SHORT, 0)
+
         checkErr("Vattrinfo2", Vattrinfo2(vgroup_id, idx, name_p, datatype_p, count_p, size_p, flds_p, refnum_p))
         val aname: String = name_p.getUtf8String(0)
         val datatype4 = datatype_p[C_INT, 0]
         val datatype = H4type.getDataType(datatype4)
         val nelems = count_p[C_INT, 0]
-        val size = size_p[C_INT, 0]
+        val size = size_p[C_INT, 0] // LOOK bug where size returns nelems instead
         val flds = flds_p[C_INT, 0]
         val refnum = refnum_p[C_SHORT, 0]
+        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
 
         val data_p: MemorySegment = session.allocate(nelems * datatype.size.toLong())
-        checkErr("Vgetattr", Vgetattr2(vgroup_id, idx, data_p))
+        checkErr("Vgetattr2", Vgetattr2(vgroup_id, idx, data_p)) // LOOK malloc(): corrupted top size
         val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
         val bb = ByteBuffer.wrap(raw)
         bb.order(ByteOrder.LITTLE_ENDIAN) // ??
