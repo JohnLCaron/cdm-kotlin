@@ -1,6 +1,9 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.Dimension
+import com.sunya.cdm.api.Group
 import com.sunya.cdm.util.Indent
+import com.sunya.cdm.util.makeValidCdmObjectName
 import java.util.*
 
 /*
@@ -26,250 +29,383 @@ import java.util.*
  * information be included in an HDF-EOS file? Yes. The descriptor file will be retained. It can be viewed by
  * EOSView if it stored either as a global attribute or a file annotation.
  */
+private val EOSmetadata = listOf("ArchiveMetadata.0", "CoreMetadata.0", "ProductMetadata.0", "StructMetadata.0")
+private val EOSprefix = listOf("coremetadata")
 
-class ODLtransform() {
-    val renameGroups = listOf("SwathName", "GridName", "PointName")
-    val wantGroup = listOf("GeoField", "DataField", "Dimension")
-    val wantGroupNewName = listOf("Geolocation_Fields", "Data_Fields", "Dimension")
-
-    fun transform(org: ODLgroup): ODLgroup {
-        val root = ODLgroup("root", null)
-        transform(org, root)
-        return root
+class EOS {
+    companion object {
+        fun isMetadata(name : String) : Boolean {
+            if (EOSmetadata.contains(name)) return true;
+            val lowername = name.lowercase()
+            return EOSprefix.map{ lowername.startsWith(it) }.reduce { a,b -> a or b}
+        }
     }
 
-    private fun transform(org: ODLgroup, trans: ODLgroup) {
-        // println("massage(${parent.name}, ${org.name})")
-        val namePair = org.attributes.find { renameGroups.contains(it.component1()) }
-        if (namePair != null) {
-            trans.name = namePair.component2()
-        }
+}
 
-        if (org.name  == "Dimension") {
-            trans.variables.add(transformDims(org))
-            return
-        }
+private val renameGroups = listOf("SwathName", "GridName", "PointName")
+private val wantGroup = listOf("GeoField", "DataField")
+private val wantGroupNewName = listOf("Geolocation_Fields", "Data_Fields")
 
-        var wantName: String? = null
+data class ODLobject(var name: String) {
+    val attributes = mutableListOf<Pair<String, String>>()
+    fun toString(indent: Indent): String {
+        return buildString {
+            append("${indent}var $name\n")
+            val nindent = indent.incr()
+            attributes.forEach { append("$nindent  ${it.component1()}=${it.component2()}\n") }
+        }
+    }
+}
+
+class ODLgroup(var name: String, val parent: ODLgroup?) {
+    val nested = mutableListOf<ODLgroup>()
+    val variables = mutableListOf<ODLobject>()
+    val attributes = mutableListOf<Pair<String, String>>()
+
+    fun addVariable(name: String): ODLobject {
+        val result = ODLobject(name)
+        variables.add(result)
+        return result
+    }
+
+    override fun toString(): String {
+        return toString(Indent(2))
+    }
+
+    fun toString(indent: Indent): String {
+        return buildString {
+            append("${indent}group $name\n")
+            val nindent = indent.incr()
+            attributes.forEach { append("$nindent  ${it.component1()}=${it.component2()}\n") }
+            variables.forEach { append(it.toString(nindent)) }
+            nested.forEach { append(it.toString(nindent)) }
+        }
+    }
+}
+
+fun ODLtransform(org: ODLgroup): ODLgroup {
+    val root = ODLgroup("root", null)
+    org.nested.forEach { transform(it, root) }
+
+    // find all requested dimensions
+    val dims = mutableSetOf<String>()
+    findReqDimensions(root, dims)
+    println("findReqDimensions = $dims ")
+    removeFoundDimensions(root, dims)
+    println("removeFoundDimensions = $dims ")
+    if (dims.isNotEmpty()) {
+        addMissingDimensions(root, dims)
+    }
+    return root
+}
+
+private fun transform(org: ODLgroup, trans: ODLgroup) {
+    // println("massage(${parent.name}, ${org.name})")
+    if (org.name == "Dimension" && org.variables.isNotEmpty()) {
+        trans.variables.add(transformDims(org))
+        return
+    }
+
+    // LOOK for groups that we want to turn into nested groups
+    var wantName: String? = null
+    val namePair = org.attributes.find { renameGroups.contains(it.component1()) }
+    if (namePair != null) {
+        wantName = namePair.component2()
+        org.attributes.remove(namePair)
+    } else {
         wantGroup.forEachIndexed { idx, it ->
             if (it == org.name) {
                 wantName = wantGroupNewName[idx]
             }
         }
+    }
 
-        if (wantName != null) {
-            val nestedTrans = ODLgroup(wantName!!, trans)
-            trans.nested.add(nestedTrans)
+    if (wantName != null) {
+        val nestedTrans = ODLgroup(wantName!!, trans)
+        trans.nested.add(nestedTrans)
+        if (org.variables.isNotEmpty()) {
             nestedTrans.variables.add(transformVariables(org))
+        }
+        org.nested.forEach { transform(it, nestedTrans) }
+        nestedTrans.attributes.addAll(org.attributes)
+    } else {
+        org.nested.forEach { transform(it, trans) }
+        trans.attributes.addAll(org.attributes)
+    }
+}
+
+private fun transformDims(dimGroup: ODLgroup): ODLobject {
+    val result = ODLobject("Dimensions")
+    dimGroup.variables.filter { it.name.startsWith("Dimension") }.map {
+        var name: String = "N/A"
+        var size: String = "N/A"
+        it.attributes.forEach { att ->
+            if (att.component1() == "DimensionName") {
+                name = att.component2()
+            }
+            if (att.component1() == "Size") {
+                size = att.component2()
+            }
+        }
+        result.attributes.add(Pair(name, size))
+    }
+    return result
+}
+
+private fun transformVariables(fldGroup: ODLgroup): ODLobject {
+    val result = ODLobject("Variables")
+    fldGroup.variables.filter { it.name.contains("Field") }.map {
+        var name: String = "N/A"
+        var dims: String = "N/A"
+        it.attributes.forEach { att ->
+            if (att.component1().contains("FieldName")) {
+                name = att.component2()
+            }
+            if (att.component1().equals("DimList")) {
+                dims = att.component2()
+            }
+        }
+        result.attributes.add(Pair(name, dims))
+    }
+    return result
+}
+
+fun findReqDimensions(group: ODLgroup, dims: MutableSet<String>) {
+    val v = group.variables.find { it.name == "Variables" }
+    v?.attributes?.forEach { att ->
+        val dimList = att.component2().split(",").forEach { dims.add(it) }
+    }
+    group.nested.forEach { findReqDimensions(it, dims) }
+}
+
+fun removeFoundDimensions(group: ODLgroup, dims: MutableSet<String>) {
+    val v = group.variables.find { it.name == "Dimensions" }
+    v?.attributes?.forEach { att -> dims.remove(att.component1()) }
+    group.nested.forEach { removeFoundDimensions(it, dims) }
+}
+
+fun addMissingDimensions(group: ODLgroup, dims: MutableSet<String>) {
+    val addDimsFromAtt = mutableListOf<Pair<String, String>>()
+    group.attributes.forEach { att ->
+        if (dims.contains(att.component1())) {
+            addDimsFromAtt.add(att)
+        }
+    }
+    if (addDimsFromAtt.isNotEmpty()) {
+        val container = group.variables.find { it.name == "Dimensions" } ?: group.addVariable("Dimensions")
+        container.attributes.addAll(addDimsFromAtt)
+        addDimsFromAtt.forEach { group.attributes.remove(it) }
+    }
+    group.nested.forEach { addMissingDimensions(it, dims) }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+// parses the original ODL
+fun ODLparseFromString(text: String): ODLgroup {
+    val root = ODLgroup("root", null)
+    var currentStruct = root
+    var currentObject: ODLobject? = null
+    val lineFinder = StringTokenizer(text, "\t\n\r\u000c")
+    while (lineFinder.hasMoreTokens()) {
+        var line = lineFinder.nextToken() ?: continue
+        line = line.trim()
+        if (line.startsWith("GROUP")) {
+            currentStruct = startGroup(currentStruct, line)
+        } else if (line.startsWith("OBJECT")) {
+            currentObject = startObject(currentStruct, line)
+        } else if (line.startsWith("END_OBJECT")) {
+            endObject(currentObject!!, line)
+            currentObject = null
+        } else if (line.startsWith("END_GROUP")) {
+            endGroup(currentStruct, line)
+            currentStruct = currentStruct.parent!!
+        } else if (line.startsWith("END")) {
+            // noop
+        } else if (currentObject != null) {
+            addFieldToObject(currentObject!!, line)
         } else {
-            org.nested.forEach { transform(it, trans) }
+            addFieldToGroup(currentStruct!!, line)
+        }
+    }
+    return root
+}
+
+private fun startGroup(parent: ODLgroup, line: String): ODLgroup {
+    val stoke = StringTokenizer(line, "=")
+    val toke = stoke.nextToken()
+    require(toke == "GROUP")
+    val name = stoke.nextToken()
+    val group = ODLgroup(name, parent)
+    parent.nested.add(group)
+    return group
+}
+
+private fun endGroup(current: ODLgroup, line: String) {
+    val stoke = StringTokenizer(line, "=")
+    val toke = stoke.nextToken()
+    require(toke == "END_GROUP")
+    val name = stoke.nextToken()
+    require(name == current.name)
+}
+
+private fun startObject(current: ODLgroup, line: String): ODLobject {
+    val stoke = StringTokenizer(line, "=")
+    val toke = stoke.nextToken()
+    require(toke == "OBJECT")
+    val name = stoke.nextToken()
+    val obj = ODLobject(name)
+    current.variables.add(obj)
+    return obj
+}
+
+private fun endObject(current: ODLobject, line: String) {
+    val stoke = StringTokenizer(line, "=")
+    val toke = stoke.nextToken()
+    require(toke == "END_OBJECT")
+    val name = stoke.nextToken()
+    require(name == current.name)
+}
+
+private fun addFieldToGroup(current: ODLgroup, line: String) {
+    val stoke = StringTokenizer(line, "=")
+    val name = stoke.nextToken()
+    if (stoke.hasMoreTokens()) {
+        var value = stoke.nextToken()
+        if (value.startsWith("(")) {
+            current.attributes.add(Pair(name, parseValueCollection(value)))
+            return
+        }
+        value = stripQuotes(value)
+        current.attributes.add(Pair(name, value))
+    }
+}
+
+private fun addFieldToObject(current: ODLobject, line: String) {
+    val stoke = StringTokenizer(line, "=")
+    val name = stoke.nextToken()
+    if (stoke.hasMoreTokens()) {
+        var value = stoke.nextToken()
+        if (value.startsWith("(")) {
+            current.attributes.add(Pair(name, parseValueCollection(value)))
+            return
+        }
+        value = stripQuotes(value)
+        current.attributes.add(Pair(name, value))
+    }
+}
+
+private fun parseValueCollection(valueInput: String): String {
+    val value = stripParens(valueInput)
+    val stoke = StringTokenizer(value, ",")
+    val list = mutableListOf<String>()
+    while (stoke.hasMoreTokens()) {
+        val t = stoke.nextToken()
+        list.add(stripQuotes(t))
+    }
+    return list.joinToString(",")
+}
+
+private fun stripParens(name: String): String {
+    var name = name
+    if (name.startsWith("(")) name = name.substring(1)
+    if (name.endsWith(")")) name = name.substring(0, name.length - 1)
+    return name
+}
+
+private fun stripQuotes(name: String): String {
+    var name = name
+    if (name.startsWith("\"")) name = name.substring(1)
+    if (name.endsWith("\"")) name = name.substring(0, name.length - 1)
+    return name
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+class ODLparser(val rootGroup: Group.Builder, val isFlat : Boolean) {
+
+    // LOOK should be All Variables named StructMetadata.n, where n= 1, 2, 3 ... are read in and their contents concatenated
+    //   to make the structMetadata String.
+    fun applyStructMetadata(structMetadata: String): Group.Builder {
+       // println("structMetadata = \n$structMetadata")
+        val odl = ODLparseFromString((structMetadata))
+        //println("odl = \n$odl")
+        val odlt = ODLtransform(odl)
+        println("transformed = \n$odlt")
+        return if (isFlat) {
+            val root = Group.Builder("")
+            root.attributes.addAll(rootGroup.attributes)
+            odlt.nested.forEach { it.applyStructMetadataFlat(root) }
+            root
+        } else {
+            odlt.applyStructMetadata(rootGroup)
+            rootGroup
         }
     }
 
-    fun transformDims(dimGroup : ODLgroup): ODLobject {
-        val result = ODLobject("Dimensions")
-        dimGroup.variables.filter { it.name.startsWith("Dimension") }.map {
-            var name : String = "N/A"
-            var size : String = "N/A"
-            it.attributes.forEach { att ->
-                if (att.component1() == "DimensionName") {
-                    name = att.component2()
-                }
-                if (att.component1() == "Size") {
-                    size = att.component2()
+    // assumes that all the existing variables are in the root group
+    fun ODLgroup.applyStructMetadataFlat(parent: Group.Builder) {
+        val nested = Group.Builder(this.name)
+        parent.addGroup(nested)
+
+        this.variables.forEach { v ->
+            if (v.name == "Dimensions") {
+                v.attributes.forEach { att ->
+                    nested.addDimension(Dimension(att.component1(), att.component2().toInt()))
                 }
             }
-            result.attributes.add(Pair(name, size))
-        }
-        return result
-    }
-
-    fun transformVariables(fldGroup : ODLgroup): ODLobject {
-        val result = ODLobject("Variables")
-        fldGroup.variables.filter { it.name.contains("Field") }.map {
-            var name : String = "N/A"
-            var dims : String = "N/A"
-            it.attributes.forEach { att ->
-                if (att.component1().contains("FieldName")) {
-                    name = att.component2()
-                }
-                if (att.component1().equals("DimList")) {
-                    dims = att.component2()
-                }
-            }
-            result.attributes.add(Pair(name, dims))
-        }
-        return result
-    }
-
-    fun massageV(variables: List<ODLobject>): List<ODLobject> {
-        val result = mutableListOf<ODLobject>()
-        variables.forEach {
-            if (it.name.startsWith("Dimension")) {
-                val dimVar = ODLobject(it.name)
-                it.attributes.forEach { att ->
-                    if (att.component1() == "DimensionName") {
-                        dimVar.name = att.component2()
+            if (v.name == "Variables") {
+                v.attributes.forEach { att ->
+                    val name = att.component1()
+                    val dimList = att.component2().split(",")
+                    val vb = rootGroup.variables.find { it.name == name }
+                    if (vb == null) {
+                        println("Cant find variable $name")
+                    } else {
+                        vb.dimList = dimList
+                        vb.dimensions.clear()
+                        nested.addVariable(vb)
                     }
-                    if (att.component1() == "Size") {
-                        dimVar.attributes.add(att)
+                }
+            }
+        }
+        this.nested.forEach { it.applyStructMetadataFlat(nested) }
+    }
+
+    // assumes that the existing variables are already in groups; adjust dimensions and add attributes
+    fun ODLgroup.applyStructMetadata(parent: Group.Builder) {
+        parent.dimensions.clear()
+        this.variables.forEach { v ->
+            if (v.name == "Dimensions") {
+                v.attributes.forEach { att ->
+                    parent.addDimension(Dimension(att.component1(), att.component2().toInt()))
+                }
+            }
+            if (v.name == "Variables") {
+                v.attributes.forEach { att ->
+                    val name = att.component1()
+                    val dimList = att.component2().split(",")
+                    val odlname = makeValidCdmObjectName(name)
+                    val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
+                    if (vb == null) {
+                        println("Cant find variable $name")
+                    } else {
+                        vb.dimList = dimList
+                        vb.dimensions.clear()
                     }
                 }
-                result.add(dimVar)
             }
         }
-        return result
-    }
-}
-
-data class ODLobject(var name : String) {
-    val attributes = mutableListOf<Pair<String, String>>()
-    fun toString(indent : Indent): String {
-        return buildString {
-            append("${indent}var $name\n")
-            val nindent = indent.incr()
-            attributes.forEach { append("$nindent${it.component1()}=${it.component2()}\n") }
-        }
-    }
-}
-
-class ODLgroup(var name : String, val parent : ODLgroup?) {
-    val nested = mutableListOf<ODLgroup>()
-    val variables = mutableListOf<ODLobject>()
-    val attributes = mutableListOf<Pair<String, String>>()
-
-    override fun toString(): String {
-        return toString(Indent(2))
-    }
-    fun toString(indent : Indent): String {
-        return buildString {
-            append("${indent}group $name\n")
-            val nindent = indent.incr()
-            attributes.forEach { append("$nindent${it.component1()}=${it.component2()}\n") }
-            variables.forEach{ append(it.toString(nindent)) }
-            nested.forEach{ append( it.toString(nindent)) }
-        }
-    }
-}
-
-class ODLparser() {
-
-    // parses the original ODL
-    fun parseFromString(text: String): ODLgroup {
-        val root = ODLgroup("root", null)
-        var currentStruct = root
-        var currentObject : ODLobject? = null
-        val lineFinder = StringTokenizer(text, "\t\n\r\u000c")
-        while (lineFinder.hasMoreTokens()) {
-            var line = lineFinder.nextToken() ?: continue
-            line = line.trim()
-            if (line.startsWith("GROUP")) {
-                currentStruct = startGroup(currentStruct, line)
-            } else if (line.startsWith("OBJECT")) {
-                currentObject = startObject(currentStruct, line)
-            } else if (line.startsWith("END_OBJECT")) {
-                endObject(currentObject!!, line)
-                currentObject = null
-            } else if (line.startsWith("END_GROUP")) {
-                endGroup(currentStruct, line)
-                currentStruct = currentStruct.parent!!
-            } else if (line.startsWith("END")) {
-                // noop
-            } else if (currentObject != null) {
-                addFieldToObject(currentObject!!, line)
-            } else  {
-                addFieldToGroup(currentStruct!!, line)
+        this.nested.forEach { odl ->
+            val odlname = makeValidCdmObjectName(odl.name)
+            val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
+            if (ngroup == null) {
+                println("Cant find group ${odl.name}")
+            } else {
+                odl.applyStructMetadata(ngroup)
             }
         }
-        return root
-    }
-
-    fun startGroup(parent: ODLgroup, line: String): ODLgroup {
-        val stoke = StringTokenizer(line, "=")
-        val toke = stoke.nextToken()
-        require(toke == "GROUP")
-        val name = stoke.nextToken()
-        val group = ODLgroup(name, parent)
-        parent.nested.add(group)
-        return group
-    }
-
-    fun endGroup(current: ODLgroup, line: String) {
-        val stoke = StringTokenizer(line, "=")
-        val toke = stoke.nextToken()
-        require(toke == "END_GROUP")
-        val name = stoke.nextToken()
-        require(name == current.name)
-    }
-
-    fun startObject(current: ODLgroup, line: String): ODLobject {
-        val stoke = StringTokenizer(line, "=")
-        val toke = stoke.nextToken()
-        require(toke == "OBJECT")
-        val name = stoke.nextToken()
-        val obj = ODLobject(name)
-        current.variables.add(obj)
-        return obj
-    }
-
-    fun endObject(current: ODLobject, line: String) {
-        val stoke = StringTokenizer(line, "=")
-        val toke = stoke.nextToken()
-        require(toke == "END_OBJECT")
-        val name = stoke.nextToken()
-        require(name == current.name)
-    }
-
-    fun addFieldToGroup(current: ODLgroup, line: String) {
-        val stoke = StringTokenizer(line, "=")
-        val name = stoke.nextToken()
-        if (stoke.hasMoreTokens()) {
-            var value = stoke.nextToken()
-            if (value.startsWith("(")) {
-                current.attributes.add( Pair(name, parseValueCollection(value)))
-                return
-            }
-            value = stripQuotes(value)
-            current.attributes.add(Pair(name, value))
-        }
-    }
-
-    fun addFieldToObject(current: ODLobject, line: String) {
-        val stoke = StringTokenizer(line, "=")
-        val name = stoke.nextToken()
-        if (stoke.hasMoreTokens()) {
-            var value = stoke.nextToken()
-            if (value.startsWith("(")) {
-                current.attributes.add( Pair(name, parseValueCollection(value)))
-                return
-            }
-            value = stripQuotes(value)
-            current.attributes.add(Pair(name, value))
-        }
-    }
-
-    fun parseValueCollection(valueInput: String) : String {
-        val value = stripParens(valueInput)
-        val stoke = StringTokenizer(value, ",")
-        val list = mutableListOf<String>()
-        while (stoke.hasMoreTokens()) {
-            val t = stoke.nextToken()
-            list.add(stripQuotes(t))
-        }
-        return list.joinToString(",")
-    }
-
-    fun stripParens(name: String): String {
-        var name = name
-        if (name.startsWith("(")) name = name.substring(1)
-        if (name.endsWith(")")) name = name.substring(0, name.length - 1)
-        return name
-    }
-
-    fun stripQuotes(name: String): String {
-        var name = name
-        if (name.startsWith("\"")) name = name.substring(1)
-        if (name.endsWith("\"")) name = name.substring(0, name.length - 1)
-        return name
     }
 }

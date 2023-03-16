@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Dimension
 import com.sunya.cdm.api.Group
 import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.OpenFile
@@ -28,12 +27,13 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         TagEnum.COMPRESSED, TagEnum.CHUNK, TagEnum.SD, TagEnum.VS -> return TagData(xtag, refno, offset, length)
         TagEnum.FID, TagEnum.FD, TagEnum.SDC -> return TagText(xtag, refno, offset, length)
         TagEnum.DIL, TagEnum.DIA -> return TagAnnotate(xtag, refno, offset, length)
-        TagEnum.NT -> return TagNumberType(xtag, refno, offset, length)
+        TagEnum.NT -> return TagNT(xtag, refno, offset, length)
         TagEnum.ID, TagEnum.LD, TagEnum.MD -> return TagRIDimension(xtag, refno, offset, length)
         TagEnum.LUT -> return TagLookupTable(xtag, refno, offset, length)
         TagEnum.RI -> return TagRasterImage(xtag, refno, offset, length)
         TagEnum.RIG, TagEnum.NDG -> return TagDataGroup(xtag, refno, offset, length)
-        TagEnum.SDD -> return TagSDDimension(xtag, refno, offset, length)
+        TagEnum.SDD -> return TagSDD(xtag, refno, offset, length)
+        // TagEnum.SDS -> return TagSDS(xtag, refno, offset, length)
         TagEnum.SDL, TagEnum.SDU, TagEnum.SDF -> return TagTextN(xtag, refno, offset, length)
         TagEnum.SDM -> return TagSDminmax(xtag, refno, offset, length)
         TagEnum.FV -> return TagFV(xtag, refno, offset, length)
@@ -64,20 +64,16 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
     }
 
     override fun toString(): String {
-        return "${if (isUsed) " " else "*"} tag=${tagName()}  vclass=${vClass()} refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
+        return "${if (isUsed) " " else "*"} tag=${tagEnum()}  vclass='${vClass()}' refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
                 " length=$length"
     }
 
-    fun tag(): String {
+    fun tagEnum(): TagEnum {
+        return TagEnum.byCode(this.code)
+    }
+
+    fun tagRefAndCode(): String {
         return "$refno/$code"
-    }
-
-    fun tagName() : String {
-        return TagEnum.byCode(this.code).toString()
-    }
-
-    fun getVinfo(): String {
-        return if ((vinfo == null)) "" else vinfo.toString()
     }
 
     fun vClass() : String {
@@ -227,12 +223,12 @@ class TagAnnotate(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
     }
 }
 
-// 106
-class TagNumberType(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+// p.114 DFTAG_NT (106)
+class TagNT(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var version: Byte = 0
     var numberType: Int = 0
-    var nbits: Byte = 0
-    var type_class: Byte = 0
+    var nbits: Byte = 0 // Number of bits, all of which are assumed to be significant
+    var type_class: Byte = 0 // meaning depends on type: floating point, integer, or character
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
@@ -260,7 +256,6 @@ class TagRIDimension(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
     var interlace: Short = 0
     var compress: Short = 0
     var compress_ref: Short = 0
-    var dims = mutableListOf<Dimension>()
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
@@ -331,80 +326,92 @@ class TagDataGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ic
     }
 }
 
-// 701 p128
-class TagSDDimension(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+// 701 p.133
+class TagSDD(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var rank: Short = 0
-    var nt_ref: Int = 0
     var shape = IntArray(0)
-    var nt_ref_scale = ShortArray(0)
+    var data_nt_ref: Int = 0 // Reference number of DFTAG_NT for data 
+    var scale_nt_ref = ShortArray(0) // Reference number for DFTAG_NT for the scale for the nth dimension
+    // LOOK maybe means DFTAG_SDS ??
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         rank = h4.raf.readShort(state)
         shape = IntArray(rank.toInt()) { h4.raf.readInt(state) }
-        state.pos += 2
-        nt_ref = h4.raf.readShort(state).toUShort().toInt()
-        nt_ref_scale = ShortArray(rank.toInt()) {
-            state.pos += 2
+        val wtf2 = h4.raf.readShort(state)
+        data_nt_ref = h4.raf.readShort(state).toUShort().toInt()
+        scale_nt_ref = ShortArray(rank.toInt()) {
+            val wtf2 = h4.raf.readShort(state)
             h4.raf.readShort(state)
         }
-    }
-
-    override fun detail(): String {
-        val sbuff: StringBuilder = StringBuilder(super.detail())
-        sbuff.append("   dims= ")
-        for (i in 0 until rank) sbuff.append(shape[i]).append(" ")
-        sbuff.append("   nt= ").append(nt_ref.toInt()).append(" nt_scale=")
-        for (i in 0 until rank) sbuff.append(nt_ref_scale[i].toInt()).append(" ")
-        return sbuff.toString()
     }
 
     override fun toString(): String {
         return buildString {
             append(super.toString())
-            append(" shape[${shape.contentToString()}")
-            append(" nt_ref = $nt_ref")
-            append(" nt_ref_scale[${nt_ref_scale.contentToString()}")
+            append(" shape${shape.contentToString()}")
+            append(" data_nt_ref = $data_nt_ref")
+            append(" scale_nt_ref${scale_nt_ref.contentToString()}")
         }
+    }
+}
+
+
+// 701 p.135
+class TagSDS(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+    var rank: Short = 0
+    var hasScale = ShortArray(0)
+    var scale = ShortArray(0) // Reference number for DFTAG_NT for the scale for the nth dimension
+
+    override fun readTag(h4 : H4builder) {
+        val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
     }
 }
 
 // 704, 705, 706 p 130
 class TagTextN(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
-    var text = mutableListOf<String>()
+    var texts = mutableListOf<String>()
+    var wasRead : Boolean = false
 
-    fun readTag(h4 : H4builder, n: Int) { // LOOK this is fishy
+    override fun readTag(h4 : H4builder) { // not Idempotent
+        if (wasRead) return
+        wasRead = true
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         val ba = h4.raf.readBytes(state, length)
         var count = 0
         var start = 0
-        for (i in 0 until length) {
-            if (ba[i].toInt() == 0) {
-                text.add(String(ba, start, i - start, h4.valueCharset))
-                count++
-                if (count == n) break
-                start = i + 1
+        for (pos in 0 until length) {
+            if (ba[pos].toInt() == 0) {
+                if (pos - start > 0) {
+                    texts.add(String(ba, start, pos - start, h4.valueCharset))
+                    count++
+                }
+                start = pos + 1
             }
         }
+    }
+
+    override fun toString(): String {
+        return "${super.toString()} text=$texts"
     }
 }
 
 // 707, p132
 class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var bb: ByteBuffer? = null
-    var dt: Datatype? = null
+    var dt: Datatype = Datatype.INT
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         bb = h4.raf.readByteBuffer(state, length)
     }
 
-    fun getMin(dataType: Datatype?): Number {
+    fun getMin(dataType: Datatype): Number {
         dt = dataType
         return get(dataType, 1)
     }
 
-    fun getMax(dataType: Datatype?): Number {
+    fun getMax(dataType: Datatype): Number {
         dt = dataType
         return get(dataType, 0)
     }
@@ -418,8 +425,8 @@ class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
         return if (dataType === Datatype.DOUBLE) bb!!.asDoubleBuffer().get(index) else Double.NaN
     }
 
-    override fun detail(): String {
-        return super.detail() + "   min= " + getMin(dt) + "   max= " + getMax(dt)
+    fun toString(dt : Datatype): String {
+        return "${super.toString()} min=${getMin(dt)} max=${getMax(dt)}"
     }
 }
 
@@ -489,7 +496,7 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
     override fun detail(): String {
         val sbuff = StringBuilder()
         sbuff.append(if (isUsed) " " else "*").append("refno=").append(refno).append(" tag= ")
-            .append(tagName())
+            .append(tagEnum())
             .append(if (isExtended) " EXTENDED" else "").append(" offset=").append(offset).append(" length=")
             .append(length)
             .append(" VV= ${vinfo?.vb?.name ?: ""}")
@@ -513,13 +520,13 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
 // DFTAG_VH 1962 Vdata header p 141. Describes a Structure.
 class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var interlace: Short = 0 // Constant indicating interlace scheme used
-    var nvert = 0 // number of entries in Vdata
+    var nelems = 0 // number of entries in Vdata
     var ivsize = 0 // Size of one Vdata entry
-    var nfields: Short = 0 // Number of fields per entry in the Vdata
+    var nfields: Short = 0 // Number of fields per entry in the Vdata: so one dimensional Structure(nelems)
     var fld_type = ShortArray(0) // Constant indicating the data type of the nth field of the Vdata
     var fld_isize = IntArray(0) // Size in bytes of the nth field of the Vdata
     var fld_offset = IntArray(0) // Offset of the nth field within the Vdata
-    var fld_order = ShortArray(0) // Order of the nth field of the Vdata LOOK WTF
+    var fld_nelems = ShortArray(0) // Order of the nth field of the Vdata: so, a one dimensional fld(fld_nelems)
     var fld_name = mutableListOf<String>()
     var name: String = "null"
     var className: String = "null"
@@ -530,13 +537,13 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         interlace = h4.raf.readShort(state)
-        nvert = h4.raf.readInt(state)
+        nelems = h4.raf.readInt(state)
         ivsize = h4.raf.readShort(state).toUShort().toInt()
         nfields = h4.raf.readShort(state)
         fld_type = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
         fld_isize = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
         fld_offset = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
-        fld_order = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
+        fld_nelems = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
         for (i in 0 until nfields) {
             val slen = h4.raf.readShort(state).toInt()
             fld_name.add(h4.raf.readString(state, slen))
@@ -558,7 +565,7 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
         val sbuff: StringBuilder = StringBuilder(super.detail())
         sbuff.append(" class= ").append(className)
         sbuff.append(" interlace= ").append(interlace.toInt())
-        sbuff.append(" nvert= ").append(nvert)
+        sbuff.append(" nvert= ").append(nelems)
         sbuff.append(" ivsize= ").append(ivsize)
         sbuff.append(" extag= ").append(extag.toInt())
         sbuff.append(" exref= ").append(exref.toInt())
@@ -572,18 +579,19 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
             sbuff.append(fld_type[i].toInt()).append(" ")
             sbuff.append(fld_isize[i]).append(" ")
             sbuff.append(fld_offset[i]).append(" ")
-            sbuff.append(fld_order[i].toInt()).append(" ")
+            sbuff.append(fld_nelems[i].toInt()).append(" ")
             sbuff.append("\n   ")
         }
         return sbuff.toString()
     }
 
+    // fld_type fld_name(fld_order), so 1 dimensional of length fld_order
     fun readStructureMembers(): List<StructureMember> {
         val members = mutableListOf<StructureMember>()
         for (fld in 0 until this.nfields) {
             val type = this.fld_type[fld].toInt()
             val fdatatype = H4type.getDataType(type)
-            val nelems = this.fld_order[fld].toInt()
+            val nelems = this.fld_nelems[fld].toInt()
             // val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray
             val m = StructureMember(this.fld_name[fld], fdatatype, this.fld_offset[fld], intArrayOf(nelems))
             members.add(m)

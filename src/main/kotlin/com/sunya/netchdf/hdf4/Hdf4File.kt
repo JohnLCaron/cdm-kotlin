@@ -24,6 +24,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
 
     init {
         header = H4builder(raf, valueCharset, strict)
+        header.make()
         rootGroup = header.rootBuilder.build(null)
     }
 

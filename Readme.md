@@ -1,10 +1,10 @@
 # netchdf-kotlin
-_last updated: Mar 11, 2023_
+_last updated: Mar 14, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
-The intention is to create a maintainable, alternative, read-only, pure JVM implementation of the netcdf3, netcdf4, 
-hdf4, hdf5, hdf-eos2 and hdf-eos5 libraries. 
+The intention is to create a maintainable, read-only, pure JVM library allowing full access to 
+netcdf3, netcdf4, hdf4, hdf5, hdf-eos2 and hdf-eos5 data files. 
 
 Please contact me if you'd like to help out. Especially needed are test datasets from all the important data archives!!
 
@@ -15,9 +15,9 @@ never go away. Its important that there be maintainable, independent libraries t
 
 The Netcdf-Java library prototyped a "Common Data Model" (CDM) to provide a single API to access various file formats. 
 The netcdf* and hdf* file formats are similar enough to make a common API a practical and useful goal. 
-By focusing on just these formats, the API and the code is kept simple.
+By focusing on read-only access to just these formats, the API and the code is kept simple.
 
-In short, a read-only library that focuses on simplicity and clarity is a good safeguard for the huge investment in these
+In short, a library that focuses on simplicity and clarity is a safeguard for the huge investment in these
 scientific datasets.
 
 #### Why do we need an alternative library from the standard reference libraries?
@@ -29,20 +29,21 @@ toolchains. Shifts in funding could wipe out much of the institutional knowledge
 The HDF file formats are overly complicated, which impacts code complexity and clarity. Having a second independent 
 implementation is a huge benefit to anyone needing to understand these file formats.
 
-The HDF4 C API is limited and disjointed in providing access to data internals. The SDS API does not provide
-access to group information. Group and other metadata is instead provided by HDF-EOS using an undocumented
-"Object Descriptor Language (ODL)" format. This adds a dependency on the SDP Toolkit library. While this library
-adds important functions such as handling projections, it adds another barrier to data access, and another point
-of potential failure of the toolchain. Our intention is to break the dependency on these legacy libraries by providing
-access to the data stored in the file. Third parties might implement projection handling and other higher level 
-functionality if needed.
+The HDF4 C library is a curious hodgepodge of disjointed APIs. Only some of the APIs needed to fully examine an HDF4 file 
+are documented in the "HDF User’s Guide". Access through the GR, SDS and VS APIs seem usable. However the Vgroup
+API exposes references to objects which have no publicly documented access methods. 
+
+HDF-EOS use an undocumented "Object Descriptor Language (ODL)" text format, which adds a dependency on the SDP Toolkit 
+and possibly other libraries. These toolkits also provide functionality such as handling projections and coordinate system 
+conversions, and arguably its impossible to process HDF-EOS without them. So the value added here by an independent 
+library is less clear. For now, we will provide a "best-effort" effort to expose the internal contents of the file.
 
 #### Why kotlin?
 
 Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects, 
 with many new features for safer and more concise code. It is a clear improvement over Java, without giving
 up any of Java's strengths. Kotlin will attract the next generation of serious open-source developers, and 
-hopefully some of them will be willing to keep this library working into the unforseeable future.
+hopefully some of them will be willing to keep this library working into the unforeseeable future.
 
 ### What about performance?
 
@@ -62,8 +63,8 @@ With these tools we have a good chance of keeping on par with the reference libr
 We do not plan to provide write capabilities. 
 
 The Netcdf-4 library is not tested against HDF5 files that are not written with the Netcdf-4 library. Similarly, 
-it only works with HDF4 files using the SDS API, which seems to be very limiting. We have the goal to give access to 
-all HDF5, HDF4 and HDF-EOS files.
+it provides access to only the HDF4 files using the SDS API. We have the goal to give access to all the content 
+in HDF5, HDF4 and HDF-EOS files.
 
 ### Data Model notes
 

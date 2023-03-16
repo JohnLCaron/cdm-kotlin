@@ -20,6 +20,7 @@ class Group(orgName : String,
         groups = groupBuilders.map { it.build(this) }
     }
 
+    // find dimension in this group or a parent
     fun findDimension(dimName: String) : Dimension? {
         return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
     }
@@ -71,6 +72,7 @@ class Group(orgName : String,
         val typedefs = mutableListOf<Typedef>()
         val variables = mutableListOf<Variable.Builder>()
         val groups = mutableListOf<Group.Builder>()
+        var parent : Group.Builder? = null
 
         fun addDimension(dim: Dimension) {
             dimensions.add(dim)
@@ -91,6 +93,11 @@ class Group(orgName : String,
             return found
         }
 
+        // find dimension in this builder or a parent
+        fun findDimension(dimName: String) : Dimension? {
+            return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
+        }
+
         fun addAttribute(att: Attribute) {
             attributes.add(att)
         }
@@ -99,13 +106,34 @@ class Group(orgName : String,
             variables.add(variable)
         }
 
-        fun addGroup(group: Group.Builder) {
-            groups.add(group)
+        fun addGroup(nested: Group.Builder) {
+            groups.add(nested)
+            nested.parent = this
         }
 
         fun removeGroupIfExists(groupName: String): Boolean {
             val egroup = groups.find {it.name == groupName }
             return if (egroup == null) false else groups.remove(egroup)
+        }
+
+        // dunno if its worth complexity
+        fun isParent(other: Group.Builder): Boolean {
+            var found: Group.Builder = other
+            while (found != this && found.parent != null) {
+                found = found.parent!!
+            }
+            return found == this
+        }
+
+        fun commonParent(other : Group.Builder) : Group.Builder? {
+            if (this == other) return this
+            if (this.isParent(other)) return this
+            if (other.isParent(this)) return other
+            var found : Group.Builder? = other
+            while (found != null && !found.isParent(this)) {
+                found = found.parent
+            }
+            return found
         }
 
         fun build(parent : Group?) : Group {

@@ -44,6 +44,8 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 
     var endian = ByteOrder.BIG_ENDIAN // LOOK TABLE 2H Little-Endian Format Data Type Definitions
 
+    var svalue : String? = null
+
     fun setVariable(v: Variable.Builder) {
         vb = v
         v.spObject = this
@@ -60,12 +62,12 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     }
 
     fun setFillValue(att: Attribute) {
-        // see IospHelper.makePrimitiveArray(int size, DataType dataType, Object fillValue)
-        fillValue = if ((vb!!.datatype === Datatype.STRING)) {
-            att.values[0] as String
-        } else {
-            att.values[0] as Number
-        }
+        fillValue = att.values[0]
+    }
+
+    fun setSValue(svalue : String) : Vinfo {
+        this.svalue = svalue
+        return this
     }
 
     fun getFillValueOrDefault() : Any {
