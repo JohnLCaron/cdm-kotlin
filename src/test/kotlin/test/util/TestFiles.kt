@@ -85,11 +85,13 @@ class TestFiles {
         var pathFilter : (Path) -> Boolean = {  true }
         var recursion = false
 
+        // filename only, not path
         fun addNameFilter(filter : (String) -> Boolean): StreamBuilder {
             this.nameFilters.add(filter)
             return this
         }
 
+        // full path
         fun withPathFilter(filter : (Path) -> Boolean): StreamBuilder {
             this.pathFilter = filter
             return this

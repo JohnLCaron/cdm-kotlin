@@ -33,6 +33,7 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         TagEnum.RI -> return TagRasterImage(xtag, refno, offset, length)
         TagEnum.RIG, TagEnum.NDG -> return TagDataGroup(xtag, refno, offset, length)
         TagEnum.SDD -> return TagSDD(xtag, refno, offset, length)
+        // TagEnum.SDS -> return TagSDS(xtag, refno, offset, length)
         TagEnum.SDL, TagEnum.SDU, TagEnum.SDF -> return TagTextN(xtag, refno, offset, length)
         TagEnum.SDM -> return TagSDminmax(xtag, refno, offset, length)
         TagEnum.FV -> return TagFV(xtag, refno, offset, length)
@@ -63,11 +64,11 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
     }
 
     override fun toString(): String {
-        return "${if (isUsed) " " else "*"} tag=${tag()}  vclass=${vClass()} refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
+        return "${if (isUsed) " " else "*"} tag=${tagEnum()}  vclass='${vClass()}' refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
                 " length=$length"
     }
 
-    fun tag(): TagEnum {
+    fun tagEnum(): TagEnum {
         return TagEnum.byCode(this.code)
     }
 
@@ -325,41 +326,45 @@ class TagDataGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ic
     }
 }
 
-// 701 p132
+// 701 p.133
 class TagSDD(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var rank: Short = 0
     var shape = IntArray(0)
-    var nt_ref: Int = 0 // Reference number of DFTAG_NT for data 
-    var nt_ref_scale = ShortArray(0) // Reference number for DFTAG_NT for the scale for the nth dimension
+    var data_nt_ref: Int = 0 // Reference number of DFTAG_NT for data 
+    var scale_nt_ref = ShortArray(0) // Reference number for DFTAG_NT for the scale for the nth dimension
+    // LOOK maybe means DFTAG_SDS ??
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         rank = h4.raf.readShort(state)
         shape = IntArray(rank.toInt()) { h4.raf.readInt(state) }
-        state.pos += 2
-        nt_ref = h4.raf.readShort(state).toUShort().toInt()
-        nt_ref_scale = ShortArray(rank.toInt()) {
-            state.pos += 2
+        val wtf2 = h4.raf.readShort(state)
+        data_nt_ref = h4.raf.readShort(state).toUShort().toInt()
+        scale_nt_ref = ShortArray(rank.toInt()) {
+            val wtf2 = h4.raf.readShort(state)
             h4.raf.readShort(state)
         }
-    }
-
-    override fun detail(): String {
-        val sbuff: StringBuilder = StringBuilder(super.detail())
-        sbuff.append("   dims= ")
-        for (i in 0 until rank) sbuff.append(shape[i]).append(" ")
-        sbuff.append("   nt= ").append(nt_ref.toInt()).append(" nt_scale=")
-        for (i in 0 until rank) sbuff.append(nt_ref_scale[i].toInt()).append(" ")
-        return sbuff.toString()
     }
 
     override fun toString(): String {
         return buildString {
             append(super.toString())
             append(" shape${shape.contentToString()}")
-            append(" nt_ref_scale${nt_ref_scale.contentToString()}")
-            append(" nt_ref = $nt_ref")
+            append(" data_nt_ref = $data_nt_ref")
+            append(" scale_nt_ref${scale_nt_ref.contentToString()}")
         }
+    }
+}
+
+
+// 701 p.135
+class TagSDS(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
+    var rank: Short = 0
+    var hasScale = ShortArray(0)
+    var scale = ShortArray(0) // Reference number for DFTAG_NT for the scale for the nth dimension
+
+    override fun readTag(h4 : H4builder) {
+        val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
     }
 }
 
@@ -491,7 +496,7 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
     override fun detail(): String {
         val sbuff = StringBuilder()
         sbuff.append(if (isUsed) " " else "*").append("refno=").append(refno).append(" tag= ")
-            .append(tag())
+            .append(tagEnum())
             .append(if (isExtended) " EXTENDED" else "").append(" offset=").append(offset).append(" length=")
             .append(length)
             .append(" VV= ${vinfo?.vb?.name ?: ""}")
@@ -517,11 +522,11 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     var interlace: Short = 0 // Constant indicating interlace scheme used
     var nelems = 0 // number of entries in Vdata
     var ivsize = 0 // Size of one Vdata entry
-    var nfields: Short = 0 // Number of fields per entry in the Vdata
+    var nfields: Short = 0 // Number of fields per entry in the Vdata: so one dimensional Structure(nelems)
     var fld_type = ShortArray(0) // Constant indicating the data type of the nth field of the Vdata
     var fld_isize = IntArray(0) // Size in bytes of the nth field of the Vdata
     var fld_offset = IntArray(0) // Offset of the nth field within the Vdata
-    var fld_nelems = ShortArray(0) // Order of the nth field of the Vdata LOOK WTF
+    var fld_nelems = ShortArray(0) // Order of the nth field of the Vdata: so, a one dimensional fld(fld_nelems)
     var fld_name = mutableListOf<String>()
     var name: String = "null"
     var className: String = "null"
@@ -580,6 +585,7 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
         return sbuff.toString()
     }
 
+    // fld_type fld_name(fld_order), so 1 dimensional of length fld_order
     fun readStructureMembers(): List<StructureMember> {
         val members = mutableListOf<StructureMember>()
         for (fld in 0 until this.nfields) {

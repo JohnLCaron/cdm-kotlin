@@ -14,11 +14,12 @@ import java.util.*
 
 private val debugVGroup = true
 private val debugVGroupDetails = true
-private val debugVSdata = true
-private val debugVSdetails = true
-private val debugSD = true
-private val debugSDdetails = true
-private val debugGR = true
+private val debugVSdata = false
+private val debugVSdetails = false
+private val debugSD = false
+private val debugSDdetails = false
+private val debugGR = false
+private val debugAttributes = true
 private val debugAttributeBug = false
 
 private val MAX_NAME = 255L
@@ -238,21 +239,22 @@ class HCheader(val filename: String) {
         }
     }
 
+    // this goes through the attr interface instead of reading the VH?
     private fun VgroupCDF(session: MemorySession, g4: Group4, vgroup_id: Int) {
         val nattrs2 = Vnattrs2(vgroup_id)
         repeat(nattrs2) { idx ->
             // val attr = VgroupReadAttribute(session, vgroup_id, idx)
-            val attr = VgroupReadAttribute2(session, vgroup_id, idx)
-            if (debugVGroupDetails) println("     read attribute ${attr.name}")
-            val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > 4000
-            if (EOS.isMetadata(attr.name) || moveup) {
-                metadata.add(attr)
-                if (attr.name == "StructMetadata.0") {
-                    this.structMetadata = attr.values[0] as String
+            val attr2 = VgroupReadAttribute2(session, vgroup_id, idx)
+            if (debugVGroupDetails) println("     read attribute ${attr2.name}")
+            val moveup = attr2.isString && attr2.values.size == 1 && (attr2.values[0] as String).length > 4000
+            if (EOS.isMetadata(attr2.name) || moveup) {
+                metadata.add(attr2)
+                if (attr2.name == "StructMetadata.0") {
+                    this.structMetadata = attr2.values[0] as String
                 }
             } else {
-                if (debugVGroupDetails) println("     add attribute ${attr}")
-                g4.gb.addAttribute(attr)
+                if (debugAttributes) println("     add attribute ${attr2}")
+                g4.gb.addAttribute(attr2)
             }
         }
     }
@@ -276,6 +278,9 @@ class HCheader(val filename: String) {
         val nelems = count_p[C_INT, 0]
         val size = size_p[C_INT, 0] // LOOK bug where size returns nelems instead
         println("VgroupReadAttribute $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
+        if (aname == "end_latlon") {
+            println()
+        }
 
         val data_p: MemorySegment = session.allocate(nelems * datatype.size.toLong())
         // checkErr("Vgetattr2", Vgetattr2(vgroup_id, idx, data_p)) // LOOK malloc(): corrupted top size
@@ -289,7 +294,9 @@ class HCheader(val filename: String) {
         return processAttribute(aname, nelems, datatype, bb)
     }
 
-    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, idx: Int): Attribute {
+    // we can guess that theres only one field in an attribute. so nvalues should be vh.nelems * fld[0].nelems
+    // looks like a bug where they are just using nvalues = fld[0].nelems
+    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute {
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val datatype_p = session.allocate(C_INT, 0)
         val count_p = session.allocate(C_INT, 0)
@@ -297,25 +304,29 @@ class HCheader(val filename: String) {
         val flds_p = session.allocate(C_INT, 0)
         val refnum_p = session.allocate(C_SHORT, 0)
 
-        checkErr("Vattrinfo2", Vattrinfo2(vgroup_id, idx, name_p, datatype_p, count_p, size_p, flds_p, refnum_p))
+        checkErr("Vattrinfo2", Vattrinfo2(vgroup_id, attr_idx, name_p, datatype_p, count_p, size_p, flds_p, refnum_p))
         val aname: String = name_p.getUtf8String(0)
         val datatype4 = datatype_p[C_INT, 0]
         val datatype = H4type.getDataType(datatype4)
-        val nelems = count_p[C_INT, 0]
-        val size = size_p[C_INT, 0] // LOOK bug where size returns nelems instead
-        val flds = flds_p[C_INT, 0]
+        val nvalues = count_p[C_INT, 0]    // LOOK a bug where nvalues returns fld[0].nelems instead of vh.nelems * fld[0].nelems
+        val sizeInBytes = size_p[C_INT, 0] // LOOK sometimes a bug where size returns nelems instead
+        val nflds = flds_p[C_INT, 0]
         val refnum = refnum_p[C_SHORT, 0]
-        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
+        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size}")
+        if (aname == "end_latlon") {
+            println()
+        }
 
-        val data_p: MemorySegment = session.allocate(nelems * datatype.size.toLong())
-        checkErr("Vgetattr2", Vgetattr2(vgroup_id, idx, data_p)) // LOOK malloc(): corrupted top size
+        // DFTAG_VS on page 143: bytes needed = vh.nelems * SUM( fld_size * fld_order)
+        val data_p: MemorySegment = session.allocate(nvalues * datatype.size.toLong())
+        checkErr("Vgetattr2", Vgetattr2(vgroup_id, attr_idx, data_p)) // LOOK malloc(): corrupted top size
         val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
         val bb = ByteBuffer.wrap(raw)
         bb.order(ByteOrder.LITTLE_ENDIAN) // ??
         bb.position(0)
         bb.limit(bb.capacity())
 
-        return processAttribute(aname, nelems, datatype, bb)
+        return processAttribute(aname, nvalues, datatype, bb)
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -397,8 +408,8 @@ class HCheader(val filename: String) {
             if (dimLength == 0) {
                 dimLength = dims[dimidx]
             }
-            if (dimName.startsWith("fakeDim")) {
-                dimList.add(dimLength.toString()) // name has been cleaned up
+            if (dimName.startsWith("fakeDim")) { // LOOK
+                dimList.add(dimLength.toString())
             } else {
                 val useDim = Dimension(dimName, dimLength, false, true)
                 g4.gb.addDimensionIfNotExists(useDim)
@@ -688,7 +699,7 @@ class HCheader(val filename: String) {
 
         val vb = Variable.Builder()
         vb.name = vsname
-        if (g4.gb.variables.find { it.name == vsname } != null) return
+        if (g4.gb.variables.find { it.name == vsname } != null) return // LOOK why needed?
 
         val index_p = session.allocate(C_INT, 0)
         val names = fieldnames.split(",").map { it.trim() }
@@ -725,7 +736,7 @@ class HCheader(val filename: String) {
         val nattrs = VSnattrs(vdata_id)
         repeat(nattrs) {
             val attr = VStructureReadAttribute(session, vdata_id, -1, it)
-            println("VStructureReadAttribute ${attr.name}")
+            // println("VStructureReadAttribute ${attr.name}")
             // vb.attributes.add( attr)
         }
 

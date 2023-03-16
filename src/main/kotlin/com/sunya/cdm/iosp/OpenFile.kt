@@ -159,7 +159,7 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
 
     fun readString(state : OpenFileState, nbytes : Int, charset : Charset): String {
         val dst = ByteArray(nbytes)
-        readBytes(state, dst)
+        readBytesUnchecked(state, dst)
         return makeStringZ(dst, charset)
     }
 

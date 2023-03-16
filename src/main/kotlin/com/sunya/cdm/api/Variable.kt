@@ -79,18 +79,28 @@ data class Variable(
                 dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
         fun build(group : Group) : Variable {
-            val useDimensions = if (dimList != null) dimList!!.map {
-                val name = makeValidCdmObjectName(it)
-                try {
-                    group.findDimension(name) ?: Dimension("", it.toInt(), false, false)
-                } catch (e : Exception){
-                    println("wtf")
-                    throw e
-                }
-            } else dimensions
+            var useDimensions = dimensions.toList()
+            if (dimList != null) {
+                useDimensions = dimList!!.map { getDimension(it, group) }
+            }
 
             val useName = makeValidCdmObjectName(name!!)
             return Variable(group, useName, datatype!!, useDimensions, attributes, spObject)
+        }
+
+        fun getDimension(dimName : String, group : Group) : Dimension {
+            val name = makeValidCdmObjectName(dimName)
+            var d = group.findDimension(name)
+            if (d == null) {
+                try {
+                    val length = dimName.toInt()
+                    d = Dimension("", length, false, false)
+                } catch(e : Exception) {
+                    group.findDimension(name)
+                    d = Dimension("", 1, false, false)
+                }
+            }
+            return d!!
         }
     }
 }
