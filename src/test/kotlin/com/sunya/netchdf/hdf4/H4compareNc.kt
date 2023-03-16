@@ -84,12 +84,12 @@ class H4compareNc {
 
     @Test
     fun problem1() { // HC has atts n > 1
-        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf")
+        compareH4header("/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
     }
 
     @Test
     fun problem2() { // H4 has atts n > 1
-        readHCheader("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf")
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf")
     }
     @Test
     fun problemHC() {
@@ -102,7 +102,7 @@ class H4compareNc {
 
     @Test
     fun smallProblem() {
-        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2/AMSR_E_L3_RainGrid_B05_200707.hdf")
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L2_Land_T06_200801012345_A.hdf")
     }
 
     @Test
@@ -142,7 +142,7 @@ class H4compareNc {
         println("=================")
         println(filename)
         Hdf4File(filename).use { myfile ->
-            println(" Hdf4File = ${myfile.cdl()}")
+            println(" Hdf4File = \n${myfile.cdl()}")
         }
     }
 
@@ -152,7 +152,7 @@ class H4compareNc {
         println("=================")
         println(filename)
         Hdf4ClibFile(filename).use { myfile ->
-            println(" Hdf4ClibFile = ${myfile.cdl()}")
+            println(" Hdf4ClibFile = \n${myfile.cdl()}")
         }
     }
 
@@ -196,7 +196,7 @@ class H4compareNc {
         println("=================")
         println(filename)
         Hdf4File(filename, true).use { myfile ->
-            println("Hdf4File = ${myfile.cdl()}")
+            println("Hdf4File = \n${myfile.cdl()}")
             Hdf4ClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")

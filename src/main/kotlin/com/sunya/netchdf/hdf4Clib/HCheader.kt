@@ -19,7 +19,7 @@ private val debugVSdetails = false
 private val debugSD = false
 private val debugSDdetails = false
 private val debugGR = false
-private val debugAttributes = true
+private val debugAttributes = false
 private val debugAttributeBug = false
 
 private val MAX_NAME = 255L
@@ -67,7 +67,7 @@ class HCheader(val filename: String) {
         metadata.forEach { makeVariableFromStringAttribute(rootGroup4, it) }
 
         if (structMetadata != null) {
-            rootGroup4.gb = ODLparser(rootGroup4.gb, false).applyStructMetadata(structMetadata!!)
+            // rootGroup4.gb = ODLparser(rootGroup4.gb, false).applyStructMetadata(structMetadata!!)
         }
     }
 
@@ -161,7 +161,7 @@ class HCheader(val filename: String) {
         }
 
         if (nobjects > 0) {
-            if (vclass.startsWith("SWATH") or vclass.startsWith("GRID")) { // ??
+            if (isNestedGroup(vclass)) {
                 VgroupGroup(session, g4, groupName, ref_array, tag_array)
             } else if ((vclass == "Dim0.0") or (vclass == "UDim0.0")) { // ??
                 VgroupDim(session, g4, ref_array, tag_array)
@@ -722,11 +722,16 @@ class HCheader(val filename: String) {
         if (members.size == 1) {
             val member = members[0]
             vb.datatype = member.datatype
-            vb.setDimensionsAnonymous(intArrayOf(member.nelems))
+            val totalNelems  = nrecords * member.nelems
+            if (totalNelems > 1) {
+                vb.setDimensionsAnonymous(intArrayOf(totalNelems))
+            }
         } else {
             val typedef = CompoundTypedef(vsname, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
-            vb.setDimensionsAnonymous(intArrayOf(nrecords))
+            if (nrecords > 1) {
+                vb.setDimensionsAnonymous(intArrayOf(nrecords))
+            }
         }
 
         val vinfo = Vinfo4()
@@ -753,7 +758,7 @@ class HCheader(val filename: String) {
             // noop
         } else {
             if (vb.datatype!!.cdlName == "compound" ) {
-                g4.gb.typedefs.add(vb.datatype!!.typedef!!)
+                rootGroup4.gb.addTypedef(vb.datatype!!.typedef!!)
             }
             g4.gb.addVariable(vb)
         }

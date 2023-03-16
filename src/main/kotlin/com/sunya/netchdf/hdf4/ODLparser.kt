@@ -29,13 +29,11 @@ import java.util.*
  * information be included in an HDF-EOS file? Yes. The descriptor file will be retained. It can be viewed by
  * EOSView if it stored either as a global attribute or a file annotation.
  */
-private val EOSmetadata = listOf("ArchiveMetadata.0", "CoreMetadata.0", "ProductMetadata.0", "StructMetadata.0")
-private val EOSprefix = listOf("coremetadata")
+private val EOSprefix = listOf("archivemetadata",  "coremetadata", "productmetadata", "structmetadata")
 
 class EOS {
     companion object {
         fun isMetadata(name : String) : Boolean {
-            if (EOSmetadata.contains(name)) return true;
             val lowername = name.lowercase()
             return EOSprefix.map{ lowername.startsWith(it) }.reduce { a,b -> a or b}
         }

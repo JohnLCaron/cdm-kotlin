@@ -102,8 +102,15 @@ class Group(orgName : String,
             attributes.add(att)
         }
 
-        fun addVariable(variable: Variable.Builder) {
-            variables.add(variable)
+        fun addVariable(vb: Variable.Builder) {
+            if (vb.name == "LevelWritten")
+                println()
+            variables.add(vb)
+        }
+
+        fun addTypedef(typedef : Typedef) {
+            if (typedefs.find { it.name == typedef.name} == null)
+                typedefs.add(typedef)
         }
 
         fun addGroup(nested: Group.Builder) {

@@ -77,7 +77,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         constructCdm()
 
         if (structMetadata != null) {
-            ODLparser(rootBuilder, false).applyStructMetadata(structMetadata!!)
+            // rootBuilder = ODLparser(rootBuilder, false).applyStructMetadata(structMetadata!!)
         }
     }
 
@@ -192,7 +192,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
 
         // this is for the nested vgroups that form nested CDM groups
-        if (vgroup.isNestedGroup()) {
+        if (isNestedGroup(vgroup.className)) {
             val tnested = TGroup(vgroup.name, vgroup.className)
             tnested.addFromVGroup(vgroup)
             groupMap[vgroup.refno] = tnested
@@ -214,14 +214,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
     }
 
-    private fun TagVGroup.isNestedGroup() : Boolean {
-        // seriously fucked up
-        return className.startsWith("SWATH") or className.startsWith("GRID") or className.startsWith("POINT")
-    }
-
     //////////////////////////////////////////////////////////////////////////////////
 
-    private fun constructCdm2(root : TGroup) {
+    private fun constructCdm3(root : TGroup) {
         VgroupProcess(root, rootBuilder)
         SDiterate(rootBuilder)
         GRiterate(rootBuilder)
@@ -279,6 +274,22 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
         return result
     }
+
+    //////////////////////////////////////////////////////////////////////////////////
+
+    private fun constructCdm2(root : TGroup) {
+        VgroupProcess(root, rootBuilder)
+        SDiterate(rootBuilder)
+        GRiterate(rootBuilder)
+        VStructureIterate(rootBuilder)
+
+        metadata.forEach { makeVariableFromStringAttribute(it, rootBuilder) }
+
+        if (structMetadata != null) {
+            ODLparser(rootBuilder, false).applyStructMetadata(structMetadata!!)
+        }
+    }
+
 
     private fun VgroupVar(vgroup: TagVGroup, parent: Group.Builder) {
         if (debugConstruct) println("  VgroupVar '${vgroup.name}'")
@@ -552,7 +563,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             val typedef = CompoundTypedef(tagVH.name, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
             vinfo.setData(data, tagVH.ivsize)
-            rootBuilder.typedefs.add(typedef)
+            rootBuilder.addTypedef(typedef)
         }
         if (debugConstruct) {
             println("added variable ${vb.name} from VH $tagVH")
@@ -564,7 +575,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
 
     private fun VStructureReadAttribute(vh: TagVH): Attribute? {
         val data: Tag = tagidMap.get(tagid(vh.refno, TagEnum.VS.code)) ?: throw IllegalStateException()
-        if (vh.name == "end_latlon") {
+        if ((vh.name == "end_latlon") or (vh.name == "HDFEOSVersion")) {
             println()
         }
 
@@ -572,15 +583,20 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         if (vh.nfields.toInt() != 1) throw IllegalStateException()
         val name: String = vh.name
         val type = vh.fld_type[0].toInt()
+        val datatype = H4type.getDataType(type)
         val size: Int = vh.fld_isize[0]
-        val nelems: Int = vh.nelems * vh.fld_nelems[0]
+        val fld_nelems = vh.fld_nelems[0]
+        val nelems = if (datatype == Datatype.CHAR) vh.nelems else  vh.nelems * fld_nelems
+
         vh.isUsed = true
         data.isUsed = true
+
         val state = OpenFileState(data.offset, ByteOrder.BIG_ENDIAN)
         val att = when (type) {
             3, 4 -> {
+                val totalSize = nelems * size
                 val vals = mutableListOf<String>()
-                repeat (nelems) { vals.add(raf.readString(state, size, valueCharset)) }
+                repeat (nelems) { vals.add(raf.readString(state, totalSize, valueCharset)) }
                 Attribute(name, Datatype.STRING, vals)
             }
             5 -> {
@@ -718,8 +734,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         parent.addVariable(vb)
     }
 
-//////////////////////////////////////////////////////////////////////////////////////////////////
-        private fun constructCdm() {
+    //////////////////////////////////////////////////////////////////////////////////////////////////
+    // old way
+    private fun constructCdm() {
         val vars = mutableListOf<Variable.Builder>()
 
         // pass 1 : Vgroups with special classes
@@ -934,7 +951,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             log.warn("**dimension length=" + length + " for TagVGroup= " + vtags + " using data " + data.refno)
         }
 
-        // remove the eos long name bologna
         val dim = Dimension(vtags.name, length)
         gb.addDimension(dim)
     }
@@ -1158,7 +1174,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             val typedef = CompoundTypedef(tagVH.name, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
             vinfo.setData(data, tagVH.ivsize)
-            rootBuilder.typedefs.add(typedef)
+            rootBuilder.addTypedef(typedef)
         }
         if (debugConstruct) println("makeVariableVS ${vb.name} from VH $tagVH")
         return vb
@@ -1385,17 +1401,17 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
 
         private var debugTag1 = false // show tags after read(), before read2().
-        private var debugTag2 = true // show tags after everything is done.
+        private var debugTag2 = false // show tags after everything is done.
         private var debugTagDetail = false // when showing tags, show detail or not
-        private var debugConstruct = true // show CDM objects as they are constructed
-        private var debugAtt = true // show CDM attributes as they are constructed
+        private var debugConstruct = false // show CDM objects as they are constructed
+        private var debugAtt = false // show CDM attributes as they are constructed
         private var debugVGroupDetails = false
         private var debugVSdata = false
         private var debugChunkDetail = false // chunked data
-        private var debugNG = true
+        private var debugNG = false
         private var debugTracker = false // memory tracker
         private val warnings = false // log messages
-        private var useHdfEos = true // allow to turn hdf eos processing off
+        private var useHdfEos = false // allow to turn hdf eos processing off
 
         // this is a unique id for a message in a file
         fun tagid(refno: Int, code: Int): Int {
@@ -1410,4 +1426,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
             return "ref=$refno code=${code}"
         }
     }
+}
+
+fun isNestedGroup(className : String) : Boolean {
+    // seriously fucked up
+    return className.startsWith("SWATH") or className.startsWith("GRID") or className.startsWith("POINT")
 }

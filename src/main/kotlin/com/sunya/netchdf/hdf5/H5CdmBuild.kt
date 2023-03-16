@@ -10,7 +10,6 @@ import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SPECIAL_ATTS
-import com.sunya.netchdf.netcdf4.Netcdf4
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
