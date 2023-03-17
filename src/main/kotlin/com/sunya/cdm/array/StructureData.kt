@@ -1,24 +1,30 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.computeSize
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
-class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : Int, val members : List<StructureMember>)
+class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
     : ArrayTyped<ArrayStructureData.StructureData>(shape) {
 
-    fun get(idx : Int) = StructureData(bb, sizeElem * idx, members)
+    init {
+        if (bb.capacity() < recsize * computeSize(shape))
+            println()
+        require(bb.capacity() >= recsize * computeSize(shape))
+    }
+
+    fun get(idx : Int) = StructureData(bb, recsize * idx, members)
 
     override fun iterator(): Iterator<StructureData> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<StructureData>() {
         private var idx = 0
         override fun computeNext() {
             if (idx >= nelems) done()
-            else setNext(StructureData(bb, sizeElem * idx, members))
+            else setNext(StructureData(bb, recsize * idx, members))
             idx++
         }
     }
@@ -40,7 +46,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val sizeElem : I
 
     override fun toString(): String {
         return buildString {
-            append("ArrayStructureData(nelems=$nelems sizeElem=$sizeElem, members=$members)\n")
+            append("ArrayStructureData(nelems=$nelems sizeElem=$recsize, members=$members)\n")
             for (member in this@ArrayStructureData.members) {
                 append("${"%12s".format(member.name)}, ")
             }

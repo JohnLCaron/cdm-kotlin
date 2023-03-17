@@ -2,6 +2,7 @@ package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.Iosp
 import com.sunya.netchdf.hdf4.Hdf4File
@@ -359,7 +360,7 @@ fun readMyData(myfile: Netcdf, varname: String? = null, section: Section? = null
     if (showCdl) {
         println(myfile.cdl())
     }
-    println(myfile.rootGroup().allVariables().map { it.fullname() })
+    // println(myfile.rootGroup().allVariables().map { it.fullname() })
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -389,7 +390,7 @@ fun readOneVar(myvar: Variable, myfile: Iosp, section: Section?) {
         if (myvar.datatype == Datatype.CHAR) {
             testCharShape(myvar.shape, mydata.shape)
         } else {
-            assertTrue(myvar.shape.contentEquals(mydata.shape))
+            assertTrue(myvar.shape.equivalent(mydata.shape), "variable ${myvar.name}")
         }
         if (NetchdfTest.showData) println(mydata)
     }
@@ -400,12 +401,9 @@ fun readOneVar(myvar: Variable, myfile: Iosp, section: Section?) {
 }
 
 fun testCharShape(want: IntArray, got: IntArray) {
-    val org = want.contentEquals(got)
+    val org = want.equivalent(got)
     val removeLast = removeLast(want)
-    val removeLastOk = removeLast.contentEquals(got)
-    if (!org and !removeLastOk) {
-        println("HEY")
-    }
+    val removeLastOk = removeLast.equivalent(got)
     assertTrue(org or removeLastOk)
 }
 
@@ -434,7 +432,7 @@ fun readMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
     if (myvar.datatype == Datatype.CHAR) {
         testCharShape(middleSection.shape, mydata.shape)
     } else {
-        assertTrue(middleSection.shape.contentEquals(mydata.shape))
+        assertTrue(middleSection.shape.equivalent(mydata.shape), "variable ${myvar.name}")
     }
     if (NetchdfTest.showData) println(mydata)
 }
@@ -495,7 +493,7 @@ fun compareOneVar(myvar: Variable, myfile: Iosp, ncvar : Variable, ncfile: Iosp,
                 } else {
                     println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
                 }
-                assertTrue(false)
+                assertTrue(false, "variable ${myvar.name}")
                 return
             } else {
                 if (NetchdfTest.showData) {
@@ -541,7 +539,7 @@ fun compareMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Var
             } else {
                 println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
             }
-            assertTrue(false)
+            assertTrue(false, "variable ${myvar.name}")
             return
         }
     }

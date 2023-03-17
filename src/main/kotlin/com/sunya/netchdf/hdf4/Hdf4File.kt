@@ -54,6 +54,10 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
             return ArraySingle(section.shape, v.datatype, vinfo.getFillValueOrDefault())
         }
 
+        if (vinfo.svalue != null) {
+            return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
+        }
+
         if (vinfo.tagData != null) {
             vinfo.setLayoutInfo(this) // make sure needed info is present
         }

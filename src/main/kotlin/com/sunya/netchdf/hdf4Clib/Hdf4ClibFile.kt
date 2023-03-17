@@ -63,23 +63,26 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
 
     // LOOK SDreadchunk ??
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val filledSection = Section.fill(section, v2.shape)
+        val filled = Section.fill(section, v2.shape)
         val vinfo = v2.spObject as Vinfo4
 
         val datatype = v2.datatype
-        val nbytes = filledSection.size() * datatype.size
+        val nbytes = filled.size() * datatype.size
 
         if (vinfo.sdsIndex != null) {
-            return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filledSection, nbytes)
+            return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)
 
         } else if (vinfo.vsInfo != null) {
-            require(filledSection.rank() == 1)
-            val startRecord = filledSection.origin(0)
-            val numRecords = filledSection.shape(0)
-            return readVSdata(header.fileOpenId, vinfo.vsInfo!!, datatype, startRecord, numRecords, nbytes)
+            require(filled.rank() <= 1) { "variable = ${v2.name}"}
+            val startRecord = if (filled.rank() == 0) 0 else filled.origin(0)
+            val numRecords = if (filled.rank() == 0) 1 else filled.shape(0)
+            return readVSdata(header.fileOpenId, vinfo.vsInfo!!, datatype, startRecord, numRecords)
 
         } else if (vinfo.grIndex != null) {
-            return readGRdata(header.grStartId, vinfo.grIndex!!, datatype, filledSection, nbytes)
+            return readGRdata(header.grStartId, vinfo.grIndex!!, datatype, filled, nbytes)
+
+        }  else if (vinfo.svalue != null) {
+            return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
         }
         throw RuntimeException("cant read ${v2.name}")
     }
@@ -117,25 +120,21 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection:
     }
 }
 
-fun readVSdata(
-    fileOpenId: Int,
-    vsInfo: VSInfo,
-    datatype: Datatype,
-    startRecord: Int,
-    numRecords: Int,
-    nbytes: Long
-): ArrayTyped<*> {
+fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecord: Int, numRecords: Int): ArrayTyped<*> {
     val shape = intArrayOf(numRecords)
 
     MemorySession.openConfined().use { session ->
         val read_access_mode = session.allocateUtf8String("r")
-        val data_p = session.allocate(nbytes)
+        val fldnames_p = session.allocateUtf8String(vsInfo.fldNames)
+        val data_p = session.allocate(numRecords * vsInfo.recsize.toLong()) // LOOK memory clobber?
         val vdata_id = VSattach(fileOpenId, vsInfo.vs_ref, read_access_mode);
 
-        // VSseek(int32 vdata_id, int32 record_pos)
+        checkErrNeg("VSsetfields", VSsetfields(vdata_id, fldnames_p))
         checkErrNeg("VSseek", VSseek(vdata_id, startRecord))
         // int32 VSread(int32 vdata_id, uint8 *databuf, int32 n_records, int32 interlace_mode)
-        checkErr("VSread", VSread(vdata_id, data_p, numRecords, FULL_INTERLACE()))
+        val nread = VSread(vdata_id, data_p, numRecords, FULL_INTERLACE())
+        checkErrNeg("VSread", nread)
+        require(nread == numRecords)
 
         VSdetach(vdata_id)
 
@@ -145,7 +144,14 @@ fun readVSdata(
         val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
         val values = ByteBuffer.wrap(raw)
         values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
-        return shapeData(datatype, values, shape)
+
+        if (datatype.typedef is CompoundTypedef) {
+            val members = (datatype.typedef as CompoundTypedef).members
+            return ArrayStructureData(shape, values, vsInfo.recsize, members)
+        } else {
+            // a single field is made into a regular variable
+            return shapeData(datatype, values, shape)
+        }
     }
 }
 

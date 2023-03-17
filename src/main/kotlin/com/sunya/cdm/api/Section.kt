@@ -33,7 +33,7 @@ class Section {
      * @throws InvalidRangeException if origin &lt; 0, or shape &lt; 1.
      */
     constructor(origin: IntArray, shape: IntArray) {
-        require(isScalar(origin) == isScalar(shape) || origin.size == shape.size)
+        require(origin.isScalar() == shape.isScalar() || origin.size == shape.size)
         val builder = ArrayList<Range>()
         for (i in shape.indices) {
             if (shape[i] < 0) {
@@ -441,17 +441,17 @@ class Section {
      * All non-null ranges must have origin 0 and length = shape\[i]
      */
     @Throws(InvalidRangeException::class)
-    fun equivalent(shape: IntArray): Boolean {
-        if (isScalar(shape) && isScalar(this.shape)) {
+    fun equivalent(other: IntArray): Boolean {
+        if (other.isScalar() && this.shape.isScalar()) {
             return true
         }
-        if (rank() != shape.size) {
+        if (rank() != other.size) {
             return false
         }
         for (i in ranges.indices) {
             val r = ranges[i] ?: continue
             if (r.first != 0) return false
-            if (r.length != shape[i]) return false
+            if (r.length != other[i]) return false
         }
         return true
     }
@@ -734,11 +734,6 @@ class Section {
             // fill in any nulls
         }
 
-        /** Is this a scalar Section? Allows int[], int[1] {0}, int[1] {1}  */
-        fun isScalar(shape: IntArray): Boolean {
-            return shape.size == 0 || shape.size == 1 && shape[0] < 2
-        }
-
         fun builder(): Builder {
             return Builder()
         }
@@ -756,6 +751,19 @@ class Section {
                 product *= aShape.toLong()
             }
             return product
+        }
+
+
+        /** Is this a scalar Section? Allows int[], int[1] {0}, int[1] {1}  */
+        fun IntArray.isScalar(): Boolean {
+            return this.size == 0 || this.size == 1 && this[0] < 2
+        }
+
+        fun IntArray.equivalent(other: IntArray): Boolean {
+            if (this.isScalar() and other.isScalar()) {
+                return true
+            }
+            return this.contentEquals(other)
         }
 
         // return outerShape, innerLength

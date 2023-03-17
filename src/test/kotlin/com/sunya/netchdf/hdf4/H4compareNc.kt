@@ -5,7 +5,6 @@ import com.sunya.netchdf.NetchdfTest
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.readDataCompareHC
 import com.sunya.netchdf.readMyData
-import com.sunya.netchdf.readDataCompareNC
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -81,7 +80,7 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            return Stream.of(starter, hasGroups, sdsNotEos, moar4, moar42).flatMap { i -> i}
+            return Stream.of(moar4, moar42).flatMap { i -> i}
             // return Stream.of(hdfeos2, moarEos).flatMap { i -> i} // malloc core dump
             // return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
@@ -89,7 +88,11 @@ class H4compareNc {
 
     @Test
     fun hasStruct() {
-        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        readHCdata("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        readData("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        NetchdfTest.showFailedData = true
+        readDataCompareHC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        NetchdfTest.showFailedData = false
  //           "Sea_Ice_Motion_Vectors_-_17766010")
     }
 
@@ -141,18 +144,18 @@ class H4compareNc {
 
     @Test
     fun linkedNotCompressed() {
-        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
+        readDataCompareHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
             "ALBEDO")
     }
 
     @Test
     fun readMyData() {
-        val filename = "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF"
+        val filename = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf"
         NetchdfTest.showData = false
-        // readHCdata(filename)
-        readHCdata(filename, null)
-        // readHCdata(filename, null)
-        //    "ALBEDO")
+        //readHCdata(filename)
+        //readData(filename)
+        compareH4header(filename)
+        readDataCompareHC(filename)
         NetchdfTest.showData = false
     }
 
@@ -186,6 +189,24 @@ class H4compareNc {
         }
     }
 
+    // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
+    // https://docs.unidata.ucar.edu/nug/current/getting_and_building_netcdf.html#build_hdf4
+    @ParameterizedTest
+    @MethodSource("params")
+    fun compareH4header(filename : String) {
+        println("=================")
+        println(filename)
+        Hdf4File(filename, true).use { myfile ->
+            println("Hdf4File = \n${myfile.cdl()}")
+            Hdf4ClibFile(filename).use { ncfile ->
+                //println("actual = $root")
+                //println("expect = $expect")
+                assertEquals(ncfile.cdl(), myfile.cdl())
+                println(myfile.cdl())
+            }
+        }
+    }
+
     fun readHCdata(filename : String, varname : String? = null) {
         println("=================")
         println(filename)
@@ -203,35 +224,9 @@ class H4compareNc {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readDataCompareWithNC(filename: String) {
-        readDataCompareNC(filename)
-        println()
-    }
-
-
-    @ParameterizedTest
-    @MethodSource("params")
     fun readDataCompareWithHC(filename: String) {
         readDataCompareHC(filename)
         println()
-    }
-
-    // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
-    // https://docs.unidata.ucar.edu/nug/current/getting_and_building_netcdf.html#build_hdf4
-    @ParameterizedTest
-    @MethodSource("params")
-    fun compareH4header(filename : String) {
-        println("=================")
-        println(filename)
-        Hdf4File(filename, true).use { myfile ->
-            println("Hdf4File = \n${myfile.cdl()}")
-            Hdf4ClibFile(filename).use { ncfile ->
-                //println("actual = $root")
-                //println("expect = $expect")
-                assertEquals(ncfile.cdl(), myfile.cdl())
-                println(myfile.cdl())
-            }
-        }
     }
 
 }

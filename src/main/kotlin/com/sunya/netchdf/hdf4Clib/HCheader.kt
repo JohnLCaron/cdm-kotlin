@@ -739,7 +739,7 @@ class HCheader(val filename: String) {
         }
 
         val vinfo = Vinfo4()
-        vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames)
+        vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames, interlace)
         vb.spObject = vinfo
 
         // LOOK no attributes
@@ -871,7 +871,7 @@ data class Group4(val name : String, val parent: Group4?) {
     }
 }
 
-data class VSInfo(val vs_ref : Int, val nrecords : Int, val recsize : Int, val fldNames : String)
+data class VSInfo(val vs_ref : Int, val nrecords : Int, val recsize : Int, val fldNames : String, val interlace : Int)
 
 class Vinfo4() {
     var svalue : String? = null
