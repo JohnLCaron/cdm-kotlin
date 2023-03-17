@@ -75,7 +75,11 @@ class Group(orgName : String,
         var parent : Group.Builder? = null
 
         fun addDimension(dim: Dimension) {
-            dimensions.add(dim)
+            if ( dimensions.find {it.name == dim.name } == null) {
+                dimensions.add(dim)
+            } else {
+                println("tried to add duplicate dimension $dim")
+            }
         }
 
         // return true if did not exist and was added
@@ -103,9 +107,11 @@ class Group(orgName : String,
         }
 
         fun addVariable(vb: Variable.Builder) {
-            if (vb.name == "LevelWritten")
-                println()
-            variables.add(vb)
+            if (variables.find {it.name == vb.name } == null) {
+                variables.add(vb)
+            } else {
+                println("tried to add duplicate variable ${vb.name}")
+            }
         }
 
         fun addTypedef(typedef : Typedef) {

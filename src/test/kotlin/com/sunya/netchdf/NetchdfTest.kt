@@ -376,14 +376,14 @@ fun readMyData(myfile: Netcdf, varname: String? = null, section: Section? = null
 
 const val maxBytes = 100_000_000
 
-fun readOneVar(myvar: Variable, h5file: Iosp, section: Section?) {
+fun readOneVar(myvar: Variable, myfile: Iosp, section: Section?) {
 
     val section = Section.fill(section, myvar.shape)
     val nbytes = section.size() * myvar.datatype.size
     if (nbytes > maxBytes) {
         println(" * ${myvar.fullname()} read too big: ${nbytes} > $maxBytes")
     } else {
-        val mydata = h5file.readArrayData(myvar, section)
+        val mydata = myfile.readArrayData(myvar, section)
         println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
                     "${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems" )
         if (myvar.datatype == Datatype.CHAR) {
@@ -395,7 +395,7 @@ fun readOneVar(myvar: Variable, h5file: Iosp, section: Section?) {
     }
 
     if (myvar.nelems > 8 && myvar.datatype != Datatype.CHAR) {
-        readMiddleSection(h5file, myvar, myvar.shape)
+        readMiddleSection(myfile, myvar, myvar.shape)
     }
 }
 

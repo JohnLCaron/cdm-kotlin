@@ -85,7 +85,7 @@ object CdlParser : Grammar<Netcdf>() {
         vb.name = name
         vb.datatype = Datatype.from(type.text.trim())
         vb.dimList = dimList.t2.map { it -> it }
-        atts.forEach { vb.attributes.add(it) }
+        atts.forEach { vb.addAttribute(it) }
         vb
     }
     val variables by (VARIABLES and zeroOrMore(variable)).map { (_, variables) ->

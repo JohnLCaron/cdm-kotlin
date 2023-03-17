@@ -29,7 +29,7 @@ import java.util.*
  * information be included in an HDF-EOS file? Yes. The descriptor file will be retained. It can be viewed by
  * EOSView if it stored either as a global attribute or a file annotation.
  */
-private val EOSprefix = listOf("archivemetadata",  "coremetadata", "productmetadata", "structmetadata")
+private val EOSprefix = listOf("archivemetadata",  "coremetadata", "productmetadata", "structmetadata", "oldstructmetadata")
 
 class EOS {
     companion object {
@@ -89,9 +89,9 @@ fun ODLtransform(org: ODLgroup): ODLgroup {
     // find all requested dimensions
     val dims = mutableSetOf<String>()
     findReqDimensions(root, dims)
-    println("findReqDimensions = $dims ")
+    // println("findReqDimensions = $dims ")
     removeFoundDimensions(root, dims)
-    println("removeFoundDimensions = $dims ")
+    // println("removeFoundDimensions = $dims ")
     if (dims.isNotEmpty()) {
         addMissingDimensions(root, dims)
     }
@@ -136,8 +136,8 @@ private fun transform(org: ODLgroup, trans: ODLgroup) {
 private fun transformDims(dimGroup: ODLgroup): ODLobject {
     val result = ODLobject("Dimensions")
     dimGroup.variables.filter { it.name.startsWith("Dimension") }.map {
-        var name: String = "N/A"
-        var size: String = "N/A"
+        var name = "N/A"
+        var size = "N/A"
         it.attributes.forEach { att ->
             if (att.component1() == "DimensionName") {
                 name = att.component2()
@@ -154,8 +154,8 @@ private fun transformDims(dimGroup: ODLgroup): ODLobject {
 private fun transformVariables(fldGroup: ODLgroup): ODLobject {
     val result = ODLobject("Variables")
     fldGroup.variables.filter { it.name.contains("Field") }.map {
-        var name: String = "N/A"
-        var dims: String = "N/A"
+        var name = "N/A"
+        var dims = "N/A"
         it.attributes.forEach { att ->
             if (att.component1().contains("FieldName")) {
                 name = att.component2()
@@ -322,61 +322,30 @@ private fun stripQuotes(name: String): String {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
-class ODLparser(val rootGroup: Group.Builder, val isFlat : Boolean) {
+class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
     // LOOK should be All Variables named StructMetadata.n, where n= 1, 2, 3 ... are read in and their contents concatenated
     //   to make the structMetadata String.
-    fun applyStructMetadata(structMetadata: String): Group.Builder {
+    fun applyStructMetadata(structMetadata: String) : Boolean {
        // println("structMetadata = \n$structMetadata")
         val odl = ODLparseFromString((structMetadata))
         //println("odl = \n$odl")
         val odlt = ODLtransform(odl)
-        println("transformed = \n$odlt")
-        return if (isFlat) {
-            val root = Group.Builder("")
-            root.attributes.addAll(rootGroup.attributes)
-            odlt.nested.forEach { it.applyStructMetadataFlat(root) }
-            root
-        } else {
-            odlt.applyStructMetadata(rootGroup)
-            rootGroup
-        }
-    }
+        if (show) println("ODL transformed = \n$odlt")
 
-    // assumes that all the existing variables are in the root group
-    fun ODLgroup.applyStructMetadataFlat(parent: Group.Builder) {
-        val nested = Group.Builder(this.name)
-        parent.addGroup(nested)
-
-        this.variables.forEach { v ->
-            if (v.name == "Dimensions") {
-                v.attributes.forEach { att ->
-                    nested.addDimension(Dimension(att.component1(), att.component2().toInt()))
-                }
-            }
-            if (v.name == "Variables") {
-                v.attributes.forEach { att ->
-                    val name = att.component1()
-                    val dimList = att.component2().split(",")
-                    val vb = rootGroup.variables.find { it.name == name }
-                    if (vb == null) {
-                        println("Cant find variable $name")
-                    } else {
-                        vb.dimList = dimList
-                        vb.dimensions.clear()
-                        nested.addVariable(vb)
-                    }
-                }
-            }
+        if (!odlt.validateStructMetadata(rootGroup)) {
+            println("***ODL did not validate")
+            return false
         }
-        this.nested.forEach { it.applyStructMetadataFlat(nested) }
+        odlt.applyStructMetadata(rootGroup)
+        return true
     }
 
     // assumes that the existing variables are already in groups; adjust dimensions and add attributes
     fun ODLgroup.applyStructMetadata(parent: Group.Builder) {
-        parent.dimensions.clear()
         this.variables.forEach { v ->
             if (v.name == "Dimensions") {
+                parent.dimensions.clear() // LOOK should only delete dimensions that are replaced ??
                 v.attributes.forEach { att ->
                     parent.addDimension(Dimension(att.component1(), att.component2().toInt()))
                 }
@@ -388,7 +357,7 @@ class ODLparser(val rootGroup: Group.Builder, val isFlat : Boolean) {
                     val odlname = makeValidCdmObjectName(name)
                     val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
                     if (vb == null) {
-                        println("Cant find variable $name")
+                        if (show) println("ODL cant find variable $name")
                     } else {
                         vb.dimList = dimList
                         vb.dimensions.clear()
@@ -400,10 +369,38 @@ class ODLparser(val rootGroup: Group.Builder, val isFlat : Boolean) {
             val odlname = makeValidCdmObjectName(odl.name)
             val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
             if (ngroup == null) {
-                println("Cant find group ${odl.name}")
+                if (show) println("ODL cant find group ${odl.name}")
             } else {
                 odl.applyStructMetadata(ngroup)
             }
         }
+    }
+
+    // assumes that the existing variables are already in groups; adjust dimensions and add attributes
+    fun ODLgroup.validateStructMetadata(parent: Group.Builder) : Boolean {
+        this.variables.forEach { v ->
+            if (v.name == "Variables") {
+                v.attributes.forEach { att ->
+                    val name = att.component1()
+                    val odlname = makeValidCdmObjectName(name)
+                    val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
+                    if (vb == null) {
+                        if (show) println("ODL cant find variable $name")
+                        return false
+                    }
+                }
+            }
+        }
+        this.nested.forEach { odl ->
+            val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
+            if (ngroup == null) {
+                if (show) println("ODL cant find group ${odl.name}")
+                return false
+            } else {
+                if (!odl.validateStructMetadata(ngroup))
+                    return false
+            }
+        }
+        return true
     }
 }

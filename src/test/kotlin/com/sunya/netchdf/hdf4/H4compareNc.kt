@@ -1,6 +1,7 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.Section
+import com.sunya.netchdf.NetchdfTest
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.readDataCompareHC
 import com.sunya.netchdf.readMyData
@@ -19,6 +20,20 @@ class H4compareNc {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
+            val starter = Stream.of(
+                Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/MI1B2T_B54_O003734_AN_05.hdf"),
+                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF"),
+                Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf"),
+                Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/f13_owsa_04010_09A.hdf"),
+            )
+
+            val hasGroups = Stream.of(
+                Arguments.of("/media/twobee/netch/hdf4/jeffmc/swath.hdf"),
+                Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf"),
+                Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L2_Land_T06_200801012345_A.hdf"),
+                Arguments.of("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/MOD10A1.A2008001.h23v15.005.2008003161138.hdf"),
+            )
+
             val sdsNotEos = Stream.of(
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf"),
                 Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/MAC07S0.A2008230.1250.002.2008233222357.hdf"),
@@ -66,8 +81,9 @@ class H4compareNc {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            // return Stream.of(sdsNotEos, hdf4).flatMap { i -> i}
-            return Stream.of(sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
+            // return hasGroups
+            // return Stream.of(hdfeos2, moarEos).flatMap { i -> i} malloc core dump
+            return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
     }
 
@@ -79,12 +95,12 @@ class H4compareNc {
 
     @Test
     fun swath() {
-        readH4header("/media/twobee/netch/hdf4/jeffmc/swath.hdf")
+        compareH4header("/media/twobee/netch/hdf4/jeffmc/swath.hdf")
     }
 
     @Test
-    fun problem1() { // HC has atts n > 1
-        compareH4header("/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
+    fun problem1() {
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf")
     }
 
     @Test
@@ -112,13 +128,15 @@ class H4compareNc {
 
     @Test
     fun eos2() {
-        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos2/MISR_AM1_GP_GMP_P040_O003734_05.eos")
+        compareH4header("/media/twobee/netch/hdf4/mak/MOD13Q1.2008.353.aust.005.b01.250m_ndvi.hdf")
     }
 
-    // compress_type = 0
     @Test
-    fun compressProblem() {
-        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/MYD021KM.A2008349.1800.005.2009329084841.hdf")
+    fun dimProblem() {
+        //NetchdfTest.showData = true
+        //readHCdata("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/MAC07S0.A2008230.1250.002.2008233222357.hdf", "Band_number")
+        //NetchdfTest.showData = false
+        compareH4header("/media/twobee/netch/hdf4/mak/MOD13Q1.2008.353.aust.005.b01.250m_ndvi.hdf")
     }
 
     @Test
@@ -132,6 +150,19 @@ class H4compareNc {
         // readH4header("/media/twobee/netch/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf")
         readDataCompareHC("/media/twobee/netch/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf",
             "chlor_a", Section("0:1533,0:1000"))
+    }
+
+
+    @Test
+    fun problemHeader() {
+        val filename = "/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf"
+        // readHCheader(filename)
+        compareH4header(filename)
+    }
+
+    @Test
+    fun groups() {
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L3_DailyLand_B04_20080101.hdf")
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -156,6 +187,14 @@ class H4compareNc {
         }
     }
 
+    fun readHCdata(filename : String, varname : String? = null) {
+        println("=================")
+        println(filename)
+        Hdf4ClibFile(filename).use { hcfile ->
+            readMyData(hcfile, varname)
+        }
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun readData(filename: String) {
@@ -176,16 +215,6 @@ class H4compareNc {
     fun readDataCompareWithHC(filename: String) {
         readDataCompareHC(filename)
         println()
-    }
-
-    @Test
-    fun problemHeader() {
-        compareH4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/MAC07S0.A2008230.1250.002.2008233222357.hdf")
-    }
-
-    @Test
-    fun groups() {
-        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L3_DailyLand_B04_20080101.hdf")
     }
 
     // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.

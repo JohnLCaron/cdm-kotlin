@@ -141,7 +141,7 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     }
 
     for (att5 in v5.attributes()) {
-        builder.attributes.add(buildAttribute(att5))
+        builder.addAttribute(buildAttribute(att5))
     }
     val iter = builder.attributes.iterator()
     while (iter.hasNext()) {
