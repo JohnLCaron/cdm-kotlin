@@ -72,11 +72,14 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
         if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filledSection, nbytes)
 
-        } else if (vinfo.vsInfo!= null) {
+        } else if (vinfo.vsInfo != null) {
             require(filledSection.rank() == 1)
             val startRecord = filledSection.origin(0)
             val numRecords = filledSection.shape(0)
             return readVSdata(header.fileOpenId, vinfo.vsInfo!!, datatype, startRecord, numRecords, nbytes)
+
+        } else if (vinfo.grIndex != null) {
+            return readGRdata(header.grStartId, vinfo.grIndex!!, datatype, filledSection, nbytes)
         }
         throw RuntimeException("cant read ${v2.name}")
     }
@@ -87,7 +90,7 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
 
 }
 
-fun readSDdata(sdsStartId : Int, sdindex : Int, datatype : Datatype, filledSection: Section, nbytes : Long): ArrayTyped<*> {
+fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection: Section, nbytes: Long): ArrayTyped<*> {
     val rank = filledSection.rank()
 
     MemorySession.openConfined().use { session ->
@@ -110,24 +113,18 @@ fun readSDdata(sdsStartId : Int, sdindex : Int, datatype : Datatype, filledSecti
         val values = ByteBuffer.wrap(raw)
         values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
 
-        return when (datatype) {
-            Datatype.BYTE -> ArrayByte(filledSection.shape, values)
-            Datatype.UBYTE -> ArrayUByte(filledSection.shape, values)
-            Datatype.CHAR, Datatype.STRING -> ArrayUByte(filledSection.shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(filledSection.shape, values.asDoubleBuffer())
-            Datatype.FLOAT -> ArrayFloat(filledSection.shape, values.asFloatBuffer())
-            Datatype.INT -> ArrayInt(filledSection.shape, values.asIntBuffer())
-            Datatype.UINT -> ArrayUInt(filledSection.shape, values.asIntBuffer())
-            Datatype.LONG -> ArrayLong(filledSection.shape, values.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(filledSection.shape, values.asLongBuffer())
-            Datatype.SHORT -> ArrayShort(filledSection.shape, values.asShortBuffer())
-            Datatype.USHORT -> ArrayUShort(filledSection.shape, values.asShortBuffer())
-            else -> throw IllegalArgumentException("datatype ${datatype}")
-        }
+        return shapeData(datatype, values, filledSection.shape)
     }
 }
 
-fun readVSdata(fileOpenId : Int, vsInfo : VSInfo, datatype : Datatype, startRecord: Int, numRecords : Int, nbytes : Long): ArrayTyped<*> {
+fun readVSdata(
+    fileOpenId: Int,
+    vsInfo: VSInfo,
+    datatype: Datatype,
+    startRecord: Int,
+    numRecords: Int,
+    nbytes: Long
+): ArrayTyped<*> {
     val shape = intArrayOf(numRecords)
 
     MemorySession.openConfined().use { session ->
@@ -148,20 +145,62 @@ fun readVSdata(fileOpenId : Int, vsInfo : VSInfo, datatype : Datatype, startReco
         val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
         val values = ByteBuffer.wrap(raw)
         values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+        return shapeData(datatype, values, shape)
+    }
+}
 
-        return when (datatype) {
-            Datatype.BYTE -> ArrayByte(shape, values)
-            Datatype.UBYTE -> ArrayUByte(shape, values)
-            Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(shape, values.asDoubleBuffer())
-            Datatype.FLOAT -> ArrayFloat(shape, values.asFloatBuffer())
-            Datatype.INT -> ArrayInt(shape, values.asIntBuffer())
-            Datatype.UINT -> ArrayUInt(shape, values.asIntBuffer())
-            Datatype.LONG -> ArrayLong(shape, values.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(shape, values.asLongBuffer())
-            Datatype.SHORT -> ArrayShort(shape, values.asShortBuffer())
-            Datatype.USHORT -> ArrayUShort(shape, values.asShortBuffer())
-            else -> throw IllegalArgumentException("datatype ${datatype}")
+fun readGRdata(
+            grStartId: Int,
+            grIdx: Int,
+            datatype: Datatype,
+            filledSection: Section,
+            nbytes: Long
+): ArrayTyped<*> {
+    val rank = filledSection.rank()
+
+    MemorySession.openConfined().use { session ->
+        // flip the shape
+        val rank = filledSection.shape.size
+        val flipShape = IntArray(rank) { filledSection.shape[rank - it - 1] }
+
+        val intArray = MemoryLayout.sequenceLayout(rank.toLong(), C_INT)
+        val origin_p = session.allocateArray(intArray, rank.toLong())
+        val shape_p = session.allocateArray(intArray, rank.toLong())
+        val stride_p = session.allocateArray(intArray, rank.toLong())
+        for (i in 0 until rank) {
+            origin_p.setAtIndex(C_INT, i.toLong(), filledSection.origin(i))
+            shape_p.setAtIndex(C_INT, i.toLong(), flipShape[i])
+            stride_p.setAtIndex(C_INT, i.toLong(), filledSection.stride(i))
         }
+        val data_p = session.allocate(nbytes)
+
+        val grId = GRselect(grStartId, grIdx)
+        println("$grStartId $grIdx == $grId")
+        checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
+        // checkErr("GRreadimage", GRreadimage(grId, origin_p, null, shape_p, data_p))
+        GRendaccess(grId)
+
+        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+        val values = ByteBuffer.wrap(raw)
+        values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+
+        return shapeData(datatype, values, filledSection.shape)
+    }
+}
+
+private fun shapeData(datatype: Datatype, values: ByteBuffer, shape: IntArray): ArrayTyped<*> {
+    return when (datatype) {
+        Datatype.BYTE -> ArrayByte(shape, values)
+        Datatype.UBYTE -> ArrayUByte(shape, values)
+        Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+        Datatype.DOUBLE -> ArrayDouble(shape, values.asDoubleBuffer())
+        Datatype.FLOAT -> ArrayFloat(shape, values.asFloatBuffer())
+        Datatype.INT -> ArrayInt(shape, values.asIntBuffer())
+        Datatype.UINT -> ArrayUInt(shape, values.asIntBuffer())
+        Datatype.LONG -> ArrayLong(shape, values.asLongBuffer())
+        Datatype.ULONG -> ArrayULong(shape, values.asLongBuffer())
+        Datatype.SHORT -> ArrayShort(shape, values.asShortBuffer())
+        Datatype.USHORT -> ArrayUShort(shape, values.asShortBuffer())
+        else -> throw IllegalArgumentException("datatype ${datatype}")
     }
 }

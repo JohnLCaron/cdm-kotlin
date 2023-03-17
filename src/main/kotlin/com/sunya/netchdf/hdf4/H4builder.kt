@@ -785,31 +785,43 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
     private fun GRVariable(group: TagDataGroup, parent : Group.Builder): Variable.Builder? {
         var dimTag: TagRIDimension? = null
         val ntag: TagNT
-        var data: Tag? = null
+        var tagRasterImage: TagRasterImage? = null
         val vinfo = Vinfo(group.refno)
         group.isUsed = true
 
-        // use the list of elements in the group to find the other tags
+        // look through the other tags
         for (i in 0 until group.nelems) {
-            val tag: Tag? = tagidMap[tagid(group.elem_ref.get(i), group.elem_tag.get(i))]
+            val tagid = tagid(group.elem_ref[i], group.elem_tag[i])
+            val tag: Tag? = tagidMap[tagid]
             if (tag == null) {
-                log.warn("Image Group ${group.tagRefAndCode()} has missing tag=${group.elem_ref[i]}/${group.elem_tag[i]}")
+                log.warn("Image Group ${group.tagRefAndCode()} has missing tag=${tagidName(tagid)}")
                 return null
             }
+            if (debugGR) println("   GRVariable ${group.refno} has tag ${tagidName(tagid)} ")
+
             vinfo.tags.add(tag)
             tag.vinfo = vinfo // track which variable this tag belongs to
             tag.isUsed = true // assume if contained in Group, then used, to avoid redundant variables
-            if (tag.code == 300) dimTag = tag as TagRIDimension
-            if (tag.code == 302) data = tag
+            if (tag.tagEnum() == TagEnum.ID) dimTag = tag as TagRIDimension
+            if (tag.tagEnum() == TagEnum.RI) tagRasterImage = tag as TagRasterImage
+            if (tag.tagEnum() == TagEnum.RIG) {
+                val rig = tag as TagDataGroup
+                for (i in 0 until rig.nelems) {
+                    val ntagid = tagid(rig.elem_ref[i], rig.elem_tag[i])
+                    if (debugGR) println("     GRVariable has nested tag ${tagidName(ntagid)} ")
+                }
+
+            }
         }
         if (dimTag == null) {
-            log.warn("Image Group " + group.tagRefAndCode() + " missing dimension tag")
+            log.warn("Image Group ${group.tagRefAndCode()} missing TagRIDimension")
             return null
         }
-        if (data == null) {
-            log.warn("Image Group " + group.tagRefAndCode() + " missing data tag")
+        if (tagRasterImage == null) {
+            log.warn("Image Group ${group.tagRefAndCode()} missing TagRasterImage")
             return null
         }
+        vinfo.tagDataRI = tagRasterImage
 
         // get the NT tag, referred to from the dimension tag
         val tag: Tag? = tagidMap[tagid(dimTag.nt_ref, TagEnum.NT.code)]
@@ -819,15 +831,13 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         }
         ntag = tag as TagNT
         if (debugConstruct) println("construct image " + group.refno)
-        vinfo.start = data.offset
-        vinfo.tags.add(group)
-        vinfo.tags.add(dimTag)
-        vinfo.tags.add(data)
-        vinfo.tags.add(ntag)
 
         val vb = Variable.Builder()
         vb.name = "Raster_Image_#" + imageCount
-        vb.datatype = H4type.getDataType(ntag.numberType)
+        val datatype = H4type.getDataType(ntag.numberType)
+        vinfo.start = tagRasterImage.offset
+        vb.datatype = datatype
+        vinfo.elemSize = datatype.size
 
         // assume dimensions are not shared
         vb.dimensions.add(makeDimensionUnshared("ydim", dimTag.ydim))
@@ -1522,6 +1532,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
         private var debugAtt = false // show CDM attributes as they are constructed
         private var debugDims = false
         private var debugNG = false
+        private var debugGR = false
 
         private var debugChunkDetail = false // chunked data
         private var debugTracker = false // memory tracker

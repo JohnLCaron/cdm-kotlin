@@ -483,7 +483,7 @@ class HCheader(val filename: String) {
     }
 
     private fun GRVariable(session: MemorySession, g4: Group4, gridx: Int) {
-        val ri_id = GRselect(grStartId, gridx)
+        val grId = GRselect(grStartId, gridx)
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val n_comps_p = session.allocate(C_INT, 0) // Number of pixel components in the pixel
         val data_type_p = session.allocate(C_INT, 0) // Pixel data type
@@ -491,7 +491,7 @@ class HCheader(val filename: String) {
         val dim_sizes_p: MemorySegment = session.allocateArray(C_INT as MemoryLayout, 2)
         val n_attrs_p = session.allocate(C_INT, 0)
 
-        checkErr("GRgetiminfo", GRgetiminfo(ri_id, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p))
+        checkErr("GRgetiminfo", GRgetiminfo(grId, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p))
 
         val name = name_p.getUtf8String(0)
         val n_comps = n_comps_p[C_INT, 0]
@@ -512,13 +512,13 @@ class HCheader(val filename: String) {
 
         // read Variable attributes // look probably need GRattrinfo
         // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. For
-        repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, ri_id, it)) }
+        repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, grId, it)) }
         g4.gb.addVariable(vb)
 
         // LOOK probably need GRgetlutinfo(), GRgetnluts
 
         if (debugGR) println("  GRgetiminfo '$name', n_comps=$n_comps, type=${vb.datatype}, interlace=$interlace, dims${dims.contentToString()}, attrs=$nattrs")
-        GRendaccess(ri_id)
+        GRendaccess(grId)
     }
 
     private fun GRreadAttribute(session: MemorySession, gr_id: Int, idx: Int): Attribute {
