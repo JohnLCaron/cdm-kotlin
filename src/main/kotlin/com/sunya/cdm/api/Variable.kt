@@ -13,7 +13,7 @@ data class Variable(
     val name = makeValidCdmObjectName(orgName)
     val rank : Int = dimensions.size
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
-    val nelems : Long = computeSize(this.shape)
+    val nelems : Long = Section.computeSize(this.shape)
 
     fun isUnlimited() = dimensions.isNotEmpty() &&
             dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
@@ -23,19 +23,6 @@ data class Variable(
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////
-    fun computeSize(shape: IntArray?): Long {
-        if (shape == null) {
-            return 1
-        }
-        var product: Long = 1
-        for (aShape in shape) {
-            if (aShape < 0) {
-                break // stop at vlen
-            }
-            product *= aShape.toLong()
-        }
-        return product
-    }
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

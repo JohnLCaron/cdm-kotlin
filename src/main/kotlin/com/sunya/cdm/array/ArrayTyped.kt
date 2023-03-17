@@ -2,6 +2,7 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.Section.Companion.equivalent
 
 abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
     val nelems = computeSize(shape).toInt()
@@ -25,7 +26,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
 
     companion object {
         fun contentEquals(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>) : Boolean {
-            if (!array1.shape.contentEquals(array2.shape)) {
+            if (!array1.shape.equivalent(array2.shape)) {
                 return false
             }
             return valuesEqual(array1, array2)

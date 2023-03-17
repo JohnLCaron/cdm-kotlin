@@ -48,11 +48,18 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
         val vinfo = v.spObject as Vinfo
-        vinfo.setLayoutInfo(this) // make sure needed info is present
 
         if (vinfo.hasNoData) {
             // LOOK not handling case where hasNoData, and has no fillvalue
             return ArraySingle(section.shape, v.datatype, vinfo.getFillValueOrDefault())
+        }
+
+        if (vinfo.svalue != null) {
+            return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
+        }
+
+        if (vinfo.tagData != null) {
+            vinfo.setLayoutInfo(this) // make sure needed info is present
         }
 
         if (!vinfo.isCompressed) {

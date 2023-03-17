@@ -20,6 +20,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     val tags = mutableListOf<Tag>()
 
     // info about reading the data
+    var tagDataRI: TagRasterImage? = null
     var tagData: TagData? = null
     var elemSize = 0 // for Structures, this is recsize
     var fillValue: Any? = null
