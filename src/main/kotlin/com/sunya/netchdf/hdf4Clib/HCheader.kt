@@ -5,6 +5,8 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.makeStringZ
 import com.sunya.netchdf.hdf4.*
 import com.sunya.netchdf.hdf4.H4builder.Companion.tagid
+import com.sunya.netchdf.hdf4.H4builder.Companion.tagidName
+import com.sunya.netchdf.hdf4.H4builder.Companion.tagidNameR
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
@@ -12,15 +14,16 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
 
-private val debugVGroup = true
-private val debugVGroupDetails = true
+private val debugVGroup = false
+private val debugVGroupDetails = false
 private val debugVSdata = false
 private val debugVSdetails = false
 private val debugSD = false
 private val debugSDdetails = false
 private val debugGR = false
-private val debugAttributes = true
+private val debugAttributes = false
 private val debugAttributeBug = false
+private val debugDims = false
 
 private val MAX_NAME = 255L
 private val MAX_FIELDS_NAME = 1000L
@@ -67,7 +70,7 @@ class HCheader(val filename: String) {
         metadata.forEach { makeVariableFromStringAttribute(rootGroup4, it) }
 
         if (structMetadata != null) {
-            rootGroup4.gb = ODLparser(rootGroup4.gb, false).applyStructMetadata(structMetadata!!)
+            ODLparser(rootGroup4.gb, false).applyStructMetadata(structMetadata!!)
         }
     }
 
@@ -161,9 +164,9 @@ class HCheader(val filename: String) {
         }
 
         if (nobjects > 0) {
-            if (vclass.startsWith("SWATH") or vclass.startsWith("GRID")) { // ??
+            if (isNestedGroup(vclass)) {
                 VgroupGroup(session, g4, groupName, ref_array, tag_array)
-            } else if ((vclass == "Dim0.0") or (vclass == "UDim0.0")) { // ??
+            } else if (isDimClass(vclass)) { // ??
                 VgroupDim(session, g4, ref_array, tag_array)
             } else if (vclass == "Var0.0") { // ??
                 VgroupVar(session, g4, ref_array, tag_array)
@@ -346,7 +349,7 @@ class HCheader(val filename: String) {
         repeat(nattrs) {
             val attr = readSDattribute(session, sd_id, it)
             if (!EOSmetadata.contains(attr.name)) {
-                g4.gb.attributes.add(attr)
+                g4.gb.addAttribute(attr)
             } else {
                 this.metadata.add(attr)
                 if (attr.name == "StructMetadata.0") {
@@ -400,6 +403,7 @@ class HCheader(val filename: String) {
         for (dimidx in 0 until rank) {
             val dimid = SDgetdimid(sd_id, dimidx)
             checkErr("SDdiminfo", SDdiminfo(dimid, name_p, dimLength_p, datatype_p, nattrs_p))
+            if (debugDims) println("   dimid=$dimid == ${tagidName(dimid)} reverse=${tagidNameR(dimid)}")
             val dimName: String = name_p.getUtf8String(0)
             var dimLength = dimLength_p[C_INT, 0]
             val datatype = datatype_p[C_INT, 0] // wtf?
@@ -429,7 +433,7 @@ class HCheader(val filename: String) {
         repeat(nattrs) {
             val att = SDreadAttribute(session, sd_id, it)
             if (debugSDdetails) println("    att = ${att.name}")
-            vb.attributes.add(att)
+            vb.addAttribute(att)
         }
         g4.gb.addVariable(vb)
 
@@ -508,7 +512,7 @@ class HCheader(val filename: String) {
 
         // read Variable attributes // look probably need GRattrinfo
         // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. For
-        repeat(nattrs) { vb.attributes.add(GRreadAttribute(session, ri_id, it)) }
+        repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, ri_id, it)) }
         g4.gb.addVariable(vb)
 
         // LOOK probably need GRgetlutinfo(), GRgetnluts
@@ -722,22 +726,28 @@ class HCheader(val filename: String) {
         if (members.size == 1) {
             val member = members[0]
             vb.datatype = member.datatype
-            vb.setDimensionsAnonymous(intArrayOf(member.nelems))
+            val totalNelems  = nrecords * member.nelems
+            if (totalNelems > 1) {
+                vb.setDimensionsAnonymous(intArrayOf(totalNelems))
+            }
         } else {
             val typedef = CompoundTypedef(vsname, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
-            vb.setDimensionsAnonymous(intArrayOf(nrecords))
+            if (nrecords > 1) {
+                vb.setDimensionsAnonymous(intArrayOf(nrecords))
+            }
         }
 
         val vinfo = Vinfo4()
         vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames)
         vb.spObject = vinfo
 
+        // LOOK no attributes
         val nattrs = VSnattrs(vdata_id)
         repeat(nattrs) {
             val attr = VStructureReadAttribute(session, vdata_id, -1, it)
             // println("VStructureReadAttribute ${attr.name}")
-            // vb.attributes.add( attr)
+            // vb.addAttribute( attr)
         }
 
         if (vclass.startsWith("Attr")) {
@@ -753,7 +763,7 @@ class HCheader(val filename: String) {
             // noop
         } else {
             if (vb.datatype!!.cdlName == "compound" ) {
-                g4.gb.typedefs.add(vb.datatype!!.typedef!!)
+                rootGroup4.gb.addTypedef(vb.datatype!!.typedef!!)
             }
             g4.gb.addVariable(vb)
         }

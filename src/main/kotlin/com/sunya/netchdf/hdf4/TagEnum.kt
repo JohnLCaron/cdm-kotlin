@@ -1,5 +1,9 @@
 package com.sunya.netchdf.hdf4
 
+/*
+  hdf/src/htags.h
+  java/src/hdf/hdflib/HDFConstants.java
+ */
 enum class TagEnum(val desc: String, val code: Int) {
     NONE("", 0),
     NULL("", 1),
@@ -61,6 +65,7 @@ enum class TagEnum(val desc: String, val code: Int) {
     SDT("Transpose", 709), // obsolete
     SDLNK("Links related to the dataset", 710), // links SDG and NDG
     NDG("Numeric Data Group", 720),
+    /* tag 721 reserved chouck 24-Nov-93 */
     CAL("Calibration information", 731),
     FV("Fill Value information", 732),
     BREQ("Beginning of required tags", 799),

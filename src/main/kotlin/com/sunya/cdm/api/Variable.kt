@@ -67,6 +67,14 @@ data class Variable(
         var spObject: Any? = null
         var dimList: List<String>? = null
 
+        fun addAttribute(attr : Attribute) {
+            attributes.add(attr)
+        }
+
+        fun addDimension(dim : Dimension) {
+            dimensions.add(dim)
+        }
+
         fun setDimensionsAnonymous(shape : IntArray) {
             dimensions.clear()
             dimList = null

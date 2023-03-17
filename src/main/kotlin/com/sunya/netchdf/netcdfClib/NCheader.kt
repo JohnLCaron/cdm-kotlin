@@ -210,7 +210,7 @@ class NCheader(val filename: String) {
                 val atts: List<Attribute.Builder> = readAttributes(session, g4.grpid, varid, natts)
                 for (attb in atts) {
                     val att = attb.build()
-                    vb.attributes.add(att)
+                    vb.addAttribute(att)
                 }
             }
             g4.gb.addVariable(vb)

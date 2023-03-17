@@ -7,9 +7,8 @@ import java.util.*
 /** strict = make cdl agree with clib if possible. also sort, so its easier to compare equAL */
 fun cdl(netcdf : Netcdf) : String {
     val filename = netcdf.location().substringAfterLast('/')
-    val name = filename.substringBefore('.')
     return buildString{
-        append("netcdf $name {\n")
+        append("netcdf $filename {\n")
         append(netcdf.rootGroup().cdl(true, Indent(2, 1)))
         append("}")
     }
