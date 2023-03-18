@@ -3,12 +3,11 @@ package com.sunya.netchdf.netcdf3
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-class Netcdf3File(val filename : String) : Iosp, Netcdf {
+class Netcdf3File(val filename : String) : Iosp, Netchdf {
     private val raf : OpenFile = OpenFile(filename)
     private val header : N3header
     private val rootGroup : Group
@@ -73,7 +72,7 @@ class Netcdf3File(val filename : String) : Iosp, Netcdf {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Netcdf) return false
+        if (other !is Netchdf) return false
 
         if (filename != other.location()) return false
         if (rootGroup != other.rootGroup()) return false

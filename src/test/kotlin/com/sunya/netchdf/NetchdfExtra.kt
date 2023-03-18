@@ -1,8 +1,6 @@
 package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
-import com.sunya.netchdf.netcdf4.openNetchdfFile
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -10,7 +8,6 @@ import org.junit.jupiter.params.provider.MethodSource
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
-import kotlin.test.assertEquals
 
 // Compare header using cdl(!strict) with Netchdf and NetcdfClibFile
 // mostly fails in handling of types. nclib doesnt pass over all the types.
@@ -22,6 +19,7 @@ class NetchdfExtra {
             val stream =
                 testFilesIn("/media/twobee/netch")
                     .withRecursion()
+                    // exclude hdf4 until we fix the core dump in the C library
                     .withPathFilter { p -> !(p.toString().contains("hdf4") or p.toString().contains("exclude"))}
                     .addNameFilter { name -> !name.endsWith(".cdl") }
                     .addNameFilter { name -> !name.endsWith(".jpg") }
@@ -53,14 +51,14 @@ class NetchdfExtra {
     @Test
     fun h5npp() {
         NetchdfTest.showData = false
-        readMyData(topdir + "npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
-        readMyData(topdir + "npp/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
+        readNetchdfData(topdir + "npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
+        readNetchdfData(topdir + "npp/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
             // , "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
     }
 
     // @Test
     fun problemData() { // causing seg fault on NClib
-        readMyData("/media/twobee/netch/signell/his_20090306.nc")
+        readNetchdfData("/media/twobee/netch/signell/his_20090306.nc")
             // "ocean_time", null, true)
     }
 
@@ -91,23 +89,12 @@ class NetchdfExtra {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun compareCdlWithClib(filename: String) {
+    fun testCompareCdlWithClib(filename: String) {
         if (filename.contains("/npp/")) {
             println("Clib cant open npp $filename")
-            return
+            // return
         }
-        val netchdf: Netcdf? = openNetchdfFile(filename, true)
-        if (netchdf == null) {
-            println("*** not a netchdf file = $filename")
-            return
-        }
-        println("${netchdf.type()} $filename")
-        if (showCdl) println("\nnetchdf = ${netchdf.cdl()}")
-        val nclibfile: Netcdf = NetcdfClibFile(filename)
-        assertEquals(nclibfile.cdl(), netchdf.cdl())
-
-        netchdf.close()
-        nclibfile.close()
+        compareCdlWithClib(filename)
     }
 
     @ParameterizedTest
@@ -118,7 +105,7 @@ class NetchdfExtra {
 
     fun readDataForProfiling(filename: String, varname : String? = null) {
         println(filename)
-        readMyData(filename, varname)
+        readNetchdfData(filename, varname)
         println()
     }
 }

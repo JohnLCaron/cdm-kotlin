@@ -5,7 +5,6 @@ import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.Iosp
-import com.sunya.netchdf.hdf4.Hdf4File
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
@@ -24,7 +23,7 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Compare header using cdl(!strict) with Netchdf and NetcdfClibFile
+// Compare Netchdf against NetcdfClibFile / H4ClibFile
 class NetchdfTest {
 
     companion object {
@@ -228,6 +227,29 @@ h5dump
 
      */
 
+    @Test
+    fun testOneCdl() {
+        compareCdlWithClib("/media/twobee/netch/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
+    }
+
+    @Test
+    fun missingChunks() {
+        readNetchdfData(
+            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/xma022032.nc",
+            "/xma/dialoop_back"
+        )
+    }
+
+    @Test
+    fun hasMissing() {
+        val filename =
+            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        readNetchdfData(filename, "CMI", Section(":, :"))
+        readNetchdfData(filename, "DQF", Section(":, :"))
+    }
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
     @ParameterizedTest
     @MethodSource("params")
     fun checkVersion(filename: String) {
@@ -242,59 +264,21 @@ h5dump
 
     @ParameterizedTest
     @MethodSource("params")
-    fun compareCdlWithClib(filename: String) {
-        println("=================")
-        openNetchdfFile(filename, true).use { netchdf ->
-            if (netchdf == null) {
-                println("*** not a netchdf file = $filename")
-                return
-            }
-            println("${netchdf.type()} $filename ")
-            println("\nnetchdf = ${netchdf.cdl()}")
-
-            NetcdfClibFile(filename).use { ncfile ->
-                assertEquals(ncfile.cdl(), netchdf.cdl())
-            }
-        }
+    fun testCompareCdlWithClib(filename: String) {
+        compareCdlWithClib(filename)
     }
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readH5dataCompareNC(filename: String) {
-        readDataCompareNC(filename, null)
+    fun testCompareDataWithClib(filename: String) {
+        compareDataWithClib(filename, null)
     }
 
-    @Test
-    fun testOneCdl() {
-        compareCdlWithClib("/media/twobee/netch/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
-    }
-
-    @Test
-    fun missingChunks() {
-        readMyData(
-            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/xma022032.nc",
-            "/xma/dialoop_back"
-        )
-    }
-
-    @Test
-    fun hasMissing() {
-        val filename =
-            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
-        readMyData(filename, "CMI", Section(":, :"))
-        readMyData(filename, "DQF", Section(":, :"))
-    }
-
-    @ParameterizedTest
-    @MethodSource("params")
-    fun readDataForProfiling(filename: String) {
-        println(filename)
-        readMyData(filename)
-        println()
-    }
 }
 
-fun showMyHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+fun showNetchdfHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     println(filename)
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
@@ -312,7 +296,7 @@ fun showNcHeader(filename: String, varname: String? = null, section: Section? = 
     }
 }
 
-fun readMyData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+fun readNetchdfData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     println("=============================================================")
     println(filename)
     openNetchdfFile(filename).use { myfile ->
@@ -324,14 +308,35 @@ fun readMyData(filename: String, varname: String? = null, section: Section? = nu
     }
 }
 
-fun readDataNc(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+fun readNcData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     NetcdfClibFile(filename).use { ncfile ->
         readMyData(ncfile, varname, section, showCdl)
     }
 }
 
+fun compareCdlWithClib(filename: String) {
+    println("=================")
+    openNetchdfFile(filename, true).use { netchdf ->
+        if (netchdf == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println("${netchdf.type()} $filename ")
+        println("\nnetchdf = ${netchdf.cdl()}")
 
-fun readDataCompareNC(filename: String, varname: String? = null, section: Section? = null) {
+        if (netchdf.type().contains("hdf4")) {
+            Hdf4ClibFile(filename).use { hcfile ->
+                assertEquals(hcfile.cdl(), netchdf.cdl())
+            }
+        } else {
+            NetcdfClibFile(filename).use { ncfile ->
+                assertEquals(ncfile.cdl(), netchdf.cdl())
+            }
+        }
+    }
+}
+
+fun compareDataWithClib(filename: String, varname: String? = null, section: Section? = null) {
     var size = 0.0
     RandomAccessFile(File(filename), "r").use { raf ->
         size = raf.getChannel().size() / 1000.0 / 1000.0
@@ -345,36 +350,22 @@ fun readDataCompareNC(filename: String, varname: String? = null, section: Sectio
         println("${netchdf.type()} $filename ${"%.2f".format(size)} Mbytes")
         if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
 
-        NetcdfClibFile(filename).use { ncfile ->
-            compareNetcdfData(netchdf, ncfile, varname, section)
+        if (netchdf.type().contains("hdf4")) {
+            Hdf4ClibFile(filename).use { ncfile ->
+                compareNetcdfData(netchdf, ncfile, varname, section)
+            }
+        } else {
+            NetcdfClibFile(filename).use { ncfile ->
+                compareNetcdfData(netchdf, ncfile, varname, section)
+            }
         }
     }
 }
 
-fun readDataCompareHC(filename: String, varname: String? = null, section: Section? = null) {
-    var size = 0.0
-    RandomAccessFile(File(filename), "r").use { raf ->
-        size = raf.getChannel().size() / 1000.0 / 1000.0
-    }
-    println("=============================================================")
-    Hdf4File(filename).use { netchdf ->
-        if (netchdf == null) {
-            println("*** not a hdf4 file = $filename")
-            return
-        }
-        println("${netchdf.type()} $filename ${"%.2f".format(size)} Mbytes")
-        if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
-
-        Hdf4ClibFile(filename).use { ncfile ->
-            compareNetcdfData(netchdf, ncfile, varname, section)
-        }
-    }
-}
-
-//////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 // just read data from myfile
 
-fun readMyData(myfile: Netcdf, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+fun readMyData(myfile: Netchdf, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
@@ -457,10 +448,9 @@ fun readMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-// compare data from two Netcdf files
+// compare data from two Netchdf files
 
-
-fun compareNetcdfData(myfile: Netcdf, ncfile: Netcdf, varname: String?, section: Section? = null) {
+fun compareNetcdfData(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {

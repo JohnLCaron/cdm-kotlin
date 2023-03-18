@@ -1,6 +1,6 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -19,7 +19,7 @@ class Hdf5headerCompare {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            // 11 of 114 fail
+            // 10 of 114 fail, because we compare with netcdf4 instead of hdf5 c library
 
             val moar4 =
                 testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
@@ -44,8 +44,8 @@ class Hdf5headerCompare {
                     .withRecursion()
                     .build()
 
-            return hdfeos5
-            // return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
+            // return hdfeos5
+            return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
         }
     }
 
@@ -76,7 +76,7 @@ class Hdf5headerCompare {
         println("${h5file.type()} $filename ")
         println("\n${h5file.cdl()}")
 
-        val nclibfile : Netcdf = NetcdfClibFile(filename)
+        val nclibfile : Netchdf = NetcdfClibFile(filename)
         println("ncfile = ${nclibfile.cdl()}")
 
         assertEquals(nclibfile.cdl(), h5file.cdl())

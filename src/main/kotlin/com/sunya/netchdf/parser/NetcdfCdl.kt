@@ -1,13 +1,13 @@
 package com.sunya.netchdf.parser
 
 import com.sunya.cdm.api.Group
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.ArrayTyped
 
 // A Netcdf created from CDL, no backing file store
-class NetcdfCdl(val location : String, val rootGroup : Group) : Netcdf {
+class NetcdfCdl(val location : String, val rootGroup : Group) : Netchdf {
     override fun rootGroup() = rootGroup
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
@@ -23,7 +23,7 @@ class NetcdfCdl(val location : String, val rootGroup : Group) : Netcdf {
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Netcdf) return false
+        if (other !is Netchdf) return false
 
         if (location != other.location()) return false
         if (rootGroup != other.rootGroup()) return false

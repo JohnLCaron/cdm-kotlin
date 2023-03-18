@@ -81,7 +81,7 @@ class BTree2(h5: H5builder, owner: String, address: Long) {
             entries = arrayOfNulls(nrecords + 1) // did i mention theres actually n+1 children?
             for (i in 0 until nrecords) {
                 entries[i] = Entry2()
-                entries[i]!!.record = readRecord(state, btreeType.toInt())
+                entries[i]!!.record = readRecord(state, btreeType)
             }
             entries[nrecords.toInt()] = Entry2()
 

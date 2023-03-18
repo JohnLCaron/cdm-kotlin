@@ -1,9 +1,7 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.netchdf.NetchdfTest
+import com.sunya.netchdf.*
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
-import com.sunya.netchdf.readDataCompareHC
-import com.sunya.netchdf.readMyData
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -90,7 +88,7 @@ class H4compareNc {
         readHCdata("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
         readData("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
         NetchdfTest.showFailedData = true
-        readDataCompareHC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
+        compareDataWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf4/17766010.hdf")
         NetchdfTest.showFailedData = false
  //           "Sea_Ice_Motion_Vectors_-_17766010")
     }
@@ -103,12 +101,12 @@ class H4compareNc {
 
     @Test
     fun unsolved2() { // variable Aerosol_Cldmask_Byproducts_Land; data fails compare
-        readDataCompareWithHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf")
+        compareDataWithClib("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf")
     }
 
     @Test
     fun unsolved3() { // duplicate variable Ancillary_Data; data fails compare
-        readDataCompareWithHC("/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
+        compareDataWithClib("/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
     }
 
     @Test
@@ -154,7 +152,7 @@ class H4compareNc {
 
     @Test
     fun linkedNotCompressed() {
-        readDataCompareHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
+        compareDataWithClib("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
             "ALBEDO")
     }
 
@@ -216,14 +214,7 @@ class H4compareNc {
     @ParameterizedTest
     @MethodSource("params")
     fun readData(filename: String) {
-        readMyData(filename, null, null, true)
-        println()
-    }
-
-    @ParameterizedTest
-    @MethodSource("params")
-    fun readDataCompareWithHC(filename: String) {
-        readDataCompareHC(filename)
+        readNetchdfData(filename, null, null, true)
         println()
     }
 

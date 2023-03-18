@@ -7,7 +7,37 @@ import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
 import kotlin.system.measureNanoTime
 
-// Time data reading
+private const val showDetail = true
+
+/* Time data reading
+3/18/23
+    nclib/h5new, h5new/h5old (should now equal 1)
+    0.2679, 4.1996, eta[0:9,0:9,0:9]
+    1.6565, 1.0501, fxx[0:99,0:9,0:9]
+    1.4914, 1.6512, fyy[0:99,0:99,0:9]
+    0.7003, 0.8649, pxx[0:99,0:99,0:99]
+    1.8484, 1.0879, pyy[0:99,0:99,:]
+    0.5656, 0.8638, eta[:,:,11:20]
+    0.1171, 1.3866, CMI[:,:]
+    1.0043, 2.0313, DQF[:,:]
+    0.4928, 1.1373, UpperDeschutes_t4p10_swemelt[0:100,0:30,0:40]
+    0.3837, 0.9939, fyy[0:99,0:99,0:9]
+    1.1360, 3.8823, EPV[0:0,0:9,0:9,0:9]
+    1.0826, 2.0128, O3[0:0,0:9,0:99,0:9]
+    1.5274, 1.0071, H[0:0,0:9,0:99,0:99]
+    1.5564, 1.1484, RH[0:0,0:9,0:99,0:999]
+    1.5534, 0.9903, EPV[:,:,:,11:20]
+    1.2087, 1.1326, UpperDeschutes_t4p10_swemelt[0:9,:,:]
+    2.1526, 1.0946, UpperDeschutes_t4p10_swemelt[0:100,0:30,0:40]
+    2.2494, 0.7369, UpperDeschutes_t4p10_swemelt[0:1000,0:30,0:40]
+    0.8358, 1.0735, UpperDeschutes_t4p10_swemelt[0:1000,0:30,:]
+    1.1458, 0.9503, UpperDeschutes_t4p10_swemelt[:,17:17,44:55]
+    0.0950, 2.5175, uw[0:4,0:39,0:55,0:74]
+    0.9646, 4.1978, uw[0:4,13:26,18:37,25:49]
+    0.0741, 1.0043, vw[0:4,0:39,0:55,0:74]
+    1.2154, 0.7166, vw[0:4,13:26,18:37,25:49]
+    3.1355, 1.0944, uw[:,:,:,25:25]
+ */
 class H5dataTiming {
     val reversed = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc"
     val chunked = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/e562p1_fp.inst3_3d_asm_Nv.20100907_00z+20100909_1200z.nc4"
@@ -79,8 +109,6 @@ class H5dataTiming {
         readData(filename, "CMI", Section(":, :"))
         readData(filename, "DQF", Section(":, :"))
     }
-
-    val showDetail = true
 
     fun readData(filename: String, varname: String, readSection : Section) {
         if (showDetail) println("$varname in $filename ")

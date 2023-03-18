@@ -6,13 +6,12 @@ import com.github.h0tk3y.betterParse.parser.ErrorResult
 import com.github.h0tk3y.betterParse.parser.Parsed
 import com.github.h0tk3y.betterParse.st.SyntaxTree
 import com.github.h0tk3y.betterParse.st.liftToSyntaxTreeGrammar
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.netchdf.netcdf4.normalize
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
-import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
@@ -100,7 +99,7 @@ variables:
         val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
         when (val parseResult = cdlGrammer.tryParseToEnd(cdl)) {
             is ErrorResult -> println("Could not parse expression: $parseResult")
-            is Parsed<SyntaxTree<Netcdf>> -> printCdlSyntaxTree(cdl, parseResult.value)
+            is Parsed<SyntaxTree<Netchdf>> -> printCdlSyntaxTree(cdl, parseResult.value)
         }
 
        //val syntaxTree = cdlSyntaxTree.parseToEnd(expect)

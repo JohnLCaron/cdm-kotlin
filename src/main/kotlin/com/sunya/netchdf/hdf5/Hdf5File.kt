@@ -1,7 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.google.common.base.Preconditions
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.ArraySingle
@@ -14,7 +14,7 @@ import java.nio.ByteBuffer
 /**
  * @param strict true = make it agree with nclib if possible
  */
-class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
+class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf {
     private val raf : OpenFile = OpenFile(filename)
     private val header : H5builder
 
@@ -47,20 +47,12 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                     val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
                     return readFilteredStringData(layout, wantSection)
                 } else {
-                    val result = if (useOld) {
-                        val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                        header.readFilteredChunkedData(vinfo, layout, wantSection)
-                    } else H5chunkReader(header).readChunkedDataNew(v2, wantSection)
-                    return result
+                    return H5chunkReader(header).readChunkedDataNew(v2, wantSection)
                 }
             }
 
             if (vinfo.isChunked) {
-                val result = if (useOld) {
-                    val layout = H5tiledLayout(header, v2, wantSection, v2.datatype) // eager read
-                    header.readChunkedData(vinfo, layout, wantSection)
-                } else H5chunkReader(header).readChunkedDataNew(v2, wantSection)
-                return result
+                return H5chunkReader(header).readChunkedDataNew(v2, wantSection)
             } else {
                 return header.readRegularData(vinfo, wantSection)
             }
@@ -76,7 +68,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
         val h5heap = H5heap(header)
         while (layout.hasNext()) {
             val chunk = layout.next()
-            val bb: ByteBuffer = chunk.byteBuffer!!
+            val bb: ByteBuffer = chunk.byteBuffer
             var destPos = chunk.destElem().toInt()
             for (i in 0 until chunk.nelems()) { // 16 byte "heap ids"
                 // TODO does this handle section correctly ??
@@ -91,6 +83,5 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
         var useOld = false
         var checkBoth = false
     }
-
 
 }

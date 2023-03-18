@@ -1,12 +1,12 @@
 package com.sunya.netchdf.netcdf4
 
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf4.Hdf4File
 import com.sunya.netchdf.hdf5.Hdf5File
 import com.sunya.netchdf.netcdf3.Netcdf3File
 
-fun openNetchdfFile(filename : String, strict : Boolean = false) : Netcdf? {
+fun openNetchdfFile(filename : String, strict : Boolean = false) : Netchdf? {
     val useFilename = filename.trim()
     OpenFile(useFilename).use { raf ->
         val format = NetchdfFileFormat.findNetcdfFormatType(raf)

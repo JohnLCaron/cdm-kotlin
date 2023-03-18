@@ -2,7 +2,6 @@ package com.sunya.netchdf.parser
 
 import com.github.h0tk3y.betterParse.combinators.*
 import com.github.h0tk3y.betterParse.grammar.Grammar
-import com.github.h0tk3y.betterParse.grammar.parseToEnd
 import com.github.h0tk3y.betterParse.grammar.tryParseToEnd
 import com.github.h0tk3y.betterParse.lexer.literalToken
 import com.github.h0tk3y.betterParse.lexer.regexToken
@@ -13,7 +12,7 @@ import com.github.h0tk3y.betterParse.st.SyntaxTree
 import com.github.h0tk3y.betterParse.st.liftToSyntaxTreeGrammar
 import com.sunya.cdm.api.*
 
-object CdlParser : Grammar<Netcdf>() {
+object CdlParser : Grammar<Netchdf>() {
     val NETCDF by regexToken("netcdf")
     val DIMENSIONS by literalToken("dimensions:")
     val VARIABLES by literalToken("variables:")
@@ -99,7 +98,7 @@ object CdlParser : Grammar<Netcdf>() {
         gb.build(null)
     }
 
-    val netcdf : Parser<Netcdf> by  (NETCDF and (name or id) and OPENB and group and CLOSEB).map {
+    val netcdf : Parser<Netchdf> by  (NETCDF and (name or id) and OPENB and group and CLOSEB).map {
         (_, location, _, rootGroup, _) ->
         NetcdfCdl(location, rootGroup)
     }
@@ -111,7 +110,7 @@ fun printCdlSyntaxTree(cdl: String) {
     val cdlGrammer = CdlParser.liftToSyntaxTreeGrammar()
     when (val result = cdlGrammer.tryParseToEnd(cdl)) {
         is ErrorResult -> println("Could not parse expression: $result")
-        is Parsed<SyntaxTree<Netcdf>> -> printCdlSyntaxTree(cdl, result.value)
+        is Parsed<SyntaxTree<Netchdf>> -> printCdlSyntaxTree(cdl, result.value)
     }
 }
 
