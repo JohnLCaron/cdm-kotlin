@@ -5,6 +5,7 @@ import java.io.IOException
 import java.io.InputStream
 import java.nio.ByteOrder
 
+/** Make a linked list of data segments look like an InputStream. */
 internal class LinkedInputStream(val h4 : H4builder,
                                  val nsegs: Int,
                                  val segPosA: LongArray,

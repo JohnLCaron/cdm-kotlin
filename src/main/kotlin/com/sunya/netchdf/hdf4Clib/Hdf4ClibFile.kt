@@ -181,9 +181,7 @@ fun readGRdata(
         val data_p = session.allocate(nbytes)
 
         val grId = GRselect(grStartId, grIdx)
-        println("$grStartId $grIdx == $grId")
         checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
-        // checkErr("GRreadimage", GRreadimage(grId, origin_p, null, shape_p, data_p))
         GRendaccess(grId)
 
         val raw = data_p.toArray(ValueLayout.JAVA_BYTE)

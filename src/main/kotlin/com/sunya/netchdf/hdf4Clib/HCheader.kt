@@ -46,7 +46,6 @@ class HCheader(val filename: String) {
             this.read_access_mode = session.allocateUtf8String("r")
             build(session)
             this.rootGroup = rootGroup4.gb.build(null)
-            println(this.rootGroup)
         }
     }
 
@@ -76,13 +75,9 @@ class HCheader(val filename: String) {
 
     fun close() {
         val sdret = SDend(this.sdsStartId)
-        System.out.printf("SDend ret=%d %n", sdret)
         val gret = GRend(this.grStartId)
-        System.out.printf("GRend ret=%d %n", gret)
         val vsret = Vfinish(this.fileOpenId)
-        System.out.printf("Vfinish ret=%d %n", vsret)
         val ret = Hclose(this.fileOpenId)
-        System.out.printf("Hclose ret=%d %n", ret)
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -102,25 +97,6 @@ class HCheader(val filename: String) {
             VgroupRead(session, g4, vgroup_ref)
             last_ref = vgroup_ref
         }
-
-        // LOOK is there anything in here we need?
-        /* retrieves the reference numbers of lone vdatas in the file
-        if (debugVGroup) println("iterateVlone")
-        val max_refs = 128
-        val ref_array_p = session.allocateArray(C_INT as MemoryLayout, max_refs.toLong())
-        val num_of_lone_vdatas = Vlone(fileid, ref_array_p, max_refs);
-        val ref_array = IntArray(num_of_lone_vdatas) { ref_array_p.getAtIndex(C_INT, it.toLong()) }
-
-        repeat(num_of_lone_vdatas) {
-            readVGroup(session, g4, ref_array[it])
-            val vdata_id = VSattach(fileid, ref_array[idx], vdata_access_mode)
-            if (vdata_id == -1) break
-            makeVvariable(session, g4, vdata_id)
-            checkErr("Vdetach", Vdetach(vdata_id))
-        }
-
-         */
-
     }
 
     // read a VGroup (1965)
@@ -140,11 +116,7 @@ class HCheader(val filename: String) {
         val nobjects_p = session.allocate(C_INT, 0)
         val name_p: MemorySegment = session.allocate(MAX_NAME)
 
-        val ret = Vinquire(vgroup_id, nobjects_p, name_p)
-        if (ret != 0) {
-            println("Vinquire failed $ret")
-            return
-        }
+        checkErr("Vinquire", Vinquire(vgroup_id, nobjects_p, name_p))
         val max_nobjects = nobjects_p[C_INT, 0]
         val groupName = name_p.getUtf8String(0)
 
@@ -280,10 +252,7 @@ class HCheader(val filename: String) {
         val datatype = H4type.getDataType(datatype4)
         val nelems = count_p[C_INT, 0]
         val size = size_p[C_INT, 0] // LOOK bug where size returns nelems instead
-        println("VgroupReadAttribute $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
-        if (aname == "end_latlon") {
-            println()
-        }
+        if (debugAttributeBug) println("VgroupReadAttribute $aname size = $size nelems = $nelems datatype.size = ${datatype.size}")
 
         val data_p: MemorySegment = session.allocate(nelems * datatype.size.toLong())
         // checkErr("Vgetattr2", Vgetattr2(vgroup_id, idx, data_p)) // LOOK malloc(): corrupted top size
@@ -316,9 +285,6 @@ class HCheader(val filename: String) {
         val nflds = flds_p[C_INT, 0]
         val refnum = refnum_p[C_SHORT, 0]
         if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size}")
-        if (aname == "end_latlon") {
-            println()
-        }
 
         // DFTAG_VS on page 143: bytes needed = vh.nelems * SUM( fld_size * fld_order)
         val data_p: MemorySegment = session.allocate(nvalues * datatype.size.toLong())
@@ -637,35 +603,8 @@ class HCheader(val filename: String) {
                 break
             }
             VStructureRead(session, g4, vdata_ref, false)
-            // makeVStructure(session, g4, vdata_ref)
-
-            /*
-            val vdata_id = VSattach(fileid, vdata_ref, read_access_mode);
-            val vclass_p: MemorySegment = session.allocate(MAX_NAME)
-            checkErr("VSgetclass", VSgetclass(vdata_id, vclass_p))
-            val vclass = vclass_p.getUtf8String(0)
-
-            if (VSisattr(vdata_id) == 0) { // not an attribute
-                if (debugVdata) println("  Vdata vclass = $vclass vdata_ref = $vdata_ref vdata_id = $vdata_id")
-                makeVStructure(session, g4, vdata_id)
-            } else {
-                if (debugVdata) println("  VSisattr vclass = $vclass vdata_ref = $vdata_ref vdata_id = $vdata_id")
-            }
-            checkErr("VSdetach", VSdetach(vdata_id))
-            */
             last_ref = vdata_ref
         }
-
-        /* retrieves the reference numbers of lone vdatas in the file
-        if (debugVSdata) println("iterateVSlone '${g4.gb.name}'")
-        val max_refs = 128
-        val ref_array_p = session.allocateArray(C_INT as MemoryLayout, max_refs.toLong())
-        val num_of_lone_vdatas = VSlone(fileOpenId, ref_array_p, max_refs);
-        val ref_array = IntArray(num_of_lone_vdatas) { ref_array_p.getAtIndex(C_INT, it.toLong()) }
-
-        for (idx in 0 until num_of_lone_vdatas) {
-            VStructureRead(session, g4, ref_array[idx], false)
-        } */
     }
 
     private fun VStructureRead(session: MemorySession, g4: Group4, vs_ref: Int, addAttributesToGroup: Boolean) {

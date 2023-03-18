@@ -5,6 +5,7 @@ import com.sunya.cdm.api.Datatype
 /** Convert HDF4 data type values  */
 object H4type {
     // p 110 table 9a : probably the "class" of the number type
+    // we only support IEEE
     fun getNumberType(type: Int): String {
         return when (type) {
             0 -> "NONE"

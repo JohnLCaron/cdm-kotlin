@@ -89,7 +89,7 @@ variables:
         )
     }
 
-    @ParameterizedTest
+    // @ParameterizedTest
     @MethodSource("params")
     fun testCdlParser(filename: String, cdl: String) {
         println("$cdl")

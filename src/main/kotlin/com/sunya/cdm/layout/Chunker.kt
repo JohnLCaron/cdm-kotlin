@@ -115,15 +115,22 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
             dst.position(this.elemSize * chunk.destElem.toInt())
             // println("  missing transfer $chunk")
             when (datatype) {
-                Datatype.STRING, Datatype.CHAR, Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> {
+                Datatype.STRING, Datatype.CHAR, Datatype.BYTE -> {
                     val fill = fillValue as Byte
                     repeat(chunk.nelems) { dst.put(fill) }
                 }
-                Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort(fillValue as Short) }
-                Datatype.INT, Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt(fillValue as Int) }
+                Datatype.UBYTE, Datatype.ENUM1 -> {
+                    val fill = fillValue as UByte
+                    repeat(chunk.nelems) { dst.put(fill.toByte()) }
+                }
+                Datatype.SHORT -> repeat(chunk.nelems) { dst.putShort(fillValue as Short) }
+                Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort((fillValue as UShort).toShort()) }
+                Datatype.INT -> repeat(chunk.nelems) { dst.putInt(fillValue as Int) }
+                Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt((fillValue as UInt).toInt()) }
                 Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(fillValue as Float) }
                 Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(fillValue as Double) }
-                Datatype.LONG, Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong(fillValue as Long) }
+                Datatype.LONG -> repeat(chunk.nelems) { dst.putLong(fillValue as Long) }
+                Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong((fillValue as ULong).toLong()) }
                 Datatype.OPAQUE -> {
                     val fill = fillValue as ByteBuffer
                     repeat(chunk.nelems) {

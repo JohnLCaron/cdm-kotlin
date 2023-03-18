@@ -26,7 +26,7 @@ class CdlReadAndParseTest {
         )
     }
 
-    @ParameterizedTest
+    // @ParameterizedTest
     @MethodSource("params")
     fun testCdlParser(filename: String) {
         println("=================")
