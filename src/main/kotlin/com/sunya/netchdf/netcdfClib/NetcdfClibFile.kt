@@ -40,7 +40,7 @@ netcdf library version 4.8.1 of Sep 29 2021 09:36:14
     /home/snake/install/netcdf4/include/netcdf.h
  */
 
-class NetcdfClibFile(val filename: String) : Iosp, Netcdf {
+class NetcdfClibFile(val filename: String) : Iosp, Netchdf {
     private val header: NCheader = NCheader(filename)
     private val rootGroup: Group = header.rootGroup.build(null)
 

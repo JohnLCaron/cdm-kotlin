@@ -1,7 +1,7 @@
 package com.sunya.netchdf.parser
 
 import com.github.h0tk3y.betterParse.grammar.parseToEnd
-import com.sunya.cdm.api.Netcdf
+import com.sunya.cdm.api.Netchdf
 import com.sunya.netchdf.netcdf4.normalize
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import java.util.*
@@ -9,7 +9,6 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 
@@ -31,7 +30,7 @@ class CdlReadAndParseTest {
     fun testCdlParser(filename: String) {
         println("=================")
         println(filename)
-        val netchdf : Netcdf? = openNetchdfFile(filename)
+        val netchdf : Netchdf? = openNetchdfFile(filename)
         if (netchdf == null) {
             println("*** not a netchdf file = $filename")
             return

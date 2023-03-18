@@ -48,7 +48,7 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-class Hdf4ClibFile(val filename: String) : Iosp, Netcdf {
+class Hdf4ClibFile(val filename: String) : Iosp, Netchdf {
     private val header: HCheader = HCheader(filename)
 
     override fun rootGroup() = header.rootGroup

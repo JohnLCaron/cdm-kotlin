@@ -4,9 +4,8 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.Odometer
 import com.sunya.cdm.layout.Tiling
 
-private val check = true
-private val debug = false
-private val debugRow = false
+private const val check = true
+private const val debug = false
 
 // replaces H5tiledLayoutBB and H5tiledLayout
 /** wraps BTree1New to handle iterating through tiled data (aka chunked data) */
@@ -16,15 +15,15 @@ class TiledData(val btree1 : BTree1New) {
 
     // keep track of nodes so we only read once
     private val nodeCache = mutableMapOf<Long, BTree1New.Node>()
-    var readHit = 0;
-    var readMiss = 0;
+    var readHit = 0
+    var readMiss = 0
 
     init {
         rootNode = readNode(btree1.rootNodeAddress, null)
     }
 
     // node reading goes through here for caching
-    fun readNode(address : Long, parent : BTree1New.Node?) : BTree1New.Node {
+    private fun readNode(address : Long, parent : BTree1New.Node?) : BTree1New.Node {
         if (nodeCache[address] != null) {
             readHit++
             return nodeCache[address]!!
@@ -49,7 +48,7 @@ class TiledData(val btree1 : BTree1New) {
     }
 
     // optimize later
-    fun findEntryContainingKey(parent : BTree1New.Node, key : IntArray) : BTree1New.DataChunkEntry? {
+    private fun findEntryContainingKey(parent : BTree1New.Node, key : IntArray) : BTree1New.DataChunkEntry? {
         var foundEntry : BTree1New.DataChunkEntry? = null
         for (idx in 0 until parent.nentries) {
             foundEntry = parent.dataChunkEntries[idx]
@@ -68,22 +67,6 @@ class TiledData(val btree1 : BTree1New) {
         }
         val node= readNode(foundEntry.childAddress, parent)
         return findEntryContainingKey(node, key)
-    }
-
-    // find the next entry in the btree
-    fun nextEntry(entry : BTree1New.DataChunkEntry) : BTree1New.DataChunkEntry? {
-        if (entry.isMissing()) {
-            return null
-        }
-        val node = entry.parent
-        if (entry.idx < node.nentries - 1) {
-            return node.dataChunkEntries[entry.idx + 1]
-        }
-        if (node.rightAddress == -1L) {
-            return null
-        }
-        val nextSibling =  readNode(node.rightAddress, node.parent)
-        return nextSibling.dataChunkEntries[0]
     }
 
     fun findDataChunks(wantSpace : IndexSpace) : Iterable<BTree1New.DataChunkEntry> {

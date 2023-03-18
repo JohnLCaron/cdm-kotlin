@@ -15,7 +15,7 @@ import java.util.zip.InflaterInputStream
 /**
  *  @param strict true = make it agree with nclib if possible
  */
-class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
+class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf {
     private val raf: OpenFile = OpenFile(filename)
     internal val header: H4builder
     private val rootGroup: Group

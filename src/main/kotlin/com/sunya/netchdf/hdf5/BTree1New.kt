@@ -30,18 +30,18 @@ class BTree1New(
     fun readGroupEntries() : Iterator<GroupEntry> {
         require(nodeType == 0)
         val root = Node(rootNodeAddress, null)
-        if (root.level == 0) {
-            return root.groupEntries.iterator()
+        return if (root.level == 0) {
+            root.groupEntries.iterator()
         } else {
             val result = mutableListOf<GroupEntry>()
             for (entry in root.groupEntries) {
                 readAllEntries(entry, root, result)
             }
-            return result.iterator()
+            result.iterator()
         }
     }
 
-    fun readAllEntries(entry : GroupEntry, parent : Node, list : MutableList<GroupEntry>) {
+    private fun readAllEntries(entry : GroupEntry, parent : Node, list : MutableList<GroupEntry>) {
         val node = Node(entry.childAddress, parent)
         if (node.level == 0) {
             list.addAll(node.groupEntries)
@@ -57,13 +57,13 @@ class BTree1New(
         val level: Int
         val nentries: Int
         private val leftAddress: Long
-        val rightAddress: Long
+        private val rightAddress: Long
 
         // type 0
-        val groupEntries = mutableListOf<BTree1New.GroupEntry>()
+        val groupEntries = mutableListOf<GroupEntry>()
 
         // type 1
-        val dataChunkEntries = mutableListOf<BTree1New.DataChunkEntry>()
+        val dataChunkEntries = mutableListOf<DataChunkEntry>()
 
         init {
             val state = OpenFileState(h5.getFileOffset(address), ByteOrder.LITTLE_ENDIAN)

@@ -5,7 +5,7 @@ import java.nio.ByteBuffer
 import java.util.*
 
 /** strict = make cdl agree with clib if possible. also sort, so its easier to compare equAL */
-fun cdl(netcdf : Netcdf) : String {
+fun cdl(netcdf : Netchdf) : String {
     val filename = netcdf.location().substringAfterLast('/')
     return buildString{
         append("netcdf $filename {\n")

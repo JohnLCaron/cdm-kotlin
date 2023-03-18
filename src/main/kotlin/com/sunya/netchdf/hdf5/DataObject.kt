@@ -13,7 +13,7 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
     val messages = mutableListOf<MessageHeader>()
 
-    var version = raf.readByte(state)
+    val version = raf.readByte(state)
     if (version.toInt() == 1) { // IV.A.1.a. Version 1 Data Object Header Prefix
         state.pos += 1 // skip byte
         val nmess = raf.readShort(state).toInt()
@@ -35,7 +35,7 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
         if (!testForMagic.contentEquals("HDR".toByteArray())) {
             return null
         }
-        version = raf.readByte(state) // better be 2
+        require(raf.readByte(state).toInt() == 2) // better be 2
         val flags = raf.readByte(state).toInt()
         if (((flags shr 5) and 1) == 1) {
             val accessTime: Int = raf.readInt(state)
