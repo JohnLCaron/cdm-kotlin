@@ -16,7 +16,6 @@ import java.nio.ByteOrder
 
 internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     var vb: Variable.Builder? = null
-    var group: Group.Builder? = null
     val tags = mutableListOf<Tag>()
 
     // info about reading the data
@@ -43,9 +42,12 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     var chunks: List<SpecialDataChunk>? = null
     var chunkLengths = IntArray(0)
 
+    // internal string valued
+    var svalue : String? = null
+
+    // LOOK
     var endian = ByteOrder.BIG_ENDIAN // LOOK TABLE 2H Little-Endian Format Data Type Definitions
 
-    var svalue : String? = null
 
     fun setVariable(v: Variable.Builder) {
         vb = v
@@ -134,16 +136,6 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
             segSize[count] = tag.length
             count++
         }
-    }
-
-    fun readChunks(ncfile : Hdf4File): List<SpecialDataChunk> {
-        return tagData?.chunked?.getDataChunks(ncfile) ?: emptyList()
-    }
-
-    fun read(h4 : H4builder): String {
-        requireNotNull(tagData)
-        val state = OpenFileState(tagData!!.offset)
-        return h4.raf.readString(state, tagData!!.length, h4.valueCharset)
     }
 
     override fun toString(): String {

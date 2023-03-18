@@ -15,7 +15,6 @@ import java.util.zip.InflaterInputStream
 
 private const val defaultBufferSize = 50_000
 
-
 // replace H4ChunkIterator, LayoutBB
 internal class H4tiledData(val h4 : H4builder, varShape : IntArray, chunk : IntArray, val chunks: List<SpecialDataChunk>) {
     val tiling = Tiling(varShape, chunk)

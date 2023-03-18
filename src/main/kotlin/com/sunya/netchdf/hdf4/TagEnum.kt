@@ -93,6 +93,7 @@ enum class TagEnum(val desc: String, val code: Int) {
         const val COMP_CODE_SZIP = 5 // for szip encoding
 
         private var hashCodes : MutableMap<Int, TagEnum>? = null
+
         fun byCode(code: Int): TagEnum {
             if (hashCodes == null) {
                 hashCodes = mutableMapOf()
@@ -103,7 +104,6 @@ enum class TagEnum(val desc: String, val code: Int) {
         }
 
         val obsolete = setOf(ID8, IP8, RI8, CI8, II8)
-
     }
 
     override fun toString(): String {

@@ -184,6 +184,15 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     bb.position(0)
     bb.limit(bb.capacity())
 
+    // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
+    if (h5type.hdfType == Datatype5.String) {
+        val extshape = IntArray(shape.size + 1) {if (it == shape.size) layout.elemSize else shape[it] }
+        if (extshape.size > 1)
+            println()
+        val result = ArrayUByte(extshape, bb)
+        return result.makeStringsFromBytes()
+    }
+
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
         Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
@@ -197,10 +206,6 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
         Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, h5type.elemSize)
         else -> throw IllegalStateException("unimplemented type= $datatype")
-    }
-    // convert to array of Strings by reducing rank by 1
-    if (h5type.hdfType == Datatype5.String) {
-        return (result as ArrayUByte).makeStringsFromBytes()
     }
     if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
         return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))

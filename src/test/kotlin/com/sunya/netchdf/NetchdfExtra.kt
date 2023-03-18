@@ -76,9 +76,15 @@ class NetchdfExtra {
         compareCdlWithClib("/media/twobee/netch/npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
     }
 
-    // @Test
-    fun problem() {
-        compareCdlWithClib("/media/twobee/netch/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
+    @Test
+    fun unsolved1() {
+        val filename = "/media/twobee/netch/barrodale/test.h5"
+        //showMyData(filename)
+        // showMyHeader(filename)
+        showNcHeader(filename)
+        //readDataForProfiling(filename, "/image1/calibration/calibration_annotation_table")
+        compareCdlWithClib(filename)
+        //readDataCompareNC(filename)
     }
 
     val showCdl= true
@@ -107,8 +113,12 @@ class NetchdfExtra {
     @ParameterizedTest
     @MethodSource("params")
     fun readDataForProfiling(filename: String) {
+        readDataForProfiling(filename, null)
+    }
+
+    fun readDataForProfiling(filename: String, varname : String? = null) {
         println(filename)
-        readMyData(filename)
+        readMyData(filename, varname)
         println()
     }
 }

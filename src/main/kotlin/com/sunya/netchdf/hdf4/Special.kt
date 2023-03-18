@@ -96,7 +96,7 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
             .append(" elem_tot_length=").append(elem_tot_length)
         sbuff.append(" chunk_size=").append(chunk_size).append(" nt_size=").append(nt_size)
             .append(" chunk_tbl_tag=")
-            .append(chunk_tbl_tag.toInt()).append(" chunk_tbl_ref=").append(chunk_tbl_ref.toInt())
+            .append(chunk_tbl_tag).append(" chunk_tbl_ref=").append(chunk_tbl_ref)
         sbuff.append("\n flag  dim  chunk\n")
         for (i in 0 until ndims) sbuff.append(" ").append(dimFlags[i][2].toInt()).append(",")
             .append(dimFlags[i][3].toInt()).append(" ").append(
@@ -199,9 +199,9 @@ internal class SpecialComp(raf : OpenFile, state : OpenFileState) {
     fun detail(): String {
         val sbuff = StringBuilder("SPECIAL_COMP ")
         sbuff.append(" version=").append(version.toInt()).append(" uncompressed length =").append(uncomp_length)
-            .append(" link_ref=").append(data_ref.toInt())
+            .append(" link_ref=").append(data_ref)
         sbuff.append(" model_type=").append(model_type.toInt()).append(" compress_type=")
-            .append(compress_type.toInt())
+            .append(compress_type)
         if (compress_type == TagEnum.COMP_CODE_NBIT) {
             sbuff.append(" nt=").append(nt).append(" signFlag=").append(signFlag.toInt()).append(" fillValue=")
                 .append(fillValue.toInt())
@@ -238,7 +238,7 @@ internal class SpecialLinked(raf : OpenFile, state : OpenFileState) {
         if (linkedDataBlocks == null) {
             val dataBlocks = mutableListOf<TagLinkedBlock>()
             var next = link_ref // (short) (link_ref & 0x3FFF);
-            while (next.toInt() != 0) {
+            while (next != 0) {
                 val tag: TagLinkedBlock =
                     h4.tagidMap.get(H4builder.tagid(next, TagEnum.LINKED.code)) as TagLinkedBlock?
                         ?: throw IllegalStateException("TagLinkedBlock not found for " + detail())

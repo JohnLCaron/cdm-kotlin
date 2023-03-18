@@ -20,8 +20,7 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
     val offset = raf.readInt(state).toUInt().toLong()
     val length = raf.readInt(state)
 
-    val tagEnum = TagEnum.byCode(btag)
-    when (tagEnum) {
+    when (val tagEnum = TagEnum.byCode(btag)) {
         TagEnum.LINKED -> return TagLinkedBlock(xtag, refno, offset, length)
         TagEnum.VERSION -> return TagVersion(xtag, refno, offset, length)
         TagEnum.COMPRESSED, TagEnum.CHUNK, TagEnum.SD, TagEnum.VS -> return TagData(xtag, refno, offset, length)
@@ -76,7 +75,7 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
         return "$refno/$code"
     }
 
-    fun vClass() : String {
+    private fun vClass() : String {
         return when (this) {
             is TagVGroup -> this.className
             is TagVH -> this.className
@@ -88,7 +87,7 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
 // TagEnum.COMPRESSED (40), TagEnum.CHUNK (61), TagEnum.SD (702), TagEnum.VS (1963)
 // Combining so we just have one data object
 class TagData(icode: Int, refno : Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
-    internal var extendedTag: Int = 0
+    private var extendedTag: Int = 0
     internal var linked: SpecialLinked? = null
     internal var compress: SpecialComp? = null
     internal var chunked: SpecialChunked? = null
@@ -108,11 +107,11 @@ class TagData(icode: Int, refno : Int, offset : Long, length : Int) : Tag(icode,
     }
 
     override fun detail(): String {
-        if (linked != null) {
-            return super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + linked!!.detail()
+        return if (linked != null) {
+            super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + linked!!.detail()
         } else if (compress != null) {
-            return super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + compress!!.detail()
-        } else return if (chunked != null) {
+            super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + compress!!.detail()
+        } else if (chunked != null) {
             super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + chunked!!.detail()
         } else super.detail()
     }
@@ -153,15 +152,15 @@ class TagLinkedBlock(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
     }
 
     override fun detail(): String {
-        if (block_ref == null) return super.detail()
-        val sbuff: StringBuilder = StringBuilder(super.detail())
-        sbuff.append(" next_ref= ").append(next_ref.toInt())
-        sbuff.append(" dataBlks= ")
-        for (i in 0 until n) {
-            val ref = block_ref[i]
-            sbuff.append(ref.toInt()).append(" ")
+        return buildString {
+            append(super.detail())
+            append(" next_ref= ").append(next_ref)
+            append(" dataBlks= ")
+            for (i in 0 until n) {
+                val ref = block_ref[i]
+                append(ref).append(" ")
+            }
         }
-        return sbuff.toString()
     }
 }
 
@@ -199,7 +198,7 @@ class TagText(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, 
     }
 
     override fun detail(): String {
-        val t = if ((text!!.length < 60)) text else text!!.substring(0, 59)
+        val t = if ((text.length < 60)) text else text.substring(0, 59)
         return super.detail() + " text= " + t
     }
 }
@@ -314,15 +313,16 @@ class TagDataGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ic
     }
 
     override fun detail(): String {
-        val sbuff: StringBuilder = StringBuilder(super.detail())
-        sbuff.append("\n")
-        sbuff.append("   tag ref\n   ")
-        for (i in 0 until nelems) {
-            sbuff.append(elem_tag[i]).append(" ")
-            sbuff.append(elem_ref[i]).append(" ")
-            sbuff.append("\n   ")
+        return buildString {
+            append(super.detail())
+            append("\n")
+            append("   tag ref\n   ")
+            for (i in 0 until nelems) {
+                append(elem_tag[i]).append(" ")
+                append(elem_ref[i]).append(" ")
+                append("\n   ")
+            }
         }
-        return sbuff.toString()
     }
 }
 
@@ -338,10 +338,10 @@ class TagSDD(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, r
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         rank = h4.raf.readShort(state)
         shape = IntArray(rank.toInt()) { h4.raf.readInt(state) }
-        val wtf2 = h4.raf.readShort(state)
+        h4.raf.readShort(state)
         data_nt_ref = h4.raf.readShort(state).toUShort().toInt()
         scale_nt_ref = ShortArray(rank.toInt()) {
-            val wtf2 = h4.raf.readShort(state)
+            h4.raf.readShort(state)
             h4.raf.readShort(state)
         }
     }
@@ -357,7 +357,7 @@ class TagSDD(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, r
 }
 
 
-// 701 p.135
+/* 701 p.135
 class TagSDS(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var rank: Short = 0
     var hasScale = ShortArray(0)
@@ -366,7 +366,7 @@ class TagSDS(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, r
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
     }
-}
+} */
 
 // 704, 705, 706 p 130
 class TagTextN(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
@@ -399,7 +399,6 @@ class TagTextN(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode,
 // 707, p132
 class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var bb: ByteBuffer? = null
-    var dt: Datatype = Datatype.INT
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
@@ -407,12 +406,10 @@ class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
     }
 
     fun getMin(dataType: Datatype): Number {
-        dt = dataType
         return get(dataType, 1)
     }
 
     fun getMax(dataType: Datatype): Number {
-        dt = dataType
         return get(dataType, 0)
     }
 
@@ -480,10 +477,10 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
         nelems = h4.raf.readShort(state).toUShort().toInt()
         elem_tag = IntArray(nelems) { h4.raf.readShort(state).toUShort().toInt() }
         elem_ref = IntArray(nelems) { h4.raf.readShort(state).toUShort().toInt() }
-        var len = h4.raf.readShort(state).toInt()
+        val len = h4.raf.readShort(state).toInt()
         name = h4.raf.readString(state, len)
-        len = h4.raf.readShort(state).toInt()
-        className = h4.raf.readString(state, len)
+        val len2 = h4.raf.readShort(state).toInt()
+        className = h4.raf.readString(state, len2)
         extag = h4.raf.readShort(state)
         exref = h4.raf.readShort(state)
         version = h4.raf.readShort(state)
@@ -494,26 +491,26 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
     }
 
     override fun detail(): String {
-        val sbuff = StringBuilder()
-        sbuff.append(if (isUsed) " " else "*").append("refno=").append(refno).append(" tag= ")
-            .append(tagEnum())
-            .append(if (isExtended) " EXTENDED" else "").append(" offset=").append(offset).append(" length=")
-            .append(length)
-            .append(" VV= ${vinfo?.vb?.name ?: ""}")
-        sbuff.append(" class= ").append(className)
-        sbuff.append(" extag= ").append(extag.toInt())
-        sbuff.append(" exref= ").append(exref.toInt())
-        sbuff.append(" version= ").append(version.toInt())
-        sbuff.append("\n")
-        sbuff.append(" name= ").append(name)
-        sbuff.append("\n")
-        sbuff.append("   tag ref\n   ")
-        for (i in 0 until nelems) {
-            sbuff.append(elem_tag.get(i)).append(" ")
-            sbuff.append(elem_ref.get(i)).append(" ")
-            sbuff.append("\n   ")
+        return buildString {
+            append(if (isUsed) " " else "*").append("refno=").append(refno).append(" tag= ")
+                .append(tagEnum())
+                .append(if (isExtended) " EXTENDED" else "").append(" offset=").append(offset).append(" length=")
+                .append(length)
+                .append(" VV= ${vinfo?.vb?.name ?: ""}")
+            append(" class= ").append(className)
+            append(" extag= ").append(extag.toInt())
+            append(" exref= ").append(exref.toInt())
+            append(" version= ").append(version.toInt())
+            append("\n")
+            append(" name= ").append(name)
+            append("\n")
+            append("   tag ref\n   ")
+            for (i in 0 until nelems) {
+                append(elem_tag[i]).append(" ")
+                append(elem_ref[i]).append(" ")
+                append("\n   ")
+            }
         }
-        return sbuff.toString()
     }
 }
 
@@ -562,27 +559,28 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     }
 
     override fun detail(): String {
-        val sbuff: StringBuilder = StringBuilder(super.detail())
-        sbuff.append(" class= ").append(className)
-        sbuff.append(" interlace= ").append(interlace.toInt())
-        sbuff.append(" nvert= ").append(nelems)
-        sbuff.append(" ivsize= ").append(ivsize)
-        sbuff.append(" extag= ").append(extag.toInt())
-        sbuff.append(" exref= ").append(exref.toInt())
-        sbuff.append(" version= ").append(version.toInt())
-        sbuff.append("\n")
-        sbuff.append(" name= ").append(name)
-        sbuff.append("\n")
-        sbuff.append("   name    type  isize  offset  order\n   ")
-        for (i in 0 until nfields) {
-            sbuff.append(fld_name[i]).append(" ")
-            sbuff.append(fld_type[i].toInt()).append(" ")
-            sbuff.append(fld_isize[i]).append(" ")
-            sbuff.append(fld_offset[i]).append(" ")
-            sbuff.append(fld_nelems[i].toInt()).append(" ")
-            sbuff.append("\n   ")
+        return buildString {
+            append(super.detail())
+            append(" class= ").append(className)
+            append(" interlace= ").append(interlace.toInt())
+            append(" nvert= ").append(nelems)
+            append(" ivsize= ").append(ivsize)
+            append(" extag= ").append(extag.toInt())
+            append(" exref= ").append(exref.toInt())
+            append(" version= ").append(version.toInt())
+            append("\n")
+            append(" name= ").append(name)
+            append("\n")
+            append("   name    type  isize  offset  order\n   ")
+            for (i in 0 until nfields) {
+                append(fld_name[i]).append(" ")
+                append(fld_type[i].toInt()).append(" ")
+                append(fld_isize[i]).append(" ")
+                append(fld_offset[i]).append(" ")
+                append(fld_nelems[i].toInt()).append(" ")
+                append("\n   ")
+            }
         }
-        return sbuff.toString()
     }
 
     // fld_type fld_name(fld_order), so 1 dimensional of length fld_order

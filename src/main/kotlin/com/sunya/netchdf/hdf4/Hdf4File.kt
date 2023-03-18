@@ -19,8 +19,8 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     private val raf: OpenFile = OpenFile(filename)
     internal val header: H4builder
     private val rootGroup: Group
+
     var valueCharset: Charset = StandardCharsets.UTF_8
-    val useOld = false
 
     init {
         header = H4builder(raf, valueCharset, strict)
@@ -40,17 +40,17 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         val filledSection = Section.fill(section, v2.shape)
-        if (v2.datatype == Datatype.COMPOUND) {
-            return readStructureDataArray(v2, filledSection)
+        return if (v2.datatype == Datatype.COMPOUND) {
+            readStructureDataArray(v2, filledSection)
+        } else {
+            readRegularDataArray(v2, filledSection)
         }
-        return readRegularDataArray(v2, filledSection)
     }
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
         val vinfo = v.spObject as Vinfo
 
         if (vinfo.hasNoData) {
-            // LOOK not handling case where hasNoData, and has no fillvalue
             return ArraySingle(section.shape, v.datatype, vinfo.getFillValueOrDefault())
         }
 
@@ -72,13 +72,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                if (useOld) {
-                    val chunkIterator = H4ChunkIterator(this, vinfo)
-                    val layout = LayoutTiled(chunkIterator, vinfo.chunkLengths, vinfo.elemSize, section)
-                    return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
-                } else {
-                    return H4chunkReader(header).readChunkedDataNew(v, section)
-                }
+                return H4chunkReader(header).readChunkedDataNew(v, section)
             }
         } else {
             if (!vinfo.isLinked && !vinfo.isChunked) {
@@ -94,13 +88,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                if (useOld) {
-                    val chunkIterator = H4CompressedChunkIterator(header, vinfo)
-                    val layout = LayoutTiledBB(chunkIterator, vinfo.chunkLengths, vinfo.elemSize, section)
-                    return readCompressedDataWithFill(raf, layout, v, vinfo.fillValue, section)
-                } else {
-                    return H4chunkReader(header).readChunkedDataNew(v, section)
-                }
+                return H4chunkReader(header).readChunkedDataNew(v, section)
             }
         }
         throw IllegalStateException()
@@ -221,21 +209,25 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netcdf {
         if (!vinfo.isLinked && !vinfo.isCompressed) {
             val layout = LayoutRegular(vinfo.start, recsize, v2.shape, section)
             return header.readArrayStructureData(layout, section.shape, members)
+
         } else if (vinfo.isLinked && !vinfo.isCompressed) {
             val input: InputStream = LinkedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
             val layout = LayoutRegular(0, recsize, v2.shape, section)
             return dataSource.readArrayStructureData(layout, section.shape, members)
+
         } else if (!vinfo.isLinked && vinfo.isCompressed) {
             val input: InputStream = getCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
             val layout: Layout = LayoutRegular(0, recsize, v2.shape, section)
             return dataSource.readArrayStructureData(layout, section.shape, members)
+
         } else if (vinfo.isLinked && vinfo.isCompressed) {
             val input: InputStream = getLinkedCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
             val layout: Layout = LayoutRegular(0, recsize, v2.shape, section)
             return dataSource.readArrayStructureData(layout, section.shape, members)
+
         } else {
             throw IllegalStateException()
         }
@@ -254,40 +246,43 @@ internal fun getLinkedCompressedInputStream(h4: H4builder, vinfo: Vinfo): InputS
     return InflaterInputStream(LinkedInputStream(h4, vinfo))
 }
 
-internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, shape: IntArray, members: List<StructureMember>): ArrayStructureData {
+internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, shape: IntArray, members: List<StructureMember>)
+: ArrayStructureData {
     val recsize: Int = vinfo.elemSize
     if (!vinfo.isLinked && !vinfo.isCompressed) {
         val layout = LayoutRegular(vinfo.start, recsize, shape, null)
+
         return h4.readArrayStructureData(layout, shape, members)
     } else if (vinfo.isLinked && !vinfo.isCompressed) {
         val input: InputStream = LinkedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
         val layout = LayoutRegular(0, recsize, shape, null)
         return dataSource.readArrayStructureData(layout, shape, members)
+
     } else if (!vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
         val layout: Layout = LayoutRegular(0, recsize, shape, null)
         return dataSource.readArrayStructureData(layout, shape, members)
+
     } else if (vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getLinkedCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
         val layout: Layout = LayoutRegular(0, recsize, shape, null)
         return dataSource.readArrayStructureData(layout, shape, members)
+
     } else {
         throw IllegalStateException()
     }
 }
 
-internal fun H4builder.readArrayStructureData(
-    layout: Layout,
-    shape: IntArray,
-    members: List<StructureMember>
-): ArrayStructureData {
+internal fun H4builder.readArrayStructureData(layout: Layout, shape: IntArray, members: List<StructureMember>)
+: ArrayStructureData {
     val state = OpenFileState(0, ByteOrder.BIG_ENDIAN)
     val sizeBytes = Section.computeSize(shape).toInt() * layout.elemSize
     val bb = ByteBuffer.allocate(sizeBytes)
     bb.order(state.byteOrder)
+
     while (layout.hasNext()) {
         val chunk: Layout.Chunk = layout.next()
         state.pos = chunk.srcPos()
@@ -304,11 +299,13 @@ internal fun H4builder.readArrayStructureData(
     return ArrayStructureData(shape, bb, layout.elemSize, members)
 }
 
-internal fun PositioningDataInputStream.readArrayStructureData(layout: Layout, shape : IntArray, members : List<StructureMember>): ArrayStructureData {
+internal fun PositioningDataInputStream.readArrayStructureData(layout: Layout, shape : IntArray, members : List<StructureMember>)
+: ArrayStructureData {
     val state = OpenFileState(0, ByteOrder.BIG_ENDIAN)
     val sizeBytes = Section.computeSize(shape).toInt() * layout.elemSize
     val bb = ByteBuffer.allocate(sizeBytes)
     bb.order(state.byteOrder)
+
     while (layout.hasNext()) {
         val chunk: Layout.Chunk = layout.next()
         state.pos = chunk.srcPos()

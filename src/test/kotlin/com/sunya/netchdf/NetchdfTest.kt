@@ -130,7 +130,7 @@ class NetchdfTest {
         compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5/structmetadata_eos.h5")
     }
 
-    /*
+    /*structmetadata_eos.h5
 netcdf structmetadata_eos {
   group: HDFEOS INFORMATION {
     variables:
@@ -141,6 +141,7 @@ nc_inq_var return -101 = NetCDF: HDF error
 */
 
 
+    // possible bug in netcdf4
     @Test
     // @Disabled
     fun compoundAttributeTest() {
@@ -290,6 +291,24 @@ h5dump
         println(filename)
         readMyData(filename)
         println()
+    }
+}
+
+fun showMyHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+    println(filename)
+    openNetchdfFile(filename).use { myfile ->
+        if (myfile == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println(myfile.cdl())
+    }
+}
+
+fun showNcHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
+    println(filename)
+    NetcdfClibFile(filename).use { ncfile ->
+        println(ncfile.cdl())
     }
 }
 

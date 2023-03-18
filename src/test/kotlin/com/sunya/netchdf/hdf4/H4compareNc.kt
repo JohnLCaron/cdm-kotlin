@@ -1,6 +1,5 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.Section
 import com.sunya.netchdf.NetchdfTest
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.readDataCompareHC
@@ -96,6 +95,22 @@ class H4compareNc {
  //           "Sea_Ice_Motion_Vectors_-_17766010")
     }
 
+
+    @Test
+    fun unsolved1() { // H4 has atts n > 1
+        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf")
+    }
+
+    @Test
+    fun unsolved2() { // variable Aerosol_Cldmask_Byproducts_Land; data fails compare
+        readDataCompareWithHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf")
+    }
+
+    @Test
+    fun unsolved3() { // duplicate variable Ancillary_Data; data fails compare
+        readDataCompareWithHC("/media/twobee/netch/hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
+    }
+
     @Test
     fun swath() {
         compareH4header("/media/twobee/netch/hdf4/jeffmc/swath.hdf")
@@ -104,11 +119,6 @@ class H4compareNc {
     @Test
     fun problem1() {
         compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf")
-    }
-
-    @Test
-    fun problem2() { // H4 has atts n > 1
-        compareH4header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf")
     }
 
     @Test
@@ -147,18 +157,6 @@ class H4compareNc {
         readDataCompareHC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
             "ALBEDO")
     }
-
-    @Test
-    fun readMyData() {
-        val filename = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf"
-        NetchdfTest.showData = false
-        //readHCdata(filename)
-        //readData(filename)
-        compareH4header(filename)
-        readDataCompareHC(filename)
-        NetchdfTest.showData = false
-    }
-
 
     // @Test HC core dump
     fun coreDumps() {
