@@ -5,7 +5,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
-import test.util.oldTestDir
+import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
@@ -19,15 +19,15 @@ class N3headerCompare {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream1 = Stream.of(
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/simple_xy.nc"),
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc"),
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc"),
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/nctest_64bit_offset.nc"),
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc"),
-                    Arguments.of("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testSpecialChars.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/simple_xy.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/longOffset.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/WMI_Lear-2003-05-28-212817.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/nctest_64bit_offset.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/WrfTimesStrUnderscore.nc"),
+                    Arguments.of(testData + "devcdm/netcdf3/testSpecialChars.nc"),
                 )
             val stream2 =
-                testFilesIn(oldTestDir + "formats/netcdf3")
+                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
                     .withRecursion()
                     .build()
 
@@ -37,7 +37,7 @@ class N3headerCompare {
 
     @Test
     fun special() {
-        readN3header("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/files/nc_test_classic.nc4")
+        readN3header(testData + "cdmUnitTest/formats/netcdf3/files/nc_test_classic.nc4")
     }
 
 

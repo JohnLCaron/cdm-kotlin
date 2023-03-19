@@ -9,17 +9,6 @@ import java.lang.foreign.*;
 import static java.lang.foreign.ValueLayout.*;
  class mfhdf_h_2 extends mfhdf_h_1 {
 
-    public static MethodHandle VSfnattrs$MH() {
-        return RuntimeHelper.requireNonNull(constants$132.VSfnattrs$MH,"VSfnattrs");
-    }
-    public static int VSfnattrs ( int vsid,  int findex) {
-        var mh$ = VSfnattrs$MH();
-        try {
-            return (int)mh$.invokeExact(vsid, findex);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
     public static MethodHandle VSfindattr$MH() {
         return RuntimeHelper.requireNonNull(constants$132.VSfindattr$MH,"VSfindattr");
     }

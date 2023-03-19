@@ -10,6 +10,7 @@ import kotlin.test.assertTrue
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import test.util.testData
 import test.util.testFilesIn
 import java.io.File
 
@@ -22,7 +23,7 @@ class N3ncdumpTest {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream3 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
+                testFilesIn(testData + "devcdm/netcdf3")
                     .build()
             return stream3
         }
@@ -30,7 +31,7 @@ class N3ncdumpTest {
 
     @Test
     fun problem() {
-        compareN3header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/testWriteFill.nc")
+        compareN3header(testData + "devcdm/netcdf3/testWriteFill.nc")
     }
 
     @ParameterizedTest

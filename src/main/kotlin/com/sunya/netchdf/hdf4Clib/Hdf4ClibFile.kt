@@ -2,38 +2,20 @@ package com.sunya.netchdf.hdf4Clib
 
 /*
 hdf4 library src:
-/home/snake/dev/github/hdf4
+/home/oem/dev/github/hdf4
 install:
-/home/snake/install/hdf4
+/home/oem/install/hdf4
 
-cd /home/snake/install/jextract-19/bin
-
-./jextract --source \
-    --header-class-name mfhdf4_h \
-    --target-package com.sunya.netchdf.hdf4Clib.ffm \
-    -I /home/snake/install/hdf4/include/hdf.h \
-    -l /home/snake/install/hdf4/lib/libdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
-    /home/snake/install/hdf4/include/hdf.h
+cd /home/oem/install/jextract-19/bin
 
 ./jextract --source \
     --header-class-name mfhdf_h \
     --target-package com.sunya.netchdf.mfhdfClib.ffm \
-    -I /home/snake/install/hdf4/include/mfhdf.h \
-    -l /home/snake/install/hdf4/lib/libmfhdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
-    /home/snake/install/hdf4/include/mfhdf.h
-
-    ./jextract --source \
-    --header-class-name hdf_h \
-    --target-package com.sunya.netchdf.hdfClib.ffm \
-    -I /home/snake/install/hdf4/include/hdf.h \
-    -l /home/snake/install/hdf4/lib/libmfhdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
-    /home/snake/install/hdf4/include/hdf.h
-
+    -I /home/oem/install/hdf4/include/mfhdf.h \
+    -l /home/oem/install/hdf4/lib/libmfhdf.so \
+    --output /home/oem/dev/github/cdm-kotlin/src/main/java \
+    /home/oem/install/hdf4/include/mfhdf.h
  */
-
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*

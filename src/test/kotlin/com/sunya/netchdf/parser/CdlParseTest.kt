@@ -14,6 +14,7 @@ import kotlin.test.assertEquals
 
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import test.util.testData
 
 class CdlParseTest {
 
@@ -21,7 +22,7 @@ class CdlParseTest {
         @JvmStatic
         fun params(): Stream<Arguments> = Stream.of(
             Arguments.of(
-                "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/longOffset.nc",
+                testData + "devcdm/netcdf3/longOffset.nc",
                 """
 netcdf longOffset {
 dimensions:
@@ -34,7 +35,7 @@ dimensions:
             ),
 
             Arguments.of(
-                "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc",
+                testData + "devcdm/netcdf4/tst_dims.nc",
                 """
 netcdf tst_dims {
 dimensions:
@@ -46,7 +47,7 @@ variables:
 """
             ),
             Arguments.of(
-                "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/byteArrayRecordVarPaddingTest-bad.nc",
+                testData + "devcdm/netcdf3/byteArrayRecordVarPaddingTest-bad.nc",
                 """
 netcdf byteArrayRecordVarPaddingTest {
 dimensions:
@@ -59,7 +60,7 @@ variables:
 """
             ),
             Arguments.of(
-                "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/tst_v2.nc",
+                testData + "devcdm/netcdf3/tst_v2.nc",
 """
 netcdf tst_v2 {
 dimensions:
@@ -73,7 +74,7 @@ variables:
     """
         ),
             Arguments.of(
-                "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdsf3/tst_pres_temp_4D_classic.nc",
+                testData + "devcdm/netcdsf3/tst_pres_temp_4D_classic.nc",
                 """
 netcdf tst_pres_temp_4D_classic {
 dimensions:

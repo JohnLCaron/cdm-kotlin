@@ -6,6 +6,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
@@ -17,11 +18,11 @@ class N3dataCompare {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream3 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
+                testFilesIn(testData + "devcdm/netcdf3")
                     .build()
 
             val moar3 =
-                testFilesIn(test.util.oldTestDir + "formats/netcdf3")
+                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .withRecursion()
                     .build()
@@ -32,12 +33,12 @@ class N3dataCompare {
 
     @Test
     fun awips() {
-        readDataCompareNC("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/awips.nc", "uw")
+        readDataCompareNC(testData + "cdmUnitTest/formats/netcdf3/awips.nc", "uw")
     }
 
     @Test
     fun problem2() {
-        readDataCompareNC("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WMI_Lear-2003-05-28-212817.nc", "time")
+        readDataCompareNC(testData + "devcdm/netcdf3/WMI_Lear-2003-05-28-212817.nc", "time")
     }
 
 

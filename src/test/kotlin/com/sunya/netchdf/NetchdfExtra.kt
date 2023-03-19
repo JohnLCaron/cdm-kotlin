@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
@@ -17,7 +18,7 @@ class NetchdfExtra {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream =
-                testFilesIn("/media/twobee/netch")
+                testFilesIn(testData + "netchdf")
                     .withRecursion()
                     // exclude hdf4 until we fix the core dump in the C library
                     .withPathFilter { p -> !(p.toString().contains("hdf4") or p.toString().contains("exclude"))}
@@ -37,7 +38,7 @@ class NetchdfExtra {
             return Stream.of(stream).flatMap { i -> i };
         }
 
-        const val topdir = "/media/twobee/netch/"
+        const val topdir = testData + "netchdf/"
     }
 
     // npp filers: superblock at file offset; reference data type
@@ -58,7 +59,7 @@ class NetchdfExtra {
 
     // @Test
     fun problemData() { // causing seg fault on NClib
-        readNetchdfData("/media/twobee/netch/signell/his_20090306.nc")
+        readNetchdfData(testData + "netchdf/signell/his_20090306.nc")
             // "ocean_time", null, true)
     }
 
@@ -71,12 +72,12 @@ class NetchdfExtra {
      */
     @Test
     fun problemNPP() {
-        compareCdlWithClib("/media/twobee/netch/npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
+        compareCdlWithClib(testData + "netchdf/npp/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5")
     }
 
     @Test
     fun unsolved1() {
-        val filename = "/media/twobee/netch/barrodale/test.h5"
+        val filename = testData + "netchdf/barrodale/test.h5"
         //showMyData(filename)
         // showMyHeader(filename)
         showNcHeader(filename)

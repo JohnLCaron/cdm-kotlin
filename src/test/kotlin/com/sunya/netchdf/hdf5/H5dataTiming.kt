@@ -5,6 +5,7 @@ import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
+import test.util.testData
 import kotlin.system.measureNanoTime
 
 private const val showDetail = true
@@ -39,9 +40,9 @@ private const val showDetail = true
     3.1355, 1.0944, uw[:,:,:,25:25]
  */
 class H5dataTiming {
-    val reversed = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc"
-    val chunked = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/e562p1_fp.inst3_3d_asm_Nv.20100907_00z+20100909_1200z.nc4"
-    val chunked2 = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc"
+    val reversed = testData + "cdmUnitTest/formats/netcdf4/Ike.egl3.SWI.tidal.nc"
+    val chunked = testData + "cdmUnitTest/formats/netcdf4/e562p1_fp.inst3_3d_asm_Nv.20100907_00z+20100909_1200z.nc4"
+    val chunked2 = testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc"
 
     @Test
     fun chunkedReverse() {
@@ -84,7 +85,7 @@ class H5dataTiming {
     fun netcdf3() {
         if (showDetail) println("===============================================")
         if (showDetail) println("netcdf3 [5, 40, 56, 75]")
-        val filename = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf3/awips.nc"
+        val filename = testData + "cdmUnitTest/formats/netcdf3/awips.nc"
         readData(filename, "uw", Section(intArrayOf(5, 40, 56, 75)))
         readData(filename, "uw", Section("0:4,13:26,18:37,25:49"))
         readData(filename, "vw", Section(intArrayOf(5, 40, 56, 75)))
@@ -105,7 +106,7 @@ class H5dataTiming {
 
     @Test
     fun hasMissing() {
-        val filename = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        val filename = testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
         readData(filename, "CMI", Section(":, :"))
         readData(filename, "DQF", Section(":, :"))
     }

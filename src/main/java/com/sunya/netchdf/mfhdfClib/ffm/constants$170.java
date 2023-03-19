@@ -11,8 +11,8 @@ class constants$170 {
 
     static final MemorySegment H4_PACKAGE_TARNAME$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("hdf");
     static final MemorySegment H4_PACKAGE_URL$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("");
-    static final MemorySegment H4_PACKAGE_VERSION$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("4.2.15-post0");
-    static final MemorySegment H4_VERSION$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("4.2.15-post0");
+    static final MemorySegment H4_PACKAGE_VERSION$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("4.2.17-1");
+    static final MemorySegment H4_VERSION$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("4.2.17-1");
     static final MemorySegment __PRI64_PREFIX$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("l");
     static final MemorySegment __PRIPTR_PREFIX$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("l");
 }

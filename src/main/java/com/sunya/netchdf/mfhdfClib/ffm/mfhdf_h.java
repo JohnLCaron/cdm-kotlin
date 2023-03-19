@@ -33,9 +33,6 @@ public class mfhdf_h extends mfhdf_h_2 {
     public static int H4_HAVE_FORK() {
         return (int)1L;
     }
-    public static int H4_HAVE_GETOPT() {
-        return (int)1L;
-    }
     public static int H4_HAVE_HTONL() {
         return (int)1L;
     }
@@ -4916,6 +4913,17 @@ public class mfhdf_h extends mfhdf_h_2 {
         var mh$ = strrchr$MH();
         try {
             return (java.lang.foreign.MemoryAddress)mh$.invokeExact(__s, __c);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle strcspn$MH() {
+        return RuntimeHelper.requireNonNull(constants$43.strcspn$MH,"strcspn");
+    }
+    public static long strcspn ( Addressable __s,  Addressable __reject) {
+        var mh$ = strcspn$MH();
+        try {
+            return (long)mh$.invokeExact(__s, __reject);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }

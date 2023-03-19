@@ -118,7 +118,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
     // Check if file affected by bug CDM-52 (netCDF-Java library used incorrect padding when
     // the file contained only one record variable and it was of type byte, char, or short).
     // Example TestDir.cdmLocalTestDataDir + "byteArrayRecordVarPaddingTest-bad.nc"
-    // Example /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc
+    // Example devcdm/core/src/test/data/netcdf3/WrfTimesStrUnderscore.nc
     if (unlimitedVariables.size == 1) {
       val uvar = unlimitedVariables[0]
       val dtype = uvar.datatype

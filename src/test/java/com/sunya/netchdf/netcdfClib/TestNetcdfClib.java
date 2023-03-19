@@ -7,12 +7,13 @@ import org.junit.jupiter.api.Test;
 
 import static com.sunya.netchdf.netcdfClib.ffm.netcdf_h.C_INT;
 import static com.sunya.netchdf.netcdfClib.ffm.netcdf_h.nc_open;
+import static test.util.TestFilesKt.testData;
 
 public class TestNetcdfClib {
 
   @Test
   public void cantOpenProblem() throws IOException {
-    open("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3/simple_xy.nc");
+    open(testData + "devcdm/netcdf3/simple_xy.nc");
   }
 
   private void open(String filename) {

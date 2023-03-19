@@ -15,7 +15,7 @@ never go away. Its important that there be maintainable, independent libraries t
 
 The Netcdf-Java library prototyped a "Common Data Model" (CDM) to provide a single API to access various file formats. 
 The netcdf* and hdf* file formats are similar enough to make a common API a practical and useful goal. 
-By focusing on read-only access to just these formats, the API and the code is kept simple.
+By focusing on read-only access to just these formats, the API and the code are kept simple.
 
 In short, a library that focuses on simplicity and clarity is a safeguard for the huge investment in these
 scientific datasets.
@@ -26,17 +26,20 @@ The reference libraries are well maintained but complex. They are coded in C, wh
 and keep bug free, with implication for memory safety and security. They require various machine and OS dependent
 toolchains. Shifts in funding could wipe out much of the institutional knowledge needed to maintain them.
 
-The HDF file formats are overly complicated, which impacts code complexity and clarity. Having a second independent 
-implementation is a huge benefit to anyone needing to understand these file formats.
+The HDF file formats are overly complicated, which impacts code complexity and clarity. The data structures do not
+always map to a user understandable data model. Semantics are left to the whim of the data-writers to document (or not). 
+While this problem isn't specific to HDF file users, its exacerbated by a "group of messages" design approach. Our 
+library tries to ameliorate these problems for non-expert readers.
 
-The HDF4 C library is a curious hodgepodge of disjointed APIs. Only some of the APIs needed to fully examine an HDF4 file 
-are documented in the "HDF User’s Guide". Access through the GR, SDS and VS APIs seem usable. However the Vgroup
-API exposes references to objects which have no publicly documented access methods. 
+The HDF4 C library is a curious hodgepodge of disjointed APIs. Only some of the APIs needed to fully examine an HDF4 
+file in a general way are documented and given examples. This creates barriers to casual use of the C API for reading
+HDF4 files.
 
 HDF-EOS use an undocumented "Object Descriptor Language (ODL)" text format, which adds a dependency on the SDP Toolkit 
 and possibly other libraries. These toolkits also provide functionality such as handling projections and coordinate system 
 conversions, and arguably its impossible to process HDF-EOS without them. So the value added here by an independent 
-library is less clear. For now, we will provide a "best-effort" effort to expose the internal contents of the file.
+library for data access only is less clear. For now, we will provide a "best-effort" effort to expose the internal 
+contents of the file.
 
 #### Why kotlin?
 

@@ -218,7 +218,7 @@ internal class DataObjectFacade(val parent : H5GroupBuilder?, val name: String) 
             // must be a  typedef
             isTypedef = true
         } else {
-            // see /home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4 = opaque typedef
+            // see devcdm/core/src/test/data/netcdf4/tst_opaque_data.nc4 = opaque typedef
             println("WARNING Unknown DataObjectFacade = ${this}")
         }
     }
@@ -266,7 +266,7 @@ internal class H5GroupBuilder(
 
         for (nested in nestedObjects) {
             if (nested.dataObject == null && nested.address == null) {
-                // see "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5"
+                // see testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5"
                 // has a name and a linkName, apparently makes name into an alias for linkName?
                 continue
             }
