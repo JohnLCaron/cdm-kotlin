@@ -3,6 +3,7 @@ package com.sunya.netchdf.netcdf4
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
+import test.util.testData
 import kotlin.test.assertEquals
 
 // trying to compare output with ncdump - h; probably get rid of
@@ -11,7 +12,7 @@ class N4strictTest {
 
     @Test
     fun tst_dims() {
-        readN4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_dims.nc",
+        readN4header(testData + "devcdm/netcdf4/tst_dims.nc",
             """netcdf tst_dims {
 dimensions:
 	latitude = 6 ;
@@ -26,7 +27,7 @@ variables:
 
     @Test
     fun string_attrs() {
-        readN4header("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/string_attrs.nc4",
+        readN4header(testData + "devcdm/netcdf4/string_attrs.nc4",
 """netcdf string_attrs {
 variables:
 	byte var ;
@@ -43,7 +44,7 @@ variables:
     @Test
     fun attstr() {
         readN4header(
-            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/attstr.h5",
+            testData + "devcdm/netcdf4/attstr.h5",
 """netcdf attstr {
 
 group: MyGroup {
@@ -58,7 +59,7 @@ group: MyGroup {
     @Test
     fun tst_groups() {
         readN4header(
-            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_groups.nc",
+            testData + "devcdm/netcdf4/tst_groups.nc",
             """netcdf tst_groups {
 dimensions:
 	dim = 4 ;
@@ -108,7 +109,7 @@ group: g2 {
     @Test
     fun tst_solar_1() {
         readN4header(
-            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_solar_1.nc",
+            testData + "devcdm/netcdf4/tst_solar_1.nc",
             """netcdf tst_solar_1 {
 dimensions:
 	length_of_name = 2 ;
@@ -141,7 +142,7 @@ group: solar_system {
     @Test
     fun test_enum_type() {
         readN4header(
-            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/test_enum_type.nc",
+            testData + "devcdm/netcdf4/test_enum_type.nc",
 """netcdf test_enum_type {
 types:
   ubyte enum cloud_class_t {Clear = 0, Cumulonimbus = 1, Stratus = 2, 
@@ -160,7 +161,7 @@ variables:
     @Test
     fun IntTimSciSamp() {
         readN4header(
-            "/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/IntTimSciSamp.nc",
+            testData + "devcdm/netcdf4/IntTimSciSamp.nc",
             """netcdf IntTimSciSamp {
 types:
   int(*) loopData ;

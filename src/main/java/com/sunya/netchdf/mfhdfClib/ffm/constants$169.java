@@ -22,7 +22,7 @@ class constants$169 {
     static final MemorySegment H4_PACKAGE$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("hdf");
     static final MemorySegment H4_PACKAGE_BUGREPORT$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("help@hdfgroup.org");
     static final MemorySegment H4_PACKAGE_NAME$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("HDF");
-    static final MemorySegment H4_PACKAGE_STRING$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("HDF 4.2.15-post0");
+    static final MemorySegment H4_PACKAGE_STRING$SEGMENT = RuntimeHelper.CONSTANT_ALLOCATOR.allocateUtf8String("HDF 4.2.17-1");
 }
 
 

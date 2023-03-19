@@ -14,7 +14,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import test.util.oldTestDir
+import test.util.testData
 import test.util.testFilesIn
 import java.io.File
 import java.io.RandomAccessFile
@@ -30,22 +30,22 @@ class NetchdfTest {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream3 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf3")
+                testFilesIn(testData + "devcdm/netcdf3")
                     .build()
 
             val stream4 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                testFilesIn(testData + "devcdm/netcdf4")
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .build()
 
             val moar3 =
-                testFilesIn(oldTestDir + "formats/netcdf3")
+                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .withRecursion()
                     .build()
 
             val moar4 =
-            testFilesIn(oldTestDir + "formats/netcdf4")
+            testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
                     .withRecursion()
@@ -98,7 +98,7 @@ class NetchdfTest {
 
     // @Test
     fun tst_grps() {
-        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4/tst_grps.nc4")
+        compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
     }
 
     /* testNestedStructure
@@ -120,13 +120,13 @@ class NetchdfTest {
      */
     @Test
     fun testNestedStructure() {
-        compareCdlWithClib("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
+        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
     }
 
     @Test
     @Disabled
     fun hdfeos() {
-        compareCdlWithClib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5/structmetadata_eos.h5")
+        compareCdlWithClib(testData + "devcdm/hdfeos5/structmetadata_eos.h5")
     }
 
     /*structmetadata_eos.h5
@@ -144,7 +144,7 @@ nc_inq_var return -101 = NetCDF: HDF error
     @Test
     // @Disabled
     fun compoundAttributeTest() {
-        compareCdlWithClib("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
+        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }
     /*snake@jlc:~/dev/github/cdm-kotlin$ ncdump -h /media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc
 netcdf compound-attribute-test {
@@ -229,13 +229,13 @@ h5dump
 
     @Test
     fun testOneCdl() {
-        compareCdlWithClib("/media/twobee/netch/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
+        compareCdlWithClib(testData + "netchdf/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
     }
 
     @Test
     fun missingChunks() {
         readNetchdfData(
-            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/files/xma022032.nc",
+            testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc",
             "/xma/dialoop_back"
         )
     }
@@ -243,7 +243,7 @@ h5dump
     @Test
     fun hasMissing() {
         val filename =
-            "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+            testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
         readNetchdfData(filename, "CMI", Section(":, :"))
         readNetchdfData(filename, "DQF", Section(":, :"))
     }

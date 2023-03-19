@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
+import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
@@ -22,25 +23,25 @@ class Hdf5headerCompare {
             // 10 of 114 fail, because we compare with netcdf4 instead of hdf5 c library
 
             val moar4 =
-                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+                testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .withRecursion()
                     .build()
 
             val hdf5 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5")
+                testFilesIn(testData + "devcdm/hdf5")
                     .withRecursion()
                     .build()
 
             val moar5 =
-                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/hdf5")
+                testFilesIn(testData + "cdmUnitTest/formats/hdf5")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith(".xml") } // bug in clib
                     .withRecursion()
                     .build()
 
             val hdfeos5 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdfeos5")
+                testFilesIn(testData + "devcdm/hdfeos5")
                     .withRecursion()
                     .build()
 
@@ -51,12 +52,12 @@ class Hdf5headerCompare {
 
     @Test
     fun problem() {
-        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/dstrarr.h5")
+        compareH5andNclib(testData + "devcdm/hdf5/dstrarr.h5")
     }
 
     @Test
     fun problem2() {
-        compareH5andNclib("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/hdf5/i32be.h5")
+        compareH5andNclib(testData + "devcdm/hdf5/i32be.h5")
     }
 
     @ParameterizedTest

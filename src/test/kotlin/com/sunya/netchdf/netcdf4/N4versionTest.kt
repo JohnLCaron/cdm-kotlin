@@ -4,6 +4,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
@@ -15,12 +16,12 @@ class N4versionTest {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val stream4 =
-                testFilesIn("/home/snake/dev/github/netcdf/devcdm/core/src/test/data/netcdf4")
+                testFilesIn(testData + "devcdm/netcdf4")
                     .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
                     .build()
 
             val moar4 =
-                testFilesIn("/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4")
+                testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
                     .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
                     .withRecursion()

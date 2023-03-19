@@ -16,7 +16,7 @@ class OdlParseTest {
         @JvmStatic
         fun params(): Stream<Arguments> = Stream.of(
 /*            Arguments.of(
-                "/media/twobee/netch/hdf4/jeffmc/swath.hdf",
+                testData + "netchdf/hdf4/jeffmc/swath.hdf",
                 """
 GROUP=SwathStructure
     GROUP=SWATH_1

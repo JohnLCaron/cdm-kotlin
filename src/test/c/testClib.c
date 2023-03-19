@@ -9,7 +9,7 @@ gcc -o testClib testClib.c -lnetcdf
 #include <netcdf.h>
 
 /* This is the name of the data file we will read. */
-#define FILE_NAME "/media/twobee/netch/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5"
+#define FILE_NAME "/home/oem/testdata/netchdf/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5"
 
 /* We are reading 2D data, a 6 x 12 grid. */
 #define NX 6

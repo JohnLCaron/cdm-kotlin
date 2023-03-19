@@ -20,24 +20,24 @@ dpkg -L libhdf5-dev
  /usr/include/hdf5/serial/hdf5.h
  /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
 
-cd /home/snake/install/jextract-19/bin
+cd /home/oem/install/jextract-19/bin
 
-netcdf library version 4.8.1 of Sep 29 2021 09:36:14
+netcdf library version 4.9.2-development of Mar 19 2023 10:42:31
 ./jextract --source \
     --header-class-name netcdf_h \
     --target-package sunya.cdm.netcdf4.ffm \
     -I /usr/include/netcdf.h \
     -l /usr/lib/x86_64-linux-gnu/libnetcdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
+    --output /home/oem/dev/github/cdm-kotlin/src/main/java \
     /usr/include/netcdf.h
 
 ./jextract --source \
     --header-class-name netcdf_h \
     --target-package com.sunya.netchdf.netcdfClib.ffm \
-    -I /home/snake/install/netcdf4/include/netcdf.h \
-    -l /home/snake/install/netcdf4/lib/libnetcdf.so \
-    --output /home/snake/dev/github/cdm-kotlin/src/main/java \
-    /home/snake/install/netcdf4/include/netcdf.h
+    -I /home/oem/install/netcdf4/include/netcdf.h \
+    -l /home/oem/install/netcdf4/lib/libnetcdf.so \
+    --output /home/oem/dev/github/cdm-kotlin/src/main/java \
+    /home/oem/install/netcdf4/include/netcdf.h
  */
 
 class NetcdfClibFile(val filename: String) : Iosp, Netchdf {

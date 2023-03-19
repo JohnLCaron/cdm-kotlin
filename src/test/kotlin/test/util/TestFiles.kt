@@ -7,14 +7,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Stream
 
-const val coreLocalDir = "../core/src/test/data/"
-const val coreLocalNetcdf3Dir = "../core/src/test/data/netcdf3/"
-const val coreLocalNetcdf4Dir = "../core/src/test/data/netcdf4/"
-const val datasetLocalDir = "../dataset/src/test/data/"
-const val datasetLocalNcmlDir = "../dataset/src/test/data/ncml/"
-const val gribLocalDir = "../grib/src/test/data/"
-const val extraTestDir = "/home/snake/tmp/testData/"
-const val oldTestDir = "/media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/"
+const val testData = "/home/oem/testdata/"
 
 fun testFilesIn(dirPath: String): TestFiles.StreamBuilder {
     return TestFiles.StreamBuilder(dirPath)

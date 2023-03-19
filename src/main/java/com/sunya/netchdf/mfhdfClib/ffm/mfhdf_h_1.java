@@ -9,17 +9,6 @@ import java.lang.foreign.*;
 import static java.lang.foreign.ValueLayout.*;
  class mfhdf_h_1 {
 
-    public static MethodHandle strcspn$MH() {
-        return RuntimeHelper.requireNonNull(constants$43.strcspn$MH,"strcspn");
-    }
-    public static long strcspn ( Addressable __s,  Addressable __reject) {
-        var mh$ = strcspn$MH();
-        try {
-            return (long)mh$.invokeExact(__s, __reject);
-        } catch (Throwable ex$) {
-            throw new AssertionError("should not reach here", ex$);
-        }
-    }
     public static MethodHandle strspn$MH() {
         return RuntimeHelper.requireNonNull(constants$43.strspn$MH,"strspn");
     }
@@ -7219,6 +7208,17 @@ import static java.lang.foreign.ValueLayout.*;
         var mh$ = VSnattrs$MH();
         try {
             return (int)mh$.invokeExact(vsid);
+        } catch (Throwable ex$) {
+            throw new AssertionError("should not reach here", ex$);
+        }
+    }
+    public static MethodHandle VSfnattrs$MH() {
+        return RuntimeHelper.requireNonNull(constants$132.VSfnattrs$MH,"VSfnattrs");
+    }
+    public static int VSfnattrs ( int vsid,  int findex) {
+        var mh$ = VSfnattrs$MH();
+        try {
+            return (int)mh$.invokeExact(vsid, findex);
         } catch (Throwable ex$) {
             throw new AssertionError("should not reach here", ex$);
         }
