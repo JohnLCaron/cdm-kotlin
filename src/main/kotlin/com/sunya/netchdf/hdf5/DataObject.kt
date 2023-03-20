@@ -7,7 +7,7 @@ import java.util.*
 
 // "Data Object Header" Level 2A
 @Throws(IOException::class)
-fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
+internal fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
     if (debugFlow) println("readDataObject= $name")
     val startPos = this.getFileOffset(address)
     val state = OpenFileState( startPos, ByteOrder.LITTLE_ENDIAN)
@@ -53,7 +53,7 @@ fun H5builder.readDataObject(address: Long, name: String?) : DataObject? {
     }
 }
 
-class DataObject(
+internal class DataObject(
     val address : Long, // aka object id : obviously unique
     var name: String?, // may be null, may not be unique
     val messages : List<MessageHeader>

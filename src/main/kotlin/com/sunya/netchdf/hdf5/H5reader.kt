@@ -11,7 +11,7 @@ import java.nio.ByteOrder
 private val debugChunkingDetail = false
 private val debugChunking = false
 
-// Handles reading attributes and regular layout Variables (eg contiguous, maybe compact)
+// Handles reading attributes and non-chunked Variables
 internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
     if (dc.mds.type == DataspaceType.Null) {
         return ArrayString(intArrayOf(), listOf())
@@ -47,7 +47,6 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
 }
 
 // handles datatypes that are not compound or vlen or filtered
-// H5tiledLayout seems to be ~ 6/5 faster than readChunkedDataNew for reversed chunk size
 @Throws(IOException::class)
 internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo): ArrayTyped<*> {
     val sizeBytes = layout.totalNelems * layout.elemSize
@@ -63,10 +62,6 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
         raf.readIntoByteBufferDirect(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
         count++
         if (debugChunkingDetail and (count < 20)) println("oldchunk = $chunk")
-    }
-    if (debugChunkingDetail or debugChunking) {
-        if (layout is H5tiledLayout)
-            println(" readNonHeapData $count dataTransfers, nodes: readNodes = ${layout.readNodes()}, dataChunks = ${layout.readChunks()}")
     }
     bb.position(0)
     bb.limit(bb.capacity())
@@ -208,21 +203,6 @@ internal fun H5builder.readVlenData(dc: DataContainer, layout : Layout, wantedSe
             }
         }
         return ArrayVlen(wantedSection.shape, listOfArrays.toList(), readDatatype)
-    }
-}
-
-// LOOK is this needed?
-internal class H5StructureMember(name: String, datatype : Datatype, offset: Int, dims : IntArray,
-                                 val hdfType: Datatype5, val lamda: ((Long) -> String))
-    : StructureMember(name, datatype, offset, dims) {
-
-    override fun value(sdata : ArrayStructureData.StructureData) : Any {
-        if (hdfType == Datatype5.Reference) {
-            val offset = sdata.offset + this.offset
-            val reference = sdata.bb.getLong(offset)
-            return lamda(reference)
-        }
-        return super.value(sdata)
     }
 }
 

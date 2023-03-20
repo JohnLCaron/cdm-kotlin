@@ -72,7 +72,7 @@ class H4compareHC {
                     .withRecursion()
                     .addNameFilter { name -> !name.endsWith("sst.coralreef.fields.50km.n14.20010106.hdf") }
                     .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf") }
+                    .addNameFilter { name -> !name.endsWith("closest_chlora.hdf") }
                     .addNameFilter { name -> !name.endsWith(".ncml") }
                     .addNameFilter { name -> !name.endsWith(".xml") }
                     .addNameFilter { name -> !name.endsWith(".pdf") }

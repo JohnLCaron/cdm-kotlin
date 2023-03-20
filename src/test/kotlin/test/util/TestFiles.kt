@@ -7,7 +7,7 @@ import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.stream.Stream
 
-const val testData = "/home/oem/testdata/"
+const val testData = "/home/all/testdata/"
 
 fun testFilesIn(dirPath: String): TestFiles.StreamBuilder {
     return TestFiles.StreamBuilder(dirPath)

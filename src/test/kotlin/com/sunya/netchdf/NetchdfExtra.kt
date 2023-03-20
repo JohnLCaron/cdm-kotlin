@@ -22,6 +22,7 @@ class NetchdfExtra {
                     .withRecursion()
                     // exclude hdf4 until we fix the core dump in the C library
                     .withPathFilter { p -> !(p.toString().contains("hdf4") or p.toString().contains("exclude"))}
+                    .addNameFilter { name -> !name.endsWith("hdf") } // core dump
                     .addNameFilter { name -> !name.endsWith(".cdl") }
                     .addNameFilter { name -> !name.endsWith(".jpg") }
                     .addNameFilter { name -> !name.endsWith(".gif") }
@@ -57,10 +58,16 @@ class NetchdfExtra {
             // , "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
     }
 
-    // @Test
-    fun problemData() { // causing seg fault on NClib
-        readNetchdfData(testData + "netchdf/signell/his_20090306.nc")
+    @Test
+    fun testIgnored() { // causing seg fault on NClib
+        compareCdlWithClib(testData + "netchdf/shuh/A-A-2007-06-25-040000-g1.h5m")
             // "ocean_time", null, true)
+    }
+
+    @Test
+    fun testProblem() { // causing seg fault on NClib
+        compareCdlWithClib(testData + "netchdf/manke/threddstest/GOMUD-2010.3.391.3Dshort.nc")
+        // "ocean_time", null, true)
     }
 
     /*

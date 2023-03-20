@@ -764,7 +764,7 @@ data class SharedMessage(val address: Long, val nindices: Int) : MessageHeader(M
 
 // Level 2A2 - Data Object Header Messages
 // “shared message” encoding
-fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): DataObject {
+internal fun H5builder.getSharedDataObject(state : OpenFileState, mtype: MessageType): DataObject {
     val sharedVersion = raf.readByte(state).toInt()
     val sharedType = raf.readByte(state).toInt()
     if (sharedVersion == 1) {

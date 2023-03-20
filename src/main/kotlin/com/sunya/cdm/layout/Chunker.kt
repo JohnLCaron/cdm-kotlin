@@ -4,7 +4,7 @@ import com.sunya.cdm.api.Datatype
 import java.nio.ByteBuffer
 
 /**
- * from iosp.IndexChunker
+ * Originally from iosp.IndexChunker
  * Finds contiguous chunks of data to copy from dataChunk to destination
  * The iteration is monotonic in both src and dest positions.
 
@@ -89,9 +89,10 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
 
+    // transfer from src to dst buffer, using my computed chunks
     fun transfer(src : ByteBuffer, dst : ByteBuffer) {
         while (this.hasNext()) {
-            val chunk = this.next()
+            val chunk : TransferChunk = this.next()
             src.position(this.elemSize * chunk.srcElem.toInt())
             dst.position(this.elemSize * chunk.destElem.toInt())
             // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -105,6 +106,7 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         }
     }
 
+    // transfer fillValue to dst buffer, using my computed chunks
     internal fun transferMissing(fillValue : Any?, datatype : Datatype, dst : ByteBuffer) {
         if (fillValue == null) {
             // could use some default, but 0 is pretty good

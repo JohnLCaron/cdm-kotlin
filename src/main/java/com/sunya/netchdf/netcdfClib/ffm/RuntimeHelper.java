@@ -37,7 +37,7 @@ final class RuntimeHelper {
             (size, align) -> MemorySegment.allocateNative(size, align, MemorySession.openImplicit());
 
     static {
-        System.load("/home/oem/install/netcdf4/lib/libnetcdf.so");
+        System.load("/home/stormy/install/netcdf4/lib/libnetcdf.so");
         SymbolLookup loaderLookup = SymbolLookup.loaderLookup();
         SYMBOL_LOOKUP = name -> loaderLookup.lookup(name).or(() -> LINKER.defaultLookup().lookup(name));
     }

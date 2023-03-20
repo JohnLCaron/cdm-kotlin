@@ -236,7 +236,7 @@ class H5builder(
      *   the DataObject doesnt know its name. Because its name is free to be something else. Cause thats how we roll.
      */
     @Throws(IOException::class)
-    fun getDataObject(address: Long, name: String?): DataObject? {
+    internal fun getDataObject(address: Long, name: String?): DataObject? {
         // find it
         var dobj = dataObjectMap[address]
         if (dobj != null) {

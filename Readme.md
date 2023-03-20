@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: Mar 14, 2023_
+_last updated: Mar 20, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -27,8 +27,8 @@ and keep bug free, with implication for memory safety and security. They require
 toolchains. Shifts in funding could wipe out much of the institutional knowledge needed to maintain them.
 
 The HDF file formats are overly complicated, which impacts code complexity and clarity. The data structures do not
-always map to a user understandable data model. Semantics are left to the whim of the data-writers to document (or not). 
-While this problem isn't specific to HDF file users, its exacerbated by a "group of messages" design approach. Our 
+always map to a user understandable data model. Semantics are left to data-writers to document (or not). 
+While this problem isn't specific to HDF file users, it is exacerbated by a "group of messages" design approach. Our 
 library tries to ameliorate these problems for non-expert readers.
 
 The HDF4 C library is a curious hodgepodge of disjointed APIs. Only some of the APIs needed to fully examine an HDF4 
@@ -41,10 +41,15 @@ conversions, and arguably its impossible to process HDF-EOS without them. So the
 library for data access only is less clear. For now, we will provide a "best-effort" effort to expose the internal 
 contents of the file.
 
+Currently, the Netcdf-4 library is not thread safe, even when operating on different files.
+The HDF5 library can be built with MPI-IO for parallel file systems. The serial HDF5 library is apparently thread safe 
+but does not allow concurrent reading (not yet tested). The HDF4 library is not thread safe. These are serious 
+limitations for high performance, scalable applications.
+
 #### Why kotlin?
 
-Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects, 
-with many new features for safer and more concise code. It is a clear improvement over Java, without giving
+Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects. 
+It has many new features for safer and more concise code, and is a clear improvement over Java, without giving
 up any of Java's strengths. Kotlin will attract the next generation of serious open-source developers, and 
 hopefully some of them will be willing to keep this library working into the unforeseeable future.
 
@@ -59,15 +64,15 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 ### Testing
 
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C and HDF4 C libraries. 
-With these tools we have a good chance of keeping on par with the reference libraries.
+With these tools we can check that our code give the same results as the reference libraries.
 
 ### Scope
 
-We do not plan to provide write capabilities. 
+We have the goal to give read access to all the content in HDF5, HDF4 and HDF-EOS files. 
 
-The Netcdf-4 library is not tested against HDF5 files that are not written with the Netcdf-4 library. Similarly, 
-it provides access to only the HDF4 files using the SDS API. We have the goal to give access to all the content 
-in HDF5, HDF4 and HDF-EOS files.
+The library will be thread-safe for reading multiple files.
+
+We do not plan to provide write capabilities.
 
 ### Data Model notes
 
