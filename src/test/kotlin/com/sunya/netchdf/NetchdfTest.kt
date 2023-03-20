@@ -51,7 +51,7 @@ class NetchdfTest {
                     .withRecursion()
                     .build()
 
-            // return moar3
+            // return stream4
             return Stream.of(stream3, stream4, moar3, moar4).flatMap { i -> i };
         }
 
@@ -62,8 +62,9 @@ class NetchdfTest {
         }
 
         var countVariables = 0
+        var showDataRead = false
         var showData = false
-        var showFailedData = false
+        var showFailedData = true
         var showCdl = false
     }
 
@@ -264,8 +265,21 @@ h5dump
 
     @ParameterizedTest
     @MethodSource("params")
+    fun testShowNetchdfHeader(filename: String) {
+        showNetchdfHeader(filename, null)
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("params")
     fun testCompareCdlWithClib(filename: String) {
         compareCdlWithClib(filename)
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testReadNetchdfData(filename: String) {
+        readNetchdfData(filename, null)
     }
 
     @ParameterizedTest
@@ -297,13 +311,13 @@ fun showNcHeader(filename: String, varname: String? = null, section: Section? = 
 }
 
 fun readNetchdfData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
-    println("=============================================================")
-    println(filename)
+    // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
             println("*** not a netchdf file = $filename")
             return
         }
+        println("--- ${myfile.type()} $filename ")
         readMyData(myfile,varname, section, showCdl)
     }
 }
@@ -392,10 +406,10 @@ fun readOneVar(myvar: Variable, myfile: Iosp, section: Section?) {
     val section = Section.fill(section, myvar.shape)
     val nbytes = section.size() * myvar.datatype.size
     if (nbytes > maxBytes) {
-        println(" * ${myvar.fullname()} read too big: ${nbytes} > $maxBytes")
+        if (NetchdfTest.showDataRead) println(" * ${myvar.fullname()} read too big: ${nbytes} > $maxBytes")
     } else {
         val mydata = myfile.readArrayData(myvar, section)
-        println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
+        if (NetchdfTest.showDataRead) println(" ${myvar.datatype} ${myvar.fullname()}${myvar.shape.contentToString()} = " +
                     "${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems" )
         if (myvar.datatype == Datatype.CHAR) {
             testCharShape(myvar.shape, mydata.shape)
@@ -432,13 +446,13 @@ fun readMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
     val middleSection = Section(middleRanges)
     val nbytes = middleSection.size() * myvar.datatype.size
     if (nbytes > maxBytes) {
-        println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
+        if (NetchdfTest.showDataRead) println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
         readMiddleSection(myfile, myvar, middleSection.shape)
         return
     }
 
     val mydata = myfile.readArrayData(myvar, middleSection)
-    println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems")
+    if (NetchdfTest.showDataRead) println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${computeSize(mydata.shape)} elems")
     if (myvar.datatype == Datatype.CHAR) {
         testCharShape(middleSection.shape, mydata.shape)
     } else {

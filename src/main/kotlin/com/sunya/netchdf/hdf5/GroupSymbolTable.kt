@@ -5,10 +5,10 @@ import com.sunya.cdm.iosp.OpenFileState
 import java.nio.ByteOrder
 
 /** Wraps a BTree1New, when its used to store symbol table nodes for GroupOld. */
-class GroupSymbolTable(val btreeAddress : Long) {
+internal class GroupSymbolTable(val btreeAddress : Long) {
 
     fun symbolTableEntries(h5: H5builder): Iterable<SymbolTableEntry> {
-        val btree = BTree1New(h5, btreeAddress, 0)
+        val btree = BTree1(h5, btreeAddress, 0)
         val symbols = mutableListOf<SymbolTableEntry>()
         btree.readGroupEntries().forEach {
             readSymbolTableNode(h5, it.childAddress, symbols)

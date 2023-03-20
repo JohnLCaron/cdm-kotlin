@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.CompoundTypedef
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
@@ -8,8 +9,9 @@ import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 
-class H5chunkReader(val h5 : H5builder) {
+internal class H5chunkReader(val h5 : H5builder) {
 
     private val debugChunkingDetail = false
     private val debugChunking = false
@@ -18,17 +20,6 @@ class H5chunkReader(val h5 : H5builder) {
     internal fun readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
         val vinfo = v2.spObject as DataContainerVariable
         val h5type = vinfo.h5type
-
-        if ((h5type.hdfType == Datatype5.Vlen) or (h5type.hdfType == Datatype5.Compound)) {
-            val layout = if (vinfo.mfp != null) H5tiledLayoutBB(h5, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-            else H5tiledLayout(h5, v2, wantSection, v2.datatype)
-            when (h5type.hdfType) {
-                Datatype5.Vlen -> return h5.readVlenData(vinfo, layout, wantSection)
-                Datatype5.Compound -> return h5.readCompoundData(vinfo, layout, wantSection)
-                // Datatype5.Reference -> return readReferenceData(h5type, layout, wantSection)
-                else -> { } // fall through
-            }
-        }
 
         val elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
         val datatype = vinfo.h5type.datatype(h5)
@@ -47,8 +38,8 @@ class H5chunkReader(val h5 : H5builder) {
         val fill = vinfo.fillValue as Short
         repeat(wantSpace.totalElements.toInt()) { bb.putShort(fill) } // performance ?? */
 
-        val btreeNew =  BTree1New(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
-        val tiledData = TiledData(btreeNew)
+        val btreeNew =  BTree1(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
+        val tiledData = TiledH5Data(btreeNew)
         val filters = H5filters(v2.name, vinfo.mfp, vinfo.h5type.endian)
         if (debugChunking) println(" ${tiledData.tiling}")
 
@@ -74,8 +65,19 @@ class H5chunkReader(val h5 : H5builder) {
 
         bb.position(0)
         bb.limit(bb.capacity())
-
+        bb.order(vinfo.h5type.endian)
         val shape = wantSpace.nelems
+
+        if (h5type.hdfType == Datatype5.Compound) {
+            val members = (datatype.typedef as CompoundTypedef).members
+            val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
+            return h5.processChunkedCompound(sdataArray, h5type.endian)
+        }
+
+        if (h5type.hdfType == Datatype5.Vlen) {
+            return h5.processChunkedVlen(h5type, shape, bb, wantSpace.totalElements.toInt(), elemSize)
+        }
+
         val result = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
             Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
@@ -97,5 +99,65 @@ class H5chunkReader(val h5 : H5builder) {
             return ArrayString(shape, h5.convertReferencesToDataObjectName(result as ArrayLong))
         }
         return result
+    }
+}
+
+// The structure data is not on the heap, but the variable length members (vlen, string) are
+internal fun H5builder.processChunkedCompound(sdataArray : ArrayStructureData, endian : ByteOrder) : ArrayStructureData {
+    val h5heap = H5heap(this)
+    sdataArray.putStringsOnHeap {  offset -> h5heap.readHeapString(sdataArray.bb, offset)!! }
+
+    sdataArray.putVlensOnHeap { member, offset ->
+        val listOfArrays = mutableListOf<Array<*>>()
+        for (i in 0 until member.nelems) {
+            val heapId = h5heap.readHeapIdentifier(sdataArray.bb, offset)
+            val vlenArray = h5heap.getHeapDataArray(heapId, member.datatype, endian)
+            // println("  ${vlenArray.contentToString()}")
+            listOfArrays.add(vlenArray)
+        }
+        ArrayVlen(member.dims, listOfArrays, member.datatype)
+    }
+
+    return sdataArray
+}
+
+internal fun H5builder.processChunkedVlen(h5type: H5TypeInfo, shape: IntArray, bb: ByteBuffer, nelems: Int, elemSize : Int): ArrayTyped<*> {
+    val h5heap = H5heap(this)
+
+    if (h5type.isVString) {
+        val sarray = mutableListOf<String>()
+        for (i in 0 until nelems) {
+            val sval = h5heap.readHeapString(bb, i * elemSize)
+            sarray.add(sval ?: "")
+        }
+        return ArrayString(shape, sarray)
+
+    } else {
+        val base = h5type.base!!
+        if (base.hdfType == Datatype5.Reference) {
+            val refsList = mutableListOf<String>()
+            for (i in 0 until nelems) {
+                val heapId = h5heap.readHeapIdentifier(bb, i * elemSize)
+                val vlenArray = h5heap.getHeapDataArray(heapId, Datatype.LONG, base.endian)
+                // LOOK require vlenArray is Array<Long>
+                val refsArray = this.convertReferencesToDataObjectName(vlenArray as Array<Long>)
+                for (s in refsArray) {
+                    refsList.add(s)
+                }
+            }
+            return ArrayString(shape, refsList)
+        }
+
+        // general case is to read an array of vlen objects
+        // each vlen generates an Array of type baseType
+        val listOfArrays = mutableListOf<Array<*>>()
+        val readDatatype = base.datatype(this)
+        for (i in 0 until nelems) {
+            val heapId = h5heap.readHeapIdentifier(bb, i * elemSize)
+            val vlenArray = h5heap.getHeapDataArray(heapId, readDatatype, base.endian)
+            // LOOK require vlenArray is Array<T>
+            listOfArrays.add(vlenArray)
+        }
+        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
     }
 }

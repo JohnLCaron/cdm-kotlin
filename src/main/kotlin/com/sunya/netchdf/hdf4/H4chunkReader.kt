@@ -16,20 +16,6 @@ class H4chunkReader(val h4 : H4builder) {
 
     internal fun readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
         val vinfo = v2.spObject as Vinfo
-
-        /*
-        val h5type = vinfo.h5type
-        if ((h5type.hdfType == Datatype5.Vlen) or (h5type.hdfType == Datatype5.Compound)) {
-            val layout = if (vinfo.mfp != null) H5tiledLayoutBB(h5, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-            else H5tiledLayout(h5, v2, wantSection, v2.datatype)
-            when (h5type.hdfType) {
-                Datatype5.Vlen -> return h5.readVlenData(vinfo, layout, wantSection)
-                Datatype5.Compound -> return h5.readCompoundData(vinfo, layout, wantSection)
-                // Datatype5.Reference -> return readReferenceData(h5type, layout, wantSection)
-                else -> { } // fall through
-            }
-        } */
-
         val elemSize = vinfo.elemSize
         val datatype = v2.datatype
 

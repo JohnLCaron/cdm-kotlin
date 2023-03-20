@@ -1,15 +1,12 @@
 package com.sunya.netchdf.hdf5
 
-import com.google.common.base.Preconditions
 import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.ArraySingle
-import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.*
 import java.io.IOException
-import java.nio.ByteBuffer
 
 /**
  * @param strict true = make it agree with nclib if possible
@@ -41,17 +38,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
         }
 
         try {
-            if (vinfo.mfp != null) { // filtered
-                Preconditions.checkArgument(vinfo.isChunked)
-                if (vinfo.h5type.isVString) {
-                    val layout = H5tiledLayoutBB(header, v2, wantSection, vinfo.mfp.filters, vinfo.h5type.endian)
-                    return readFilteredStringData(layout, wantSection)
-                } else {
-                    return H5chunkReader(header).readChunkedDataNew(v2, wantSection)
-                }
-            }
-
-            if (vinfo.isChunked) {
+             if (vinfo.isChunked) {
                 return H5chunkReader(header).readChunkedDataNew(v2, wantSection)
             } else {
                 return header.readRegularData(vinfo, wantSection)
@@ -60,23 +47,6 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
             println("failed to read ${v2.name}, $ex")
             throw ex
         }
-    }
-
-    @Throws(IOException::class)
-    private fun readFilteredStringData(layout: H5tiledLayoutBB, wantSection : Section): ArrayString {
-        val sa = mutableListOf<String>()
-        val h5heap = H5heap(header)
-        while (layout.hasNext()) {
-            val chunk = layout.next()
-            val bb: ByteBuffer = chunk.byteBuffer
-            var destPos = chunk.destElem().toInt()
-            for (i in 0 until chunk.nelems()) { // 16 byte "heap ids"
-                // TODO does this handle section correctly ??
-                val s = h5heap.readHeapString(bb, (chunk.srcElem().toInt() + i) * 16)
-                sa.add(s!!)
-            }
-        }
-        return ArrayString(wantSection.shape, sa)
     }
 
     companion object {

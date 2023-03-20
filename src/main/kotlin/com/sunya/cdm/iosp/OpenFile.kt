@@ -2,6 +2,7 @@ package com.sunya.cdm.iosp
 
 import java.io.Closeable
 import java.io.EOFException
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.channels.FileChannel
@@ -33,14 +34,20 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         if (state.pos >= size) {
             throw EOFException("Tried to read past EOF ${fileChannel.size()} at pos ${state.pos} location $location")
         }
-        val nread = fileChannel.read(dst, state.pos)
-        if (nread != dst.capacity()) {
-            throw EOFException("Only read $nread bytes of wanted ${dst.capacity()} bytes; starting at pos ${state.pos} EOF=${fileChannel.size()}")
+        try {
+            val nread = fileChannel.read(dst, state.pos)
+            if (nread != dst.capacity()) {
+                throw EOFException("Only read $nread bytes of wanted ${dst.capacity()} bytes; starting at pos ${state.pos} EOF=${fileChannel.size()}")
+            }
+            dst.flip()
+            dst.order(state.byteOrder)
+            state.pos += nread
+            return dst
+        } catch (ioe: IOException) {
+            println("Got error on $location")
+            ioe.printStackTrace()
+            throw ioe
         }
-        dst.flip()
-        dst.order(state.byteOrder)
-        state.pos += nread
-        return dst
     }
 
     fun readIntoByteBufferDirect(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
@@ -54,12 +61,18 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         // this is what fileChannel.read uses to read into dst; so limit and pos are getting munged
         dst.limit(dstPos + nbytes)
         dst.position(dstPos)
-        val nread =  fileChannel.read(dst, state.pos)
-        if (nread != nbytes) {
-            throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
+        try {
+            val nread = fileChannel.read(dst, state.pos)
+            if (nread != nbytes) {
+                throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
+            }
+            state.pos += nread
+            return nread
+        } catch ( ioe : IOException) {
+            println("Got error on $location")
+            ioe.printStackTrace()
+            throw ioe
         }
-        state.pos += nread
-        return nread
     }
 
     override fun readIntoByteArray(state : OpenFileState, dest : ByteArray, destPos : Int, nbytes : Int) : Int {

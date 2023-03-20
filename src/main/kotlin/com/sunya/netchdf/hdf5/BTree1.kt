@@ -6,7 +6,7 @@ import java.nio.ByteOrder
 
 /**
  * This holds the chunked data storage.
- * level 1A
+ * level 1A1
  * A B-tree, version 1, used for data (node type 1)
  *
  * Version 1 B-trees in HDF5 files are a B-link tree, in which the sibling nodes at a particular level
@@ -17,8 +17,7 @@ import java.nio.ByteOrder
  * The pointers in internal nodes point to sub-trees while the pointers in leaf nodes point to symbol nodes and
  * raw data chunks. Aside from that difference, internal nodes and leaf nodes are identical.
  */
-// replaces BTree1 and BTreeData
-class BTree1New(
+internal class BTree1(
     val h5: H5builder,
     val rootNodeAddress: Long,
     val nodeType : Int,  // 0 = group/symbol table, 1 = raw data chunks
@@ -53,7 +52,7 @@ class BTree1New(
     }
 
     // Btree nodes Level 1A1 - Version 1 B-trees
-    inner class Node(val address: Long, val parent: BTree1New.Node?) {
+    inner class Node(val address: Long, val parent: BTree1.Node?) {
         val level: Int
         val nentries: Int
         private val leftAddress: Long

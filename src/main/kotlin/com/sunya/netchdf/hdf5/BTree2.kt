@@ -8,10 +8,9 @@ import java.util.*
 
 /**
  * Level 1A2
- * Used in readGroupNew( type 5 and 6), readAttributesFromInfoMessage(), FractalHeap.
- * DHeapId(type 1,2,3,4)
+ * Used in readGroupNew( type 5 and 6), readAttributesFromInfoMessage(), FractalHeap, and DHeapId(type 1,2,3,4)
  */
-class BTree2(h5: H5builder, owner: String, address: Long) {
+internal class BTree2(h5: H5builder, owner: String, address: Long) {
     val btreeType: Int
     private val nodeSize: Int // size in bytes of btree nodes
     private val recordSize: Short// size in bytes of btree records

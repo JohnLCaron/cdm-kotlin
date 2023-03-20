@@ -9,7 +9,7 @@ import java.nio.ByteOrder
 import java.util.*
 
 /** Level 1G - Fractal Heap  */
-class FractalHeap(h5: H5builder, forWho: String, address: Long) {
+internal class FractalHeap(h5: H5builder, forWho: String, address: Long) {
     // level 1E "Fractal Heap" used for both Global and Local heaps in 1.8.0+
     /*
    * 1) the root indirect block knows how many rows it has from the header, which i can divide into

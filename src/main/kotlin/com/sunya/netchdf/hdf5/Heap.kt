@@ -17,7 +17,7 @@ internal class H5heap(val header: H5builder) {
     /**
      * Fetch a Vlen data array.
      *
-     * @param globalHeapIdAddress address of the heapId, used to get the String out of the heap
+     * @param globalHeapIdAddress address of the heapId, used to get the data array out of the heap
      * @param datatype type of data
      * @param endian byteOrder of the data (0 = BE, 1 = LE)
      * @return the Array read from the heap

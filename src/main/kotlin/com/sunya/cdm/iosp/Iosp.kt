@@ -14,4 +14,5 @@ interface Iosp {
     @Throws(IOException::class, InvalidRangeException::class)
     fun readArrayData(v2: Variable, section: Section? = null) : ArrayTyped<*>
 
+    // fun chunkIterator(v2: Variable, section: Section? = null) : Iterator<Pair<ArrayTyped<*>, Section>>
 }
