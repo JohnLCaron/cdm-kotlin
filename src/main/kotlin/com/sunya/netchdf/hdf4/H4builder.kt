@@ -346,8 +346,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boo
 
         // have to use the variables to figure out the dimensions. barf
         if (dimNames != null && !dimNames.isEmpty()) {
-            if (dimSDD.shape.size != dimNames.size)
-                println()
             require(dimSDD.shape.size == dimNames.size)
             repeat(dimSDD.shape.size) {
                 val dim = Dimension(dimNames[it], dimSDD.shape[it])

@@ -19,6 +19,7 @@ cd /home/oem/install/jextract-19/bin
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
+import com.sunya.cdm.iosp.ArraySection
 import com.sunya.cdm.iosp.Iosp
 
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
@@ -67,6 +68,10 @@ class Hdf4ClibFile(val filename: String) : Iosp, Netchdf {
             return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
         }
         throw RuntimeException("cant read ${v2.name}")
+    }
+
+    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+        return null
     }
 
     companion object {

@@ -286,6 +286,10 @@ class NetcdfClibFile(val filename: String) : Iosp, Netchdf {
             }
         }
     }
+
+    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+        return null
+    }
 }
 
 private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {

@@ -46,11 +46,11 @@ internal class H5chunkReader(val h5 : H5builder) {
         var count = 0
         var transferChunks = 0
         val state = OpenFileState(0L, vinfo.h5type.endian)
-        for (dataChunk in tiledData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
+        for (dataChunk : BTree1.DataChunkEntry in tiledData.dataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
             val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
             val chunker = Chunker(dataSection, elemSize, wantSpace)
             if (dataChunk.isMissing()) {
-                if (debugMissing) println(" ${dataChunk.show(tiledData.tiling)}")
+                if (debugMissing) println(" missing ${dataChunk.show(tiledData.tiling)}")
                 chunker.transferMissing(vinfo.fillValue, datatype, bb)
             } else {
                 if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(tiledData.tiling)}")
@@ -66,7 +66,7 @@ internal class H5chunkReader(val h5 : H5builder) {
         bb.position(0)
         bb.limit(bb.capacity())
         bb.order(vinfo.h5type.endian)
-        val shape = wantSpace.nelems
+        val shape = wantSpace.shape
 
         if (h5type.hdfType == Datatype5.Compound) {
             val members = (datatype.typedef as CompoundTypedef).members

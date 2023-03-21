@@ -5,6 +5,8 @@ import java.io.Closeable
 
 interface Netchdf : Closeable, Iosp {
     fun location() : String
-    fun cdl() : String
     fun type() : String
+    val size : Long get() = 0
+    fun rootGroup() : Group
+    fun cdl() : String
 }

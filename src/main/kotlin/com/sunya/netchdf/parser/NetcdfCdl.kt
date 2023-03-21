@@ -5,6 +5,7 @@ import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.ArrayTyped
+import com.sunya.cdm.iosp.ArraySection
 
 // A Netcdf created from CDL, no backing file store
 class NetcdfCdl(val location : String, val rootGroup : Group) : Netchdf {
@@ -12,6 +13,10 @@ class NetcdfCdl(val location : String, val rootGroup : Group) : Netchdf {
 
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         TODO("Not yet implemented")
+    }
+
+    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+        return null
     }
 
     override fun location() = location

@@ -116,3 +116,80 @@ fun unsignedShortToInt(s: Short): Int {
 fun unsignedByteToShort(b: Byte): Short {
     return java.lang.Byte.toUnsignedInt(b).toShort()
 }
+
+////////////////////////////////////////////////////////////////////////
+
+const val defaultMaxRelativeDiffFloat = 1.0e-5f
+
+/** The default maximum relative difference for floats, when comparing as doubles.  */
+const val defaultDiffFloat = 1.0e-5
+
+/**
+ * The default maximum [relative difference][.relativeDifference] that two doubles can have in
+ * order to be deemed [nearly equal][.nearlyEquals].
+ */
+const val defaultMaxRelativeDiffDouble = 1.0e-8
+
+/** The absolute difference between two floats, i.e. `|a - b|`.  */
+fun absoluteDifference(a: Float, b: Float): Float {
+    return if (java.lang.Float.compare(a, b) == 0) {
+        0f
+    } else {
+        Math.abs(a - b)
+    }
+}
+
+/** The absolute difference between two doubles, i.e. `|a - b|`.  */
+fun absoluteDifference(a: Double, b: Double): Double {
+    return if (java.lang.Double.compare(a, b) == 0) { // Shortcut: handles infinities and NaNs.
+        0.0
+    } else {
+        Math.abs(a - b)
+    }
+}
+
+/**
+ * Returns the relative difference between two numbers, i.e. `|a - b| / max(|a|, |b|)`.
+ *
+ *
+ * For cases where `a == 0`, `b == 0`, or `a` and `b` are extremely close, traditional
+ * relative difference calculation breaks down. So, in those instances, we compute the difference relative to
+ * [Float.MIN_NORMAL], i.e. `|a - b| / Float.MIN_NORMAL`.
+ *
+ * @param a first number.
+ * @param b second number.
+ * @return the relative difference.
+ * @see [The Floating-Point Guide](http://floating-point-gui.de/errors/comparison/)
+ *
+ * @see [
+ * Comparing Floating Point Numbers, 2012 Edition](https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/)
+ */
+fun relativeDifference(a: Float, b: Float): Float {
+    val absDiff: Float = absoluteDifference(a, b)
+    return if (java.lang.Float.compare(a, b) == 0) {
+        0f
+    } else {
+        val maxAbsValue = Math.max(Math.abs(a), Math.abs(b))
+        if (maxAbsValue < defaultMaxRelativeDiffFloat) absDiff else absDiff / maxAbsValue
+    }
+}
+
+fun relativeDifference(a: Double, b: Double): Double {
+    val absDiff: Double = absoluteDifference(a, b)
+    return if (java.lang.Double.compare(a, b) == 0) { // Shortcut: handles infinities and NaNs.
+        0.0
+    } else {
+        val maxAbsValue = Math.max(Math.abs(a), Math.abs(b))
+        if (maxAbsValue < defaultMaxRelativeDiffDouble) absDiff else absDiff / maxAbsValue
+    }
+}
+
+/** RelativeDifference is less than maxRelDiff.  */
+fun nearlyEquals(a: Float, b: Float, maxRelDiff: Float = defaultMaxRelativeDiffFloat): Boolean {
+    return relativeDifference(a, b) < maxRelDiff
+}
+
+/** RelativeDifference is less than maxRelDiff.  */
+fun nearlyEquals(a: Double, b: Double, maxRelDiff: Double = defaultMaxRelativeDiffDouble): Boolean {
+    return relativeDifference(a, b) < maxRelDiff
+}

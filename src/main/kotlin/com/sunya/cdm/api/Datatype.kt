@@ -57,6 +57,11 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
     val isNumeric: Boolean
         get() = (this == FLOAT) || (this == DOUBLE) || isIntegral
 
+    val isNumber: Boolean
+        get() = (this == FLOAT) || (this == DOUBLE) || (this == BYTE) || (this == INT) || (this == SHORT) ||
+                (this == LONG)
+
+
     val isUnsigned: Boolean
         get() = (this == UBYTE) || (this == USHORT) || (this == UINT) || (this == ULONG)
 

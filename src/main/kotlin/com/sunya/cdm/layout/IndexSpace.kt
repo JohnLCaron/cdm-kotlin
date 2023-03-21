@@ -9,14 +9,19 @@ import kotlin.math.min
  * A rectangular subsection of indices
  * Replaces Section for data chunk layout. no stride, negative indices are allowed.
  */
-data class IndexSpace(val start : IntArray, val nelems : IntArray) {
+data class IndexSpace(val start : IntArray, val shape : IntArray) {
     val rank = start.size
-    val totalElements = computeSize(nelems)
-    val limit by lazy { IntArray(rank) { idx -> start[idx]+ nelems[idx] - 1 } } // inclusive
-    val ranges by lazy { start.mapIndexed { idx, it -> it until it + nelems[idx] } } // inclusive
+    val totalElements = computeSize(shape)
+    val limit by lazy { IntArray(rank) { idx -> start[idx]+ shape[idx] - 1 } } // inclusive
+    val ranges by lazy { start.mapIndexed { idx, it -> it until it + shape[idx] } } // inclusive
 
     constructor(shape : IntArray) : this( IntArray(shape.size), shape) // starts at 0
     constructor(section : Section) : this( section.origin, section.shape)
+
+    fun section() : Section {
+        val useShape = if (shape.size == start.size) shape else IntArray( start.size) { shape[it] }
+        return Section(start, useShape)
+    }
 
     fun contains(pt : IntArray): Boolean {
         ranges.forEachIndexed { idx, range ->
@@ -29,7 +34,7 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
 
     fun shift(origin : IntArray): IndexSpace {
         val newOrigin = IntArray(rank) { idx -> start[idx] - origin[idx] }
-        return IndexSpace(newOrigin, nelems)
+        return IndexSpace(newOrigin, shape)
     }
 
     fun intersect(other: IndexSpace): IndexSpace {
@@ -58,7 +63,7 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
     }
 
     fun makeSection() : Section {
-        return Section(start, nelems)
+        return Section(start, shape)
     }
 
     override fun toString(): String {
@@ -70,7 +75,7 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
         if (other !is IndexSpace) return false
 
         if (!start.contentEquals(other.start)) return false
-        if (!nelems.contentEquals(other.nelems)) return false
+        if (!shape.contentEquals(other.shape)) return false
         if (rank != other.rank) return false
         if (totalElements != other.totalElements) return false
 
@@ -79,7 +84,7 @@ data class IndexSpace(val start : IntArray, val nelems : IntArray) {
 
     override fun hashCode(): Int {
         var result = start.contentHashCode()
-        result = 31 * result + nelems.contentHashCode()
+        result = 31 * result + shape.contentHashCode()
         result = 31 * result + rank
         result = 31 * result + totalElements.hashCode()
         return result

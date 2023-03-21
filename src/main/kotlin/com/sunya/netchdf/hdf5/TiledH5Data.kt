@@ -6,6 +6,7 @@ import com.sunya.cdm.layout.Tiling
 
 private const val check = true
 private const val debug = false
+private const val debugMissing = false
 
 /** wraps BTree1New to handle iterating through tiled data (aka chunked data) */
 internal class TiledH5Data(val btree1 : BTree1) {
@@ -59,7 +60,11 @@ internal class TiledH5Data(val btree1 : BTree1) {
             }
         }
         if (foundEntry == null) {
-            throw RuntimeException("wtf")
+            if (parent.level == 0) {
+                if (debugMissing) println("TiledH5Data findEntryContainingKey missing key ${key.contentToString()}")
+                return null
+            }
+            throw RuntimeException("TiledH5Data findEntryContainingKey cant find key ${key.contentToString()}")
         }
         if (parent.level == 0) {
             return if (tiling.compare(key, foundEntry.key.offsets) == 0) foundEntry else null
@@ -68,25 +73,30 @@ internal class TiledH5Data(val btree1 : BTree1) {
         return findEntryContainingKey(node, key)
     }
 
-    fun findDataChunks(wantSpace : IndexSpace) : Iterable<BTree1.DataChunkEntry> {
-        val chunks = mutableListOf<BTree1.DataChunkEntry>()
+    fun dataChunks(wantSpace : IndexSpace) = Iterable { DataChunkIterator(wantSpace) }
 
-        val tileSection = tiling.section( wantSpace) // section in tiles that we want
-        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        // println("tileSection = ${tileSection}")
+    private inner class DataChunkIterator(wantSpace : IndexSpace) : AbstractIterator<BTree1.DataChunkEntry>() {
+        val tileOdometer : Odometer
 
-        // var lastEntry : BTree1New.DataChunkEntry? = null
-        while (!tileOdometer.isDone()) {
-            val wantTile = tileOdometer.current
-            val wantKey = tiling.index(wantTile) // convert to index "keys"
-            val haveEntry = findEntryContainingKey(rootNode, wantKey)
-            val useEntry = haveEntry?: BTree1.DataChunkEntry(0, rootNode, -1, BTree1.DataChunkKey(-1, 0, wantKey), -1L)
-            chunks.add(useEntry)
-            tileOdometer.incr()
-            // if (haveEntry != null) lastEntry = haveEntry
+        init {
+            val tileSection = tiling.section(wantSpace) // section in tiles that we want
+            tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
         }
-        // println("nchunks = ${chunks.size}")
-        return chunks
+
+        override fun computeNext() {
+            if (tileOdometer.isDone()) {
+                return done()
+            } else {
+                val wantTile = tileOdometer.current
+                val wantKey = tiling.index(wantTile) // convert to index "keys"
+                val haveEntry = findEntryContainingKey(rootNode, wantKey)
+                val useEntry = haveEntry ?:
+                    // missing
+                    BTree1.DataChunkEntry(0, rootNode, -1, BTree1.DataChunkKey(-1, 0, wantKey), -1L)
+                tileOdometer.incr()
+                setNext(useEntry)
+            }
+        }
     }
 
     override fun toString(): String {

@@ -14,12 +14,12 @@ import java.nio.ByteBuffer
 class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Boolean = true)
     : AbstractIterator<TransferChunk>() {
 
-    val nelems : Int // number of elements to read at one time
+    val nelems: Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
 
-    private val srcOdometer : Odometer
-    private val dstOdometer : Odometer
-    private val incrDigit : Int
+    private val srcOdometer: Odometer
+    private val dstOdometer: Odometer
+    private val incrDigit: Int
     var transferChunks = 0
 
     init {
@@ -30,29 +30,36 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         val wantSectionShifted = intersectSpace.shift(wantSpace.start) // wantSection origin
 
         // construct odometers over source and destination index spaces
-        this.srcOdometer = Odometer(dataChunkShifted, dataChunkRaw.nelems)
-        this.dstOdometer = Odometer(wantSectionShifted, wantSpace.nelems)
+        this.srcOdometer = Odometer(dataChunkShifted, dataChunkRaw.shape)
+        this.dstOdometer = Odometer(wantSectionShifted, wantSpace.shape)
         this.totalNelems = intersectSpace.totalElements
 
         val rank = intersectSpace.rank
-        val mergeDims = countMergeDims(intersectSpace, dataChunkRaw.nelems, wantSpace.nelems, merge)
+        val mergeDims = countMergeDims(intersectSpace, dataChunkRaw.shape, wantSpace.shape, merge)
         // the first dimension to merge
         val firstDim = if (rank == mergeDims) 0 else rank - mergeDims - 1
 
         var product = 1
-        for (idx in rank-1 downTo firstDim) { product *= intersectSpace.nelems[idx] }
+        for (idx in rank - 1 downTo firstDim) {
+            product *= intersectSpace.shape[idx]
+        }
         this.nelems = product
 
         // the digit to increment when iterating
         this.incrDigit = if (firstDim == 0) 0 else firstDim - 1
     }
 
-    fun countMergeDims(intersect : IndexSpace, dataChunkShape : IntArray, dataSubsetShape : IntArray, merge : Boolean) : Int {
+    fun countMergeDims(
+        intersect: IndexSpace,
+        dataChunkShape: IntArray,
+        dataSubsetShape: IntArray,
+        merge: Boolean
+    ): Int {
         if (!merge) return 0
 
         var mergeDims = 0 // how many dimensions can be merged?
         for (idx in intersect.rank - 1 downTo 0) {
-            if ((intersect.nelems[idx] == dataChunkShape[idx]) and (intersect.nelems[idx] == dataSubsetShape[idx])) {
+            if ((intersect.shape[idx] == dataChunkShape[idx]) and (intersect.shape[idx] == dataSubsetShape[idx])) {
                 mergeDims++
             } else {
                 break
@@ -89,10 +96,11 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
 
+
     // transfer from src to dst buffer, using my computed chunks
-    fun transfer(src : ByteBuffer, dst : ByteBuffer) {
+    fun transfer(src: ByteBuffer, dst: ByteBuffer) {
         while (this.hasNext()) {
-            val chunk : TransferChunk = this.next()
+            val chunk: TransferChunk = this.next()
             src.position(this.elemSize * chunk.srcElem.toInt())
             dst.position(this.elemSize * chunk.destElem.toInt())
             // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -107,7 +115,7 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
     }
 
     // transfer fillValue to dst buffer, using my computed chunks
-    internal fun transferMissing(fillValue : Any?, datatype : Datatype, dst : ByteBuffer) {
+    internal fun transferMissing(fillValue: Any?, datatype: Datatype, dst: ByteBuffer) {
         if (fillValue == null) {
             // could use some default, but 0 is pretty good
             return
@@ -121,10 +129,12 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
                     val fill = fillValue as Byte
                     repeat(chunk.nelems) { dst.put(fill) }
                 }
+
                 Datatype.UBYTE, Datatype.ENUM1 -> {
                     val fill = fillValue as UByte
                     repeat(chunk.nelems) { dst.put(fill.toByte()) }
                 }
+
                 Datatype.SHORT -> repeat(chunk.nelems) { dst.putShort(fillValue as Short) }
                 Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort((fillValue as UShort).toShort()) }
                 Datatype.INT -> repeat(chunk.nelems) { dst.putInt(fillValue as Int) }
@@ -137,8 +147,10 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
                     val fill = fillValue as ByteBuffer
                     repeat(chunk.nelems) {
                         fill.position(0)
-                        dst.put(fill) }
+                        dst.put(fill)
+                    }
                 }
+
                 else -> throw IllegalStateException("unimplemented type= $datatype")
             }
         }
