@@ -36,6 +36,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = "hdf4   "
+    override val size : Long get() = raf.size
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
@@ -45,6 +46,10 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
         } else {
             readRegularDataArray(v2, filledSection)
         }
+    }
+
+    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+        return null
     }
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {

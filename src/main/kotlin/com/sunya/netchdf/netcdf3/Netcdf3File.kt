@@ -26,6 +26,7 @@ class Netcdf3File(val filename : String) : Iosp, Netchdf {
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = "netcdf3"
+    override val size : Long get() = raf.size
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
@@ -37,6 +38,10 @@ class Netcdf3File(val filename : String) : Iosp, Netchdf {
             LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, wantSection)
         }
         return readDataWithLayout(layout, v2, wantSection)
+    }
+
+    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+        return null
     }
 
     @Throws(IOException::class)

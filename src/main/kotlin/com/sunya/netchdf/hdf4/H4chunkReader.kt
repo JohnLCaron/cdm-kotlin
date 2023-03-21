@@ -57,7 +57,7 @@ class H4chunkReader(val h4 : H4builder) {
         bb.position(0)
         bb.limit(bb.capacity())
 
-        val shape = wantSpace.nelems
+        val shape = wantSpace.shape
         val result = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
             Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)

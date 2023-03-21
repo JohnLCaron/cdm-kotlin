@@ -69,8 +69,6 @@ internal fun H5builder.readNonHeapData(state: OpenFileState, layout: Layout, dat
     // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
     if (h5type.hdfType == Datatype5.String) {
         val extshape = IntArray(shape.size + 1) {if (it == shape.size) layout.elemSize else shape[it] }
-        if (extshape.size > 1)
-            println()
         val result = ArrayUByte(extshape, bb)
         return result.makeStringsFromBytes()
     }

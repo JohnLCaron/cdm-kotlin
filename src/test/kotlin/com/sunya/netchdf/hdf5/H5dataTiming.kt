@@ -130,10 +130,8 @@ class H5dataTiming {
 
             var size : Long = 0L
             val elapsed = measureNanoTime {
-                Hdf5File.useOld = useOld
                 val mydata = h5file.readArrayData(myvar!!, readSection)
                 size = computeSize(mydata.shape)
-                Hdf5File.useOld = false
             }.toDouble() * 1.0e-9
 
             val tookPer = size / elapsed

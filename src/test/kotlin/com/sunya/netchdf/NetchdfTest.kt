@@ -62,7 +62,7 @@ class NetchdfTest {
         }
 
         var countVariables = 0
-        var showDataRead = false
+        var showDataRead = true
         var showData = false
         var showFailedData = true
         var showCdl = false
@@ -351,17 +351,13 @@ fun compareCdlWithClib(filename: String) {
 }
 
 fun compareDataWithClib(filename: String, varname: String? = null, section: Section? = null) {
-    var size = 0.0
-    RandomAccessFile(File(filename), "r").use { raf ->
-        size = raf.getChannel().size() / 1000.0 / 1000.0
-    }
     println("=============================================================")
     openNetchdfFile(filename).use { netchdf ->
         if (netchdf == null) {
             println("*** not a netchdf file = $filename")
             return
         }
-        println("${netchdf.type()} $filename ${"%.2f".format(size)} Mbytes")
+        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
 
         if (netchdf.type().contains("hdf4")) {

@@ -34,7 +34,7 @@ class Section {
      */
     constructor(origin: IntArray, shape: IntArray) {
         require(origin.isScalar() == shape.isScalar() || origin.size == shape.size)
-        val builder = ArrayList<Range>()
+        val builder = mutableListOf<Range>()
         for (i in shape.indices) {
             if (shape[i] < 0) {
                 builder.add(Range.VLEN)
@@ -146,6 +146,11 @@ class Section {
             builder.add(range)
         }
         ranges = Collections.unmodifiableList(builder)
+    }
+
+    fun removeLast(): Section {
+        require (ranges.size > 1)
+        return Section(ranges.subList(0, ranges.size - 1))
     }
 
     /**
@@ -476,6 +481,7 @@ class Section {
      *
      * @param shape total array shape
      * @return iterator over this section
+     * LOOK what is the relationship to Odometer ??
      */
     fun getIterator(shape: IntArray): Iterator {
         return Iterator(shape)

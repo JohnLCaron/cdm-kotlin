@@ -15,6 +15,7 @@ dependencies {
     implementation(libs.guava)
     implementation(libs.microutils.logging)
     implementation("com.github.h0tk3y.betterParse:better-parse:0.4.4")
+    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.6.4")
 
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.1.0")

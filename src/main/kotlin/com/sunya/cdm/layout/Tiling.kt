@@ -9,7 +9,7 @@ package com.sunya.cdm.layout
  *  Allows to efficiently find the data chunks that cover an arbitrary section of the variable's index space.
  *
  * @param varshape the variable's shape
- * @param chunk  actual data storage has this shape. May be larger than the shape.
+ * @param chunk  actual data storage has this shape. May be larger than the shape, last dim ignored.
  */
 class Tiling(varshape: IntArray, val chunk: IntArray) {
     val rank: Int
@@ -57,7 +57,7 @@ class Tiling(varshape: IntArray, val chunk: IntArray) {
     /** Compute the minimum index of a tile, inverse of tile().
      * This will match a key in the datachunk btree, up to rank dimensions */
     fun index(tile: IntArray): IntArray {
-        return IntArray(rank) { idx-> tile[idx] * chunk[idx] }
+        return IntArray(rank) { idx -> tile[idx] * chunk[idx] }
     }
 
     /**

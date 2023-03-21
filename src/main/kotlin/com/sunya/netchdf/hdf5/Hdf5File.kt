@@ -27,6 +27,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
     override fun location() = filename
     override fun cdl() = com.sunya.cdm.api.cdl(this)
     override fun type() = header.formatType()
+    override val size : Long get() = raf.size
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
@@ -49,9 +50,27 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
         }
     }
 
-    companion object {
-        var useOld = false
-        var checkBoth = false
+    @Throws(IOException::class)
+    override fun chunkIterator(v2: Variable, section: Section?) : Iterator<ArraySection>? {
+        val wantSection = Section.fill(section, v2.shape)
+
+        val vinfo = v2.spObject as DataContainerVariable
+        if (vinfo.onlyFillValue) { // fill value only, no data
+            val single = ArraySection(ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue), wantSection)
+            return listOf(single).iterator()
+        }
+
+        try {
+            if (vinfo.isChunked) {
+                return H5chunkIterator(header, v2, wantSection)
+            } else {
+                return null
+            }
+        } catch (ex: Exception) {
+            println("failed to read ${v2.name}, $ex")
+            throw ex
+        }
     }
+
 
 }
