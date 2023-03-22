@@ -11,7 +11,7 @@ Please contact me if you'd like to help out. Especially needed are test datasets
 #### Why this library? 
 
 There is so much important scientific data stored in the NetCDF and HDF file formats, that those formats will 
-never go away. Its important that there be maintainable, independent libraries to read these files forever.
+never go away. It is important that there should be maintainable, independent libraries to read these files forever.
 
 The Netcdf-Java library prototyped a "Common Data Model" (CDM) to provide a single API to access various file formats. 
 The netcdf* and hdf* file formats are similar enough to make a common API a practical and useful goal. 
