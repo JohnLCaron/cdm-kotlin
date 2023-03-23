@@ -79,7 +79,7 @@ class H4compareHC {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            // return Stream.of(hdfeos2, moarEos).flatMap { i -> i} // malloc core dump
+            // return Stream.of(starter, hasGroups, sdsNotEos).flatMap { i -> i}
             return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
     }
@@ -153,8 +153,15 @@ class H4compareHC {
 
     @Test
     fun linkedNotCompressed() {
-        compareDataWithClib(testData + "cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
+        compareData(testData + "cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf",
             "ALBEDO")
+    }
+
+    // CLib returns -9999, I dont see any fill value set.
+    @Test
+    fun problemCompareDataFill() {
+        compareData(testData + "cdmUnitTest/formats/hdf4/ssec/MYD04_L2.A2006188.1830.005.2006194121515.hdf",
+            "/mod04/Data_Fields/Aerosol_Cldmask_Byproducts_Land")
     }
 
     // @Test HC core dump
@@ -217,6 +224,24 @@ class H4compareHC {
     fun readData(filename: String) {
         readNetchdfData(filename, null, null, true)
         println()
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun compareData(filename: String) {
+        compareData(filename, null)
+    }
+
+    fun compareData(filename: String, varname : String?) {
+        println("=================")
+        println(filename)
+        Hdf4File(filename).use { myfile ->
+            // println("Hdf4File = \n${myfile.cdl()}")
+            Hdf4ClibFile(filename).use { ncfile ->
+                compareNetcdfData(myfile, ncfile, varname)
+            }
+        }
     }
 
 }

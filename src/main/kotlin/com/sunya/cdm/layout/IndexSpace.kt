@@ -16,10 +16,10 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
     val ranges by lazy { start.mapIndexed { idx, it -> it until it + shape[idx] } } // inclusive
 
     constructor(shape : IntArray) : this( IntArray(shape.size), shape) // starts at 0
-    constructor(section : Section) : this( section.origin, section.shape)
+    constructor(section : Section) : this(section.origin, section.shape)
 
     fun section() : Section {
-        val useShape = if (shape.size == start.size) shape else IntArray( start.size) { shape[it] }
+        val useShape = if (shape.size == start.size) shape else IntArray(start.size) { shape[it] }
         return Section(start, useShape)
     }
 

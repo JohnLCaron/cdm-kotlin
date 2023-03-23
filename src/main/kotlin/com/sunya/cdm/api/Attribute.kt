@@ -2,7 +2,6 @@ package com.sunya.cdm.api
 
 import com.sunya.cdm.util.makeValidCdmObjectName
 
-// could use Array<*>
 data class Attribute(val orgName : String, val datatype : Datatype, val values : List<*>) {
     val name = makeValidCdmObjectName(orgName)
 

@@ -3,9 +3,7 @@ package com.sunya.netchdf.netcdf3
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.cdm.layout.Layout
-import com.sunya.cdm.layout.LayoutRegular
-import com.sunya.cdm.layout.LayoutRegularSegmented
+import com.sunya.cdm.layout.*
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -36,9 +34,10 @@ class Netcdf3File(val filename : String) : Netchdf {
         val wantSection = Section.fill(section, v2.shape)
         val vinfo = v2.spObject as N3header.Vinfo
         val layout = if (!v2.isUnlimited()) {
-            LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, wantSection)
+            LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(wantSection))
         } else {
-            LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, wantSection)
+            // LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, wantSection)
+            LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(wantSection))
         }
         return readDataWithLayout(layout, v2, wantSection)
     }

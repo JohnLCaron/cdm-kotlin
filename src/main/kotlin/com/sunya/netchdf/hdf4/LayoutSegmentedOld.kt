@@ -1,17 +1,16 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
-import com.sunya.cdm.layout.Chunker
-import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.iosp.IndexChunker
 import com.sunya.cdm.layout.Layout
-import com.sunya.cdm.layout.LayoutChunk
 import kotlin.math.min
 
 
 /**
  * LayoutSegmented has data stored in an array of segments, stored in segPos\[i], segSize\[i]
  * Each segment size must be a multiple of elemSize.
- * The total segment size may be larger than the variable's total size.
+ * The total segment size may be large than the variable's total size.
  *
  * @param segPos starting address of each segment.
  * @param segSize number of bytes in each segment, multiple of elemSize
@@ -19,7 +18,7 @@ import kotlin.math.min
  * @param srcShape shape of the entire variables' data (in elements)
  * @param wantSection the wanted section of data (in elements)
  */
-class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, srcShape: IntArray, wantSection: IndexSpace)
+class LayoutSegmentedOld(segPos: LongArray, segSize: IntArray, override val elemSize: Int, srcShape: IntArray, wantSection: Section?)
     : Layout {
 
     override val totalNelems: Long
@@ -28,11 +27,11 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
     private val segMax : LongArray // elems
 
     // outer chunk deals with the wanted section of data
-    private val chunker = Chunker(IndexSpace(srcShape), elemSize, wantSection)
-    private var chunkOuter = LayoutChunk(0, 0, 0, 0)
+    private val chunker = IndexChunker(srcShape, wantSection)
+    private var chunkOuter: IndexChunker.Chunk = IndexChunker.Chunk(0, 0, 0) // fake
 
     // inner chunk = deal with segmentation
-    private var chunkInner = LayoutChunk(0, 0, 0, 0)
+    private val chunkInner = IndexChunker.Chunk(0, 0, 0)
     private var done: Long = 0    // number elements done overall
     private var needOuter = 0 // remaining elements to do in the outer chunk
 
@@ -76,40 +75,39 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
     }
 
     override fun next(): Layout.Chunk {
-        this.chunkInner = if (needOuter <= 0) {
+        val innerChunk = if (needOuter <= 0) {
             chunkOuter = nextOuter()
             nextInner(true)
         } else {
             nextInner(false)
         }
-        done += chunkInner.nelems
-        needOuter -= chunkInner.nelems
-        if (debugNext) println(" next chunk: $chunkInner")
+        done += innerChunk.nelems
+        needOuter -= innerChunk.nelems
+        if (debugNext) println(" next chunk: $innerChunk")
+        return innerChunk
+    }
+
+    private fun nextInner(first: Boolean): IndexChunker.Chunk {
+        if (first) {
+            val maxElemsInSeg = getMaxElemsInSeg(chunkOuter.srcElem)
+            chunkInner.nelems = min(maxElemsInSeg, needOuter)
+            chunkInner.destElem = chunkOuter.destElem
+            chunkInner.srcElem = chunkOuter.srcElem
+        } else {
+            chunkInner.destElem += chunkInner.nelems // increment using last chunks' value
+            chunkInner.srcElem += chunkInner.nelems
+            val maxElemsInSeg = getMaxElemsInSeg(chunkInner.srcElem)
+            chunkInner.nelems = min(maxElemsInSeg, needOuter)
+        }
+        chunkInner.srcPos = getStartPos(chunkInner.srcElem)
         return chunkInner
     }
 
-    private fun nextInner(first: Boolean): LayoutChunk {
-        if (first) {
-            val maxElemsInSeg = getMaxElemsInSeg(chunkOuter.srcElem)
-            val nelems = min(maxElemsInSeg, needOuter)
-            val destElem = chunkOuter.destElem
-            val srcElem = chunkOuter.srcElem
-            return LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
-        } else {
-            val destElem = chunkInner.nelems + chunkInner.destElem // increment using last chunks' value
-            val srcElem = chunkInner.nelems  + chunkInner.srcElem
-            val maxElemsInSeg = getMaxElemsInSeg(srcElem)
-            val nelems = min(maxElemsInSeg, needOuter)
-            return LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
-        }
-    }
-
-    // LOOK assumes that chunks dont cross Segments.
-    fun nextOuter(): LayoutChunk {
+    fun nextOuter(): IndexChunker.Chunk {
         val chunkOuter = chunker.next()
-        val srcPos = getStartPos(chunkOuter.srcElem)
+        chunkOuter.srcPos = getStartPos(chunkOuter.srcElem)
         needOuter = chunkOuter.nelems
-        return LayoutChunk(srcPos, chunkOuter)
+        return chunkOuter
     }
 
     companion object {
