@@ -96,7 +96,6 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
 
-
     // transfer from src to dst buffer, using my computed chunks
     fun transfer(src: ByteBuffer, dst: ByteBuffer) {
         while (this.hasNext()) {

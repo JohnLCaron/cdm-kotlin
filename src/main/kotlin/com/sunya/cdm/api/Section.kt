@@ -745,20 +745,11 @@ class Section {
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////
-        fun computeSize(shape: IntArray?): Long {
-            if (shape == null) {
-                return 1
-            }
+        fun computeSize(shape: IntArray): Long {
             var product: Long = 1
-            for (aShape in shape) {
-                if (aShape < 0) {
-                    break // stop at vlen
-                }
-                product *= aShape.toLong()
-            }
+            for (ii in shape.indices) product *= shape[ii].toLong()
             return product
         }
-
 
         /** Is this a scalar Section? Allows int[], int[1] {0}, int[1] {1}  */
         fun IntArray.isScalar(): Boolean {

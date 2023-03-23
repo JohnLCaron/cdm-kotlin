@@ -2,6 +2,7 @@ package com.sunya.cdm.iosp
 
 import com.sunya.cdm.api.Range
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.layout.Layout
 import java.util.*
 
 /**
@@ -95,14 +96,14 @@ class IndexChunker(srcShape: IntArray, want: Section?) : Iterator<Layout.Chunk> 
                 shape[rank - i - 1] = dim.wantSize
             }
             if (debug) {
-                System.out.printf("  elemsPerChunk=%d  nchunks=%d ", nelems, IndexLong.computeSize(shape))
+                System.out.printf("  elemsPerChunk=%d  nchunks=%d ", nelems, Section.computeSize(shape))
                 System.out.printf("  indexShape=%s%n", shape.contentToString())
                 System.out.printf("  indexStride=%s%n", wstride.contentToString())
             }
             chunkIndex = IndexLong(shape, wstride)
 
             // sanity check
-            require(IndexLong.computeSize(shape) * nelems == totalNelems)
+            require(Section.computeSize(shape) * nelems == totalNelems)
             if (debug) {
                 println("Index2= $this")
                 println(" start= " + start + " varShape= " + Arrays.toString(srcShape) + " wantSection= " + wantSection)

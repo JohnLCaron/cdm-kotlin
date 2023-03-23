@@ -2,7 +2,6 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.ArrayLong
-import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.*
 import com.sunya.cdm.util.unsignedByteToShort
 import com.sunya.cdm.util.unsignedIntToLong

@@ -12,8 +12,6 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
     : ArrayTyped<ArrayStructureData.StructureData>(shape) {
 
     init {
-        if (bb.capacity() < recsize * computeSize(shape))
-            println()
         require(bb.capacity() >= recsize * computeSize(shape))
     }
 

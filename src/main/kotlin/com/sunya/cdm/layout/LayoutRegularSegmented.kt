@@ -1,7 +1,7 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Section
-import com.sunya.cdm.iosp.IndexLong.Companion.computeSize
+import com.sunya.cdm.iosp.IndexChunker
 import kotlin.math.min
 
 /**
@@ -36,7 +36,7 @@ class LayoutRegularSegmented(val startPos: Long, override val elemSize: Int, val
         require(srcShape.size > 0)
         chunker = IndexChunker(srcShape, wantSection)
         totalNelems = chunker.totalNelems
-        innerNelems = if (srcShape[0] == 0) 0 else computeSize(srcShape) / srcShape[0]
+        innerNelems = if (srcShape[0] == 0) 0 else Section.computeSize(srcShape) / srcShape[0]
         done = 0
     }
 

@@ -1,6 +1,7 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.iosp.IndexChunker
 
 /**
  * LayoutRegular has data stored in row-major order, like netcdf non-record variables.

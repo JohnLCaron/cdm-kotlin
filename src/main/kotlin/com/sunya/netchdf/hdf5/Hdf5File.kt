@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.ArraySection
 import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
@@ -11,7 +12,7 @@ import java.io.IOException
 /**
  * @param strict true = make it agree with nclib if possible
  */
-class Hdf5File(val filename : String, strict : Boolean = false) : Iosp, Netchdf {
+class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     private val raf : OpenFile = OpenFile(filename)
     private val header : H5builder
 

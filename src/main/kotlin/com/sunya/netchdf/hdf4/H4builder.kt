@@ -9,7 +9,7 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-class H4builder(val raf : OpenFile, val valueCharset : Charset, val strict : Boolean) {
+class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     var rootBuilder: Group.Builder = Group.Builder("")
     val metadata = mutableListOf<Attribute>()
     var structMetadata : String? = null

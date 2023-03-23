@@ -43,12 +43,4 @@ class IndexLong {
         for (ii in 0 until rank) value += current[ii] * stride[ii]
         return value
     }
-
-    companion object {
-        fun computeSize(shape: IntArray): Long {
-            var product: Long = 1
-            for (ii in shape.indices.reversed()) product *= shape[ii].toLong()
-            return product
-        }
-    }
 }

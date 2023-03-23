@@ -53,6 +53,7 @@ class H4compareHC {
                 testFilesIn(testData + "cdmUnitTest/formats/hdf4")
                     .withRecursion()
                     .withPathFilter { p -> !(p.toString().contains("/eos/"))}
+                    .addNameFilter { name -> !name.endsWith("2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf") } // reported bug in H4Clib
                     .addNameFilter { name -> !name.endsWith("MOD021KM.A2004328.1735.004.2004329164007.hdf") } // corrupted ??
                     .addNameFilter { name -> !name.endsWith("MYD021KM.A2008349.1800.005.2009329084841.hdf") } // corrupted ??
                     .addNameFilter { name -> !name.endsWith("MOD02HKM.A2007016.0245.005.2007312120020.hdf") } // corrupted ??
@@ -78,9 +79,8 @@ class H4compareHC {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            return Stream.of(moar4, moar42).flatMap { i -> i}
             // return Stream.of(hdfeos2, moarEos).flatMap { i -> i} // malloc core dump
-            // return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
+            return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
     }
 
@@ -193,7 +193,7 @@ class H4compareHC {
     fun compareH4header(filename : String) {
         println("=================")
         println(filename)
-        Hdf4File(filename, true).use { myfile ->
+        Hdf4File(filename).use { myfile ->
             println("Hdf4File = \n${myfile.cdl()}")
             Hdf4ClibFile(filename).use { ncfile ->
                 //println("actual = $root")

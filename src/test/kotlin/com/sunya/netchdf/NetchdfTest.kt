@@ -4,7 +4,6 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.ArrayTyped
-import com.sunya.cdm.iosp.Iosp
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
@@ -16,8 +15,6 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import test.util.testData
 import test.util.testFilesIn
-import java.io.File
-import java.io.RandomAccessFile
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -97,7 +94,7 @@ class NetchdfTest {
 
      */
 
-    // @Test
+    @Test
     fun tst_grps() {
         compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
     }
@@ -106,18 +103,18 @@ class NetchdfTest {
     Relies on field1 and fields2 mdt hash matching s1_t hash, so not added again.
     no obvious reason why mdts are not shared.
     <netcdf testNestedStructure {
-  types:
-    compound s1_t {
-      int x ;
-      int y ;
-    }; // s1_t
-    compound s2_t {
-      s1_t field1 ;
-      s1_t field2 ;
-    }; // s2_t
-  variables:
-    s2_t x ;
-}
+      types:
+        compound s1_t {
+          int x ;
+          int y ;
+        }; // s1_t
+        compound s2_t {
+          s1_t field1 ;
+          s1_t field2 ;
+        }; // s2_t
+      variables:
+        s2_t x ;
+    }
      */
     @Test
     fun testNestedStructure() {
@@ -143,7 +140,7 @@ nc_inq_var return -101 = NetCDF: HDF error
 
     // possible bug in netcdf4
     @Test
-    // @Disabled
+    @Disabled
     fun compoundAttributeTest() {
         compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }
@@ -397,7 +394,7 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: Section? = nul
 
 const val maxBytes = 100_000_000
 
-fun readOneVar(myvar: Variable, myfile: Iosp, section: Section?) {
+fun readOneVar(myvar: Variable, myfile: Netchdf, section: Section?) {
 
     val section = Section.fill(section, myvar.shape)
     val nbytes = section.size() * myvar.datatype.size
@@ -432,7 +429,7 @@ fun removeLast(org: IntArray): IntArray {
     return IntArray(org.size - 1) { org[it] }
 }
 
-fun readMiddleSection(myfile: Iosp, myvar: Variable, shape: IntArray) {
+fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: IntArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.map { range ->
         if (range == null) throw RuntimeException("Range is null")
@@ -491,7 +488,7 @@ fun compareNetcdfData(myfile: Netchdf, ncfile: Netchdf, varname: String?, sectio
     }
 }
 
-fun compareOneVar(myvar: Variable, myfile: Iosp, ncvar : Variable, ncfile: Iosp, section: Section?) {
+fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: Section?) {
     val filledSection = Section.fill(section, myvar.shape)
     val nbytes = filledSection.size() * myvar.datatype.size
     if (nbytes > 100_000_000) {
@@ -528,7 +525,7 @@ fun compareOneVar(myvar: Variable, myfile: Iosp, ncvar : Variable, ncfile: Iosp,
     }
 }
 
-fun compareMiddleSection(myfile: Iosp, myvar: Variable, ncfile: Iosp, ncvar: Variable, shape : IntArray) {
+fun compareMiddleSection(myfile: Netchdf, myvar: Variable, ncfile: Netchdf, ncvar: Variable, shape : IntArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.map { range ->
         if (range == null) throw RuntimeException("Range is null")

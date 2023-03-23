@@ -1,10 +1,11 @@
-package com.sunya.cdm.dsl
+package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
+/** Experimental DSL for reading structure data from file */
 class StructDsl(val name : String, val bb : ByteBuffer, val flds : List<StructFld>, val startPos : Long) {
     val fldm = flds.associateBy { it.fldName }
 

@@ -1,4 +1,4 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.layout
 
 interface Layout : Iterator<Layout.Chunk> {
     /** The total number of elements in the wanted subset.  */
