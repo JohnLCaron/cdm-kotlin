@@ -25,7 +25,7 @@ class Netcdf3File(val filename : String) : Netchdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl() = com.sunya.cdm.api.cdl(this)
+    override fun cdl() = cdl(this)
     override fun type() = "netcdf3"
     override val size : Long get() = raf.size
 
@@ -36,7 +36,6 @@ class Netcdf3File(val filename : String) : Netchdf {
         val layout = if (!v2.isUnlimited()) {
             LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(wantSection))
         } else {
-            // LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, wantSection)
             LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(wantSection))
         }
         return readDataWithLayout(layout, v2, wantSection)

@@ -7,7 +7,6 @@ import com.sunya.cdm.layout.Layout
 import com.sunya.cdm.layout.LayoutChunk
 import kotlin.math.min
 
-
 /**
  * LayoutSegmented has data stored in an array of segments, stored in segPos\[i], segSize\[i]
  * Each segment size must be a multiple of elemSize.

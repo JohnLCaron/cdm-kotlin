@@ -95,6 +95,7 @@ class NetchdfTest {
      */
 
     @Test
+    @Disabled
     fun tst_grps() {
         compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
     }

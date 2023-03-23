@@ -62,7 +62,6 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
   private val valueCharset = StandardCharsets.UTF_8
 
   private var isStreaming = false
-  private var isUnlimited = false
   var numrecs = 0 // number of records written
   var recsize: Long = 0 // size of each record (padded) TODO can it really be bigger than MAX_INTEGER ?
   var recStart = Int.MAX_VALUE.toLong() // where the record data starts TODO can it really be bigger than MAX_INTEGER ?
@@ -476,7 +475,6 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
    * @param vsize size of array in bytes; if isRecordVariable, size per record.
    * @param begin offset of start of data from start of file
    * @param isRecordVariable  is it a record variable?
-   * @param attsPos attributes start here - used for update
    */
   data class Vinfo(
     val name: String,

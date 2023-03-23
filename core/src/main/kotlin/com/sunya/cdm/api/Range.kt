@@ -21,12 +21,12 @@ import java.util.*
  */
 
 data class Range(
-        val length : Int, // number of elements
         val first : Int, // first value in range
         val last : Int, // last value in range, inclusive
         val stride : Int, // stride, must be >= 1
         val name : String? = null, // optional name
     ) : Iterable<Int> {
+    val length : Int // number of elements
 
     init {
         require(first >= 0) {"first ($first) must be >= 0" }
@@ -34,6 +34,7 @@ data class Range(
         if (name != "VLEN" && name != "EMPTY") {
             require(last >= first) { "last ($last) must be >= first ($first)" }
         }
+        length = 1 + (last - first) / stride
     }
 
     /**
@@ -41,7 +42,7 @@ data class Range(
      *
      * @param length number of elements in the Range
      */
-    constructor(length: Int) : this(length, 0, length - 1, 1)
+    constructor(length: Int, name : String? = null) : this(0, length - 1, 1, name)
 
     /**
      * Create a range with unit stride.
@@ -50,17 +51,7 @@ data class Range(
      * @param last last value in range, inclusive
      * @throws InvalidRangeException elements must be nonnegative, 0  first  last
      */
-    constructor(first: Int, last: Int) : this(null, first, last, 1)
-
-    /**
-     * Create a range with a specified first, last, stride.
-     *
-     * @param first first value in range
-     * @param last last value in range, inclusive
-     * @param stride stride between consecutive elements, must be &gt; 0
-     * @throws InvalidRangeException elements must be nonnegative: 0  first  last, stride &gt; 0
-     */
-    constructor(first: Int, last: Int, stride: Int) : this(null, first, last, stride)
+    constructor(first: Int, last: Int, name : String? = null) : this(first, last, 1, name)
 
     /**
      * Create a named range with a specified name, first, last, stride.
@@ -73,19 +64,7 @@ data class Range(
      */
     @JvmOverloads
     constructor(name: String?, first: Int, last: Int, stride: Int = 1) :
-            this(1 + (last - first) / stride, first, (last / stride) * stride, stride, name)
-
-    /** Make a copy with a different stride.  */
-    fun copyWithStride(stride: Int): Range {
-        return if (stride == this.stride) this
-        else Range(this.first, this.last, stride)
-    }
-
-    /** Make a copy with a different name.  */
-    fun copyWithName(name: String): Range {
-        return if (name == this.name) this
-        else Range(this.length, this.first, this.last, this.stride, name)
-    }
+            this(first, (last / stride) * stride, stride, name)
 
     /////////////////////////////////////////////
     /**
@@ -98,53 +77,6 @@ data class Range(
         if (want < first) return false
         if (want > last) return false
         return if (stride == 1) true else (want - first) % stride == 0
-    }
-
-    /**
-     * Create a new Range by composing a Range that is reletive to this Range.
-     *
-     * @param r range elements are reletive to this
-     * @return combined Range, may be EMPTY
-     * @throws InvalidRangeException elements must be nonnegative, 0  first  last
-     */
-    @Throws(InvalidRangeException::class)
-    fun compose(r: Range): Range {
-        if (this.length == 0 || r.length == 0) {
-            return EMPTY
-        }
-        if (this === VLEN || r === VLEN) {
-            return VLEN
-        }
-        /*
-     * if(false) {// Original version
-     * // Note that this version assumes that range r is
-     * // correct with respect to this.
-     * int first = element(r.first());
-     * int stride = stride() * r.stride();
-     * int last = element(r.last());
-     * return new Range(name, first, last, stride);
-     * } else {//new version: handles versions all values of r.
-     */
-        val sr_stride = stride * r.stride
-        val sr_first = element(r.first) // MAP(this,i) == element(i)
-        val lastx = element(r.last)
-        val sr_last = Math.min(last, lastx)
-        return Range(name, sr_first, sr_last, sr_stride)
-    }
-
-    /**
-     * Create a new Range by compacting this Range by removing the stride.
-     * first = first/stride, last=last/stride, stride=1.
-     *
-     * @return compacted Range
-     * @throws InvalidRangeException elements must be nonnegative, 0  first  last
-     */
-    @Throws(InvalidRangeException::class)
-    fun compact(): Range {
-        if (stride == 1) return this
-        val first = first / stride
-        val last = first + length - 1
-        return Range(name, first, last, 1)
     }
 
     /**
@@ -190,9 +122,6 @@ data class Range(
     fun intersect(other: Range): Range {
         if (this.length == 0 || other.length == 0) {
             return EMPTY
-        }
-        if (this === VLEN || other === VLEN) {
-            return VLEN
         }
         val first = Math.max(this.first, other.first)
         val last = Math.min(this.last, other.last)
@@ -290,9 +219,8 @@ data class Range(
     }
 
     companion object {
-        val EMPTY = Range(0, 0, -1, 1, "EMPTY") // used for unlimited dimension = 0
-        val SCALAR = Range(1, 0, 0, 1, "SCALAR")
-        val VLEN = Range(-1, 0, -1, 1, "VLEN")
+        val EMPTY = Range(0, -1, 1, "EMPTY") // used for unlimited dimension = 0
+        val SCALAR = Range(0, 0, 1, "SCALAR")
 
         /** Make a named Range from 0 to len-1. RuntimeException on error.  */
         fun make(name: String?, len: Int): Range {

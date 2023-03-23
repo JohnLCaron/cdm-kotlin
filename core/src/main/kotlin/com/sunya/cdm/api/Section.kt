@@ -18,9 +18,8 @@ class Section {
     constructor(shape: IntArray) {
         val builder = ArrayList<Range>()
         for (aShape in shape) {
-            if (aShape > 0) builder.add(Range(aShape)) else if (aShape == 0) builder.add(Range.EMPTY) else {
-                builder.add(Range.VLEN)
-            }
+            require(aShape >= 0)
+            if (aShape > 0) builder.add(Range(aShape)) else if (aShape == 0) builder.add(Range.EMPTY)
         }
         ranges = Collections.unmodifiableList(builder)
     }
@@ -36,9 +35,8 @@ class Section {
         require(origin.isScalar() == shape.isScalar() || origin.size == shape.size)
         val builder = mutableListOf<Range>()
         for (i in shape.indices) {
-            if (shape[i] < 0) {
-                builder.add(Range.VLEN)
-            } else if (shape[i] == 0) {
+            require(shape[i] >= 0)
+            if (shape[i] == 0) {
                 builder.add(Range.EMPTY)
             } else if (origin[i] == 0 && shape[i] == 1) {
                 builder.add(Range.SCALAR)
@@ -72,11 +70,10 @@ class Section {
 
         // check that any individual Range is null
         for (i in shape.indices) {
+            require(shape[i] >= 0)
             val r = from[i]
             if (r == null) {
-                if (shape[i] > 0) builder.add(Range(shape[i])) else if (shape[i] == 0) builder.add(Range.EMPTY) else {
-                    builder.add(Range.VLEN)
-                }
+                if (shape[i] > 0) builder.add(Range(shape[i])) else if (shape[i] == 0) builder.add(Range.EMPTY)
             } else {
                 builder.add(r)
             }
@@ -148,27 +145,6 @@ class Section {
         ranges = Collections.unmodifiableList(builder)
     }
 
-    fun removeLast(): Section {
-        require (ranges.size > 1)
-        return Section(ranges.subList(0, ranges.size - 1))
-    }
-
-    /**
-     * Create a new Section by compacting each Range.
-     * first = first/stride, last=last/stride, stride=1.
-     *
-     * @return compacted Section
-     * @throws InvalidRangeException elements must be nonnegative, 0  first  last
-     */
-    @Throws(InvalidRangeException::class)
-    fun compact(): Section {
-        val results: MutableList<Range?> = ArrayList(rank())
-        for (r in ranges) {
-            results.add(r?.compact())
-        }
-        return Section(results)
-    }
-
     fun contains(index : IntArray): Boolean {
         ranges.forEachIndexed { idx, r ->
             if (!(r!!.contains(index[idx]))) {
@@ -176,61 +152,6 @@ class Section {
             }
         }
         return true
-    }
-
-    /**
-     * Create a new Section by composing with a Section that is reletive to this Section.
-     *
-     * @param want Section reletive to this one. If null, return this. If individual ranges are null, use corresponding
-     * Range in this.
-     * @return new Section, composed
-     * @throws InvalidRangeException if want.getRank() not equal to this.getRank(), or invalid component Range
-     */
-    @Throws(InvalidRangeException::class)
-    fun compose(want: Section?): Section {
-        // all nulls
-        if (want == null) {
-            return this
-        }
-        if (want.rank() != rank()) {
-            throw InvalidRangeException("Invalid Section rank")
-        }
-
-        // check individual nulls
-        val results: MutableList<Range?> = ArrayList(rank())
-        for (j in ranges.indices) {
-            val base = ranges[j]
-            val r = want.getRange(j)
-            if (r == null) {
-                results.add(base)
-            } else {
-                results.add(base!!.compose(r))
-            }
-        }
-        return Section(results)
-    }
-
-    /**
-     * Create a new Section by intersection with another Section
-     *
-     * @param other Section other section
-     * @return new Section, composed
-     * @throws InvalidRangeException if want.getRank() not equal to this.getRank(), or invalid component Range
-     */
-    @Throws(InvalidRangeException::class)
-    fun intersect(other: Section): Section {
-        if (!compatibleRank(other)) {
-            throw InvalidRangeException("Invalid Section rank")
-        }
-
-        // check individual nulls
-        val results: MutableList<Range?> = ArrayList(rank())
-        for (j in ranges.indices) {
-            val base = ranges[j]
-            val r = other.getRange(j)
-            results.add(base!!.intersect(r!!))
-        }
-        return Section(results)
     }
 
     /**
@@ -257,28 +178,6 @@ class Section {
     }
 
     /**
-     * See if this Section intersects with another Section. ignores strides, vlen
-     *
-     * @param other another section
-     * @return true if intersection is non-empty
-     * @throws InvalidRangeException if want.getRank() not equal to this.getRank(),
-     */
-    @Throws(InvalidRangeException::class)
-    fun intersects(other: Section): Boolean {
-        for (j in ranges.indices) {
-            val base = ranges[j]
-            val r = other.getRange(j)
-            if (base === Range.VLEN || r === Range.VLEN) {
-                continue
-            }
-            if (!base!!.intersects(r!!)) {
-                return false
-            }
-        }
-        return true
-    }
-
-    /**
      * Convert List of Ranges to String sectionSpec.
      * Inverse of new Section(String sectionSpec)
      *
@@ -296,25 +195,6 @@ class Section {
         return sbuff.toString()
     }
 
-    val isVariableLength: Boolean
-        /** Does this contain a VLEN range?  */
-        get() {
-            for (aFrom in ranges) {
-                if (aFrom === Range.VLEN) {
-                    return true
-                }
-            }
-            return false
-        }
-    val isStrided: Boolean
-        get() {
-            for (r in ranges) {
-                if (r!!.stride != 1) {
-                    return true
-                }
-            }
-            return false
-        }
     // Get shape array using the Range.length() values.
     val shape: IntArray
         get() {
@@ -432,7 +312,6 @@ class Section {
         }
         for (i in ranges.indices) {
             val r = ranges[i] ?: continue
-            if (r === Range.VLEN) continue
             if (r === Range.EMPTY) {
                 return if (shape[i] != 0) "Illegal Range for dimension $i: empty range only for unlimited dimension len = 0" else continue
             }
@@ -472,236 +351,6 @@ class Section {
         return Objects.hash(ranges)
     }
 
-    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    /**
-     * Iterate over a section, returning the index in an equivalent 1D array of shape[], and
-     * optionally the corresponding index\[n]
-     * So this is a section in a (possibly) larger array described by shape[].
-     * The index is in the "source" array.
-     *
-     * @param shape total array shape
-     * @return iterator over this section
-     * LOOK what is the relationship to Odometer ??
-     */
-    fun getIterator(shape: IntArray): Iterator {
-        return Iterator(shape)
-    }
-
-    inner class Iterator internal constructor(shape: IntArray) {
-        private val odo = IntArray(rank()) // odometer - the current element
-        private val rangeIterList: MutableList<kotlin.collections.Iterator<Int>> = ArrayList()
-        private val stride = IntArray(rank())
-        private val total: Long
-        private var done: Long
-
-        init {
-            var ss = 1
-            for (i in rank() - 1 downTo 0) { // fastest varying last
-                stride[i] = ss
-                ss *= shape[i]
-            }
-            for (i in 0 until rank()) {
-                val iter = getRange(i)!!.iterator()
-                odo[i] = iter.next()
-                rangeIterList.add(iter)
-            }
-            done = 0
-            total = computeSize(shape) // total in the section
-        }
-
-        /** Return true if there are more elements  */
-        operator fun hasNext(): Boolean {
-            return done < total
-        }
-
-        /**
-         * Get the position in the equivalant 1D array of shape[]
-         *
-         * @param index if not null, return the current nD index
-         * @return the current position in a 1D array
-         */
-        fun next(index: IntArray?): Int {
-            val next = currentElement()
-            if (index != null) System.arraycopy(odo, 0, index, 0, odo.size)
-            done++
-            if (done < total) incr() // increment for next call
-            return next
-        }
-
-        private fun incr() {
-            var digit = rank() - 1
-            while (digit >= 0) {
-                val iter = rangeIterList[digit]
-                if (iter.hasNext()) {
-                    odo[digit] = iter.next()
-                    break // normal exit
-                }
-
-                // else, carry to next digit in the odometer
-                val iterReset = getRange(digit)!!.iterator()
-                odo[digit] = iterReset.next()
-                rangeIterList[digit] = iterReset
-                digit--
-                require(digit >= 0) // catch screw-ups
-            }
-        }
-
-        private fun currentElement(): Int {
-            var value = 0
-            for (ii in 0 until rank()) value += odo[ii] * stride[ii]
-            return value
-        }
-    } // Section.Iterator
-
-    fun toBuilder(): Builder {
-        return Builder().appendRanges(ranges)
-    }
-
-    class Builder {
-        var ranges: MutableList<Range?> = ArrayList()
-
-        /** Append a Range to the Section, may be null.  */
-        fun appendRange(range: Range?): Builder {
-            ranges.add(range)
-            return this
-        }
-
-        /** Append a new Range(0,size-1)  */
-        fun appendRange(size: Int): Builder {
-            if (size > 1) ranges.add(Range(size)) else if (size == 0) ranges.add(Range.EMPTY) else if (size == 1) ranges.add(
-                Range.SCALAR
-            ) else ranges.add(Range.VLEN)
-            return this
-        }
-
-        /**
-         * Append a new Range(first, last) to the Section
-         *
-         * @param first starting index
-         * @param last last index, inclusive. If last &lt; 0, then append a VLEN Range.
-         */
-        @Throws(InvalidRangeException::class)
-        fun appendRange(first: Int, last: Int): Builder {
-            if (last < 0) ranges.add(Range.VLEN) else ranges.add(Range(first, last))
-            return this
-        }
-
-        /**
-         * Append a new Range(first,last,stride) to the Section.
-         *
-         * @param first starting index
-         * @param last last index, inclusive
-         * @param stride stride
-         */
-        @Throws(InvalidRangeException::class)
-        fun appendRange(first: Int, last: Int, stride: Int): Builder {
-            if (last < 0) ranges.add(Range.VLEN) else ranges.add(Range(first, last, stride))
-            return this
-        }
-
-        /**
-         * Append a new Range(name,first,last,stride) to the Section
-         *
-         * @param name name of Range
-         * @param first starting index
-         * @param last last index, inclusive
-         * @param stride stride
-         */
-        @Throws(InvalidRangeException::class)
-        fun appendRange(name: String?, first: Int, last: Int, stride: Int): Builder {
-            if (last < 0) ranges.add(Range.VLEN) else ranges.add(Range(name, first, last, stride))
-            return this
-        }
-
-        /** Append Ranges to the Section  */
-        fun appendRanges(ranges: List<Range?>?): Builder {
-            this.ranges.addAll(ranges!!)
-            return this
-        }
-
-        /** Append Ranges to the Section, Range(shape[i]) for each i.  */
-        fun appendRanges(shape: IntArray): Builder {
-            for (aShape in shape) {
-                appendRange(aShape)
-            }
-            return this
-        }
-
-        /**
-         * Insert a range at the specified index in the list.
-         *
-         * @param index insert here in the list, existing ranges at or after this index get shifted by one
-         * @param r insert this Range
-         */
-        fun insertRange(index: Int, r: Range?): Builder {
-            ranges.add(index, r)
-            return this
-        }
-
-        /**
-         * Remove a range at the specified index in the list.
-         *
-         * @param index remove here in the list, existing ranges after this index get shifted by one
-         */
-        fun removeRange(index: Int): Builder {
-            ranges.removeAt(index)
-            return this
-        }
-
-        /**
-         * Replace a range at the specified index in the list.
-         *
-         * @param index replace here in the list.
-         * @param r use this Range
-         * @return this
-         * @throws IndexOutOfBoundsException if bad index
-         */
-        fun replaceRange(index: Int, r: Range?): Builder {
-            ranges[index] = r
-            return this
-        }
-
-        /**
-         * Set the range at the specified index in the list, previous Range is discarded
-         *
-         * @param index list index, must be in interval [0,size).
-         * @param r insert this Range
-         */
-        fun setRange(index: Int, r: Range?): Builder {
-            ranges[index] = r
-            return this
-        }
-
-        /** Remove the last range, if it exists.  */
-        fun removeLast(): Builder {
-            val size = ranges.size
-            if (size > 0) {
-                ranges.removeAt(size - 1)
-            }
-            return this
-        }
-
-        /** Remove the first n Ranges, n  number of ranges.  */
-        fun removeFirst(n: Int): Builder {
-            require(n <= ranges.size)
-            ranges = ranges.subList(n, ranges.size)
-            return this
-        }
-
-        /** Remove the last range, if it exists and is a Vlen.  */
-        fun removeVlen(): Builder {
-            val size = ranges.size
-            if (ranges[size - 1] === Range.VLEN) {
-                ranges.removeAt(size - 1)
-            }
-            return this
-        }
-
-        fun build(): Section {
-            return Section(ranges)
-        }
-    }
-
     companion object {
         val SCALAR = Section(Range.SCALAR)
 
@@ -738,10 +387,6 @@ class Section {
             return if (ok) s else Section(s.ranges, shape)
 
             // fill in any nulls
-        }
-
-        fun builder(): Builder {
-            return Builder()
         }
 
         /////////////////////////////////////////////////////////////////////////////////////////

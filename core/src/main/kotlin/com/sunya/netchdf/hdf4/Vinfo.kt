@@ -53,7 +53,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     }
 
     override fun compareTo(other: Vinfo?): Int {
-        return Integer.compare(refno, other!!.refno)
+        return refno.compareTo(other!!.refno)
     }
 
     fun setData(data: TagData?, elemSize: Int) {
