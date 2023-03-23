@@ -16,3 +16,5 @@ dependencyResolutionManagement {
     }
 }
 
+include("clibs")
+include("core")
