@@ -1,11 +1,11 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.ArraySection
 import com.sunya.cdm.api.CompoundTypedef
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.*
-import com.sunya.cdm.iosp.ArraySection
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer

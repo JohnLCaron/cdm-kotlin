@@ -6,10 +6,10 @@ package com.sunya.cdm.layout
  * Tiles are points in the tiled space.
  * Each tile has the same index size, given by chunk.
  *
- *  Allows to efficiently find the data chunks that cover an arbitrary section of the variable's index space.
+ * Allows to efficiently find the data chunks that cover an arbitrary section of the variable's index space.
  *
  * @param varshape the variable's shape
- * @param chunk  actual data storage has this shape. May be larger than the shape, last dim ignored.
+ * @param chunk  actual data storage has this shape. May be larger than the shape, last dim ignored if rank > varshape.
  */
 class Tiling(varshape: IntArray, val chunk: IntArray) {
     val rank: Int

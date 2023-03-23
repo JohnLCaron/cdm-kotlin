@@ -1,5 +1,6 @@
 package com.sunya.cdm.iosp
 
+import com.sunya.cdm.api.ArraySection
 import com.sunya.cdm.array.*
 
 import kotlinx.coroutines.*
@@ -23,10 +24,6 @@ internal class ReadChunkConcurrent() {
             // wait for all jobs to be done, then close everything
             joinAll(*jobs.toTypedArray())
         }
-    }
-
-    fun sumValues(ArraySection : ArraySection) : Double {
-        return 42.0
     }
 
     private val allResults = mutableListOf<Double>()

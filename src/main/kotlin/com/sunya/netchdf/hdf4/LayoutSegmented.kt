@@ -3,7 +3,7 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.iosp.IndexChunker
-import com.sunya.cdm.iosp.Layout
+import com.sunya.cdm.layout.Layout
 import kotlin.math.min
 
 

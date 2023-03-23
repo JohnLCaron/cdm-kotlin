@@ -1,13 +1,11 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Section
-import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.Odometer
-import com.sunya.cdm.layout.Tiling
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
+/** Test [com.sunya.cdm.layout.Tiling]  */
 class TestTiling {
 
     @Test

@@ -1,12 +1,10 @@
-package com.sunya.cdm.iosp
+package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Section
-import com.sunya.cdm.layout.Chunker
-import com.sunya.cdm.layout.IndexSpace
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
-/** Test [com.sunya.cdm.iosp.IndexChunker]  */
+/** Test [com.sunya.cdm.layout.Chunker]  */
 class TestChunker {
 
     fun runChunkerTest(dataChunk: IndexSpace, wantSection: Section,

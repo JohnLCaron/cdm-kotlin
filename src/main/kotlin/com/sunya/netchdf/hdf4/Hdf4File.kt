@@ -3,6 +3,8 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
+import com.sunya.cdm.layout.Layout
+import com.sunya.cdm.layout.LayoutRegular
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -12,10 +14,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.zip.InflaterInputStream
 
-/**
- *  @param strict true = make it agree with nclib if possible
- */
-class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf {
+class Hdf4File(val filename : String) : Netchdf {
     private val raf: OpenFile = OpenFile(filename)
     internal val header: H4builder
     private val rootGroup: Group
@@ -23,7 +22,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
     var valueCharset: Charset = StandardCharsets.UTF_8
 
     init {
-        header = H4builder(raf, valueCharset, strict)
+        header = H4builder(raf, valueCharset)
         header.make()
         rootGroup = header.rootBuilder.build(null)
     }
@@ -99,6 +98,7 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
         throw IllegalStateException()
     }
 
+    // LOOK use fillValue
     private fun readDataWithFill(reader: ReaderIntoByteArray, layout: Layout, v2: Variable, fillValue: Any?, wantSection: Section)
             : ArrayTyped<*> {
         require(wantSection.size() == layout.totalNelems)
@@ -132,73 +132,6 @@ class Hdf4File(val filename : String, strict : Boolean = false) : Iosp, Netchdf 
             Datatype.USHORT -> ArrayUShort(wantSection.shape, values.asShortBuffer())
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
-    }
-
-    private fun readCompressedDataWithFill(reader: ReaderIntoByteArray, layout: LayoutBB, v2: Variable, fillValue: Any?, wantSection: Section)
-            : ArrayTyped<*> {
-        require(wantSection.size() == layout.totalNelems)
-        val vinfo = v2.spObject as Vinfo
-        val totalNbytes = (vinfo.elemSize * layout.totalNelems)
-        require(totalNbytes < Int.MAX_VALUE)
-        val values = ByteBuffer.allocate(totalNbytes.toInt())
-        if (fillValue != null) {
-            prefill(values, layout.totalNelems.toInt(), v2.datatype, fillValue)
-        }
-
-        var bytesRead = 0
-        var elemsRead = 0
-        var count = 0
-        while (layout.hasNext()) {
-            val chunk = layout.next()
-            // if (count < 100) println("$count chunk = $chunk")
-            val chunkBB = chunk.byteBuffer
-            chunkBB.position(0)
-            // copy these bytes into destination
-            val chunkBytes = vinfo.elemSize * chunk.nelems()
-            var dstPos = layout.elemSize * chunk.destElem().toInt()
-            for (i in 0 until chunkBytes) {
-                values.put(dstPos, chunkBB.get())
-                dstPos++
-            }
-            bytesRead += chunkBytes
-            elemsRead += chunk.nelems()
-            count++
-        }
-        require(elemsRead == layout.totalNelems.toInt())
-        values.position(0)
-
-        return when (v2.datatype) {
-            Datatype.BYTE -> ArrayByte(wantSection.shape, values)
-            Datatype.UBYTE -> ArrayUByte(wantSection.shape, values)
-            Datatype.CHAR, Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values.asDoubleBuffer())
-            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values.asFloatBuffer())
-            Datatype.INT -> ArrayInt(wantSection.shape, values.asIntBuffer())
-            Datatype.UINT -> ArrayUInt(wantSection.shape, values.asIntBuffer())
-            Datatype.LONG -> ArrayLong(wantSection.shape, values.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(wantSection.shape, values.asLongBuffer())
-            Datatype.SHORT -> ArrayShort(wantSection.shape, values.asShortBuffer())
-            Datatype.USHORT -> ArrayUShort(wantSection.shape, values.asShortBuffer())
-            else -> throw IllegalArgumentException("datatype ${v2.datatype}")
-        }
-    }
-
-    fun prefill(values: ByteBuffer, nelems: Int, datatype: Datatype, fillValue : Any) {
-        values.position(0)
-        when (datatype) {
-            Datatype.SHORT -> {
-                val sbb = values.asShortBuffer()
-                val fill = fillValue as Short
-                repeat(nelems) { sbb.put(fill) }
-            }
-            Datatype.FLOAT -> {
-                val fbb = values.asFloatBuffer()
-                val fill = fillValue as Float
-                repeat(nelems) { fbb.put(fill) }
-            }
-        }
-
-        values.position(0)
     }
 
     @Throws(IOException::class, InvalidRangeException::class)

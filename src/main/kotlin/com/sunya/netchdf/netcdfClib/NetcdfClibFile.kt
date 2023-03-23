@@ -40,7 +40,7 @@ netcdf library version 4.9.2-development of Mar 19 2023 10:42:31
     /home/oem/install/netcdf4/include/netcdf.h
  */
 
-class NetcdfClibFile(val filename: String) : Iosp, Netchdf {
+class NetcdfClibFile(val filename: String) : Netchdf {
     private val header: NCheader = NCheader(filename)
     private val rootGroup: Group = header.rootGroup.build(null)
 

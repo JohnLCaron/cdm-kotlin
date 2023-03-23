@@ -31,14 +31,14 @@ class Stats(val statsName : String) {
             return result
         }
         result.add("\n$statsName ================================================================")
-        var sum = 0L
+        val first = stats.values.first()
+        val totalStat = Stat("total", first.thing)
         stats.values.sortedBy{ it.accum() }.forEach {
             result.add("  ${it.statName.padStart(80, ' ')}: ${it.show(len)}")
-            sum += it.accum()
+            totalStat.sum(it)
         }
-        val total = stats.values.first().copy(sum)
-        val totalName = "total".padStart(80, ' ')
-        result.add("  $totalName: ${total.show(len)}")
+        result.add("  ${totalStat.statName.padStart(80, ' ')}: ${totalStat.show(len)}")
+
         return result
     }
 
@@ -86,18 +86,25 @@ class Stat(val statName: String, val thing : String) {
     fun nthings() = this.nthings.get()
 
     fun count() = this.count.get()
+
+    fun sum(other : Stat) {
+        this.accum.addAndGet(other.accum())
+        this.count.addAndGet(other.count())
+        this.nthings.addAndGet(other.nthings())
+    }
 }
 
 fun Stat.show(len: Int = 3): String {
     val total = 1e-6 * (accum().toDouble())
     val perThing = if (nthings() == 0) 0.0 else total / nthings()
-    val perWhat = if (count() == 0) 0.0 else total / count()
-    return "took ${total.sigfig(4)} msecs = ${perThing.sigfig(4)} msecs/${thing} (${nthings()} ${thing}s)"
+    val perCount = if (count() == 0) 0.0 else total / count()
+    val part1 = "took ${total.sigfig(4)} msecs = ${perThing.sigfig(4)} msecs/${thing} (${nthings()} ${thing}s)"
+        val part2 = " = ${perCount.sigfig(4)} msecs/call (${count()} calls)"
+    return part1 + part2
 }
 
 fun Int.pad(len: Int): String = "$this".padStart(len, ' ')
 fun Long.pad(len: Int): String = "$this".padStart(len, ' ')
-
 
 /**
  * Format a double value to have a minimum significant figures.

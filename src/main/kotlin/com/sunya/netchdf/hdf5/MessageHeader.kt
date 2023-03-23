@@ -1,6 +1,5 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.dsl.structdsl
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.netchdf.hdf5.FilterType.Companion.fromId
 import java.io.IOException

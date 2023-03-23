@@ -4,6 +4,8 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
+import com.sunya.cdm.layout.Layout
+import com.sunya.cdm.layout.LayoutRegular
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder

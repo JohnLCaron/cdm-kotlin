@@ -19,8 +19,6 @@ cd /home/oem/install/jextract-19/bin
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
-import com.sunya.cdm.iosp.ArraySection
-import com.sunya.cdm.iosp.Iosp
 
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
 import java.lang.foreign.MemoryLayout
@@ -31,7 +29,7 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
-class Hdf4ClibFile(val filename: String) : Iosp, Netchdf {
+class Hdf4ClibFile(val filename: String) : Netchdf {
     private val header: HCheader = HCheader(filename)
 
     override fun rootGroup() = header.rootGroup
@@ -133,7 +131,7 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecord
         values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
 
         if (datatype.typedef is CompoundTypedef) {
-            val members = (datatype.typedef as CompoundTypedef).members
+            val members = datatype.typedef.members
             return ArrayStructureData(shape, values, vsInfo.recsize, members)
         } else {
             // a single field is made into a regular variable
@@ -149,7 +147,6 @@ fun readGRdata(
             filledSection: Section,
             nbytes: Long
 ): ArrayTyped<*> {
-    val rank = filledSection.rank()
 
     MemorySession.openConfined().use { session ->
         // flip the shape
