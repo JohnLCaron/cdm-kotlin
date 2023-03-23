@@ -3,15 +3,18 @@ package com.sunya.cdm.layout
 import com.sunya.cdm.api.Datatype
 import java.nio.ByteBuffer
 
+enum class Merge {all, none, notFirst }
+
 /**
- * Originally from iosp.IndexChunker
  * Finds contiguous chunks of data to copy from dataChunk to destination
  * The iteration is monotonic in both src and dest positions.
 
  * @param dataChunkRaw the dataChunk index space, may have a trailing dimension that is ignored
- * @param wantSection the requested section of data
+ * @param elemSize size in bytes of one element
+ * @param wantSpace the requested section of data
+ * @param mergeFirst merge the first (outer) dimension
  */
-class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Boolean = true)
+class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all)
     : AbstractIterator<TransferChunk>() {
 
     val nelems: Int // number of elements to read at one time
@@ -35,15 +38,15 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         this.totalNelems = intersectSpace.totalElements
 
         val rank = intersectSpace.rank
-        val mergeDims = countMergeDims(intersectSpace, dataChunkRaw.shape, wantSpace.shape, merge)
+        val mergeNDims = countMergeDims(intersectSpace, dataChunkRaw.shape, wantSpace.shape, merge)
         // the first dimension to merge
-        val firstDim = if (rank == mergeDims) 0 else rank - mergeDims - 1
+        val firstDim = if (rank == mergeNDims) 0 else rank - mergeNDims - 1
 
         var product = 1
         for (idx in rank - 1 downTo firstDim) {
             product *= intersectSpace.shape[idx]
         }
-        this.nelems = product
+        this.nelems = if ((rank == 1) and (merge == Merge.notFirst)) 1 else product
 
         // the digit to increment when iterating
         this.incrDigit = if (firstDim == 0) 0 else firstDim - 1
@@ -53,12 +56,13 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
         intersect: IndexSpace,
         dataChunkShape: IntArray,
         dataSubsetShape: IntArray,
-        merge: Boolean
+        merge: Merge
     ): Int {
-        if (!merge) return 0
+        if (merge == Merge.none) return 0
+        val mergeDownto = if (merge == Merge.all) 0 else 2
 
         var mergeDims = 0 // how many dimensions can be merged?
-        for (idx in intersect.rank - 1 downTo 0) {
+        for (idx in intersect.rank - 1 downTo mergeDownto) {
             if ((intersect.shape[idx] == dataChunkShape[idx]) and (intersect.shape[idx] == dataSubsetShape[idx])) {
                 mergeDims++
             } else {

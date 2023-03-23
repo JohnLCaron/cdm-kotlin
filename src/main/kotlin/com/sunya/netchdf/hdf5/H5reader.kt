@@ -4,6 +4,7 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
+import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.Layout
 import com.sunya.cdm.layout.LayoutRegular
 import java.io.IOException
@@ -25,7 +26,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val elemSize = h5type.elemSize
 
     val wantSection = Section.fill(section, shape)
-    val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, wantSection)
+    val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, IndexSpace(wantSection))
 
     if (h5type.hdfType == Datatype5.Vlen) {
         return readVlenData(dc, layout, wantSection)

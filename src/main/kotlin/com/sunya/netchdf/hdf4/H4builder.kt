@@ -4,6 +4,7 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.util.Indent
+import com.sunya.netchdf.netcdf4.NUG
 import mu.KotlinLogging
 import java.nio.ByteOrder
 import java.nio.charset.Charset
@@ -382,12 +383,12 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (tag.tagEnum() == TagEnum.SDL) {
                 val labels: TagTextN = tag as TagTextN
                 tag.isUsed = true
-                vb.addAttribute(Attribute(CDM.LONG_NAME, Datatype.STRING, labels.texts))
+                vb.addAttribute(Attribute(NUG.LONG_NAME, Datatype.STRING, labels.texts))
             }
             if (tag.tagEnum() == TagEnum.SDU) {
                 val units: TagTextN = tag as TagTextN
                 tag.isUsed = true
-                vb.addAttribute(Attribute(CDM.UNITS, Datatype.STRING, units.texts))
+                vb.addAttribute(Attribute(NUG.UNITS, Datatype.STRING, units.texts))
             }
             if (tag.tagEnum() == TagEnum.SDF) {
                 val formats: TagTextN = tag as TagTextN
@@ -680,7 +681,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     val att: Attribute? = VStructureReadAttribute(vh)
                     if (null != att) {
                         vb.addAttribute(att)
-                        if (att.name.equals(CDM.FILL_VALUE)) vinfo.setFillValue(att)
+                        if (att.name.equals(NUG.FILL_VALUE)) vinfo.setFillValue(att)
                     }
                 }
             }

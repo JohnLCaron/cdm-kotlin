@@ -3,6 +3,7 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
+import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.Layout
 import com.sunya.cdm.layout.LayoutRegular
 import java.io.ByteArrayInputStream
@@ -33,7 +34,7 @@ class Hdf4File(val filename : String) : Netchdf {
 
     override fun rootGroup() = rootGroup
     override fun location() = filename
-    override fun cdl() = com.sunya.cdm.api.cdl(this)
+    override fun cdl() = cdl(this)
     override fun type() = "hdf4   "
     override val size : Long get() = raf.size
 
@@ -68,11 +69,12 @@ class Hdf4File(val filename : String) : Netchdf {
 
         if (!vinfo.isCompressed) {
             if (!vinfo.isLinked && !vinfo.isChunked) {
-                val layout = LayoutRegular(vinfo.start, vinfo.elemSize, v.shape, section)
+                val layout = LayoutRegular(vinfo.start, vinfo.elemSize, v.shape, IndexSpace(section))
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isLinked) {
-                val layout = LayoutSegmented(vinfo.segPos, vinfo.segSize, vinfo.elemSize, v.shape, section)
+                // val layout = LayoutSegmentedOld(vinfo.segPos, vinfo.segSize, vinfo.elemSize, v.shape, section)
+                val layout = LayoutSegmented(vinfo.segPos, vinfo.segSize, vinfo.elemSize, v.shape, IndexSpace(section))
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
@@ -80,13 +82,13 @@ class Hdf4File(val filename : String) : Netchdf {
             }
         } else {
             if (!vinfo.isLinked && !vinfo.isChunked) {
-                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, section)
+                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, IndexSpace(section))
                 val input: InputStream = getCompressedInputStream(header, vinfo)
                 val reader = PositioningDataInputStream(input)
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isLinked) {
-                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, section)
+                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, IndexSpace(section))
                 val input: InputStream = getLinkedCompressedInputStream(header, vinfo)
                 val reader = PositioningDataInputStream(input)
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
@@ -145,29 +147,26 @@ class Hdf4File(val filename : String) : Netchdf {
         val members = v2.datatype.typedef.members
 
         if (!vinfo.isLinked && !vinfo.isCompressed) {
-            val layout = LayoutRegular(vinfo.start, recsize, v2.shape, section)
+            val layout = LayoutRegular(vinfo.start, recsize, v2.shape, IndexSpace(section))
             return header.readArrayStructureData(layout, section.shape, members)
 
         } else if (vinfo.isLinked && !vinfo.isCompressed) {
             val input: InputStream = LinkedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout = LayoutRegular(0, recsize, v2.shape, section)
+            val layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
             return dataSource.readArrayStructureData(layout, section.shape, members)
 
         } else if (!vinfo.isLinked && vinfo.isCompressed) {
             val input: InputStream = getCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout: Layout = LayoutRegular(0, recsize, v2.shape, section)
+            val layout: Layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
             return dataSource.readArrayStructureData(layout, section.shape, members)
 
-        } else if (vinfo.isLinked && vinfo.isCompressed) {
+        } else  { // if (vinfo.isLinked && vinfo.isCompressed)
             val input: InputStream = getLinkedCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout: Layout = LayoutRegular(0, recsize, v2.shape, section)
+            val layout: Layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
             return dataSource.readArrayStructureData(layout, section.shape, members)
-
-        } else {
-            throw IllegalStateException()
         }
     }
 }
@@ -184,33 +183,30 @@ internal fun getLinkedCompressedInputStream(h4: H4builder, vinfo: Vinfo): InputS
     return InflaterInputStream(LinkedInputStream(h4, vinfo))
 }
 
+// called from special.getDataChunks()
 internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, shape: IntArray, members: List<StructureMember>)
 : ArrayStructureData {
     val recsize: Int = vinfo.elemSize
     if (!vinfo.isLinked && !vinfo.isCompressed) {
-        val layout = LayoutRegular(vinfo.start, recsize, shape, null)
-
+        val layout = LayoutRegular(vinfo.start, recsize, shape, IndexSpace(shape))
         return h4.readArrayStructureData(layout, shape, members)
     } else if (vinfo.isLinked && !vinfo.isCompressed) {
         val input: InputStream = LinkedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout = LayoutRegular(0, recsize, shape, null)
+        val layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
         return dataSource.readArrayStructureData(layout, shape, members)
 
     } else if (!vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout: Layout = LayoutRegular(0, recsize, shape, null)
+        val layout: Layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
         return dataSource.readArrayStructureData(layout, shape, members)
 
-    } else if (vinfo.isLinked && vinfo.isCompressed) {
+    } else { // if (vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getLinkedCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout: Layout = LayoutRegular(0, recsize, shape, null)
+        val layout: Layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
         return dataSource.readArrayStructureData(layout, shape, members)
-
-    } else {
-        throw IllegalStateException()
     }
 }
 

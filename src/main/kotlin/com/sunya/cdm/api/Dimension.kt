@@ -11,6 +11,6 @@ data class Dimension(val orgName : String, val length : Int, val isUnlimited : B
 
 fun IntArray.computeSize(): Int {
     var product = 1
-    this.forEach { product *= it}
+    this.forEach { product *= it }
     return product
 }

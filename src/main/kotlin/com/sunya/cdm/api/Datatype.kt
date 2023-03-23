@@ -1,13 +1,9 @@
 package com.sunya.cdm.api
 
-import java.lang.RuntimeException
-import java.util.*
-
 /**
  * The CDM api datatype. Note the file storage types may be different.
  * @param cdlName name in CDL
- * @param size Size in bytes of one element of this data type, Strings = 0, Structures = 1
- * @param signed only needed for integral types
+ * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  */
 data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null) {
@@ -34,17 +30,6 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         val COMPOUND = Datatype("compound", 4)
         val OPAQUE = Datatype("opaque", 4)
         val VLEN = Datatype("vlen", 4)
-
-        fun from(name : String) : Datatype {
-            return when (name) {
-                "byte" -> BYTE
-                "double" -> DOUBLE
-                "float" -> FLOAT
-                "int" -> INT
-                "short" -> SHORT
-                else -> throw RuntimeException("unknown datatype = $name")
-            }
-        }
     }
 
     override fun toString(): String {
@@ -74,7 +59,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         get() =  (this == FLOAT) || (this == DOUBLE)
 
     /**
-     * Returns an DataType that is related to `this`, but with the specified signedness.
+     * Returns the DataType that is related to `this`, but with the specified signedness.
      * This method is only meaningful for [integral][.isIntegral] data types; if it is called on a non-integral
      * type, then `this` is simply returned.
      */
@@ -88,7 +73,8 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         }
     }
 
-    /** Used for Hdf5 Enum, Compound, Opaque, Vlen. The last two arent particularly useful. */
+    /** Used for Hdf5 Enum, Compound, Opaque, Vlen. The last two arent particularly useful, but we leave them in
+     * to agree with the Netcdf4 C library. */
     fun withTypedef(typedef : Typedef?) : Datatype = this.copy(typedef = typedef)
 
     override fun equals(other: Any?): Boolean {

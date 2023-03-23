@@ -1,15 +1,17 @@
-package com.sunya.cdm.api
+package com.sunya.netchdf.netcdf4
 
-object CDM {
+object NUG {
     // from the Netcdf Users Guide
-    // https://www.unidata.ucar.edu/software/netcdf/docs/netcdf.html#Attribute-Conventions
+    // https://docs.unidata.ucar.edu/netcdf-c/current/attribute_conventions.html
     const val ABBREV = "abbreviation"
     const val ADD_OFFSET = "add_offset"
     const val CONVENTIONS = "Conventions"
+    const val COORDINATES = "coordinates"
     const val DESCRIPTION = "description"
     const val FILL_VALUE = "_FillValue"
     const val HISTORY = "history"
     const val LONG_NAME = "long_name"
+    const val NO_FILL = "_NoFill"
     const val MISSING_VALUE = "missing_value"
     const val SCALE_FACTOR = "scale_factor"
     const val TITLE = "title"
