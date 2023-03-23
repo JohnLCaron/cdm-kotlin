@@ -19,7 +19,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     private val completedObjects = mutableSetOf<Int>()
 
     internal val tagidMap = mutableMapOf<Int, Tag>()
-    private val refnoMap = mutableMapOf<Int, Vinfo>()
     private var imageCount = 0
 
     init {
@@ -615,8 +614,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (tag.tagEnum() == TagEnum.RI) tagRasterImage = tag as TagRasterImage
             if (tag.tagEnum() == TagEnum.RIG) {
                 val rig = tag as TagDataGroup
-                for (i in 0 until rig.nelems) {
-                    val ntagid = tagid(rig.elem_ref[i], rig.elem_tag[i])
+                repeat (rig.nelems) {
+                    val ntagid = tagid(rig.elem_ref[it], rig.elem_tag[it])
                     if (debugGR) println("     GRVariable has nested tag ${tagidName(ntagid)} ")
                 }
 

@@ -59,8 +59,7 @@ internal class H4CompressedDataChunk(
     @Throws(IOException::class)
     fun getByteBuffer(): ByteBuffer {
         if (bb != null) return bb!!
-        if (compress == null) {
-        } else {
+        if (compress != null) {
             // read compressed data in
             val cdata = compress!!.getDataTag(h4)
             val input: InputStream
