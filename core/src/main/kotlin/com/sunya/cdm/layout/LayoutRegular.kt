@@ -18,7 +18,7 @@ class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSpace
         require(elemSize > 0)
         this.startPos = startPos
         this.elemSize = elemSize
-        chunker = Chunker(IndexSpace(varShape), elemSize, wantSpace)
+        chunker = Chunker(IndexSpace(varShape), elemSize, wantSpace) // one big chunk
     }
 
     override val totalNelems: Long

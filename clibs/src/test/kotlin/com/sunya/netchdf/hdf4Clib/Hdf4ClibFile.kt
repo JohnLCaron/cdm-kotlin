@@ -68,7 +68,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         throw RuntimeException("cant read ${v2.name}")
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
         return null
     }
 

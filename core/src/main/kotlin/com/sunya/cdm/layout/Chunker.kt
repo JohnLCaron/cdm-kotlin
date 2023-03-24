@@ -3,18 +3,21 @@ package com.sunya.cdm.layout
 import com.sunya.cdm.api.Datatype
 import java.nio.ByteBuffer
 
-enum class Merge {all, none, notFirst }
+enum class Merge { all, none, notFirst }
 
 /**
- * Finds contiguous chunks of data to copy from dataChunk to destination
+ * Copies the intersection of a dataChunk and wantSpace to the destination buffer.
+ * Each dataChunk gets its own Chunker, which can only be used once.
+ * The wantSpace is a (possibly improper) subset of the variable's IndexSpace.
+ * Finds contiguous chunks of data to copy from the dataChunk to the destination.
  * The iteration is monotonic in both src and dest positions.
 
- * @param dataChunkRaw the dataChunk index space, may have a trailing dimension that is ignored
+ * @param dataChunk the dataChunk, may have a trailing dimension that is ignored
  * @param elemSize size in bytes of one element
- * @param wantSpace the requested section of data
- * @param mergeFirst merge the first (outer) dimension
+ * @param wantSpace the requested section of data.
+ * @param mergeFirst merge strategy for dimensions that can be merged and still keep contiguous transfer
  */
-class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all)
+class Chunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all)
     : AbstractIterator<TransferChunk>() {
 
     val nelems: Int // number of elements to read at one time
@@ -26,19 +29,19 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
     var transferChunks = 0
 
     init {
-        val intersectSpace = wantSpace.intersect(dataChunkRaw)
+        val intersectSpace = wantSpace.intersect(dataChunk)
 
         // shift intersect to dataChunk and wantSection origins
-        val dataChunkShifted = intersectSpace.shift(dataChunkRaw.start) // dataChunk origin
+        val dataChunkShifted = intersectSpace.shift(dataChunk.start) // dataChunk origin
         val wantSectionShifted = intersectSpace.shift(wantSpace.start) // wantSection origin
 
         // construct odometers over source and destination index spaces
-        this.srcOdometer = Odometer(dataChunkShifted, dataChunkRaw.shape)
+        this.srcOdometer = Odometer(dataChunkShifted, dataChunk.shape)
         this.dstOdometer = Odometer(wantSectionShifted, wantSpace.shape)
         this.totalNelems = intersectSpace.totalElements
 
         val rank = intersectSpace.rank
-        val mergeNDims = countMergeDims(intersectSpace, dataChunkRaw.shape, wantSpace.shape, merge)
+        val mergeNDims = countMergeDims(intersectSpace, dataChunk.shape, wantSpace.shape, merge)
         // the first dimension to merge
         val firstDim = if (rank == mergeNDims) 0 else rank - mergeNDims - 1
 
@@ -102,8 +105,7 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
 
     // transfer from src to dst buffer, using my computed chunks
     fun transfer(src: ByteBuffer, dst: ByteBuffer) {
-        while (this.hasNext()) {
-            val chunk: TransferChunk = this.next()
+        for (chunk in this) {
             src.position(this.elemSize * chunk.srcElem.toInt())
             dst.position(this.elemSize * chunk.destElem.toInt())
             // Object src,  int  srcPos, Object dest, int destPos, int length
@@ -120,42 +122,69 @@ class Chunker(dataChunkRaw: IndexSpace, val elemSize: Int, wantSpace: IndexSpace
     // transfer fillValue to dst buffer, using my computed chunks
     internal fun transferMissing(fillValue: Any?, datatype: Datatype, dst: ByteBuffer) {
         if (fillValue == null) {
-            // could use some default, but 0 is pretty good
             return
         }
-        while (this.hasNext()) {
-            val chunk = this.next()
+        for (chunk in this) {
             dst.position(this.elemSize * chunk.destElem.toInt())
-            // println("  missing transfer $chunk")
-            when (datatype) {
-                Datatype.STRING, Datatype.CHAR, Datatype.BYTE -> {
-                    val fill = fillValue as Byte
-                    repeat(chunk.nelems) { dst.put(fill) }
-                }
-
-                Datatype.UBYTE, Datatype.ENUM1 -> {
-                    val fill = fillValue as UByte
-                    repeat(chunk.nelems) { dst.put(fill.toByte()) }
-                }
-
-                Datatype.SHORT -> repeat(chunk.nelems) { dst.putShort(fillValue as Short) }
-                Datatype.USHORT, Datatype.ENUM2 -> repeat(chunk.nelems) { dst.putShort((fillValue as UShort).toShort()) }
-                Datatype.INT -> repeat(chunk.nelems) { dst.putInt(fillValue as Int) }
-                Datatype.UINT, Datatype.ENUM4 -> repeat(chunk.nelems) { dst.putInt((fillValue as UInt).toInt()) }
-                Datatype.FLOAT -> repeat(chunk.nelems) { dst.putFloat(fillValue as Float) }
-                Datatype.DOUBLE -> repeat(chunk.nelems) { dst.putDouble(fillValue as Double) }
-                Datatype.LONG -> repeat(chunk.nelems) { dst.putLong(fillValue as Long) }
-                Datatype.ULONG -> repeat(chunk.nelems) { dst.putLong((fillValue as ULong).toLong()) }
-                Datatype.OPAQUE -> {
-                    val fill = fillValue as ByteBuffer
-                    repeat(chunk.nelems) {
-                        fill.position(0)
-                        dst.put(fill)
-                    }
-                }
-
-                else -> throw IllegalStateException("unimplemented type= $datatype")
-            }
+            transferMissing(fillValue, datatype, chunk.nelems, dst)
         }
     }
 }
+
+internal fun transferMissing(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
+    if (fillValue == null) {
+        return
+    }
+    when (datatype) {
+        Datatype.STRING, Datatype.CHAR, Datatype.BYTE -> {
+            val fill = fillValue as Byte
+            repeat(nelems) { dst.put(fill) }
+        }
+
+        Datatype.UBYTE, Datatype.ENUM1 -> {
+            val fill = fillValue as UByte
+            repeat(nelems) { dst.put(fill.toByte()) }
+        }
+
+        Datatype.SHORT -> repeat(nelems) { dst.putShort(fillValue as Short) }
+        Datatype.USHORT, Datatype.ENUM2 -> repeat(nelems) { dst.putShort((fillValue as UShort).toShort()) }
+        Datatype.INT -> repeat(nelems) { dst.putInt(fillValue as Int) }
+        Datatype.UINT, Datatype.ENUM4 -> repeat(nelems) { dst.putInt((fillValue as UInt).toInt()) }
+        Datatype.FLOAT -> repeat(nelems) { dst.putFloat(fillValue as Float) }
+        Datatype.DOUBLE -> repeat(nelems) { dst.putDouble(fillValue as Double) }
+        Datatype.LONG -> repeat(nelems) { dst.putLong(fillValue as Long) }
+        Datatype.ULONG -> repeat(nelems) { dst.putLong((fillValue as ULong).toLong()) }
+        Datatype.OPAQUE -> {
+            val fill = fillValue as ByteBuffer
+            repeat(nelems) {
+                fill.position(0)
+                dst.put(fill)
+            }
+        }
+
+        else -> throw IllegalStateException("unimplemented type= $datatype")
+    }
+}
+
+
+// class MaxChunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all) {
+    // : AbstractIterator<TransferChunk>() {
+    fun maxChunkShape(shape: IntArray, maxChunkElems: Int): IntArray {
+        val rank = shape.size
+        val strider = IntArray(rank)
+        var accumStride = 1
+        for (k in rank - 1 downTo 0) {
+            strider[k] = accumStride
+            accumStride *= shape[k]
+        }
+
+        val chunkShape = IntArray(rank)
+        repeat(rank) { idx ->
+            var size: Int = (maxChunkElems / strider.get(idx))
+            size = if (size == 0) 1 else size
+            size = Math.min(size, shape.get(idx))
+            chunkShape[idx] = size
+        }
+        return chunkShape
+    }
+// }

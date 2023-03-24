@@ -41,7 +41,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
 
         try {
              if (vinfo.isChunked) {
-                return H5chunkReader(header).readChunkedDataNew(v2, wantSection)
+                return H5chunkReader(header).readChunkedData(v2, wantSection)
             } else {
                 return header.readRegularData(vinfo, wantSection)
             }
@@ -52,7 +52,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     }
 
     @Throws(IOException::class)
-    override fun chunkIterator(v2: Variable, section: Section?) : Iterator<ArraySection>? {
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?) : Iterator<ArraySection>? {
         val wantSection = Section.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable
@@ -65,7 +65,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
             if (vinfo.isChunked) {
                 return H5chunkIterator(header, v2, wantSection)
             } else {
-                return null
+                return null // H5maxIterator(header, v2, wantSection, maxElements)
             }
         } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")

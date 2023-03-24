@@ -14,7 +14,7 @@ class H4chunkReader(val h4 : H4builder) {
     private val debugChunking = false
     private val debugMissing = false
 
-    internal fun readChunkedDataNew(v2: Variable, wantSection : Section) : ArrayTyped<*> {
+    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
         val vinfo = v2.spObject as Vinfo
         val elemSize = vinfo.elemSize
         val datatype = v2.datatype
@@ -41,7 +41,7 @@ class H4chunkReader(val h4 : H4builder) {
         var transferChunks = 0
         for (dataChunk in tiledData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
             val dataSection = IndexSpace(dataChunk.offsets, vinfo.chunkLengths)
-            val chunker = Chunker(dataSection, elemSize, wantSpace)
+            val chunker = Chunker(dataSection, elemSize, wantSpace) // each dataChunk has its own Chunker iteration
             if (dataChunk.isMissing()) {
                 if (debugMissing) println(" ${dataChunk.show(tiledData.tiling)}")
                 chunker.transferMissing(vinfo.fillValue, datatype, bb)
