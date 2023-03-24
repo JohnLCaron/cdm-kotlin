@@ -7,8 +7,6 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.transfer
-import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
 internal class H5chunkReader(val h5 : H5builder) {

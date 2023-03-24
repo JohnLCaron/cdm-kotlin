@@ -3,9 +3,7 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.Layout
-import com.sunya.cdm.layout.LayoutRegular
+import com.sunya.cdm.layout.*
 import java.io.ByteArrayInputStream
 import java.io.IOException
 import java.io.InputStream
@@ -48,8 +46,32 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
-        return null
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
+        val wantSection = Section.fill(section, v2.shape)
+        return H4maxIterator(v2, wantSection, maxElements ?: 100_000)
+    }
+
+    private inner class H4maxIterator(val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+        private val debugChunking = false
+        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+
+        // LOOK could look for natural chunking (isChunked, isLinked)
+        override fun computeNext() {
+            if (maxIterator.hasNext()) {
+                val indexSection = maxIterator.next()
+                if (debugChunking) println("  chunk=${indexSection}")
+
+                val section = indexSection.section()
+                val array = if (v2.datatype == Datatype.COMPOUND) {
+                    readStructureDataArray(v2, section)
+                } else {
+                    readRegularDataArray(v2, section)
+                }
+                setNext(ArraySection(array, section))
+            } else {
+                done()
+            }
+        }
     }
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {

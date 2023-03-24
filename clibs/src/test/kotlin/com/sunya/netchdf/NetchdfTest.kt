@@ -1,13 +1,17 @@
 package com.sunya.netchdf
 
+import com.google.common.util.concurrent.AtomicDouble
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.ArrayTyped
+import com.sunya.cdm.util.Stats
+import com.sunya.cdm.util.nearlyEquals
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -17,6 +21,7 @@ import test.util.testData
 import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
+import kotlin.system.measureNanoTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
@@ -48,17 +53,22 @@ class NetchdfTest {
                     .withRecursion()
                     .build()
 
-            // return stream4
+            // return Stream.of(stream3, stream4).flatMap { i -> i };
             return Stream.of(stream3, stream4, moar3, moar4).flatMap { i -> i };
+        }
+
+        @JvmStatic
+        @BeforeAll
+        fun beforeAll() {
+            Stats.clear() // problem with concurrent tests
         }
 
         @JvmStatic
         @AfterAll
         fun afterAll() {
-            println("\ncountVariables = $countVariables")
+            Stats.show()
         }
 
-        var countVariables = 0
         var showDataRead = true
         var showData = false
         var showFailedData = true
@@ -247,6 +257,20 @@ h5dump
         readNetchdfData(filename, "DQF", Section(":, :"))
     }
 
+    @Test
+    fun readOneNetchIterate() {
+        // compareDataWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc")
+        readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI", false)
+    }
+
+    @Test
+    fun readIterateCompareNC() {
+        val filename = testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc"
+        // showNetchdfHeader(filename, null)
+        compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
+        // compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
+    }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @ParameterizedTest
@@ -277,13 +301,19 @@ h5dump
     @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchdfData(filename: String) {
-        readNetchdfData(filename, null)
+        readNetchdfData(filename)
     }
 
     @ParameterizedTest
     @MethodSource("params")
     fun testCompareDataWithClib(filename: String) {
-        compareDataWithClib(filename, null)
+        compareDataWithClib(filename)
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testReadNetchIterate(filename: String) {
+        readNetchIterate(filename)
     }
 
 }
@@ -365,6 +395,28 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
         } else {
             NetcdfClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
+            }
+        }
+    }
+}
+
+fun compareIterateWithClib(filename: String, varname: String? = null, section: Section? = null) {
+    println("=============================================================")
+    openNetchdfFile(filename).use { netchdf ->
+        if (netchdf == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
+        if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
+
+        if (netchdf.type().contains("hdf4")) {
+            Hdf4ClibFile(filename).use { ncfile ->
+                compareIterateWithNC(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
+            }
+        } else {
+            NetcdfClibFile(filename).use { ncfile ->
+                compareIterateWithNC(netchdf, ncfile, varname, section)
             }
         }
     }
@@ -566,5 +618,140 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
         println("   *** FAIL comparing char variable = ${name}")
         print("   ncdata = $ncdata")
         print("   mydata = $mydata")
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+// compare reading data regular and through the chunkIterate API
+
+fun readNetchIterate(filename: String, varname : String? = null, compare : Boolean = true) {
+    openNetchdfFile(filename).use { myfile ->
+        if (myfile == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println("${myfile.type()} $filename ${"%.2f".format(myfile.size / 1000.0 / 1000.0)} Mbytes")
+        var countChunks = 0
+        if (varname != null) {
+            val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname } ?: throw RuntimeException("cant find $varname")
+            countChunks +=  compareOneVarIterate(myfile, myvar, compare)
+        } else {
+            myfile.rootGroup().allVariables().forEach { it ->
+                if (it.datatype.isNumber) {
+                    countChunks += compareOneVarIterate(myfile, it, compare)
+                }
+            }
+        }
+        if (countChunks > 0) {
+            println("${myfile.type()} $filename ${"%.2f".format(myfile.size / 1000.0 / 1000.0)} Mbytes chunks = $countChunks")
+        }
+    }
+}
+
+fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
+    val filename = myFile.location().substringAfterLast('/')
+    val sum = AtomicDouble()
+
+    val sum2 = if (compare) {
+        sum.set(0.0)
+        val time3 = measureNanoTime {
+            val arrayData = myFile.readArrayData(myvar, null)
+            sumValues(arrayData)
+        }
+        Stats.of("regularSum", filename, "chunk").accum(time3, 1)
+        sum.get()
+    } else 0.0
+
+    sum.set(0.0)
+    var countChunks = 0
+    val time1 = measureNanoTime {
+        val chunkIter = myFile.chunkIterator(myvar)
+        if (chunkIter == null) {
+            return 0
+        }
+        for (pair in chunkIter) {
+            // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
+            sumValues(pair.array)
+            countChunks++
+        }
+    }
+    val sum1 = sum.get()
+    if (compare) Stats.of("serialSum", filename, "chunk").accum(time1, countChunks)
+
+    if (compare && sum1.isFinite() && sum2.isFinite()) {
+       assertTrue(nearlyEquals(sum1, sum2), "$sum1 != $sum2 sum2")
+    }
+    return countChunks
+}
+
+var sum = AtomicDouble()
+fun sumValues(array : ArrayTyped<*>) {
+    if (!array.datatype.isNumber or true) return
+    for (value in array) {
+        val number = (value as Number)
+        val numberd : Double = number.toDouble()
+        if (numberd.isFinite()) {
+            sum.getAndAdd(numberd)
+        }
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////
+// compare reading data chunkIterate API with Neetch and NC
+
+fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
+    if (varname != null) {
+        val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
+        if (myvar == null) {
+            println(" *** cant find myvar $varname")
+            return
+        }
+        val ncvar = ncfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
+        if (ncvar == null) {
+            throw RuntimeException(" *** cant find ncvar $varname")
+        }
+        compareOneVarIterate(myvar, myfile, ncvar, ncfile, section)
+    } else {
+        myfile.rootGroup().allVariables().forEach { myvar ->
+            val ncvar = ncfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
+            if (ncvar == null) {
+                println(" *** cant find ${myvar.fullname()} in ncfile")
+            } else {
+                compareOneVarIterate(myvar, myfile, ncvar, ncfile, null)
+            }
+        }
+    }
+}
+
+fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: Section?) {
+    val sum = AtomicDouble()
+    sum.set(0.0)
+    var countChunks = 0
+    val time1 = measureNanoTime {
+        val chunkIter = myfile.chunkIterator(myvar)
+        for (pair in chunkIter) {
+            // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
+            sumValues(pair.array)
+            countChunks++
+        }
+    }
+    Stats.of("netchdf", myfile.location(), "chunk").accum(time1, countChunks)
+    val sum1 = sum.get()
+
+    sum.set(0.0)
+    countChunks = 0
+    val time2 = measureNanoTime {
+        val chunkIter = ncfile.chunkIterator(ncvar)
+        for (pair in chunkIter) {
+            // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
+            sumValues(pair.array)
+            countChunks++
+        }
+    }
+    Stats.of("nclib", ncfile.location(), "chunk").accum(time2, countChunks)
+    val sum2 = sum.get()
+
+    if (sum1.isFinite() && sum2.isFinite()) {
+        assertTrue(nearlyEquals(sum1, sum2), "$sum1 != $sum2 sum2")
     }
 }

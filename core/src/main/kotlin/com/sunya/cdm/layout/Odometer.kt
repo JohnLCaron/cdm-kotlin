@@ -6,12 +6,12 @@ class Odometer(val section : IndexSpace, varshape : IntArray) : Iterable<IntArra
     val current = section.start.copyOf()
     val limit = section.limit
     val totalElements = section.totalElements
-    val strider : IntArray
+    val strider : LongArray
     var done = 0
 
     init {
-        strider = IntArray(rank)
-        var accumStride = 1
+        strider = LongArray(rank)
+        var accumStride = 1L
         for (k in rank - 1 downTo 0) {
             strider[k] = accumStride
             accumStride *= varshape[k]
@@ -30,7 +30,7 @@ class Odometer(val section : IndexSpace, varshape : IntArray) : Iterable<IntArra
         var total = element
         for (dim in 0 until rank) {
             current[dim] = (total / strider[dim]).toInt()
-            total -= (current[dim] * strider[dim]).toLong()
+            total -= (current[dim] * strider[dim])
         }
     }
 

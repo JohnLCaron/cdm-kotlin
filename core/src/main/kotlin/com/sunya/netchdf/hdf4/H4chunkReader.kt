@@ -6,8 +6,6 @@ import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.transfer
-import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
 class H4chunkReader(val h4 : H4builder) {

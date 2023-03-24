@@ -19,6 +19,8 @@ cd /home/oem/install/jextract-19/bin
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
+import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.MaxChunker
 
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
 import java.lang.foreign.MemoryLayout
@@ -68,14 +70,32 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         throw RuntimeException("cant read ${v2.name}")
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
-        return null
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
+        val filled = Section.fill(section, v2.shape)
+        return HCmaxIterator(v2, filled, maxElements ?: 100_000)
+    }
+
+    private inner class HCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+        private val debugChunking = false
+        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+
+        override fun computeNext() {
+            if (maxIterator.hasNext()) {
+                val indexSection = maxIterator.next()
+                if (debugChunking) println("  chunk=${indexSection}")
+
+                val section = indexSection.section()
+                val array = readArrayData(v2, section)
+                setNext(ArraySection(array, section))
+            } else {
+                done()
+            }
+        }
     }
 
     companion object {
         var valueCharset: Charset = StandardCharsets.UTF_8
     }
-
 }
 
 fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection: Section, nbytes: Long): ArrayTyped<*> {

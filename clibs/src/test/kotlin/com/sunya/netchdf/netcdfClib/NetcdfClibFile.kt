@@ -2,8 +2,8 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
-import com.sunya.cdm.iosp.*
-import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
+import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.MaxChunker
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.lang.foreign.*
 import java.lang.foreign.ValueLayout.*
@@ -287,8 +287,27 @@ class NetcdfClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
-        return null
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
+        val filled = Section.fill(section, v2.shape)
+        return NCmaxIterator(v2, filled, maxElements ?: 100_000)
+    }
+
+    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+        private val debugChunking = false
+        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+
+        override fun computeNext() {
+            if (maxIterator.hasNext()) {
+                val indexSection = maxIterator.next()
+                if (debugChunking) println("  chunk=${indexSection}")
+
+                val section = indexSection.section()
+                val array = readArrayData(v2, section)
+                setNext(ArraySection(array, section))
+            } else {
+                done()
+            }
+        }
     }
 }
 

@@ -6,13 +6,13 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.transfer
-import com.sunya.cdm.layout.transferMissing
+import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
 internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
 
     private val debugChunking = false
+    private val debugChunkingDetails = false
 
     val vinfo : DataContainerVariable
     val h5type : H5TypeInfo
@@ -31,19 +31,13 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
         datatype = h5type.datatype(h5)
 
-        val wantSpace = IndexSpace(wantSection)
-        val sizeBytes = wantSpace.totalElements * elemSize
-        if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
-            throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
-        }
-
         val btreeNew = BTree1(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
         tiledData = TiledH5Data(btreeNew)
         filters = H5filters(v2.name, vinfo.mfp, h5type.endian)
         if (debugChunking) println(" ${tiledData.tiling}")
 
         state = OpenFileState(0L, h5type.endian)
-        chunkIterator = tiledData.dataChunks(wantSpace).iterator()
+        chunkIterator = tiledData.dataChunks(IndexSpace(wantSection)).iterator()
     }
 
     override fun computeNext() {
@@ -61,9 +55,10 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         val bb = if (dataChunk.isMissing()) {
             val sizeBytes = section.computeSize() * elemSize
             val bbmissing = ByteBuffer.allocate(sizeBytes.toInt())
-            transferMissing(vinfo.fillValue, datatype, section.computeSize().toInt(), bbmissing)
+            transferMissingNelems(vinfo.fillValue, datatype, section.computeSize().toInt(), bbmissing)
             bbmissing
         } else {
+            if (debugChunkingDetails) println("  chunk=${dataChunk.show(tiledData.tiling)}")
             state.pos = dataChunk.childAddress
             val chunkData = h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
             filters.apply(chunkData, dataChunk)

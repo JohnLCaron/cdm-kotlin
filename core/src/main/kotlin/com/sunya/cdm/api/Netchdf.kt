@@ -16,7 +16,7 @@ interface Netchdf : Closeable {
     fun readArrayData(v2: Variable, section: Section? = null) : ArrayTyped<*>
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun chunkIterator(v2: Variable, section: Section? = null, maxElements : Int? = null) : Iterator<ArraySection>?
+    fun chunkIterator(v2: Variable, section: Section? = null, maxElements : Int? = null) : Iterator<ArraySection>
 }
 
 data class ArraySection(val array : ArrayTyped<*>, val section : Section)

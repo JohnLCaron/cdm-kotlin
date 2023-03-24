@@ -41,8 +41,35 @@ class Netcdf3File(val filename : String) : Netchdf {
         return readDataWithLayout(layout, v2, wantSection)
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
-        return null
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
+        val wantSection = Section.fill(section, v2.shape)
+        return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
+    }
+
+    private inner class NCmaxIterator(val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+        private val debugChunking = false
+        val vinfo = v2.spObject as N3header.Vinfo
+        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+
+        override fun computeNext() {
+            if (maxIterator.hasNext()) {
+                val indexSection = maxIterator.next()
+                if (debugChunking) println("  chunk=${indexSection}")
+                val section = indexSection.section()
+
+                val layout = if (!v2.isUnlimited()) {
+                    LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(section))
+                } else {
+                    // I think this will segment on the record dimension
+                    LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(section))
+                }
+
+                val array = readDataWithLayout(layout, v2, section)
+                setNext(ArraySection(array, section))
+            } else {
+                done()
+            }
+        }
     }
 
     @Throws(IOException::class)
