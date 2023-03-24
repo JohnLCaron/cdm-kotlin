@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
 class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
-    : ArrayTyped<ArrayStructureData.StructureData>(shape) {
+    : ArrayTyped<ArrayStructureData.StructureData>(Datatype.COMPOUND, shape) {
 
     init {
         require(bb.capacity() >= recsize * computeSize(shape))

@@ -1,7 +1,7 @@
 package com.sunya.cdm.layout
 
 /** Iterator through indices of multidimensional space. */
-class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> {
+class Odometer(val section : IndexSpace, varshape : IntArray) : Iterable<IntArray> {
     val rank = section.rank
     val current = section.start.copyOf()
     val limit = section.limit
@@ -14,7 +14,7 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
         var accumStride = 1
         for (k in rank - 1 downTo 0) {
             strider[k] = accumStride
-            accumStride *= shape[k]
+            accumStride *= varshape[k]
         }
     }
 
@@ -26,7 +26,7 @@ class Odometer(val section : IndexSpace, shape : IntArray) : Iterable<IntArray> 
         repeat(count) {incr() } // LOOK do something smarter
     }
 
-    private fun setFromElement(element: Long) {
+    fun setFromElement(element: Long) {
         var total = element
         for (dim in 0 until rank) {
             current[dim] = (total / strider[dim]).toInt()

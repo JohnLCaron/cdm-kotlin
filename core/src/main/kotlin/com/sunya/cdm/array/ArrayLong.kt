@@ -1,8 +1,9 @@
 package com.sunya.cdm.array
 
+import com.sunya.cdm.api.Datatype
 import java.nio.LongBuffer
 
-class ArrayLong(shape : IntArray, val values : LongBuffer) : ArrayTyped<Long>(shape) {
+class ArrayLong(shape : IntArray, val values : LongBuffer) : ArrayTyped<Long>(Datatype.LONG, shape) {
 
     override fun iterator(): Iterator<Long> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Long>() {

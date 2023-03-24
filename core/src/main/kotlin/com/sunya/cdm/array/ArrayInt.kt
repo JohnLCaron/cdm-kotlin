@@ -1,8 +1,9 @@
 package com.sunya.cdm.array
 
+import com.sunya.cdm.api.Datatype
 import java.nio.IntBuffer
 
-class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(shape) {
+class ArrayInt(shape : IntArray, val values : IntBuffer) : ArrayTyped<Int>(Datatype.INT, shape) {
 
     override fun iterator(): Iterator<Int> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Int>() {

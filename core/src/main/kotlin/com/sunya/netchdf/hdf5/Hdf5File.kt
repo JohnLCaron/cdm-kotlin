@@ -65,7 +65,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
             if (vinfo.isChunked) {
                 return H5chunkIterator(header, v2, wantSection)
             } else {
-                return null // H5maxIterator(header, v2, wantSection, maxElements)
+                return H5maxIterator(header, v2, wantSection, maxElements ?: 100_000)
             }
         } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")

@@ -1,10 +1,11 @@
 package com.sunya.cdm.array
 
+import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section.Companion.breakoutInner
 import com.sunya.cdm.api.Section.Companion.computeSize
 import java.nio.charset.StandardCharsets
 
-class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(shape) {
+class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(Datatype.STRING, shape) {
 
     constructor(shape : IntArray, valueArray : Array<String>) : this (shape, valueArray.toList())
 

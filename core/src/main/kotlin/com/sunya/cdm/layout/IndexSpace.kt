@@ -12,7 +12,7 @@ import kotlin.math.min
 data class IndexSpace(val start : IntArray, val shape : IntArray) {
     val rank = start.size
     val totalElements = computeSize(shape)
-    val limit by lazy { IntArray(rank) { idx -> start[idx]+ shape[idx] - 1 } } // inclusive
+    val limit by lazy { IntArray(rank) { idx -> start[idx] + shape[idx] - 1 } } // inclusive
     val ranges by lazy { start.mapIndexed { idx, it -> it until it + shape[idx] } } // inclusive
 
     constructor(shape : IntArray) : this( IntArray(shape.size), shape) // starts at 0
@@ -67,7 +67,8 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
     }
 
     override fun toString(): String {
-        return "${makeSection()} total=${totalElements}"
+        // return "${makeSection()} total=${totalElements}"
+        return "${start.contentToString()} ${shape.contentToString()} total=${totalElements}"
     }
 
     override fun equals(other: Any?): Boolean {

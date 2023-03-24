@@ -7,6 +7,8 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.transfer
+import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
 internal class H5chunkReader(val h5 : H5builder) {
@@ -39,16 +41,16 @@ internal class H5chunkReader(val h5 : H5builder) {
         val state = OpenFileState(0L, vinfo.h5type.endian)
         for ((count, dataChunk : BTree1.DataChunkEntry) in tiledData.dataChunks(wantSpace).withIndex()) { // : Iterable<BTree1New.DataChunkEntry>
             val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
-            val chunker = Chunker(dataSection, elemSize, wantSpace) // each DataChunkEntry has its own Chunker iteration
+            val chunker = Chunker(dataSection, wantSpace) // each DataChunkEntry has its own Chunker iteration
             if (dataChunk.isMissing()) {
                 if (debugMissing) println(" missing ${dataChunk.show(tiledData.tiling)}")
-                chunker.transferMissing(vinfo.fillValue, datatype, bb)
+                chunker.transferMissing(vinfo.fillValue, datatype, elemSize, bb)
             } else {
                 if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(tiledData.tiling)}")
                 state.pos = dataChunk.childAddress
                 val chunkData = h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
                 val filteredData = filters.apply(chunkData, dataChunk)
-                chunker.transfer(filteredData, bb)
+                chunker.transfer(filteredData, elemSize, bb)
                 transferChunks += chunker.transferChunks
             }
         }
