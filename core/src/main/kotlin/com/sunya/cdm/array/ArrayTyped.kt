@@ -4,7 +4,7 @@ import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
 
-abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
+abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : Iterable<T> {
     val nelems = computeSize(shape).toInt()
 
     override fun toString(): String {
@@ -65,7 +65,7 @@ abstract class ArrayTyped<T>(val shape : IntArray) : Iterable<T> {
 }
 
 // An array of any shape that has a single value for all elements
-class ArraySingle<T>(shape : IntArray, val datatype : Datatype, val fillValue : T) : ArrayTyped<T>(shape) {
+class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) : ArrayTyped<T>(datatype, shape) {
     override fun iterator(): Iterator<T> = SingleIterator()
     private inner class SingleIterator : AbstractIterator<T>() {
         private var idx = 0

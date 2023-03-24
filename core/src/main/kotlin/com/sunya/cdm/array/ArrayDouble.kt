@@ -1,8 +1,9 @@
 package com.sunya.cdm.array
 
+import com.sunya.cdm.api.Datatype
 import java.nio.DoubleBuffer
 
-class ArrayDouble(shape : IntArray, val values : DoubleBuffer) : ArrayTyped<Double>(shape) {
+class ArrayDouble(shape : IntArray, val values : DoubleBuffer) : ArrayTyped<Double>(Datatype.DOUBLE, shape) {
 
     override fun iterator(): Iterator<Double> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<Double>() {

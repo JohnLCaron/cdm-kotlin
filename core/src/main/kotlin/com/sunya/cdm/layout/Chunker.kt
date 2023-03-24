@@ -13,12 +13,10 @@ enum class Merge { all, none, notFirst }
  * The iteration is monotonic in both src and dest positions.
 
  * @param dataChunk the dataChunk, may have a trailing dimension that is ignored
- * @param elemSize size in bytes of one element
  * @param wantSpace the requested section of data.
  * @param mergeFirst merge strategy for dimensions that can be merged and still keep contiguous transfer
  */
-class Chunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all)
-    : AbstractIterator<TransferChunk>() {
+class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merge.all) : AbstractIterator<TransferChunk>() {
 
     val nelems: Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
@@ -75,8 +73,7 @@ class Chunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, m
         return mergeDims
     }
 
-    //// iterator, TODO strides
-
+    //// iterator
     private var done: Long = 0 // done so far
     private var first = true
 
@@ -100,34 +97,34 @@ class Chunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, m
     }
 
     override fun toString(): String {
-        return "Chunker(nelems=$nelems, elemSize=$elemSize totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
+        return "Chunker(nelems=$nelems, totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
+}
 
-    // transfer from src to dst buffer, using my computed chunks
-    fun transfer(src: ByteBuffer, dst: ByteBuffer) {
-        for (chunk in this) {
-            src.position(this.elemSize * chunk.srcElem.toInt())
-            dst.position(this.elemSize * chunk.destElem.toInt())
-            // Object src,  int  srcPos, Object dest, int destPos, int length
-            System.arraycopy(
-                src.array(),
-                this.elemSize * chunk.srcElem.toInt(),
-                dst.array(),
-                this.elemSize * chunk.destElem.toInt(),
-                this.elemSize * chunk.nelems,
-            )
-        }
+// transfer from src to dst buffer, using my computed chunks
+internal fun Iterator<TransferChunk>.transfer(src: ByteBuffer, elemSize : Int, dst: ByteBuffer) {
+    for (chunk in this) {
+        src.position(elemSize * chunk.srcElem.toInt())
+        dst.position(elemSize * chunk.destElem.toInt())
+        // Object src,  int  srcPos, Object dest, int destPos, int length
+        System.arraycopy(
+            src.array(),
+            elemSize * chunk.srcElem.toInt(),
+            dst.array(),
+            elemSize * chunk.destElem.toInt(),
+            elemSize * chunk.nelems,
+        )
     }
+}
 
-    // transfer fillValue to dst buffer, using my computed chunks
-    internal fun transferMissing(fillValue: Any?, datatype: Datatype, dst: ByteBuffer) {
-        if (fillValue == null) {
-            return
-        }
-        for (chunk in this) {
-            dst.position(this.elemSize * chunk.destElem.toInt())
-            transferMissing(fillValue, datatype, chunk.nelems, dst)
-        }
+// transfer fillValue to dst buffer, using my computed chunks
+internal fun Iterator<TransferChunk>.transferMissing(fillValue: Any?, datatype: Datatype, elemSize : Int, dst: ByteBuffer) {
+    if (fillValue == null) {
+        return
+    }
+    for (chunk in this) {
+        dst.position(elemSize * chunk.destElem.toInt())
+        transferMissing(fillValue, datatype, chunk.nelems, dst)
     }
 }
 
@@ -165,26 +162,3 @@ internal fun transferMissing(fillValue: Any?, datatype: Datatype, nelems : Int, 
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }
 }
-
-
-// class MaxChunker(dataChunk: IndexSpace, val elemSize: Int, wantSpace: IndexSpace, merge : Merge = Merge.all) {
-    // : AbstractIterator<TransferChunk>() {
-    fun maxChunkShape(shape: IntArray, maxChunkElems: Int): IntArray {
-        val rank = shape.size
-        val strider = IntArray(rank)
-        var accumStride = 1
-        for (k in rank - 1 downTo 0) {
-            strider[k] = accumStride
-            accumStride *= shape[k]
-        }
-
-        val chunkShape = IntArray(rank)
-        repeat(rank) { idx ->
-            var size: Int = (maxChunkElems / strider.get(idx))
-            size = if (size == 0) 1 else size
-            size = Math.min(size, shape.get(idx))
-            chunkShape[idx] = size
-        }
-        return chunkShape
-    }
-// }

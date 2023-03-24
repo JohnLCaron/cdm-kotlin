@@ -2,7 +2,7 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 
-class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Datatype) : ArrayTyped<Any>(shape) {
+class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Datatype) : ArrayTyped<Any>(Datatype.VLEN, shape) {
 
     // iterate over all the values, needed eg for toList()
     override fun iterator(): Iterator<Any> = AllIterator()

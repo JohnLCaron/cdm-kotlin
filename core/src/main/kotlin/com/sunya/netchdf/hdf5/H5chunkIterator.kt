@@ -6,6 +6,7 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.transfer
 import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
@@ -42,7 +43,6 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         if (debugChunking) println(" ${tiledData.tiling}")
 
         state = OpenFileState(0L, h5type.endian)
-
         chunkIterator = tiledData.dataChunks(wantSpace).iterator()
     }
 
@@ -65,7 +65,8 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
             bbmissing
         } else {
             state.pos = dataChunk.childAddress
-            h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
+            val chunkData = h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
+            filters.apply(chunkData, dataChunk)
         }
 
         bb.position(0)

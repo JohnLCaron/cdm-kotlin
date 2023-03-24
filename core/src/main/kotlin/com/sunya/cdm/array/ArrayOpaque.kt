@@ -1,10 +1,10 @@
 package com.sunya.cdm.array
 
-import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.Datatype
 import java.nio.ByteBuffer
 
 // LOOK not dealing with n > 1
-class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(shape) {
+class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(Datatype.OPAQUE, shape) {
     init {
         require(nelems * size <= values.capacity())
     }
