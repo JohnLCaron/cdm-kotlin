@@ -41,7 +41,7 @@ class Netcdf3File(val filename : String) : Netchdf {
         return readDataWithLayout(layout, v2, wantSection)
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
         return null
     }
 

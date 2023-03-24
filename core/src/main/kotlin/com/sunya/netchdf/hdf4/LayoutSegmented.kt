@@ -27,7 +27,7 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
     private val segMax : LongArray // elems
 
     // outer chunk deals with the wanted section of data
-    private val chunker = Chunker(IndexSpace(srcShape), elemSize, wantSection)
+    private val chunker = Chunker(IndexSpace(srcShape), elemSize, wantSection) // One  big chunk
     private var chunkOuter = LayoutChunk(0, 0, 0, 0)
 
     // inner chunk = deal with segmentation

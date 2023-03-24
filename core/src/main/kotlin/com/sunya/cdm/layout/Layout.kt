@@ -22,12 +22,12 @@ interface Layout : Iterator<Layout.Chunk> {
         fun srcPos() : Long
 
         /** The 1D element position in the source to read from. (Note: elements, not bytes)   */
-        fun srcElem() : Long
+        fun srcElem() : Long // In principle, can have data arrays bigger than 2^32
 
         /** Number of elements to transfer contiguously (Note: elements, not bytes)  */
         fun nelems() : Int
 
         /** The 1D element position in the destination to copy into. (Note: elements, not bytes) */
-        fun destElem() : Long // LOOK why Long?
+        fun destElem() : Long // LOOK why Long? cant read more than 2^32
     }
 }

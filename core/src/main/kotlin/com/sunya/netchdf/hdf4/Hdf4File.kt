@@ -48,7 +48,7 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?): Iterator<ArraySection>? {
+    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection>? {
         return null
     }
 
@@ -78,7 +78,7 @@ class Hdf4File(val filename : String) : Netchdf {
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                return H4chunkReader(header).readChunkedDataNew(v, section)
+                return H4chunkReader(header).readChunkedData(v, section)
             }
         } else {
             if (!vinfo.isLinked && !vinfo.isChunked) {
@@ -94,7 +94,7 @@ class Hdf4File(val filename : String) : Netchdf {
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
-                return H4chunkReader(header).readChunkedDataNew(v, section)
+                return H4chunkReader(header).readChunkedData(v, section)
             }
         }
         throw IllegalStateException()

@@ -1,20 +1,17 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.ArraySection
-import com.sunya.cdm.api.CompoundTypedef
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
-import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
+import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
 internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
 
-    private val debugChunkingDetail = false
     private val debugChunking = false
-    private val debugMissing = false
 
     val vinfo : DataContainerVariable
     val h5type : H5TypeInfo
@@ -74,35 +71,22 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
             h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
         }
 
-        /* val sizeBytes = dataSection.totalElements * elemSize
-        val bb = ByteBuffer.allocate(sizeBytes.toInt())
-        bb.order(vinfo.h5type.endian)
-
-        val chunker = Chunker(dataSection, elemSize, dataSection)
-        if (dataChunk.isMissing()) {
-            if (debugMissing) println(" ${dataChunk.show(tiledData.tiling)}")
-            chunker.transferMissing(vinfo.fillValue, datatype, bb)
-        } else {
-            if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(tiledData.tiling)}")
-            state.pos = dataChunk.childAddress
-            val chunkData = h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
-            val filteredData = filters.apply(chunkData, dataChunk)
-            chunker.transfer(filteredData, bb)
-            transferChunks += chunker.transferChunks
-        }
-        count++
-
-         */
-
         bb.position(0)
         bb.limit(bb.capacity())
         bb.order(h5type.endian)
         val shape = section.shape
 
+        return if (h5type.hdfType == Datatype5.Vlen) {
+            ArraySection(h5.processVlenIntoArray(h5type, shape, bb, dataSection.totalElements.toInt(), elemSize), section)
+        } else {
+            ArraySection(h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize), section)
+        }
+
+        /*
         if (h5type.hdfType == Datatype5.Compound) {
             val members = (datatype.typedef as CompoundTypedef).members
             val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
-            return ArraySection(h5.processChunkedCompound(sdataArray, h5type.endian), section)
+            return ArraySection(h5.processCompoundData(sdataArray, h5type.endian), section)
         }
 
         if (h5type.hdfType == Datatype5.Vlen) {
@@ -130,41 +114,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
             result = ArrayString(shape, h5.convertReferencesToDataObjectName(result as ArrayLong))
         }
         return ArraySection(result, section)
-    }
-}
 
-internal fun transferMissing(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
-    if (fillValue == null) {
-        // could use some default, but 0 is pretty good
-        return
-    }
-    when (datatype) {
-        Datatype.STRING, Datatype.CHAR, Datatype.BYTE -> {
-            val fill = fillValue as Byte
-            repeat(nelems) { dst.put(fill) }
-        }
-
-        Datatype.UBYTE, Datatype.ENUM1 -> {
-            val fill = fillValue as UByte
-            repeat(nelems) { dst.put(fill.toByte()) }
-        }
-
-        Datatype.SHORT -> repeat(nelems) { dst.putShort(fillValue as Short) }
-        Datatype.USHORT, Datatype.ENUM2 -> repeat(nelems) { dst.putShort((fillValue as UShort).toShort()) }
-        Datatype.INT -> repeat(nelems) { dst.putInt(fillValue as Int) }
-        Datatype.UINT, Datatype.ENUM4 -> repeat(nelems) { dst.putInt((fillValue as UInt).toInt()) }
-        Datatype.FLOAT -> repeat(nelems) { dst.putFloat(fillValue as Float) }
-        Datatype.DOUBLE -> repeat(nelems) { dst.putDouble(fillValue as Double) }
-        Datatype.LONG -> repeat(nelems) { dst.putLong(fillValue as Long) }
-        Datatype.ULONG -> repeat(nelems) { dst.putLong((fillValue as ULong).toLong()) }
-        Datatype.OPAQUE -> {
-            val fill = fillValue as ByteBuffer
-            repeat(nelems) {
-                fill.position(0)
-                dst.put(fill)
-            }
-        }
-
-        else -> throw IllegalStateException("unimplemented type= $datatype")
+         */
     }
 }

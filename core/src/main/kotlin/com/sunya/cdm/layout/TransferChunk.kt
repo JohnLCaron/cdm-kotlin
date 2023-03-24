@@ -11,6 +11,9 @@ data class TransferChunk(
     val destElem: Long  // start transferring to here in destination
 )
 
+/**
+ * Adds the srcPos to the TransferChunk.
+ */
 data class LayoutChunk(
     val srcPos: Long,   // byte position in source where to read from
     val srcElem : Long, // start reading here in the source
