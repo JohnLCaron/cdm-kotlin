@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import com.sunya.cdm.layout.IndexSpace
@@ -113,30 +112,6 @@ internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, 
     }
 
     return result
-}
-
-// The structure data is not on the heap, but the variable length members (vlen, string) are
-internal fun H5builder.readCompoundData(dc: DataContainer, layout : Layout, section : Section) : ArrayStructureData {
-    val datatype = dc.h5type.datatype(this)
-    require(datatype == Datatype.COMPOUND)
-    requireNotNull(datatype.typedef)
-    require(datatype.typedef is CompoundTypedef)
-
-    val state = OpenFileState(0, dc.h5type.endian)
-
-    val sizeBytes = computeSize(section.shape).toInt() * layout.elemSize
-    val bb = ByteBuffer.allocate(sizeBytes)
-    bb.order(state.byteOrder)
-    while (layout.hasNext()) {
-        val chunk: Layout.Chunk = layout.next()
-        state.pos = chunk.srcPos()
-        raf.readIntoByteBuffer(state, bb, layout.elemSize * chunk.destElem().toInt(), layout.elemSize * chunk.nelems())
-    }
-    bb.position(0)
-    bb.limit(bb.capacity())
-    val sdataArray =  ArrayStructureData(section.shape, bb, layout.elemSize, datatype.typedef.members)
-
-    return processCompoundData(sdataArray, dc.h5type.endian)
 }
 
 // Put the variable length members (vlen, string) on the heap

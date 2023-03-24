@@ -19,7 +19,7 @@ internal class H5chunkReader(val h5 : H5builder) {
         val vinfo = v2.spObject as DataContainerVariable
         val h5type = vinfo.h5type
 
-        val elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
+        val elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
         val datatype = vinfo.h5type.datatype(h5)
 
         val wantSpace = IndexSpace(wantSection)
@@ -35,10 +35,9 @@ internal class H5chunkReader(val h5 : H5builder) {
         val filters = H5filters(v2.name, vinfo.mfp, vinfo.h5type.endian)
         if (debugChunking) println(" ${tiledData.tiling}")
 
-        var count = 0
         var transferChunks = 0
         val state = OpenFileState(0L, vinfo.h5type.endian)
-        for (dataChunk : BTree1.DataChunkEntry in tiledData.dataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
+        for ((count, dataChunk : BTree1.DataChunkEntry) in tiledData.dataChunks(wantSpace).withIndex()) { // : Iterable<BTree1New.DataChunkEntry>
             val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
             val chunker = Chunker(dataSection, elemSize, wantSpace) // each DataChunkEntry has its own Chunker iteration
             if (dataChunk.isMissing()) {
@@ -52,7 +51,6 @@ internal class H5chunkReader(val h5 : H5builder) {
                 chunker.transfer(filteredData, bb)
                 transferChunks += chunker.transferChunks
             }
-            count++
         }
 
         bb.position(0)
@@ -65,43 +63,6 @@ internal class H5chunkReader(val h5 : H5builder) {
         } else {
             h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize)
         }
-
-/*
-        if (h5type.hdfType == Datatype5.Compound) {
-            val members = (datatype.typedef as CompoundTypedef).members
-            val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
-            return h5.processCompoundData(sdataArray, h5type.endian)
-        }
-
-        // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
-        if (h5type.hdfType == Datatype5.String) {
-            val extshape = IntArray(shape.size + 1) { if (it == shape.size) elemSize else shape[it] }
-            val result = ArrayUByte(extshape, bb)
-            return result.makeStringsFromBytes()
-        }
-
-        val result = when (datatype) {
-            Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-            Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-            Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-            Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-            Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-            Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-            Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-            Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
-            Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
-            else -> throw IllegalStateException("unimplemented type= $datatype")
-        }
-
-        if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
-            return ArrayString(shape, h5.convertReferencesToDataObjectName(result as ArrayLong))
-        }
-
-        return result
-
- */
     }
 }
 
