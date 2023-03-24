@@ -21,16 +21,13 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
     val filters : H5filters
     val state : OpenFileState
 
-    val chunkIterator : Iterator<BTree1.DataChunkEntry>
-
-    var count = 0
-    var transferChunks = 0
+    private val chunkIterator : Iterator<BTree1.DataChunkEntry>
 
     init {
         vinfo = v2.spObject as DataContainerVariable
 
         h5type = vinfo.h5type
-        elemSize = vinfo.storageDims.get(vinfo.storageDims.size - 1) // last one is always the elements size
+        elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
         datatype = h5type.datatype(h5)
 
         val wantSpace = IndexSpace(wantSection)
@@ -57,7 +54,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         }
     }
 
-    fun getaPair(dataChunk : BTree1.DataChunkEntry) : ArraySection {
+    private fun getaPair(dataChunk : BTree1.DataChunkEntry) : ArraySection {
         val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
         val section = dataSection.section()
 
@@ -81,40 +78,5 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         } else {
             ArraySection(h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize), section)
         }
-
-        /*
-        if (h5type.hdfType == Datatype5.Compound) {
-            val members = (datatype.typedef as CompoundTypedef).members
-            val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
-            return ArraySection(h5.processCompoundData(sdataArray, h5type.endian), section)
-        }
-
-        if (h5type.hdfType == Datatype5.Vlen) {
-            return ArraySection(h5.processChunkedVlen(h5type, shape, bb, dataSection.totalElements.toInt(), elemSize), section)
-        }
-
-        var result = when (datatype) {
-            Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-            Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-            Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-            Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-            Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-            Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-            Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-            Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
-            Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
-            else -> throw IllegalStateException("unimplemented type= $datatype")
-        }
-        if (h5type.hdfType == Datatype5.String) {
-            result =  (result as ArrayUByte).makeStringsFromBytes()
-        }
-        if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
-            result = ArrayString(shape, h5.convertReferencesToDataObjectName(result as ArrayLong))
-        }
-        return ArraySection(result, section)
-
-         */
     }
 }
