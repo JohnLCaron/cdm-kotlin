@@ -12,11 +12,13 @@ import kotlin.math.min
 data class IndexSpace(val start : IntArray, val shape : IntArray) {
     val rank = start.size
     val totalElements = computeSize(shape)
-    val limit by lazy { IntArray(rank) { idx -> start[idx] + shape[idx] - 1 } } // inclusive
-    val ranges by lazy { start.mapIndexed { idx, it -> it until it + shape[idx] } } // inclusive
+    val last by lazy { IntArray(rank) { idx -> start[idx] + shape[idx] - 1 } } // inclusive
+    val ranges : List<IntProgression> by lazy { start.mapIndexed {
+            idx, start -> IntProgression.fromClosedRange(start, start + shape[idx] - 1, 1) } } // inclusive
 
     constructor(shape : IntArray) : this( IntArray(shape.size), shape) // starts at 0
     constructor(section : Section) : this(section.origin, section.shape)
+    constructor(rank : Int, start : IntArray, shape : IntArray) : this( IntArray(rank) { start[it] }, IntArray(rank) { shape[it] })
 
     fun section() : Section {
         val useShape = if (shape.size == start.size) shape else IntArray(start.size) { shape[it] }
@@ -24,8 +26,19 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
     }
 
     fun contains(pt : IntArray): Boolean {
+        require(rank == pt.size)
         ranges.forEachIndexed { idx, range ->
             if (!range.contains(pt[idx])) {
+                return false
+            }
+        }
+        return true
+    }
+
+    fun contains(other : IndexSpace): Boolean {
+        require(rank == other.rank)
+        ranges.forEachIndexed { idx, range ->
+            if (!range.contains(other.ranges[idx])) {
                 return false
             }
         }
@@ -90,4 +103,12 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
         result = 31 * result + totalElements.hashCode()
         return result
     }
+}
+
+private fun IntProgression.contains(pt : Int) : Boolean {
+    return (pt >= this.first && pt <= this.last)
+}
+
+private fun IntProgression.contains(other : IntProgression) : Boolean {
+    return (other.first >= this.first && other.last <= this.last)
 }

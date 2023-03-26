@@ -11,7 +11,7 @@ class TestOdometer {
     fun testFull() {
         val shape = intArrayOf(2, 3, 4)
         val dataSection = IndexSpace(shape)
-        val odo = Odometer(dataSection, shape)
+        val odo = IndexND(dataSection, shape)
         var count = 0L
         for (ia in odo) {
             println("${ ia.contentToString()} = ${odo.element()}")
@@ -26,7 +26,7 @@ class TestOdometer {
     fun testSlice() {
         val shape = intArrayOf(3, 4, 5)
         val dataSection = IndexSpace(Section("1:2, 2:3, 3:4"))
-        val odo = Odometer(dataSection, shape)
+        val odo = IndexND(dataSection, shape)
         var count = 0
         for (ia in odo) {
             println("${ ia.contentToString()} = ${odo.element()}")
@@ -40,7 +40,7 @@ class TestOdometer {
     fun testSlice2() {
         val shape = intArrayOf(3, 4, 50)
         val dataSection = IndexSpace(Section("1:2, 2:3, 47:47"))
-        val odo = Odometer(dataSection, shape)
+        val odo = IndexND(dataSection, shape)
         var count = 0
         for (ia in odo) {
             println("${ ia.contentToString()} = ${odo.element()}")

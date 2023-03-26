@@ -4,7 +4,7 @@ import com.google.common.util.concurrent.AtomicDouble
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
-import com.sunya.cdm.array.ArrayTyped
+import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
@@ -637,9 +637,7 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
             countChunks +=  compareOneVarIterate(myfile, myvar, compare)
         } else {
             myfile.rootGroup().allVariables().forEach { it ->
-                if (it.datatype.isNumber) {
-                    countChunks += compareOneVarIterate(myfile, it, compare)
-                }
+                countChunks += compareOneVarIterate(myfile, it, compare)
             }
         }
         if (countChunks > 0) {
@@ -650,15 +648,14 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
 
 fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
-    val sum = AtomicDouble()
 
-    val sum2 = if (compare) {
+    val sumArrayData = if (compare) {
         sum.set(0.0)
         val time3 = measureNanoTime {
             val arrayData = myFile.readArrayData(myvar, null)
             sumValues(arrayData)
         }
-        Stats.of("regularSum", filename, "chunk").accum(time3, 1)
+        Stats.of("readArrayData", filename, "chunk").accum(time3, 1)
         sum.get()
     } else 0.0
 
@@ -675,29 +672,18 @@ fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = t
             countChunks++
         }
     }
-    val sum1 = sum.get()
-    if (compare) Stats.of("serialSum", filename, "chunk").accum(time1, countChunks)
+    val sumChunkIterator = sum.get()
+    if (compare) Stats.of("chunkIterator", filename, "chunk").accum(time1, countChunks)
 
-    if (compare && sum1.isFinite() && sum2.isFinite()) {
-       assertTrue(nearlyEquals(sum1, sum2), "$sum1 != $sum2 sum2")
+    if (compare && sumChunkIterator.isFinite() && sumArrayData.isFinite()) {
+        println("  sumChunkIterator = $sumChunkIterator for ${myvar.nameAndShape()}")
+        assertTrue(nearlyEquals(sumArrayData, sumChunkIterator), "chunkIterator $sumChunkIterator != $sumArrayData sumArrayData")
     }
     return countChunks
 }
 
-var sum = AtomicDouble()
-fun sumValues(array : ArrayTyped<*>) {
-    if (!array.datatype.isNumber or true) return
-    for (value in array) {
-        val number = (value as Number)
-        val numberd : Double = number.toDouble()
-        if (numberd.isFinite()) {
-            sum.getAndAdd(numberd)
-        }
-    }
-}
-
 //////////////////////////////////////////////////////////////////////////////////////
-// compare reading data chunkIterate API with Neetch and NC
+// compare reading data chunkIterate API with Netch and NC
 
 fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
     if (varname != null) {
@@ -753,5 +739,32 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
 
     if (sum1.isFinite() && sum2.isFinite()) {
         assertTrue(nearlyEquals(sum1, sum2), "$sum1 != $sum2 sum2")
+        println("sum = $sum1")
+    }
+}
+
+///////////////////////////////////////////////////////////
+val sum = AtomicDouble()
+fun sumValues(array : ArrayTyped<*>) {
+    if (array is ArraySingle) {
+        return // fillValue the same ??
+    }
+    // cant cast unsigned to Numbers
+    val useArray = when (array.datatype) {
+        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).values)
+        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).values)
+        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).values)
+        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).values)
+        else -> array
+    }
+
+    if (useArray.datatype.isNumber) {
+        for (value in useArray) {
+            val number = (value as Number)
+            val numberd: Double = number.toDouble()
+            if (numberd.isFinite()) {
+                sum.getAndAdd(numberd)
+            }
+        }
     }
 }

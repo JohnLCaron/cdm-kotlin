@@ -46,6 +46,10 @@ data class Variable(
         return result
     }
 
+    fun nameAndShape(): String {
+        return "${datatype} ${fullname()}${shape.contentToString()}"
+    }
+
     class Builder {
         var name : String? = null
         var datatype : Datatype? = null

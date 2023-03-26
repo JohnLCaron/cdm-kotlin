@@ -62,14 +62,11 @@ class TestTiling {
         val tileSection = tiling.section(indexSection)
         assertEquals(IndexSpace(Section("1:2,1:2")), tileSection)
         
-        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
-        while (!tileOdometer.isDone()) {
-            val tile = tileOdometer.current
+        val tileOdometer = IndexND(tileSection, tiling.tileShape) // loop over tiles we want
+        for (tile in tileOdometer) {
             val key = tiling.index(tile) // convert to index "keys"
             // println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
-            tileOdometer.incr()
         }
-
     }
 
     @Test
@@ -83,13 +80,11 @@ class TestTiling {
         val tileSection = tiling.section(indexSection)
         assertEquals(IndexSpace(Section("0:9,0:26,0:12")), tileSection)
 
-        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
+        val tileOdometer = IndexND(tileSection, tiling.tileShape) // loop over tiles we want
         var count = 0
-        while (!tileOdometer.isDone()) {
-            val tile = tileOdometer.current
+        for (tile in tileOdometer) {
             val key = tiling.index(tile) // convert to index "keys"
             // println("tile = ${tile.contentToString()} key = ${key.contentToString()}")
-            tileOdometer.incr()
             count++
         }
         println("tile count = $count")

@@ -5,23 +5,23 @@ import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
 internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
-
     private val debugChunking = false
-    private val debugChunkingDetails = false
 
     val vinfo : DataContainerVariable
     val h5type : H5TypeInfo
     val elemSize : Int
     val datatype : Datatype
-    val tiledData : TiledH5Data
+    val tiledData : H5TiledData
     val filters : H5filters
     val state : OpenFileState
 
+    private val wantSpace : IndexSpace
     private val chunkIterator : Iterator<BTree1.DataChunkEntry>
 
     init {
@@ -32,12 +32,13 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         datatype = h5type.datatype(h5)
 
         val btreeNew = BTree1(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
-        tiledData = TiledH5Data(btreeNew)
+        tiledData = H5TiledData(btreeNew)
         filters = H5filters(v2.name, vinfo.mfp, h5type.endian)
-        if (debugChunking) println(" ${tiledData.tiling}")
+        if (debugChunking) println(" H5chunkIterator tiles=${tiledData.tiling}")
 
         state = OpenFileState(0L, h5type.endian)
-        chunkIterator = tiledData.dataChunks(IndexSpace(wantSection)).iterator()
+        wantSpace = IndexSpace(wantSection)
+        chunkIterator = tiledData.dataChunks(wantSpace).iterator()
     }
 
     override fun computeNext() {
@@ -49,30 +50,43 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
     }
 
     private fun getaPair(dataChunk : BTree1.DataChunkEntry) : ArraySection {
-        val dataSection = IndexSpace(dataChunk.key.offsets, vinfo.storageDims)
-        val section = dataSection.section()
+        val dataSpace = IndexSpace(v2.rank, dataChunk.key.offsets, vinfo.storageDims)
+
+        // TODO we need to intersect the dataChunk with the wanted section.
+        // optionally, we could make a view of the array, rather than copying the data.
+        val useEntireChunk = wantSpace.contains(dataSpace)
+        val intersectSpace = if (useEntireChunk) dataSpace else wantSpace.intersect(dataSpace)
 
         val bb = if (dataChunk.isMissing()) {
-            val sizeBytes = section.computeSize() * elemSize
+            if (debugChunking) println("   missing ${dataChunk.show(tiledData.tiling)}")
+            val sizeBytes = intersectSpace.totalElements * elemSize
             val bbmissing = ByteBuffer.allocate(sizeBytes.toInt())
-            transferMissingNelems(vinfo.fillValue, datatype, section.computeSize().toInt(), bbmissing)
+            transferMissingNelems(vinfo.fillValue, datatype, intersectSpace.totalElements.toInt(), bbmissing)
             bbmissing
         } else {
-            if (debugChunkingDetails) println("  chunk=${dataChunk.show(tiledData.tiling)}")
+            if (debugChunking) println("  chunkIterator=${dataChunk.show(tiledData.tiling)}")
             state.pos = dataChunk.childAddress
             val chunkData = h5.raf.readByteBufferDirect(state, dataChunk.key.chunkSize)
-            filters.apply(chunkData, dataChunk)
+            val filteredData = filters.apply(chunkData, dataChunk)
+            if (useEntireChunk) {
+                filteredData
+            } else {
+                val chunker = Chunker(dataSpace, wantSpace) // each DataChunkEntry has its own Chunker iteration
+                chunker.transferBB(filteredData, elemSize, intersectSpace.totalElements.toInt())
+            }
         }
 
         bb.position(0)
         bb.limit(bb.capacity())
         bb.order(h5type.endian)
-        val shape = section.shape
 
-        return if (h5type.hdfType == Datatype5.Vlen) {
-            ArraySection(h5.processVlenIntoArray(h5type, shape, bb, dataSection.totalElements.toInt(), elemSize), section)
+        val array = if (h5type.hdfType == Datatype5.Vlen) {
+            h5.processVlenIntoArray(h5type, intersectSpace.shape, bb, intersectSpace.totalElements.toInt(), elemSize)
         } else {
-            ArraySection(h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize), section)
+            h5.processDataIntoArray(bb, datatype, intersectSpace.shape, h5type, elemSize)
         }
+
+
+        return ArraySection(array, intersectSpace.section()) // LOOK use space instead of Section ??
     }
 }

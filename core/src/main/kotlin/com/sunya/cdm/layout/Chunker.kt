@@ -21,8 +21,8 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     val nelems: Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
 
-    private val srcOdometer: Odometer
-    private val dstOdometer: Odometer
+    private val srcOdometer: IndexND
+    private val dstOdometer: IndexND
     private val incrDigit: Int
     var transferChunks = 0
 
@@ -34,8 +34,8 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
         val wantSectionShifted = intersectSpace.shift(wantSpace.start) // wantSection origin
 
         // construct odometers over source and destination index spaces
-        this.srcOdometer = Odometer(dataChunkShifted, dataChunk.shape)
-        this.dstOdometer = Odometer(wantSectionShifted, wantSpace.shape)
+        this.srcOdometer = IndexND(dataChunkShifted, dataChunk.shape)
+        this.dstOdometer = IndexND(wantSectionShifted, wantSpace.shape)
         this.totalNelems = intersectSpace.totalElements
 
         val rank = intersectSpace.rank
@@ -114,6 +114,23 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
                 elemSize * chunk.nelems,
             )
         }
+    }
+
+    internal fun transferBB(src: ByteBuffer, elemSize : Int, totalElems: Int) : ByteBuffer {
+        val dst = ByteBuffer.allocate(elemSize * totalElems)
+        var dstElem = 0 // ignore chunker dstPosition
+        for (chunk in this) {
+            // Object src,  int  srcPos, Object dest, int destPos, int length
+            System.arraycopy(
+                src.array(),
+                elemSize * chunk.srcElem.toInt(),
+                dst.array(),
+                elemSize * dstElem,
+                elemSize * chunk.nelems,
+            )
+            dstElem += chunk.nelems
+        }
+        return dst
     }
 
     // transfer fillValue to dst buffer, using my computed chunks

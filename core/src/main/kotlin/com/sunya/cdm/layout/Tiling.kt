@@ -86,15 +86,15 @@ class Tiling(varshape: IntArray, val chunk: IntArray) {
         return order(p1) - order(p2)
     }
 
-    /** create an IndexChunk in tile space from a IndexChunk in index space */
+    /** create an IndexSpace in tile space from an IndexSpace in index space */
     fun section(indexSection : IndexSpace) : IndexSpace {
         require(indexSection.rank == rank)
-        indexSection.limit.forEachIndexed { idx, it ->
-            require(it < indexShape[idx])
+        indexSection.last.forEachIndexed { idx, last ->
+            require(last < indexShape[idx])
         }
 
         val start = tile(indexSection.start)
-        val limit = tile(indexSection.limit)
+        val limit = tile(indexSection.last)
         val length = IntArray(rank) { idx -> limit[idx] - start[idx] + 1 }
         return IndexSpace(start, length)
     }

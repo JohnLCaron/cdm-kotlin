@@ -123,6 +123,6 @@ internal class BTree1(
     data class DataChunkEntry(val level : Int, val parent : Node, val idx : Int, val key : DataChunkKey, val childAddress : Long) {
         fun isMissing() = (childAddress == -1L)
         fun show(tiling : Tiling) : String = "chunkSize=${key.chunkSize}, chunkStart=${key.offsets.contentToString()}" +
-                ", tile= ${tiling.tile(key.offsets).contentToString()}"
+                ", tile= ${tiling.tile(key.offsets).contentToString()}  idx=$idx"
     }
 }

@@ -1,22 +1,22 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.Odometer
+import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.Tiling
 
-private const val check = true
-private const val debug = false
-private const val debugMissing = false
-
 /** wraps BTree1New to handle iterating through tiled data (aka chunked data) */
-internal class TiledH5Data(val btree1 : BTree1) {
+internal class H5TiledData(val btree1 : BTree1) {
+    private val check = true
+    private val debug = false
+    private val debugMissing = false
+
     val tiling = Tiling(btree1.varShape, btree1.storageSize)
     val rootNode : BTree1.Node
 
     // keep track of nodes so we only read once
     private val nodeCache = mutableMapOf<Long, BTree1.Node>()
-    var readHit = 0
-    var readMiss = 0
+    private var readHit = 0
+    private var readMiss = 0
 
     init {
         rootNode = readNode(btree1.rootNodeAddress, null)
@@ -76,24 +76,23 @@ internal class TiledH5Data(val btree1 : BTree1) {
     fun dataChunks(wantSpace : IndexSpace) = Iterable { DataChunkIterator(wantSpace) }
 
     private inner class DataChunkIterator(wantSpace : IndexSpace) : AbstractIterator<BTree1.DataChunkEntry>() {
-        val tileOdometer : Odometer
+        val tileIterator : Iterator<IntArray>
 
         init {
             val tileSection = tiling.section(wantSpace) // section in tiles that we want
-            tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
+            tileIterator = IndexND(tileSection, tiling.tileShape).iterator() // iterate over tiles we want
         }
 
         override fun computeNext() {
-            if (tileOdometer.isDone()) {
+            if (!tileIterator.hasNext()) {
                 return done()
             } else {
-                val wantTile = tileOdometer.current
+                val wantTile = tileIterator.next()
                 val wantKey = tiling.index(wantTile) // convert to index "keys"
                 val haveEntry = findEntryContainingKey(rootNode, wantKey)
                 val useEntry = haveEntry ?:
                     // missing
                     BTree1.DataChunkEntry(0, rootNode, -1, BTree1.DataChunkKey(-1, 0, wantKey), -1L)
-                tileOdometer.incr()
                 setNext(useEntry)
             }
         }

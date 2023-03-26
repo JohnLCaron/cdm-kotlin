@@ -1,6 +1,5 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 
 /**
@@ -17,7 +16,7 @@ class MaxChunker(val maxElems: Int, val wantSpace: IndexSpace, varshape : IntArr
     val totalNelems = wantSpace.totalElements
     val rank = wantSpace.rank
     val strider = LongArray(rank)
-    val odo = Odometer(wantSpace, varshape)
+    val odo = IndexND(wantSpace, varshape)
 
     init {
         var accumStride = 1L
@@ -43,7 +42,7 @@ class MaxChunker(val maxElems: Int, val wantSpace: IndexSpace, varshape : IntArr
         setNext(sectionSpace)
 
         done += chunk.computeSize()
-        odo.setFromElement(done)
+        odo.set(done)
     }
 
     fun maxChunkShape(shape: IntArray, current: IntArray): IntArray {
