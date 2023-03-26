@@ -7,9 +7,7 @@ import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
-import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -17,13 +15,12 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import test.util.testData
-import test.util.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.system.measureNanoTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
+
 
 // Compare Netchdf against NetcdfClibFile / H4ClibFile
 class NetchdfTest {
@@ -75,172 +72,6 @@ class NetchdfTest {
         var showCdl = false
     }
 
-    /* tst_grps
-        Relies on vlen-3 and vlen-4 mdt hash NOT matching v1-2 hash, so added again.
-
-    netcdf tst_grps {
-        types:
-        opaque(10) opaque-1 ;
-        int(*) vlen-1 ;
-
-        group: the_in_crowd {
-            types:
-            opaque(7) opaque-2 ;
-            byte(*) vlen-2 ;
-        }
-
-        group: the_out_crowd {
-            types:
-            opaque(4) opaque-3 ;
-            byte(*) vlen-3 ;
-
-            group: the_confused_crowd {
-            types:
-            opaque(13) opaque-4 ;
-            byte(*) vlen-4 ;
-        }
-        }
-    }
-
-     */
-
-    @Test
-    @Disabled
-    fun tst_grps() {
-        compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
-    }
-
-    /* testNestedStructure
-    Relies on field1 and fields2 mdt hash matching s1_t hash, so not added again.
-    no obvious reason why mdts are not shared.
-    <netcdf testNestedStructure {
-      types:
-        compound s1_t {
-          int x ;
-          int y ;
-        }; // s1_t
-        compound s2_t {
-          s1_t field1 ;
-          s1_t field2 ;
-        }; // s2_t
-      variables:
-        s2_t x ;
-    }
-     */
-    @Test
-    fun testNestedStructure() {
-        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
-    }
-
-    @Test
-    @Disabled
-    fun hdfeos() {
-        compareCdlWithClib(testData + "devcdm/hdfeos5/structmetadata_eos.h5")
-    }
-
-    /*structmetadata_eos.h5
-netcdf structmetadata_eos {
-  group: HDFEOS INFORMATION {
-    variables:
-      string StructMetadata.0 ;
-  }
-}
-nc_inq_var return -101 = NetCDF: HDF error
-*/
-
-
-    // possible bug in netcdf4
-    @Test
-    @Disabled
-    fun compoundAttributeTest() {
-        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
-    }
-    /*snake@jlc:~/dev/github/cdm-kotlin$ ncdump -h /media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc
-netcdf compound-attribute-test {
-types:
-  compound compound_type {
-    float field0 ;
-    float field1 ;
-    float field2 ;
-    float field3 ;
-  }; // compound_type
-  compound compound_att_string {
-    string field0 ;
-    string field1 ;
-    string field2 ;
-    string field3 ;
-  }; // compound_att_string
-  compound compound_att_char_array {
-    char field0(4) ;
-    char field1(4) ;
-    char field2(4) ;
-    char field3(4) ;
-  }; // compound_att_char_array
-  compound compound_att_float {
-    float field0 ;
-    float field1 ;
-    float field2 ;
-    float field3 ;
-  }; // compound_att_float
-dimensions:
-	dim0 = 2 ;
-variables:
-	compound_type compound_test(dim0) ;
-		compound_att_char_array compound_test:att_char_array_test = {{"a"}, {"1"}, {"abc"}, {"123"}} ;
-		compound_type           compound_test:att_primitive_test = {1, 2, 3, 4} ;
-		compound_att_string     compound_test:att_string_test = {"string for field 0", "field 1 has something", "hey look at me!", "writer\'s block"} ;
-}
-nclib
-   compound_type compound_test(dim0);
-      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
-      compound_type           compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
-      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
-
-h5lib LOOK I think compound_att_float is correct, compound_type has same hash, but wrong
-    compound_type compound_test(dim0);
-      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
-      compound_att_float      compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
-      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
-
-h5dump
-  compound_att_char_array looks like it should be an array os "strings" of size 1
-
-  H5T_ARRAY { [4] H5T_STRING {
-         STRSIZE 1;
-         STRPAD H5T_STR_NULLTERM;
-         CSET H5T_CSET_ASCII;
-         CTYPE H5T_C_S1;
-      } } "field0";
-
-      compound_att_string should be "strings" of vlen i guess
-      H5T_STRING {
-         STRSIZE H5T_VARIABLE;
-         STRPAD H5T_STR_NULLTERM;
-         CSET H5T_CSET_ASCII;
-         CTYPE H5T_C_S1;
-      } "field0";
-
-         DATATYPE "compound_type" H5T_COMPOUND {
-      H5T_IEEE_F32LE "field0";
-      H5T_IEEE_F32LE "field1";
-      H5T_IEEE_F32LE "field2";
-      H5T_IEEE_F32LE "field3";
-   }
-   same as
-      DATATYPE "compound_att_float" H5T_COMPOUND {
-      H5T_IEEE_F32LE "field0";
-      H5T_IEEE_F32LE "field1";
-      H5T_IEEE_F32LE "field2";
-      H5T_IEEE_F32LE "field3";
-   }
-
-     */
-
-    @Test
-    fun testOneCdl() {
-        compareCdlWithClib(testData + "netchdf/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
-    }
-
     @Test
     fun missingChunks() {
         readNetchdfData(
@@ -258,17 +89,9 @@ h5dump
     }
 
     @Test
-    fun readOneNetchIterate() {
-        // compareDataWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc")
-        readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI", false)
-    }
-
-    @Test
-    fun readIterateCompareNC() {
-        val filename = testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc"
-        // showNetchdfHeader(filename, null)
-        compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
-        // compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
+    fun problemNetchIterate() {
+        readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
+        // readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc", "/xma/dialoop_back")
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -291,23 +114,10 @@ h5dump
         showNetchdfHeader(filename, null)
     }
 
-
-    @ParameterizedTest
-    @MethodSource("params")
-    fun testCompareCdlWithClib(filename: String) {
-        compareCdlWithClib(filename)
-    }
-
     @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchdfData(filename: String) {
         readNetchdfData(filename)
-    }
-
-    @ParameterizedTest
-    @MethodSource("params")
-    fun testCompareDataWithClib(filename: String) {
-        compareDataWithClib(filename)
     }
 
     @ParameterizedTest
@@ -331,13 +141,6 @@ fun showNetchdfHeader(filename: String, varname: String? = null, section: Sectio
     }
 }
 
-fun showNcHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
-    println(filename)
-    NetcdfClibFile(filename).use { ncfile ->
-        println(ncfile.cdl())
-    }
-}
-
 fun readNetchdfData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
@@ -347,78 +150,6 @@ fun readNetchdfData(filename: String, varname: String? = null, section: Section?
         }
         println("--- ${myfile.type()} $filename ")
         readMyData(myfile,varname, section, showCdl)
-    }
-}
-
-fun readNcData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
-    NetcdfClibFile(filename).use { ncfile ->
-        readMyData(ncfile, varname, section, showCdl)
-    }
-}
-
-fun compareCdlWithClib(filename: String) {
-    println("=================")
-    openNetchdfFile(filename, true).use { netchdf ->
-        if (netchdf == null) {
-            println("*** not a netchdf file = $filename")
-            return
-        }
-        println("${netchdf.type()} $filename ")
-        println("\nnetchdf = ${netchdf.cdl()}")
-
-        if (netchdf.type().contains("hdf4")) {
-            Hdf4ClibFile(filename).use { hcfile ->
-                assertEquals(hcfile.cdl(), netchdf.cdl())
-            }
-        } else {
-            NetcdfClibFile(filename).use { ncfile ->
-                assertEquals(ncfile.cdl(), netchdf.cdl())
-            }
-        }
-    }
-}
-
-fun compareDataWithClib(filename: String, varname: String? = null, section: Section? = null) {
-    println("=============================================================")
-    openNetchdfFile(filename).use { netchdf ->
-        if (netchdf == null) {
-            println("*** not a netchdf file = $filename")
-            return
-        }
-        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
-        if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
-
-        if (netchdf.type().contains("hdf4")) {
-            Hdf4ClibFile(filename).use { ncfile ->
-                compareNetcdfData(netchdf, ncfile, varname, section)
-            }
-        } else {
-            NetcdfClibFile(filename).use { ncfile ->
-                compareNetcdfData(netchdf, ncfile, varname, section)
-            }
-        }
-    }
-}
-
-fun compareIterateWithClib(filename: String, varname: String? = null, section: Section? = null) {
-    println("=============================================================")
-    openNetchdfFile(filename).use { netchdf ->
-        if (netchdf == null) {
-            println("*** not a netchdf file = $filename")
-            return
-        }
-        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
-        if (NetchdfTest.showCdl) println("\n${netchdf.cdl()}")
-
-        if (netchdf.type().contains("hdf4")) {
-            Hdf4ClibFile(filename).use { ncfile ->
-                compareIterateWithNC(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
-            }
-        } else {
-            NetcdfClibFile(filename).use { ncfile ->
-                compareIterateWithNC(netchdf, ncfile, varname, section)
-            }
-        }
     }
 }
 
@@ -648,35 +379,37 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
 
 fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
+    val varBytes = myvar.nelems
+    if (varBytes >= Integer.MAX_VALUE) {
+        println(" *** ${myvar.nameAndShape()} cant readArrayData too many bytes= $varBytes")
+        return 0
+    }
 
+    val sum1 = AtomicDouble()
     val sumArrayData = if (compare) {
-        sum.set(0.0)
         val time3 = measureNanoTime {
             val arrayData = myFile.readArrayData(myvar, null)
-            sumValues(arrayData)
+            sumValues(arrayData, sum1)
         }
         Stats.of("readArrayData", filename, "chunk").accum(time3, 1)
-        sum.get()
+        sum1.get()
     } else 0.0
 
-    sum.set(0.0)
+    val sum2 = AtomicDouble()
     var countChunks = 0
     val time1 = measureNanoTime {
         val chunkIter = myFile.chunkIterator(myvar)
-        if (chunkIter == null) {
-            return 0
-        }
         for (pair in chunkIter) {
             // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
-            sumValues(pair.array)
+            sumValues(pair.array, sum2)
             countChunks++
         }
     }
-    val sumChunkIterator = sum.get()
+    val sumChunkIterator = sum2.get()
     if (compare) Stats.of("chunkIterator", filename, "chunk").accum(time1, countChunks)
 
     if (compare && sumChunkIterator.isFinite() && sumArrayData.isFinite()) {
-        println("  sumChunkIterator = $sumChunkIterator for ${myvar.nameAndShape()}")
+        // println("  sumChunkIterator = $sumChunkIterator for ${myvar.nameAndShape()}")
         assertTrue(nearlyEquals(sumArrayData, sumChunkIterator), "chunkIterator $sumChunkIterator != $sumArrayData sumArrayData")
     }
     return countChunks
@@ -711,13 +444,12 @@ fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, sec
 
 fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: Section?) {
     val sum = AtomicDouble()
-    sum.set(0.0)
     var countChunks = 0
     val time1 = measureNanoTime {
         val chunkIter = myfile.chunkIterator(myvar)
         for (pair in chunkIter) {
             // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
-            sumValues(pair.array)
+            sumValues(pair.array, sum)
             countChunks++
         }
     }
@@ -730,7 +462,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
         val chunkIter = ncfile.chunkIterator(ncvar)
         for (pair in chunkIter) {
             // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
-            sumValues(pair.array)
+            sumValues(pair.array, sum)
             countChunks++
         }
     }
@@ -744,8 +476,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
 }
 
 ///////////////////////////////////////////////////////////
-val sum = AtomicDouble()
-fun sumValues(array : ArrayTyped<*>) {
+fun sumValues(array : ArrayTyped<*>, sum : AtomicDouble) {
     if (array is ArraySingle) {
         return // fillValue the same ??
     }

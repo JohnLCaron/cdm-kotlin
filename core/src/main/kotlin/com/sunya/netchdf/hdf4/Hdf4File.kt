@@ -48,14 +48,19 @@ class Hdf4File(val filename : String) : Netchdf {
 
     override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
         val wantSection = Section.fill(section, v2.shape)
-        return H4maxIterator(v2, wantSection, maxElements ?: 100_000)
+        val vinfo = v2.spObject as Vinfo
+
+        return if (vinfo.isChunked) {  // LOOK isLinked?
+            H4chunkIterator(header, v2, wantSection)
+        } else {
+            H4maxIterator(v2, wantSection, maxElements ?: 100_000)
+        }
     }
 
     private inner class H4maxIterator(val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
 
-        // LOOK could look for natural chunking (isChunked, isLinked)
         override fun computeNext() {
             if (maxIterator.hasNext()) {
                 val indexSection = maxIterator.next()

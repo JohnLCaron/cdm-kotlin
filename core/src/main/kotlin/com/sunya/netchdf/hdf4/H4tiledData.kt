@@ -91,7 +91,7 @@ internal class H4CompressedDataChunk(
             } else {
                 throw IllegalStateException("unknown compression type =" + compress.compress_type)
             }
-            println("uncompress offset ${cdata.offset} length ${cdata.length} uncomp_length=${compress.uncomp_length} outSize=${outSize}")
+            // println("uncompress offset ${cdata.offset} length ${cdata.length} uncomp_length=${compress.uncomp_length} outSize=${outSize}")
         }
         bb!!.position(0)
         return bb!!

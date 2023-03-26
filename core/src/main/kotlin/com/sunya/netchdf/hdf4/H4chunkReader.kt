@@ -27,14 +27,7 @@ class H4chunkReader(val h4 : H4builder) {
         val bb = ByteBuffer.allocate(sizeBytes.toInt())
         bb.order(vinfo.endian)
 
-        // prefill with fill value
-        /* val sbb = bb.asShortBuffer()
-        sbb.position(0)
-        val fill = vinfo.fillValue as Short
-        repeat(wantSpace.totalElements.toInt()) { bb.putShort(fill) } // performance ?? */
-
         val tiledData = H4tiledData(h4, v2.shape, vinfo.chunkLengths, vinfo.chunks!!)
-        // val filters = H5filters(v2.name, vinfo.mfp, vinfo.endian)
         if (debugChunking) println(" ${tiledData.tiling}")
 
         var count = 0
@@ -47,7 +40,7 @@ class H4chunkReader(val h4 : H4builder) {
                 chunker.transferMissing(vinfo.fillValue, datatype, elemSize, bb)
             } else {
                 if (debugChunkingDetail and (count < 1)) println(" ${dataChunk.show(tiledData.tiling)}")
-                val filteredData = dataChunk.getByteBuffer()
+                val filteredData = dataChunk.getByteBuffer() // filter already applied
                 chunker.transfer(filteredData, elemSize, bb)
                 transferChunks += chunker.transferChunks
             }

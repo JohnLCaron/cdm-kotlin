@@ -84,7 +84,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         metadata.forEach { makeVariableFromStringAttribute(it, rootBuilder) }
 
         if (structMetadata != null) {
-            ODLparser(rootBuilder, true).applyStructMetadata(structMetadata!!)
+            ODLparser(rootBuilder, false).applyStructMetadata(structMetadata!!)
         }
     }
 

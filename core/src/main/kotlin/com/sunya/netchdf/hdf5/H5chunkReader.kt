@@ -10,7 +10,6 @@ import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
 
 internal class H5chunkReader(val h5 : H5builder) {
-
     private val debugChunking = false
 
     internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
