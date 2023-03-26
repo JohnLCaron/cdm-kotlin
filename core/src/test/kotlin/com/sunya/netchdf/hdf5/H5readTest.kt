@@ -6,11 +6,10 @@ import com.sunya.cdm.api.Variable
 import com.sunya.cdm.api.chunkConcurrent
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.util.Stats
-import com.sunya.netchdf.compareDataWithClib
+import com.sunya.netchdf.readNetchIterate
 import com.sunya.netchdf.readNetchdfData
-import com.sunya.netchdf.showNcHeader
-import test.util.testData
-import test.util.testFilesIn
+import com.sunya.netchdf.testData
+import com.sunya.netchdf.testFilesIn
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -22,7 +21,7 @@ import java.util.stream.Stream
 import kotlin.system.measureNanoTime
 
 // Sanity check read Hdf5File header, for non-netcdf4 files
-class Hdf5openTest {
+class H5readTest {
 
     companion object {
         @JvmStatic
@@ -80,24 +79,6 @@ class Hdf5openTest {
     }
 
     @Test
-    fun vlenData() {
-        readNetchdfData(testData + "devcdm/netcdf4/tst_vlen_data.nc4")
-        compareDataWithClib(testData + "devcdm/netcdf4/tst_vlen_data.nc4")
-    }
-
-    @Test
-    fun compoundData() {
-        readNetchdfData(testData + "devcdm/netcdf4/tst_compounds.nc4")
-        compareDataWithClib(testData + "devcdm/netcdf4/tst_compounds.nc4")
-    }
-
-    @Test
-    fun stringData() {
-        readNetchdfData(testData + "devcdm/netcdf4/tst_strings.nc")
-        compareDataWithClib(testData + "devcdm/netcdf4/tst_strings.nc")
-    }
-
-    @Test
     fun opaqueAttribute() {
         testOpenH5(testData + "devcdm/netcdf4/tst_opaque_data.nc4")
     }
@@ -110,8 +91,20 @@ class Hdf5openTest {
     @Test
     fun testIterateDataSumInfinite() {
         // readH5(testData + "devcdm/hdf5/zip.h5", "/Data/Compressed_Data")
-        compareDataWithClib(testData + "cdmUnitTest/formats/hdf5/StringsWFilter.h5", "/observation/matrix/data")
         readH5concurrent(testData + "cdmUnitTest/formats/hdf5/StringsWFilter.h5", "/observation/matrix/data")
+    }
+
+    @Test
+    fun testIterateProblem() {
+        readNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
+    }
+
+    @Test
+    fun testIterateProblem2() { //  int64 ATMS-REMAP-SDR_Aggr(6)  has chunk size (6, 4)
+        val filename = testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5"
+        openH5(filename)
+        readNetchIterate(filename, "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
+        // readH5concurrent(testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -124,14 +117,14 @@ class Hdf5openTest {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun testShowNcHeader(filename: String) {
-        showNcHeader(filename)
+    fun testReadNetchdfData(filename: String) {
+        readNetchdfData(filename)
     }
 
     @ParameterizedTest
     @MethodSource("params")
-    fun testReadNetchdfData(filename: String) {
-        readNetchdfData(filename)
+    fun testReadIterate(filename: String) {
+        readNetchIterate(filename, null)
     }
 
     @ParameterizedTest

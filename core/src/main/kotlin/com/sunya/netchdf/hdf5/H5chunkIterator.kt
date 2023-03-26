@@ -61,7 +61,9 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
             if (debugChunking) println("   missing ${dataChunk.show(tiledData.tiling)}")
             val sizeBytes = intersectSpace.totalElements * elemSize
             val bbmissing = ByteBuffer.allocate(sizeBytes.toInt())
+            bbmissing.order(vinfo.h5type.endian)
             transferMissingNelems(vinfo.fillValue, datatype, intersectSpace.totalElements.toInt(), bbmissing)
+            if (debugChunking) println("   missing transfer ${intersectSpace.totalElements} fillValue=${vinfo.fillValue}")
             bbmissing
         } else {
             if (debugChunking) println("  chunkIterator=${dataChunk.show(tiledData.tiling)}")

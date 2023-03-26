@@ -139,11 +139,14 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
             return
         }
         for (chunk in this) {
+            if (debugChunking) println("  missing chunk $chunk fillValue=$fillValue")
             dst.position(elemSize * chunk.destElem.toInt())
             transferMissingNelems(fillValue, datatype, chunk.nelems, dst)
         }
     }
 }
+
+private val debugChunking = false
 
 internal fun transferMissingNelems(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
     if (fillValue == null) {
