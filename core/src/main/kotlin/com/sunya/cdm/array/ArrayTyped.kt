@@ -10,12 +10,12 @@ abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : It
     override fun toString(): String {
         return buildString {
             append("class ${this@ArrayTyped::class.java.simpleName} shape=${shape.contentToString()} data=")
-            append("${values()}")
+            append("${showValues()}")
             append("\n")
         }
     }
 
-    fun values(): String {
+    fun showValues(): String {
         return buildString {
             val iter = this@ArrayTyped.iterator()
             for (value in iter) {

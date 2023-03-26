@@ -1,7 +1,6 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.computeSize
 import java.nio.ByteBuffer
 import java.nio.charset.Charset
@@ -12,7 +11,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
     : ArrayTyped<ArrayStructureData.StructureData>(Datatype.COMPOUND, shape) {
 
     init {
-        require(bb.capacity() >= recsize * computeSize(shape))
+        require(bb.capacity() >= recsize * shape.computeSize())
     }
 
     fun get(idx : Int) = StructureData(bb, recsize * idx, members)
@@ -75,7 +74,7 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
                 members.forEachIndexed { idx, m ->
                     if (idx > 0) append(", ")
                     val value = m.value(this@StructureData)
-                    if (value is ArrayTyped<*>) append(value.values())
+                    if (value is ArrayTyped<*>) append(value.showValues())
                     else if (value is String) append("\"${"%12s".format(value.toString())}\"")
                     else append("%12s".format(value.toString()))
                 }

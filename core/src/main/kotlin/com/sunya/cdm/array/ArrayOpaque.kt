@@ -24,10 +24,4 @@ class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : A
         return "ArrayOpaque(size=$size, nelems=$nelems, \n values=${showValues()})"
     }
 
-    private fun showValues(): String {
-        return buildString {
-            for (idx in 0 until values.limit()) append("${values.get(idx)},")
-        }
-    }
-
 }

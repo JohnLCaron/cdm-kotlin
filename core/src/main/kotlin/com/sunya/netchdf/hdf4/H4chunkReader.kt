@@ -6,8 +6,6 @@ import com.sunya.cdm.api.Variable
 import com.sunya.cdm.array.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.transfer
-import com.sunya.cdm.layout.transferMissing
 import java.nio.ByteBuffer
 
 class H4chunkReader(val h4 : H4builder) {
@@ -42,7 +40,7 @@ class H4chunkReader(val h4 : H4builder) {
         var count = 0
         var transferChunks = 0
         for (dataChunk in tiledData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
-            val dataSection = IndexSpace(dataChunk.offsets, vinfo.chunkLengths)
+            val dataSection = IndexSpace(v2.rank, dataChunk.offsets, vinfo.chunkLengths)
             val chunker = Chunker(dataSection, wantSpace) // each dataChunk has its own Chunker iteration
             if (dataChunk.isMissing()) {
                 if (debugMissing) println(" ${dataChunk.show(tiledData.tiling)}")

@@ -2,7 +2,7 @@ package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
-import com.sunya.cdm.layout.Odometer
+import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.Tiling
 import com.sunya.cdm.util.IOcopyB
 import java.io.ByteArrayInputStream
@@ -30,18 +30,16 @@ internal class H4tiledData(val h4 : H4builder, varShape : IntArray, chunk : IntA
     fun findDataChunks(wantSpace : IndexSpace) : Iterable<H4CompressedDataChunk> {
         val chunks = mutableListOf<H4CompressedDataChunk>()
 
-        val tileSection = tiling.section( wantSpace) // section in tiles that we want
-        val tileOdometer = Odometer(tileSection, tiling.tileShape) // loop over tiles we want
+        val tileSection = tiling.section(wantSpace) // section in tiles that we want
+        val tileOdometer = IndexND(tileSection, tiling.tileShape) // loop over tiles we want
         // println("tileSection = ${tileSection}")
 
-        while (!tileOdometer.isDone()) {
-            val wantTile = tileOdometer.current
+        for (wantTile in tileOdometer) {
             val wantKey = tiling.index(wantTile) // convert to chunk origin
             val chunk = findEntryContainingKey(wantKey)
             val useEntry = if (chunk != null) H4CompressedDataChunk(h4, chunk.origin, chunk.data.compress)
                 else H4CompressedDataChunk(h4, wantKey, null)
             chunks.add(useEntry)
-            tileOdometer.incr()
         }
         return chunks
     }
@@ -74,7 +72,7 @@ internal class H4CompressedDataChunk(
             }
 
             // uncompress it
-            var outSize = 0
+            val outSize : Int
             bb = if (compress.compress_type == TagEnum.COMP_CODE_DEFLATE) {
                 // read the stream in and uncompress
                 val zin: InputStream = InflaterInputStream(input)

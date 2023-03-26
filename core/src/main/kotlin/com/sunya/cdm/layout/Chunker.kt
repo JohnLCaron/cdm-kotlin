@@ -21,8 +21,8 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     val nelems: Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
 
-    private val srcOdometer: Odometer
-    private val dstOdometer: Odometer
+    private val srcOdometer: IndexND
+    private val dstOdometer: IndexND
     private val incrDigit: Int
     var transferChunks = 0
 
@@ -34,8 +34,8 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
         val wantSectionShifted = intersectSpace.shift(wantSpace.start) // wantSection origin
 
         // construct odometers over source and destination index spaces
-        this.srcOdometer = Odometer(dataChunkShifted, dataChunk.shape)
-        this.dstOdometer = Odometer(wantSectionShifted, wantSpace.shape)
+        this.srcOdometer = IndexND(dataChunkShifted, dataChunk.shape)
+        this.dstOdometer = IndexND(wantSectionShifted, wantSpace.shape)
         this.totalNelems = intersectSpace.totalElements
 
         val rank = intersectSpace.rank
@@ -99,36 +99,53 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     override fun toString(): String {
         return "Chunker(nelems=$nelems, totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
     }
-}
 
-// transfer from src to dst buffer, using my computed chunks
-internal fun Iterator<TransferChunk>.transfer(src: ByteBuffer, elemSize : Int, dst: ByteBuffer) {
-    for (chunk in this) {
-        src.position(elemSize * chunk.srcElem.toInt())
-        dst.position(elemSize * chunk.destElem.toInt())
-        // Object src,  int  srcPos, Object dest, int destPos, int length
-        System.arraycopy(
-            src.array(),
-            elemSize * chunk.srcElem.toInt(),
-            dst.array(),
-            elemSize * chunk.destElem.toInt(),
-            elemSize * chunk.nelems,
-        )
+    // transfer from src to dst buffer, using my computed chunks
+    internal fun transfer(src: ByteBuffer, elemSize : Int, dst: ByteBuffer) {
+        for (chunk in this) {
+            src.position(elemSize * chunk.srcElem.toInt())
+            dst.position(elemSize * chunk.destElem.toInt())
+            // Object src,  int  srcPos, Object dest, int destPos, int length
+            System.arraycopy(
+                src.array(),
+                elemSize * chunk.srcElem.toInt(),
+                dst.array(),
+                elemSize * chunk.destElem.toInt(),
+                elemSize * chunk.nelems,
+            )
+        }
+    }
+
+    internal fun transferBB(src: ByteBuffer, elemSize : Int, totalElems: Int) : ByteBuffer {
+        val dst = ByteBuffer.allocate(elemSize * totalElems)
+        var dstElem = 0 // ignore chunker dstPosition
+        for (chunk in this) {
+            // Object src,  int  srcPos, Object dest, int destPos, int length
+            System.arraycopy(
+                src.array(),
+                elemSize * chunk.srcElem.toInt(),
+                dst.array(),
+                elemSize * dstElem,
+                elemSize * chunk.nelems,
+            )
+            dstElem += chunk.nelems
+        }
+        return dst
+    }
+
+    // transfer fillValue to dst buffer, using my computed chunks
+    internal fun transferMissing(fillValue: Any?, datatype: Datatype, elemSize: Int, dst: ByteBuffer) {
+        if (fillValue == null) {
+            return
+        }
+        for (chunk in this) {
+            dst.position(elemSize * chunk.destElem.toInt())
+            transferMissingNelems(fillValue, datatype, chunk.nelems, dst)
+        }
     }
 }
 
-// transfer fillValue to dst buffer, using my computed chunks
-internal fun Iterator<TransferChunk>.transferMissing(fillValue: Any?, datatype: Datatype, elemSize : Int, dst: ByteBuffer) {
-    if (fillValue == null) {
-        return
-    }
-    for (chunk in this) {
-        dst.position(elemSize * chunk.destElem.toInt())
-        transferMissing(fillValue, datatype, chunk.nelems, dst)
-    }
-}
-
-internal fun transferMissing(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
+internal fun transferMissingNelems(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
     if (fillValue == null) {
         return
     }
