@@ -15,9 +15,6 @@ data class Variable(
     val shape : IntArray = dimensions.map { it.length }.toIntArray()
     val nelems : Long = Section.computeSize(this.shape)
 
-    fun isUnlimited() = dimensions.isNotEmpty() &&
-            dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
-
     fun fullname() : String {
         return if (group.fullname() == "") name else "${group.fullname()}/$name"
     }
@@ -76,12 +73,9 @@ data class Variable(
             dimensions.clear()
             dimList = null
             for (len in shape) {
-                dimensions.add(Dimension("", len, false, false))
+                dimensions.add(Dimension("", len, false))
             }
         }
-
-        fun isUnlimited() = dimensions.isNotEmpty() &&
-                dimensions.map { it.isUnlimited }.reduce { a,b -> a or b}
 
         fun build(group : Group) : Variable {
             var useDimensions = dimensions.toList()
@@ -99,10 +93,10 @@ data class Variable(
             if (d == null) {
                 try {
                     val length = dimName.toInt()
-                    d = Dimension("", length, false, false)
+                    d = Dimension("", length, false)
                 } catch(e : Exception) {
                     group.findDimension(name)
-                    d = Dimension("", 1, false, false)
+                    d = Dimension("", 1, false)
                 }
             }
             return d!!

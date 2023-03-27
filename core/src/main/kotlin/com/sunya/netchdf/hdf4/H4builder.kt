@@ -645,8 +645,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         vinfo.elemSize = datatype.size
 
         // assume dimensions are not shared
-        vb.dimensions.add(Dimension("ydim", dimTag.ydim, false ,false))
-        vb.dimensions.add(Dimension("xdim", dimTag.xdim, false ,false))
+        vb.dimensions.add(Dimension("ydim", dimTag.ydim, false))
+        vb.dimensions.add(Dimension("xdim", dimTag.xdim, false))
 
         vinfo.setVariable(vb)
         imageCount++

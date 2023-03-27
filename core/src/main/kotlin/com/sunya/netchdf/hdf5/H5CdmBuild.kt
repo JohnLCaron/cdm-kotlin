@@ -424,7 +424,7 @@ private fun addSharedDimension(
     val dimName = name.substringAfterLast('/')
     var d = h5group.dimMap[dimName] // first look in current group
     if (d == null) { // create if not exist
-        d = Dimension(name, length, isUnlimited, true)
+        d = Dimension(name, length, true)
         h5group.dimMap[dimName] = d
         h5group.dimList.add(d)
         parent.addDimension(d)
