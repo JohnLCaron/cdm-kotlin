@@ -195,8 +195,7 @@ class NCheader(val filename: String) {
             }
 
             // create the Variable
-            val vb = Variable.Builder()
-            vb.name = vname
+            val vb = Variable.Builder(vname)
             vb.datatype = convertType(typeid)
             vb.dimensions.addAll(g4.makeDimList(dimIds))
 
@@ -382,7 +381,7 @@ class NCheader(val filename: String) {
                     if (s2 != MemoryAddress.NULL) {
                         val value = s2.getUtf8String(0)
                         val tvalue = transcodeString(value)
-                        result.add(value)
+                        result.add(tvalue)
                     } else {
                         result.add("")
                     }

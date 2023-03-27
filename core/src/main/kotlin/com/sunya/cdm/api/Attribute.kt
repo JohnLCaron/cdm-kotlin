@@ -14,12 +14,12 @@ data class Attribute(val orgName : String, val datatype : Datatype, val values :
         var datatype : Datatype? = null
         var values : List<*>? = null
 
-        fun setName(name : String) : Attribute.Builder {
+        fun setName(name : String) : Builder {
             this.name = name
             return this
         }
 
-        fun setDatatype(type : Datatype) : Attribute.Builder {
+        fun setDatatype(type : Datatype) : Builder {
             this.datatype = type
             return this
         }

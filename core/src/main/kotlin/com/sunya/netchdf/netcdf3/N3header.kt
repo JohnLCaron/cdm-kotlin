@@ -215,9 +215,8 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
 
     // loop over variables
     for (i in 0 until nvars) {
-      val ncvarb = Variable.Builder()
       val name = readString()!!
-      ncvarb.name = name
+      val ncvarb = Variable.Builder(name)
 
       // get element count in non-record dimensions
       var velems: Long = 1

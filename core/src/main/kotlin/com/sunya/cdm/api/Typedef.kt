@@ -77,7 +77,7 @@ fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
     return ArrayString(this.shape, stringValues)
 }
 
-fun Datatype.strictEnumType() : Datatype {
+private fun Datatype.strictEnumType() : Datatype {
     return when(this) {
         Datatype.ENUM1 -> Datatype.UBYTE
         Datatype.ENUM2 -> Datatype.USHORT

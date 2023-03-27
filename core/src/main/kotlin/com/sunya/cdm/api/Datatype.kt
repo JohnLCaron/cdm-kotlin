@@ -1,7 +1,7 @@
 package com.sunya.cdm.api
 
 /**
- * The CDM api datatype. Note the file storage types may be different.
+ * The CDM API datatype. Note that file storage types may be different.
  * @param cdlName name in CDL
  * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
@@ -73,8 +73,8 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         }
     }
 
-    /** Used for Hdf5 Enum, Compound, Opaque, Vlen. The last two arent particularly useful, but we leave them in
-     * to agree with the Netcdf4 C library. */
+    /** Used for Hdf5 Enum, Compound, Opaque, Vlen.
+     * The last two arent particularly useful, but we leave them in to agree with the Netcdf4 C library. */
     fun withTypedef(typedef : Typedef?) : Datatype = this.copy(typedef = typedef)
 
     override fun equals(other: Any?): Boolean {

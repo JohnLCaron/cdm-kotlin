@@ -341,8 +341,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return null
         }
 
-        val vb = Variable.Builder()
-        vb.name = groupName ?: "Data-Set-${group.refno}"
+        val vb = Variable.Builder(groupName ?: "Data-Set-${group.refno}")
 
         // have to use the variables to figure out the dimensions. barf
         if (dimNames != null && !dimNames.isEmpty()) {
@@ -458,9 +457,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         data.vinfo = vinfo
         if (tagVH.nfields < 1) throw IllegalStateException()
 
-        val vb = Variable.Builder()
+        val vb = Variable.Builder(tagVH.name)
         vinfo.setVariable(vb)
-        vb.name = tagVH.name
         if (tagVH.nfields.toInt() == 1) { // one field - dont make it into a structure
             vb.datatype = H4type.getDataType(tagVH.fld_type[0].toInt())
             val fnelems = tagVH.fld_nelems[0]
@@ -640,8 +638,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         ntag = tag as TagNT
         if (debugConstruct) println("construct image " + group.refno)
 
-        val vb = Variable.Builder()
-        vb.name = "Raster_Image_#" + imageCount
+        val vb = Variable.Builder("Raster_Image_#" + imageCount)
         val datatype = H4type.getDataType(ntag.numberType)
         vinfo.start = tagRasterImage.offset
         vb.datatype = datatype
@@ -663,8 +660,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     private fun makeVariableFromStringAttribute(att : Attribute, parent : Group.Builder) {
         require(att.isString)
         val svalue = att.values[0] as String
-        val vb = Variable.Builder()
-        vb.name = att.name
+        val vb = Variable.Builder(att.name)
         vb.datatype = Datatype.STRING
         vb.spObject = Vinfo(-1).setSValue(svalue)
         parent.addVariable(vb)

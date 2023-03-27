@@ -121,8 +121,7 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
 
 internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     // what the cdm variable looks like
-    val builder = Variable.Builder()
-    builder.name = v5.name.substringAfter(NETCDF4_NON_COORD)
+    val builder = Variable.Builder(v5.name.substringAfter(NETCDF4_NON_COORD))
     if (v5.name.startsWith(NETCDF4_NON_COORD)) {
         isNetcdf4 = true
     }
@@ -157,7 +156,7 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
 
     // stuff needed to read hdf5
     require (v5.dataObject.mdl != null)
-    val vdata = DataContainerVariable(builder.name!!, h5type, v5, this)
+    val vdata = DataContainerVariable(builder.name, h5type, v5, this)
     builder.spObject = vdata
     return builder
 }

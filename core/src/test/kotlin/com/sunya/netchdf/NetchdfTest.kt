@@ -380,7 +380,7 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
 fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
     val varBytes = myvar.nelems
-    if (varBytes >= Integer.MAX_VALUE) {
+    if (varBytes >= 100_000_000) {
         println(" *** ${myvar.nameAndShape()} cant readArrayData too many bytes= $varBytes")
         return 0
     }
