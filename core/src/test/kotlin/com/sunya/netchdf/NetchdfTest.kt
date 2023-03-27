@@ -22,7 +22,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
 
-// Compare Netchdf against NetcdfClibFile / H4ClibFile
+// Test files opened and read through openNetchdfFile().
 class NetchdfTest {
 
     companion object {
@@ -275,7 +275,7 @@ fun compareNetcdfData(myfile: Netchdf, ncfile: Netchdf, varname: String?, sectio
 fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: Section?) {
     val filledSection = Section.fill(section, myvar.shape)
     val nbytes = filledSection.size() * myvar.datatype.size
-    if (nbytes > 100_000_000) {
+    if (nbytes > maxBytes) {
         println(" * ${myvar.fullname()} read too big = ${nbytes}")
     } else {
         val mydata = myfile.readArrayData(myvar, filledSection)
@@ -318,7 +318,7 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, ncfile: Netchdf, ncva
     }
     val middleSection = Section(middleRanges)
     val nbytes = middleSection.size() * myvar.datatype.size
-    if (nbytes > 100_000_000) {
+    if (nbytes > maxBytes) {
         println("  * ${myvar.fullname()} read too big = ${nbytes}")
         compareMiddleSection(myfile, myvar, ncfile, ncvar, middleSection.shape)
         return
@@ -380,7 +380,7 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
 fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
     val varBytes = myvar.nelems
-    if (varBytes >= 100_000_000) {
+    if (varBytes >= maxBytes) {
         println(" *** ${myvar.nameAndShape()} cant readArrayData too many bytes= $varBytes")
         return 0
     }
