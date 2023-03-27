@@ -50,20 +50,26 @@ data class Variable(
         return "${datatype} ${fullname()}${shape.contentToString()}"
     }
 
-    class Builder {
-        var name : String? = null
+    class Builder(val name : String) {
         var datatype : Datatype? = null
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
         var spObject: Any? = null
         var dimList: List<String>? = null
 
-        fun addAttribute(attr : Attribute) {
+        fun addAttribute(attr : Attribute) : Builder {
             attributes.add(attr)
+            return this
         }
 
-        fun addDimension(dim : Dimension) {
+        fun addDimension(dim : Dimension) : Builder {
             dimensions.add(dim)
+            return this
+        }
+
+        fun setDatatype(datatype : Datatype) : Builder {
+            this.datatype = datatype
+            return this
         }
 
         fun setDimensionsAnonymous(shape : IntArray) {
@@ -83,11 +89,11 @@ data class Variable(
                 useDimensions = dimList!!.map { getDimension(it, group) }
             }
 
-            val useName = makeValidCdmObjectName(name!!)
+            val useName = makeValidCdmObjectName(name)
             return Variable(group, useName, datatype!!, useDimensions, attributes, spObject)
         }
 
-        fun getDimension(dimName : String, group : Group) : Dimension {
+        private fun getDimension(dimName : String, group : Group) : Dimension {
             val name = makeValidCdmObjectName(dimName)
             var d = group.findDimension(name)
             if (d == null) {
@@ -100,6 +106,10 @@ data class Variable(
                 }
             }
             return d!!
+        }
+
+        override fun toString(): String {
+            return "'$name' $datatype, dimensions=$dimensions, dimList=$dimList)"
         }
     }
 }

@@ -389,8 +389,7 @@ class HCheader(val filename: String) {
         if (debugSD) println("  readSD '$sdName' ref=$sd_ref datatype=${datatype} dims=${dims.contentToString()} dimList=$dimList")
 
         // create the Variable
-        val vb = Variable.Builder()
-        vb.name = sdName
+        val vb = Variable.Builder(sdName)
         vb.datatype = datatype
         vb.spObject = Vinfo4().setSDSindex(sdidx)
         vb.dimList = dimList
@@ -467,8 +466,7 @@ class HCheader(val filename: String) {
         val nattrs = n_attrs_p[C_INT, 0]
 
         // create the Variable
-        val vb = Variable.Builder()
-        vb.name = name
+        val vb = Variable.Builder(name)
         vb.datatype = H4type.getDataType(datatype)
         vb.spObject = Vinfo4().setGRindex(gridx)
 
@@ -640,8 +638,7 @@ class HCheader(val filename: String) {
             println("  readVStructure '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
         }
 
-        val vb = Variable.Builder()
-        vb.name = vsname
+        val vb = Variable.Builder(vsname)
         if (g4.gb.variables.find { it.name == vsname } != null) return // LOOK why needed?
 
         val index_p = session.allocate(C_INT, 0)
@@ -695,7 +692,7 @@ class HCheader(val filename: String) {
                 //metadata.add(attr)
             }
             if (addAttributesToGroup) {
-                val attr = VStructureMakeAttribute(vb.name!!, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
+                val attr = VStructureMakeAttribute(vb.name, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
                 g4.gb.addAttribute(attr)
             }
         } else if (vclass.startsWith("DimVal") || vclass.startsWith("_HDF_CHK_TBL")) {
@@ -784,8 +781,7 @@ private fun makeVariableFromStringAttribute(g4 : Group4, att : Attribute) {
     require(att.isString)
     val svalue = att.values[0] as String
     // create the Variable
-    val vb = Variable.Builder()
-    vb.name = att.name
+    val vb = Variable.Builder(att.name)
     vb.datatype = Datatype.STRING
     vb.spObject = Vinfo4().setSValue(svalue)
     g4.gb.addVariable(vb)

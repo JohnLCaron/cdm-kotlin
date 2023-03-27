@@ -49,9 +49,9 @@ limitations for high performance, scalable applications.
 #### Why kotlin?
 
 Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects. 
-It has many new features for safer and more concise code, and is a clear improvement over Java, without giving
-up any of Java's strengths. Kotlin will attract the next generation of serious open-source developers, and 
-hopefully some of them will be willing to keep this library working into the unforeseeable future.
+It has many new features for safer (like null-safety) and more concise (like functional idioms) code, and is a great 
+improvement over Java, without giving up any of Java's strengths. Kotlin will attract the next generation of serious 
+open-source developers, and hopefully some of them will be willing to keep this library working into the unforeseeable future.
 
 ### What about performance?
 

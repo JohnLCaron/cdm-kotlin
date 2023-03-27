@@ -66,7 +66,7 @@ class Group(orgName : String,
         return if (parent == null) "root" else name
     }
 
-    class Builder(var name : String) {
+    class Builder(val name : String) {
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
         val typedefs = mutableListOf<Typedef>()
@@ -74,17 +74,19 @@ class Group(orgName : String,
         val groups = mutableListOf<Group.Builder>()
         var parent : Group.Builder? = null
 
-        fun addDimension(dim: Dimension) {
+        // add if dim name not already added, else RuntimeException.
+        fun addDimension(dim: Dimension) : Builder {
             if ( dimensions.find {it.name == dim.name } == null) {
                 dimensions.add(dim)
             } else {
-                println("tried to add duplicate dimension $dim")
+                throw RuntimeException("tried to add duplicate dimension '${dim.name}'")
             }
+            return this
         }
 
         // return true if did not exist and was added
         fun addDimensionIfNotExists(dim: Dimension): Boolean {
-            if ( dimensions.find {it.name == dim.name } != null) {
+            if (dimensions.find {it.name == dim.name } != null) {
                 return false
             }
             addDimension(dim)
@@ -97,31 +99,33 @@ class Group(orgName : String,
             return found
         }
 
-        // find dimension in this builder or a parent
-        fun findDimension(dimName: String) : Dimension? {
-            return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
-        }
-
-        fun addAttribute(att: Attribute) {
+        fun addAttribute(att: Attribute) : Builder {
             attributes.add(att)
+            return this
         }
 
-        fun addVariable(vb: Variable.Builder) {
+        // add if vb name not already added
+        fun addVariable(vb: Variable.Builder) : Builder {
             if (variables.find {it.name == vb.name } == null) {
                 variables.add(vb)
             } else {
-                println("tried to add duplicate variable ${vb.name}")
+                // throw RuntimeException("tried to add duplicate variable '${vb.name}'")
+                println("tried to add duplicate variable '${vb.name}'")
             }
+            return this
         }
 
-        fun addTypedef(typedef : Typedef) {
+        // add if typedef name not already added
+        fun addTypedef(typedef : Typedef) : Builder {
             if (typedefs.find { it.name == typedef.name} == null)
                 typedefs.add(typedef)
+            return this
         }
 
-        fun addGroup(nested: Group.Builder) {
-            groups.add(nested)
+        fun addGroup(nested: Group.Builder) : Builder {
+            this.groups.add(nested)
             nested.parent = this
+            return this
         }
 
         fun removeGroupIfExists(groupName: String): Boolean {
@@ -129,7 +133,7 @@ class Group(orgName : String,
             return if (egroup == null) false else groups.remove(egroup)
         }
 
-        // dunno if its worth complexity
+        /* dunno if its worth the complexity - not currently used
         fun isParent(other: Group.Builder): Boolean {
             var found: Group.Builder = other
             while (found != this && found.parent != null) {
@@ -148,6 +152,7 @@ class Group(orgName : String,
             }
             return found
         }
+         */
 
         fun build(parent : Group?) : Group {
             val useName = makeValidCdmObjectName(name)
