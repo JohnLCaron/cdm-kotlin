@@ -381,7 +381,7 @@ class HCheader(val filename: String) {
             if (dimName.startsWith("fakeDim")) { // LOOK
                 dimList.add(dimLength.toString())
             } else {
-                val useDim = Dimension(dimName, dimLength, false, true)
+                val useDim = Dimension(dimName, dimLength, true)
                 g4.gb.addDimensionIfNotExists(useDim)
                 dimList.add(useDim.name) // name has been cleaned up
             }

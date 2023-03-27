@@ -33,12 +33,16 @@ class Netcdf3File(val filename : String) : Netchdf {
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         val wantSection = Section.fill(section, v2.shape)
         val vinfo = v2.spObject as N3header.Vinfo
-        val layout = if (!v2.isUnlimited()) {
+        val layout = if (!v2.hasUnlimited()) {
             LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(wantSection))
         } else {
             LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(wantSection))
         }
         return readDataWithLayout(layout, v2, wantSection)
+    }
+
+    private fun Variable.hasUnlimited() : Boolean {
+        return this.dimensions.find { it == header.unlimitedDimension } != null
     }
 
     override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
@@ -57,7 +61,7 @@ class Netcdf3File(val filename : String) : Netchdf {
                 if (debugChunking) println("  chunk=${indexSection}")
                 val section = indexSection.section()
 
-                val layout = if (!v2.isUnlimited()) {
+                val layout = if (!v2.hasUnlimited()) {
                     LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(section))
                 } else {
                     // I think this will segment on the record dimension

@@ -154,7 +154,7 @@ class NCheader(val filename: String) {
                 val dimension = Dimension(dimLength.toInt())
                 g4.dimHash[dimId] = dimension
             } else {
-                val dimension = Dimension(dimName, dimLength.toInt(), isUnlimited, true)
+                val dimension = Dimension(dimName, dimLength.toInt(), true)
                 g4.gb.addDimension(dimension)
                 g4.dimHash[dimId] = dimension
             }
@@ -414,10 +414,7 @@ class NCheader(val filename: String) {
 
         fun makeDimList(dimIds : IntArray) : List<Dimension> {
             return dimIds.map {
-                val dim = findDim(it)
-                if (dim == null)
-                    println("HEY")
-                findDim(it) ?: Dimension("", it, false, false)
+                findDim(it) ?: Dimension("", it, false)
             }
         }
 

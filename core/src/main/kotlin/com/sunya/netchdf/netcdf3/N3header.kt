@@ -57,7 +57,7 @@ private val logger = KotlinLogging.logger("N3header")
 // Really a builder of the root Group.
 class N3header(val raf: OpenFile, root: Group.Builder) {
   private val root: Group.Builder
-  private var unlimitedDimension: Dimension? = null
+  internal var unlimitedDimension: Dimension? = null
   private val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
   private val valueCharset = StandardCharsets.UTF_8
 
@@ -109,7 +109,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
       nonRecordDataSize -= dataStart
     }
 
-    val unlimitedVariables = root.variables.filter { it.isUnlimited() }
+    val unlimitedVariables = root.variables.filter { hasUnlimited(it) }
     if (unlimitedVariables.isEmpty()) { // if there are no record variables
       recStart = 0
     }
@@ -125,7 +125,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
         var vsize = dtype.size // works for all netcdf-3 data types
         val dims: List<Dimension> = uvar.dimensions
         for (curDim in dims) {
-          if (!curDim.isUnlimited) vsize *= curDim.length
+          if (curDim != unlimitedDimension) vsize *= curDim.length
         }
         val vinfo = uvar.spObject as Vinfo
         if (vsize != vinfo.vsize) {
@@ -175,6 +175,10 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
      */
   }
 
+  private fun hasUnlimited(vb : Variable.Builder) : Boolean {
+    return vb.dimensions.find { it == unlimitedDimension } != null
+  }
+
   private fun readDimensions(raf: OpenFile, root: Group.Builder) {
     var numdims = 0
     val magic = raf.readInt(filePos)
@@ -192,7 +196,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
 
       var dim: Dimension
       if (len == 0) {
-        dim = Dimension(name, numrecs, true, true)
+        dim = Dimension(name, numrecs, true)
         unlimitedDimension = dim
       } else {
         dim = Dimension(name, len)
@@ -226,7 +230,7 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
       for (j in 0 until rank) {
         val dimIndex: Int = raf.readInt(filePos)
         val dim: Dimension = fileDimensions[dimIndex]
-        if (dim.isUnlimited) {
+        if (dim == unlimitedDimension) {
           isRecord = true
         } else {
           velems *= dim.length

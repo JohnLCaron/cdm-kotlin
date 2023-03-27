@@ -46,9 +46,8 @@ fun Group.cdl(isRoot : Boolean, indent : Indent = Indent(2)) : String {
 }
 
 fun Dimension.cdl(indent : Indent = Indent(2)) : String {
-    return if (isUnlimited) "${indent}$name = UNLIMITED ; // ($length currently)"
-    else if (!isShared) "${indent}$length"
-    else "${indent}$name = $length ;"
+    return if (!isShared) "${indent}$length"
+           else "${indent}$name = $length ;"
 }
 
 fun Variable.cdl(indent : Indent = Indent(2)) : String {

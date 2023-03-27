@@ -2,11 +2,11 @@ package com.sunya.cdm.api
 
 import com.sunya.cdm.util.makeValidCdmObjectName
 
-data class Dimension(val orgName : String, val length : Int, val isUnlimited : Boolean, val isShared : Boolean) {
+data class Dimension(val orgName : String, val length : Int, val isShared : Boolean) {
     val name = makeValidCdmObjectName(orgName)
 
-    constructor(name : String, len : Int) : this(name, len, false, true)
-    constructor(len : Int) : this("", len, false, false)
+    constructor(name : String, len : Int) : this(name, len, true)
+    constructor(len : Int) : this("", len, false)
 }
 
 fun IntArray.computeSize(): Int {
