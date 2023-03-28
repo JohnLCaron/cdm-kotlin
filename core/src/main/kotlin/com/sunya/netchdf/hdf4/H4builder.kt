@@ -114,8 +114,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             val tage = TagEnum.byCode(tagCode)
             val tagid = tagid(tagRef, tagCode)
             if (debugVGroupDetails) println("$indent    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)}")
-            val tag = tagidMap[tagid] ?: throw RuntimeException("Dont have tag (${tagRef}, ${TagEnum.byCode(tagCode)})")
-            if (tage == TagEnum.VG) {
+            val tag = tagidMap[tagid]
+            if (tag == null) {
+                println("*** Dont have tag (refno=${tagRef}, code=${TagEnum.byCode(tagCode)}) referenced in vgroup '${vgroup.name}'")
+            } else if (tage == TagEnum.VG) {
                 VgroupFindAliases(tag as TagVGroup, indent.incr())
             } else if (tage == TagEnum.NDG) {
                 sdAliasMap[tagRef] = vgroup
@@ -187,7 +189,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                 if (alias != null)
                     VgroupVar(alias, nested)
                 else {
-                    SDread(tag as TagDataGroup, null, nested)
+                    SDread(tag as TagDataGroup, null, nested, emptyList())
                 }
             } else if (tage == TagEnum.VH) {
                 val vtag = tag as TagVH
@@ -297,12 +299,12 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         if (debugConstruct) println("--SDiterate")
         for (t: Tag in alltags) {
             if (t.tagEnum() == TagEnum.NDG) {
-                SDread(t as TagDataGroup, null, rootBuilder)
+                SDread(t as TagDataGroup, null, rootBuilder, emptyList())
             }
         }
     }
 
-    private fun SDread(group: TagDataGroup, groupName : String?, parent : Group.Builder, dimNames : List<String>? = null): Variable.Builder? {
+    private fun SDread(group: TagDataGroup, groupName : String?, parent : Group.Builder, dimNames : List<String>): Variable.Builder? {
         val tagid = tagid(group.refno, group.code)
         if (completedObjects.contains(tagid)) {
             if (debugConstruct) println("SDread skip  ${group.refno} $groupName")
@@ -344,15 +346,17 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         val vb = Variable.Builder(groupName ?: "Data-Set-${group.refno}")
 
         // have to use the variables to figure out the dimensions. barf
-        if (dimNames != null && !dimNames.isEmpty()) {
-            require(dimSDD.shape.size == dimNames.size)
-            repeat(dimSDD.shape.size) {
-                val dim = Dimension(dimNames[it], dimSDD.shape[it])
-                vb.addDimension(dim)
-                parent.addDimensionIfNotExists(dim)
-            }
-        } else {
-            vb.setDimensionsAnonymous(dimSDD.shape)
+        val rank = dimSDD.shape.size
+        val ndimNames = dimNames.size
+        repeat(ndimNames) {
+            val dim = Dimension(dimNames[it], dimSDD.shape[it])
+            vb.addDimension(dim)
+            parent.addDimensionIfNotExists(dim)
+        }
+        // sometimes dont any or enough names, use anon dimensions for remaining
+        for (dimidx in ndimNames until rank) {
+            val dim = Dimension("", dimSDD.shape[dimidx], false)
+            vb.addDimension(dim)
         }
 
         val nt: TagNT = tagidMap.get(tagid(dimSDD.data_nt_ref, TagEnum.NT.code)) as TagNT? ?: throw IllegalStateException()
@@ -738,8 +742,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 }
 
+// seriously fucked up to rely on these conventions
+
 fun isNestedGroup(className : String) : Boolean {
-    // seriously fucked up
     return className.startsWith("SWATH") or className.startsWith("GRID") or className.startsWith("POINT")
 }
 

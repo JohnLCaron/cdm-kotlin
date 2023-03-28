@@ -73,7 +73,16 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
             val refM = members.find{ it.name == "chk_ref" }!!
             val chunkList = mutableListOf<SpecialDataChunk>()
             for (sdata in sdataArray) {
-                val origin = originM.value(sdata) as ArrayInt
+                val wtf = originM.value(sdata)
+                val origin : IntArray = when (wtf) {
+                    is Int -> intArrayOf(wtf)
+                    is ArrayInt -> {
+                        val iter = wtf.iterator()
+                        IntArray(wtf.nelems) { iter.next() }
+                    }
+                    else -> throw RuntimeException("origin must be Integer")
+                }
+
                 val tag = tagM.value(sdata) as UShort
                 val ref = refM.value(sdata) as UShort
                 val data  = h4file.header.tagidMap[H4builder.tagid(ref.toInt(), tag.toInt())]
@@ -116,17 +125,17 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
 }
 
 internal class SpecialDataChunk(
-    originA: ArrayInt,
-    chunk_length: IntArray,
+    originA: IntArray,
+    chunkLength: IntArray,
     val data: TagData,
 ) {
     val origin: IntArray
     init {
         // origin is in units of chunks - convert to indices
-        require(originA.nelems == chunk_length.size)
-        val origin = IntArray(chunk_length.size)
-        repeat(chunk_length.size) {
-            origin[it] = originA.values[it] * chunk_length[it]
+        require(originA.size == chunkLength.size)
+        val origin = IntArray(chunkLength.size)
+        repeat(chunkLength.size) {
+            origin[it] = originA[it] * chunkLength[it]
         }
         this.origin = origin
     }

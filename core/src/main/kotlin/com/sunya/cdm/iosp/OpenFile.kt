@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets
 
 /** An abstraction over a Java FileChannel. */
 data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
+    var allowTruncation = true
     val raf : com.sunya.io.RandomAccessFile
     val fileChannel : FileChannel
     val size : Long
@@ -81,6 +82,7 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
 
     fun readIntoByteBuffer(state : OpenFileState, dst : ByteBuffer, dstPos : Int, nbytes : Int) : Int {
         if (state.pos >= size) {
+            if (allowTruncation) return 0
             throw EOFException("Tried to read past EOF ${size} at pos ${state.pos} location $location")
         }
         val bb = readBytes(state, nbytes)
@@ -111,7 +113,7 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         raf.seek(state.pos)
         raf.order(state.byteOrder)
         val nread = raf.read(dst)
-        if (nread != dst.size) {
+        if (nread != dst.size && !allowTruncation) {
             throw EOFException("Only read $nread bytes of wanted ${dst.size} bytes; starting at pos ${state.pos} EOF=${size}")
         }
         state.pos += nread

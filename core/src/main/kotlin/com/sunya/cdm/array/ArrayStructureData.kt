@@ -137,6 +137,7 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
 open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray) {
     val nelems = dims.computeSize()
 
+    // LOOK clumsy
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
         val offset = sdata.offset + this.offset
@@ -144,21 +145,17 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             val memberBB = ByteBuffer.allocate(nelems * datatype.size)
             repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
             return when (datatype) {
-                Datatype.BYTE -> ByteArray(nelems) { bb.get(offset + it) }
-                Datatype.SHORT -> ShortArray(nelems) { bb.getShort(offset + it * 2) }
+                Datatype.BYTE -> ArrayByte(dims, memberBB)
+                Datatype.SHORT -> ArrayShort(dims, memberBB.asShortBuffer())
                 Datatype.INT -> ArrayInt(dims, memberBB.asIntBuffer())
-                Datatype.LONG -> bb.getLong(offset)
-                Datatype.UBYTE -> bb.get(offset).toUByte()
-                Datatype.USHORT -> bb.getShort(offset).toUShort()
-                Datatype.UINT -> bb.getInt(offset).toUInt()
-                Datatype.ULONG -> bb.getLong(offset).toULong()
-                Datatype.FLOAT -> bb.getFloat(offset)
-                Datatype.DOUBLE -> bb.getDouble(offset)
+                Datatype.LONG -> ArrayLong(dims, memberBB.asLongBuffer())
+                Datatype.UBYTE -> ArrayUByte(dims, memberBB)
+                Datatype.USHORT -> ArrayUShort(dims, memberBB.asShortBuffer())
+                Datatype.UINT -> ArrayUInt(dims, memberBB.asIntBuffer())
+                Datatype.ULONG -> ArrayULong(dims, memberBB.asLongBuffer())
+                Datatype.FLOAT -> ArrayFloat(dims, memberBB.asFloatBuffer())
+                Datatype.DOUBLE -> ArrayDouble(dims, memberBB.asDoubleBuffer())
                 Datatype.CHAR -> makeStringZ(bb, offset, nelems)
-                Datatype.STRING -> {
-                    val ret = sdata.getFromHeap(offset)
-                    if (ret == null) "unknown" else ret as String
-                }
                 else -> throw RuntimeException("unimplemented array of $datatype")
             }
         }
@@ -182,11 +179,10 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             Datatype.VLEN -> {
                 val ret = sdata.getFromHeap(offset)
                 if (ret != null) (ret as ArrayVlen) else {
-                    sdata.getFromHeap(offset)
                     throw RuntimeException("cant find ArrayVlen on heap at $offset")
                 }
             }
-            else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8)
+            else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8) // wtf?
         }
     }
 

@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: Mar 20, 2023_
+_last updated: Mar 28, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -65,6 +65,12 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C and HDF4 C libraries. 
 With these tools we can check that our code give the same results as the reference libraries.
+
+Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC. 
+
+There are ~450 hdf4 test files and ~800 netcdf3/4/hdf5 files. 
+
+We need to get representative samples of recent files using these formats.
 
 ### Scope
 
