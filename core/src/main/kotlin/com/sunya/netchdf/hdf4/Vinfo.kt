@@ -135,10 +135,9 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 
     override fun toString(): String {
         return buildString {
-            vb?.let { append("refno=%d name=%s fillValue=%s %n", refno, it.name, fillValue) }
-            append(" isChunked=%s isCompressed=%s isLinked=%s hasNoData=%s %n", isChunked, isCompressed, isLinked, hasNoData)
-            append(" elemSize=%d data start=%d length=%s %n%n", elemSize, start, length)
-            for (t: Tag in tags) append(" %s%n", t.detail())
+            vb?.let { append("refno=$refno name=${it.name} fillValue=$fillValue") }
+            append(" isChunked=$isChunked isCompressed=$isCompressed isLinked=$isLinked hasNoData=$hasNoData")
+            append(" elemSize=$elemSize data start=$start length=$length tags=${tags.map{ it.refno }}")
         }
     }
 }

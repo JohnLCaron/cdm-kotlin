@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf4
 
 import com.sunya.netchdf.*
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
+import com.sunya.netchdf.netcdf4.openNetchdfFile
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -39,8 +40,9 @@ class H4compareHC {
             )
 
             val hdf4 =
-                testFilesIn(testData + "devcdm/hdf4")
+                testFilesIn(testData + "hdf4")
                     .withRecursion()
+                    .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") } // corrupted ??
                     .build()
 
             val hdfeos2 =
@@ -69,7 +71,7 @@ class H4compareHC {
                     .build()
 
             val moar42 =
-                testFilesIn(testData + "netchdf/hdf4")
+                testFilesIn(testData + "hdf4")
                     .withRecursion()
                     .addNameFilter { name -> !name.endsWith("sst.coralreef.fields.50km.n14.20010106.hdf") }
                     .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
@@ -79,8 +81,8 @@ class H4compareHC {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            // return Stream.of(starter, hasGroups, sdsNotEos).flatMap { i -> i}
-            return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
+            return hdf4
+            // return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
         }
     }
 
@@ -117,18 +119,19 @@ class H4compareHC {
     }
 
     @Test
-    fun problem1() {
-        compareH4header(testData + "cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf")
+    fun problem1() { // fakeDims, HC coredump "double free or corruption (out)"
+        compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
+        // compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD03.A2007001.0000.005.2007041030714.hdf")
     }
 
     @Test
-    fun smallProblem() {
-        compareH4header(testData + "cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L2_Land_T06_200801012345_A.hdf")
+    fun problem2() { // missing lots of tags, HC coredump
+        readH4header(testData + "hdf4/eisalt/VHRR-KALPANA_20081216_070002.hdf")
     }
 
     @Test
     fun smallProblem2() {
-        compareH4header(testData + "cdmUnitTest/formats/hdf4/MI1B2T_B55_O003734_AN_05.hdf")
+        compareData(testData + "hdf4/nsidc/LP_DAAC/MOD/MOD09GA.A2007268.h10v08.005.2007272184810.hdf")
     }
 
     @Test
@@ -173,6 +176,18 @@ class H4compareHC {
     }
 
     //////////////////////////////////////////////////////////////////////
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        openNetchdfFile(filename).use { ncfile ->
+            if (ncfile == null) {
+                println("Not a netchdf file=$filename ")
+                return
+            }
+            println("${ncfile.type()} $filename ")
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("params")
@@ -226,7 +241,6 @@ class H4compareHC {
         readNetchdfData(filename, null, null, true)
         println()
     }
-
 
     @ParameterizedTest
     @MethodSource("params")

@@ -17,7 +17,7 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
     val xtag = raf.readShort(state).toUShort().toInt()
     val btag = xtag and 0x3FFF // 14 bits // basic tags are numbered 0x0001 through 0x3FFF,
     val refno = raf.readShort(state).toUShort().toInt()
-    val offset = raf.readInt(state).toUInt().toLong()
+    val offset = raf.readInt(state).toLong() // LOOK only 32 bit (!)
     val length = raf.readInt(state)
 
     when (val tagEnum = TagEnum.byCode(btag)) {
@@ -487,7 +487,7 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
     }
 
     override fun toString(): String {
-        return super.toString() + " class= " + className + " name= " + name
+        return "${super.toString()} name= '${name}'"
     }
 
     override fun detail(): String {

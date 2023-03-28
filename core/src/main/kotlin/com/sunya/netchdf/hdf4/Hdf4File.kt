@@ -82,16 +82,16 @@ class Hdf4File(val filename : String) : Netchdf {
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
         val vinfo = v.spObject as Vinfo
 
+        if (vinfo.tagData != null) {
+            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+        }
+
         if (vinfo.hasNoData) {
             return ArraySingle(section.shape, v.datatype, vinfo.getFillValueOrDefault())
         }
 
         if (vinfo.svalue != null) {
             return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
-        }
-
-        if (vinfo.tagData != null) {
-            vinfo.setLayoutInfo(this) // make sure needed info is present
         }
 
         if (!vinfo.isCompressed) {
@@ -137,7 +137,7 @@ class Hdf4File(val filename : String) : Netchdf {
         val values = ByteBuffer.allocate(totalNbytes.toInt())
 
         var bytesRead = 0
-        val filePos = OpenFileState(vinfo.start, ByteOrder.BIG_ENDIAN)
+        val filePos = OpenFileState(vinfo.start, vinfo.endian)
         while (layout.hasNext()) {
             val chunk = layout.next()
             filePos.pos = chunk.srcPos()

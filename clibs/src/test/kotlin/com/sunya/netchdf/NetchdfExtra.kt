@@ -1,6 +1,7 @@
 package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
+import com.sunya.netchdf.netcdf4.openNetchdfFile
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -91,8 +92,20 @@ class NetchdfExtra {
         //readDataCompareNC(filename)
     }
 
+    ///////////////////////////////////////////////////////
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        openNetchdfFile(filename).use { ncfile ->
+            if (ncfile == null) {
+                println("Not a netchdf file=$filename ")
+                return
+            }
+            println("${ncfile.type()} $filename ")
+        }
+    }
 
-        @ParameterizedTest
+    @ParameterizedTest
     @MethodSource("params")
     fun testCompareCdlWithClib(filename: String) {
         if (filename.contains("/npp/")) {

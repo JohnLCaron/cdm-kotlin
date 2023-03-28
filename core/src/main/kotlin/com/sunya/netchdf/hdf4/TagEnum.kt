@@ -103,7 +103,7 @@ enum class TagEnum(val desc: String, val code: Int) {
             return te?: NONE
         }
 
-        val obsolete = setOf(ID8, IP8, RI8, CI8, II8)
+        val obsolete = setOf(ID8, IP8, RI8, CI8, II8, SDG, SDLNK)
     }
 
     override fun toString(): String {

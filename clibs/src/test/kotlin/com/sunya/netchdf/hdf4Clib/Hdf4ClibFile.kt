@@ -114,14 +114,16 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection:
         val data_p = session.allocate(nbytes)
 
         val sds_id = SDselect(sdsStartId, sdindex)
-        checkErr("SDreaddata", SDreaddata(sds_id, origin_p, stride_p, shape_p, data_p))
-        SDendaccess(sds_id)
+        try {
+            checkErr("SDreaddata", SDreaddata(sds_id, origin_p, stride_p, shape_p, data_p))
+            val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+            val values = ByteBuffer.wrap(raw)
+            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+            return shapeData(datatype, values, filledSection.shape)
 
-        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-        val values = ByteBuffer.wrap(raw)
-        values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
-
-        return shapeData(datatype, values, filledSection.shape)
+        } finally {
+            SDendaccess(sds_id)
+        }
     }
 }
 
@@ -132,30 +134,31 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecord
         val read_access_mode = session.allocateUtf8String("r")
         val fldnames_p = session.allocateUtf8String(vsInfo.fldNames)
         val data_p = session.allocate(numRecords * vsInfo.recsize.toLong()) // LOOK memory clobber?
-        val vdata_id = VSattach(fileOpenId, vsInfo.vs_ref, read_access_mode);
+        val vdata_id = VSattach(fileOpenId, vsInfo.vs_ref, read_access_mode)
+        try {
+            checkErrNeg("VSsetfields", VSsetfields(vdata_id, fldnames_p))
+            checkErrNeg("VSseek", VSseek(vdata_id, startRecord))
+            // int32 VSread(int32 vdata_id, uint8 *databuf, int32 n_records, int32 interlace_mode)
+            val nread = VSread(vdata_id, data_p, numRecords, FULL_INTERLACE())
+            checkErrNeg("VSread", nread)
+            require(nread == numRecords)
 
-        checkErrNeg("VSsetfields", VSsetfields(vdata_id, fldnames_p))
-        checkErrNeg("VSseek", VSseek(vdata_id, startRecord))
-        // int32 VSread(int32 vdata_id, uint8 *databuf, int32 n_records, int32 interlace_mode)
-        val nread = VSread(vdata_id, data_p, numRecords, FULL_INTERLACE())
-        checkErrNeg("VSread", nread)
-        require(nread == numRecords)
+            // As the data is stored contiguously in the vdata, VSfpack should be used to
+            // unpack the fields after reading.
 
-        VSdetach(vdata_id)
+            val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+            val values = ByteBuffer.wrap(raw)
+            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
 
-        // As the data is stored contiguously in the vdata, VSfpack should be used to
-        // unpack the fields after reading.
-
-        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-        val values = ByteBuffer.wrap(raw)
-        values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
-
-        if (datatype.typedef is CompoundTypedef) {
-            val members = (datatype.typedef as CompoundTypedef).members
-            return ArrayStructureData(shape, values, vsInfo.recsize, members)
-        } else {
-            // a single field is made into a regular variable
-            return shapeData(datatype, values, shape)
+            if (datatype.typedef is CompoundTypedef) {
+                val members = (datatype.typedef as CompoundTypedef).members
+                return ArrayStructureData(shape, values, vsInfo.recsize, members)
+            } else {
+                // a single field is made into a regular variable
+                return shapeData(datatype, values, shape)
+            }
+        } finally {
+            VSdetach(vdata_id)
         }
     }
 }
@@ -185,14 +188,15 @@ fun readGRdata(
         val data_p = session.allocate(nbytes)
 
         val grId = GRselect(grStartId, grIdx)
-        checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
-        GRendaccess(grId)
-
-        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-        val values = ByteBuffer.wrap(raw)
-        values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
-
-        return shapeData(datatype, values, filledSection.shape)
+        try {
+            checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
+            val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+            val values = ByteBuffer.wrap(raw)
+            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+            return shapeData(datatype, values, filledSection.shape)
+        } finally {
+            GRendaccess(grId)
+        }
     }
 }
 

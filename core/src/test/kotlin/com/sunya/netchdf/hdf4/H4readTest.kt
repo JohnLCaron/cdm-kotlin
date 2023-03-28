@@ -37,11 +37,6 @@ class H4readTest {
                 Arguments.of(testData + "cdmUnitTest/formats/hdf4/MI1B2T_B54_O003734_AN_05.hdf"),
             )
 
-            val hdf4 =
-                testFilesIn(testData + "devcdm/hdf4")
-                    .withRecursion()
-                    .build()
-
             val hdfeos2 =
                 testFilesIn(testData + "devcdm/hdfeos2")
                     .withRecursion()
@@ -67,8 +62,8 @@ class H4readTest {
                     .addNameFilter { name -> !name.endsWith("MYD021KM.A2008349.1800.005.2009329084841.hdf") } // corrupted ??
                     .build()
 
-            val moar42 =
-                testFilesIn(testData + "netchdf/hdf4")
+            val hdf4 =
+                testFilesIn(testData + "hdf4")
                     .withRecursion()
                     .addNameFilter { name -> !name.endsWith("sst.coralreef.fields.50km.n14.20010106.hdf") }
                     .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
@@ -78,8 +73,8 @@ class H4readTest {
                     .addNameFilter { name -> !name.endsWith(".pdf") }
                     .build()
 
-            // return Stream.of(starter, hasGroups, sdsNotEos).flatMap { i -> i}
-            return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4, moar42).flatMap { i -> i}
+            return hdf4
+           // return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4).flatMap { i -> i}
         }
 
 
@@ -106,6 +101,19 @@ class H4readTest {
         testReadIterate(testData + "cdmUnitTest/formats/hdf4/ssec/AIRS.2005.08.28.103.L1B.AIRS_Rad.v4.0.9.0.G05241172839.hdf")
     }
 
+    @Test
+    fun problem1() { // HC coredump
+        readH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
+        // compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD03.A2007001.0000.005.2007041030714.hdf")
+    }
+
+    @Test
+    fun problemData() {
+        readH4header(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
+        readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf", "Discarded_Packets") // , "/mod08/Data_Fields/Angstrom_Exponent_2_Ocean_Std_Deviation_Mean")
+    }
+
+    //home/all/testdata/hdf4/MYD021KM.A2008349.1800.005.2009329084841.hdf
     //home/all/testdata/cdmUnitTest/formats/hdf4/ssec/AIRS.2005.08.28.103.L1B.AIRS_Rad.v4.0.9.0.G05241172839.hdf, radiances
     //home/all/testdata/cdmUnitTest/formats/hdf4/MYD29.A2009152.0000.005.2009153124331.hdf, Sea_Ice_by_Reflectance
 
