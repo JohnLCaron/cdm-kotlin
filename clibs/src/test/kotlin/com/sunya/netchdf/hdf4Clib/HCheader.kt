@@ -606,17 +606,16 @@ class HCheader(val filename: String) {
             val recsize = recsize_p[C_INT, 0]
             val vsname = vsname_p.getUtf8String(0)
             require(vsname.length < MAX_NAME)
-            if (g4.gb.variables.find { it.name == vsname } != null) return
 
             if (debugVSdata) {
                 println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
             }
-            //
-            if (vsname == "Prior S/C Ancillary Data")
-                println()
 
-            val vb = Variable.Builder(vsname)
-            if (g4.gb.variables.find { it.name == vsname } != null) return // LOOK why needed?
+            val vhname = if (vsname.equals("Ancillary_Data")) vclass else vsname // Lame
+            val vb = Variable.Builder(vhname)
+
+            if (vs_ref == 7)
+                println()
 
             val index_p = session.allocate(C_INT, 0)
             val names = fieldnames.split(",").map { it.trim() }
@@ -639,9 +638,13 @@ class HCheader(val filename: String) {
             if (members.size == 1) {
                 val member = members[0]
                 vb.datatype = member.datatype
+                // vinfo.elemSize = member.datatype.size // look correct the size, not tagVH.ivsize
                 val totalNelems = nrecords * member.nelems
                 if (totalNelems > 1) {
-                    vb.setDimensionsAnonymous(intArrayOf(totalNelems))
+                    if (nrecords != 1 && member.nelems != 1)
+                        vb.setDimensionsAnonymous(intArrayOf(nrecords,  member.nelems))
+                    else
+                        vb.setDimensionsAnonymous(intArrayOf(totalNelems))
                 }
             } else {
                 val typedef = CompoundTypedef(vsname, members)

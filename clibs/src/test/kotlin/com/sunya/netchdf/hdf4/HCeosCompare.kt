@@ -13,7 +13,7 @@ import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
 
-class H4compareHC {
+class HCeosCompare {
 
     companion object {
         @JvmStatic
@@ -173,6 +173,11 @@ class H4compareHC {
         readHCheader(testData + "cdmUnitTest/formats/hdf4/eos/misr/MISR_AM1_AGP_P040_F01_24.subset.eos")
         readHCheader(testData + "netchdf/hdf4/chlora/MODSCW_P2009168_C4_1805_1810_1940_1945_GM03_closest_chlora.hdf") // malloc(): invalid size (unsorted)
         compareH4header(testData + "cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L3_DailyLand_B04_20080101.hdf")
+    }
+
+    @Test
+    fun problemDuplicateVariable() {
+        compareH4header(testData + "hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
     }
 
     //////////////////////////////////////////////////////////////////////

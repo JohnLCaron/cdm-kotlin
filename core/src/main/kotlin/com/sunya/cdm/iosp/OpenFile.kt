@@ -65,7 +65,7 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         try {
             val nread = fileChannel.read(dst, state.pos)
             if (nread != nbytes) {
-                throw EOFException("Tried to read past EOF at pos ${state.pos} location $location EOF=${fileChannel.size()}")
+                throw EOFException("nread != nwanted at pos ${state.pos} location $location EOF=${fileChannel.size()}")
             }
             state.pos += nread
             return nread

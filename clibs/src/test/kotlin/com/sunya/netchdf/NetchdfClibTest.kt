@@ -542,14 +542,19 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Ne
         println(" * ${myvar.fullname()} read too big = ${nbytes}")
     } else {
         val mydata = myfile.readArrayData(myvar, filledSection)
-        val ncdata = ncfile.readArrayData(ncvar, filledSection)
-        println(" ${myvar.datatype} ${myvar.fullname()}[${filledSection}] = ${Section.computeSize(mydata.shape)} elems" )
+        val ncdata = try {
+            ncfile.readArrayData(ncvar, filledSection)
+        } catch (e : Exception) {
+            println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
+            throw e
+        }
+        println(" ${myvar.datatype} ${myvar.fullname()}[${filledSection}] = ${computeSize(mydata.shape)} elems" )
 
         if (myvar.datatype == Datatype.CHAR) {
             compareCharData(myvar.fullname(), mydata, ncdata)
         } else {
-            if (!ArrayTyped.contentEquals(ncdata, mydata)) {
-                println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.name} ${ncvar.dimensions.map { it.name }}")
+            if (!ncdata.equals(mydata)) {
+                println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
                 if (NetchdfTest.showFailedData) {
                     println("\n mydata = $mydata")
                     println(" ncdata = $ncdata")
@@ -588,13 +593,18 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, ncfile: Netchdf, ncva
     }
 
     val mydata = myfile.readArrayData(myvar, middleSection)
-    val ncdata = ncfile.readArrayData(ncvar, middleSection)
+    val ncdata = try {
+        ncfile.readArrayData(ncvar, middleSection)
+    } catch (e: Exception) {
+        println(" *** FAIL compareMiddleSection data for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
+        throw e
+    }
     println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${Section.computeSize(mydata.shape)} elems")
 
     if (myvar.datatype == Datatype.CHAR) {
         compareCharData(myvar.fullname(), mydata, ncdata)
     } else {
-        if (!ArrayTyped.contentEquals(ncdata, mydata)) {
+        if (!ncdata.equals(mydata)) {
             println(" *** FAIL comparing middle section variable = ${ncvar}")
             if (NetchdfTest.showFailedData) {
                 println(" mydata = $mydata")

@@ -74,9 +74,11 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
                 members.forEachIndexed { idx, m ->
                     if (idx > 0) append(", ")
                     val value = m.value(this@StructureData)
-                    if (value is ArrayTyped<*>) append(value.showValues())
-                    else if (value is String) append("\"${"%12s".format(value.toString())}\"")
-                    else append("%12s".format(value.toString()))
+                    when (value) {
+                        is ArrayTyped<*> -> append(value.showValues())
+                        is String -> append("\"${"%12s".format(value.toString())}\"")
+                        else -> append("%12s".format(value.toString()))
+                    }
                 }
             }
         }
@@ -94,10 +96,10 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
             // check each member's value
             members.forEachIndexed { idx, m ->
                 val om = other.members[idx]
-                if (m.value(this) != om.value(other)) {
-                    val v1 = m.value(this)
-                    val v2 = om.value(other)
-                    val ok = v1.equals(v2)
+                val val1 = m.value(this)
+                val val2 = om.value(other)
+                if (val1 != val2) {
+                    val1.equals(val2) // debug
                     return false
                 }
             }
@@ -141,8 +143,12 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
         val offset = sdata.offset + this.offset
+        if ((offset < 0) or (offset >= bb.capacity()))
+            println()
+
         if (nelems > 1) {
-            val memberBB = ByteBuffer.allocate(nelems * datatype.size)
+            val memberBB = ByteBuffer.allocate(nelems * datatype.size) // why cant we use a view ??
+            memberBB.order(sdata.bb.order())
             repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
             return when (datatype) {
                 Datatype.BYTE -> ArrayByte(dims, memberBB)

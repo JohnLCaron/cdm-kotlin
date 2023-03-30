@@ -30,6 +30,7 @@ import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
+import kotlin.math.min
 
 class Hdf4ClibFile(val filename: String) : Netchdf {
     private val header: HCheader = HCheader(filename)
@@ -51,12 +52,14 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
 
         val datatype = v2.datatype
         val nbytes = filled.size() * datatype.size
+        if (nbytes == 0L) {
+            return ArraySingle(filled.shape, v2.datatype, 0)
+        }
 
         if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)
 
         } else if (vinfo.vsInfo != null) {
-            require(filled.rank() <= 1) { "variable = ${v2.name}"}
             val startRecord = if (filled.rank() == 0) 0 else filled.origin(0)
             val numRecords = if (filled.rank() == 0) 1 else filled.shape(0)
             return readVSdata(header.fileOpenId, vinfo.vsInfo!!, datatype, startRecord, numRecords)
@@ -118,7 +121,7 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection:
             checkErr("SDreaddata", SDreaddata(sds_id, origin_p, stride_p, shape_p, data_p))
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
-            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+            values.order(ByteOrder.nativeOrder())
             return shapeData(datatype, values, filledSection.shape)
 
         } finally {
@@ -127,7 +130,9 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection:
     }
 }
 
-fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecord: Int, numRecords: Int): ArrayTyped<*> {
+fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum: Int, wantRecords: Int): ArrayTyped<*> {
+    val startRecord = if (vsInfo.nrecords == 1) 0 else startRecnum // trick because we promote single field structures
+    val numRecords = min(vsInfo.nrecords, wantRecords) // trick because we promote single field structures
     val shape = intArrayOf(numRecords)
 
     MemorySession.openConfined().use { session ->
@@ -148,7 +153,8 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecord
 
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
-            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+           // values.order(ByteOrder.LITTLE_ENDIAN) // clib converts to machine order
+            values.order(ByteOrder.nativeOrder()) // clib converts to machine order
 
             if (datatype.typedef is CompoundTypedef) {
                 val members = (datatype.typedef as CompoundTypedef).members
@@ -192,7 +198,7 @@ fun readGRdata(
             checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
-            values.order(ByteOrder.LITTLE_ENDIAN) // LOOK ??
+            values.order(ByteOrder.nativeOrder())
             return shapeData(datatype, values, filledSection.shape)
         } finally {
             GRendaccess(grId)

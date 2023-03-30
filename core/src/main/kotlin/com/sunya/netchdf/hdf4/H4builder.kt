@@ -21,6 +21,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     internal val tagidMap = mutableMapOf<Int, Tag>()
     private var imageCount = 0
 
+    fun type() : String {
+        return if ( structMetadata == null) "hdf4    " else "hdf4-eos"
+    }
+
     init {
         // header information is in big endian byte order
         val state = OpenFileState(0, ByteOrder.BIG_ENDIAN)
@@ -203,7 +207,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         if (debugConstruct) println("  VgroupVar '${vgroup.name}' ref=${vgroup.refno}")
 
         val dims = mutableListOf<String>()
-        val atts = mutableListOf<TagVH>()
+        val tagVHs = mutableListOf<TagVH>()
         var vb: Variable.Builder? = null
 
         repeat(vgroup.nelems) { objIdx ->
@@ -230,15 +234,20 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                 val tagVH = tag as TagVH
                 if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)} ${tagVH.className} ${tagVH.name}")
                 if (tagVH.className.startsWith("Att")) {
-                    atts.add(tagVH)
+                    tagVHs.add(tagVH)
                 }
             }
         }
 
+        // tagVH's on the group tag (TagVGroup) might be attributes
         if (vb != null) {
-            atts.forEach {
+            tagVHs.forEach {
                 val att = VStructureReadAttribute(it)
-                if (att != null) vb!!.addAttribute(att)
+                if (att != null) {
+                    vb!!.addAttribute(att)
+                    val vinfo = vb!!.spObject as Vinfo
+                    if (att.name.equals(NUG.FILL_VALUE)) vinfo.setFillValue(att)
+                }
             }
         }
     }
@@ -438,12 +447,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                 }
             }
             return null
-        } else  if (tagVH.className.startsWith("DimVal") || tagVH.className.startsWith("_HDF_CHK_TBL")) {
+        } else if (tagVH.className.startsWith("DimVal") || tagVH.className.startsWith("_HDF_CHK_TBL")) {
             return null
         }
-
-        // Hcheader has
-        //         if (g4.gb.variables.find { it.name == vsname } != null) return // LOOK why needed?
 
         val vinfo = Vinfo(tagVH.refno)
         vinfo.tags.add(tagVH)
@@ -457,45 +463,38 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
 
         vinfo.tags.add(data)
+        vinfo.setData(data, tagVH.ivsize)
         data.isUsed = true
         data.vinfo = vinfo
         if (tagVH.nfields < 1) throw IllegalStateException()
 
-        val vb = Variable.Builder(tagVH.name)
+        val vsname = if (tagVH.name.equals("Ancillary_Data")) tagVH.className else tagVH.name // Lame
+        val vb = Variable.Builder(vsname)
         vinfo.setVariable(vb)
-        if (tagVH.nfields.toInt() == 1) { // one field - dont make it into a structure
-            vb.datatype = H4type.getDataType(tagVH.fld_type[0].toInt())
-            val fnelems = tagVH.fld_nelems[0]
-            if (tagVH.nelems > 1) {
-                if (fnelems > 1) {
-                    vb.setDimensionsAnonymous(intArrayOf(tagVH.nelems, fnelems.toInt()))
-                } else if (tagVH.fld_nelems[0] < 0) {
-                    vb.setDimensionsAnonymous(intArrayOf(tagVH.nelems, tagVH.fld_isize[0]))
-                } else {
-                    vb.setDimensionsAnonymous(intArrayOf(tagVH.nelems))
-                }
-            } else {
-                if (fnelems > 1) {
-                    vb.setDimensionsAnonymous(intArrayOf(fnelems.toInt()))
-                } else if (fnelems < 0) { // LOOK what is this case ??
-                    vb.setDimensionsAnonymous(intArrayOf(tagVH.fld_isize.get(0)))
-                } else {
-                    vb.dimensions.clear()
-                }
+
+        val members = tagVH.readStructureMembers()
+        val nrecords = tagVH.nelems
+        if (members.size == 1) { // one field - dont make it into a structure
+            val member = members[0]
+            vb.datatype = member.datatype
+            vinfo.elemSize = member.datatype.size // look correct the size, not tagVH.ivsize
+            val totalNelems = nrecords * member.nelems
+            if (totalNelems > 1) {
+                if (nrecords != 1 && member.nelems != 1)
+                    vb.setDimensionsAnonymous(intArrayOf(nrecords,  member.nelems))
+                else
+                    vb.setDimensionsAnonymous(intArrayOf(totalNelems))
             }
-            vinfo.setData(data, vb.datatype!!.size)
         } else {
-            if (tagVH.nelems > 1) {
-                vb.setDimensionsAnonymous(intArrayOf(tagVH.nelems))
-            } else {
-                vb.dimensions.clear()
-            }
-            val members = tagVH.readStructureMembers()
             val typedef = CompoundTypedef(tagVH.name, members)
             vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
-            vinfo.setData(data, tagVH.ivsize)
+            if (nrecords > 1) {
+                vb.setDimensionsAnonymous(intArrayOf(nrecords))
+            }
+            // LOOK!
             rootBuilder.addTypedef(typedef)
         }
+
         if (debugConstruct) {
             println("added variable ${vb.name} from VH $tagVH")
         }
@@ -670,11 +669,12 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         parent.addVariable(vb)
     }
 
+    // looking for tagVHs on the TagDataGroup (NDG) might be attributes
     private fun addVariableAttributes(group: TagDataGroup, vb : Variable.Builder, vinfo: Vinfo) {
         // look for attributes
         repeat(group.nelems) {
             val tag = tagidMap.get(tagid(group.elem_ref[it], group.elem_tag[it]))
-            if (tag != null && tag.code == 1962) {
+            if (tag != null && tag.code == 1962) { // VH
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val att: Attribute? = VStructureReadAttribute(vh)
@@ -709,7 +709,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return false
         }
 
-        private var debugTagSummary = false // show tags after everything is done.
+        private var debugTagSummary = true // show tags after everything is done.
         private var debugTag = false // show tags when reading in first time
         private var debugTagDetail = false // when showing tags, show detail or not
 

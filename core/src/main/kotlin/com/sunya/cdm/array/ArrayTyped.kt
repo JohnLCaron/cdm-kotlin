@@ -24,14 +24,16 @@ abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : It
         }
     }
 
-    companion object {
-        fun contentEquals(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>) : Boolean {
-            if (!array1.shape.equivalent(array2.shape)) {
-                return false
-            }
-            return valuesEqual(array1, array2)
-        }
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ArrayTyped<*>) return false
+        if (datatype != other.datatype) return false
+        if (nelems != other.nelems) return false
+        if (!shape.equivalent(other.shape)) return false
+        return valuesEqual(this, other)
+    }
 
+    companion object {
         fun valuesEqual(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>) : Boolean {
             val iter1 = array1.iterator()
             val iter2 = array2.iterator()
@@ -54,7 +56,7 @@ abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : It
                 val v1 = iter1.next()
                 val v2 = iter2.next()
                 if (v1 != v2) {
-                    // println("$allcount $v1 != $v2")
+                    println("$allcount $v1 != $v2")
                     count++
                 }
                 allcount++
@@ -64,7 +66,7 @@ abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : It
     }
 }
 
-// An array of any shape that has a single value for all elements
+// An array of any shape that has a single value for all elements, usually the fill value
 class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) : ArrayTyped<T>(datatype, shape) {
     override fun iterator(): Iterator<T> = SingleIterator()
     private inner class SingleIterator : AbstractIterator<T>() {

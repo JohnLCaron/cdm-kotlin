@@ -33,7 +33,7 @@ class Hdf4File(val filename : String) : Netchdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl() = cdl(this)
-    override fun type() = "hdf4   "
+    override fun type() = header.type()
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
@@ -87,7 +87,7 @@ class Hdf4File(val filename : String) : Netchdf {
         }
 
         if (vinfo.hasNoData) {
-            return ArraySingle(section.shape, v.datatype, vinfo.getFillValueOrDefault())
+            return ArraySingle(section.shape, v.datatype, vinfo.fillValue)
         }
 
         if (vinfo.svalue != null) {
@@ -166,12 +166,25 @@ class Hdf4File(val filename : String) : Netchdf {
     @Throws(IOException::class, InvalidRangeException::class)
     private fun readStructureDataArray(v2: Variable, section: Section): ArrayStructureData {
         val vinfo = v2.spObject as Vinfo
-        vinfo.setLayoutInfo(this)
-        val recsize: Int = vinfo.elemSize
+
+        if (vinfo.tagData != null) {
+            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+        } else {
+            vinfo.hasNoData = true
+        }
+        println("readStructureDataArray refno=${vinfo.refno}")
 
         requireNotNull(v2.datatype.typedef)
         require(v2.datatype.typedef is CompoundTypedef)
+        val recsize: Int = vinfo.elemSize
         val members = v2.datatype.typedef.members
+
+        if (vinfo.hasNoData) {
+            // class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
+            // can you just use a zero bb ??
+            val bbz = ByteBuffer.allocate(recsize * section.shape.computeSize())
+            return ArrayStructureData(section.shape, bbz, recsize, members)
+        }
 
         if (!vinfo.isLinked && !vinfo.isCompressed) {
             val layout = LayoutRegular(vinfo.start, recsize, v2.shape, IndexSpace(section))
