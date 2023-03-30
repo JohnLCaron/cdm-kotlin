@@ -321,6 +321,7 @@ private fun stripQuotes(name: String): String {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+private val showDetail = false
 private val showValidationFailures = false
 
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
@@ -328,9 +329,9 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
     // LOOK should be All Variables named StructMetadata.n, where n= 1, 2, 3 ... are read in and their contents concatenated
     //   to make the structMetadata String.
     fun applyStructMetadata(structMetadata: String) : Boolean {
-       // println("structMetadata = \n$structMetadata")
+       if (showDetail) println("structMetadata = \n$structMetadata")
         val odl = ODLparseFromString((structMetadata))
-        //println("odl = \n$odl")
+        if (showDetail)  println("odl = \n$odl")
         val odlt = ODLtransform(odl)
         if (show) println("ODL transformed = \n$odlt")
 

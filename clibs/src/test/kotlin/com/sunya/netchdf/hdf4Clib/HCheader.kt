@@ -39,7 +39,7 @@ class HCheader(val filename: String) {
 
     private val completedObjects = mutableSetOf<Int>()
     private val metadata = mutableListOf<Attribute>()
-    private var structMetadata: String? = null
+    private val structMetadata = mutableListOf<String>()
 
     init {
         MemorySession.openConfined().use { session ->
@@ -70,16 +70,17 @@ class HCheader(val filename: String) {
 
         metadata.forEach { makeVariableFromStringAttribute(rootGroup4, it) }
 
-        if (structMetadata != null) {
-            ODLparser(rootGroup4.gb, false).applyStructMetadata(structMetadata!!)
+        if (structMetadata.isNotEmpty()) {
+            val sm = structMetadata.joinToString("")
+            ODLparser(rootGroup4.gb, false).applyStructMetadata(sm)
         }
     }
 
     fun close() {
-        val sdret = SDend(this.sdsStartId)
-        val gret = GRend(this.grStartId)
-        val vsret = Vfinish(this.fileOpenId)
-        val ret = Hclose(this.fileOpenId)
+        SDend(this.sdsStartId)
+        GRend(this.grStartId)
+        Vfinish(this.fileOpenId)
+        Hclose(this.fileOpenId)
     }
 
     ///////////////////////////////////////////////////////////////////////////////
@@ -236,8 +237,8 @@ class HCheader(val filename: String) {
             val moveup = attr3.isString && attr3.values.size == 1 && (attr3.values[0] as String).length > 4000
             if (EOS.isMetadata(attr3.name) || moveup) {
                 metadata.add(attr3)
-                if (attr3.name == "StructMetadata.0") {
-                    this.structMetadata = attr3.values[0] as String
+                if (attr3.name.startsWith("StructMetadata")) {
+                    this.structMetadata.add(attr3.values[0] as String)
                 }
             } else {
                 if (debugAttributes) println("     add attribute ${attr3}")

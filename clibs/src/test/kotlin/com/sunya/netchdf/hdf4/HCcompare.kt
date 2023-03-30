@@ -142,26 +142,26 @@ class HCcompare {
         compareData(testData + "hdf4/eos/misr/MISR_AM1_AGP_P040_F01_24.subset", "/Standard/Data_Fields/AveSceneElev")
     }
 
-    // /home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf
     // /home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf short /mod08/Data_Fields/Number_Pixels_Used_Land_Minimum []
     //home/all/testdata/hdf4/nsidc/GESC/AIRS/AIRS.2007.10.21.069.L2.RetSup.v5.0.14.0.G07295084430.hdf float /L2_Support_atmospheric&surface_product/Data_Fields/cldFreq []
     // /home/all/testdata/hdf4/nsidc/GESC/AIRS/AIRS.2003.01.24.116.L2.RetSup_H.v5.0.14.0.G07295101113.hdf float /L2_Support_atmospheric&surface_product/Data_Fields/cldFreq []
     // /home/all/testdata/hdf4/nsidc/GESC/GV/1B51.070101.1.HSTN.2.HDF // FAIL comparing data for variable = char Comment1 []
     // /home/all/testdata/hdf4/nsidc/GESC/GV/1C51.070101.1.HSTN.4.HDF // FAIL comparing data for variable = char Comment1 []
 
+    // 117  /home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf short /mod08/Data_Fields/Number_Pixels_Used_Land_Minimum []
     @Test
     fun problemReadData() {
-        val filename = testData + "hdf4/nsidc/GESC/GV/1C51.070101.1.HSTN.4.HDF"
+        val filename = testData + "hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf"
         readH4header(filename)
-        compareData(filename, "Comment1")
+        compareData(filename, "/mod08/Data_Fields/Number_Pixels_Used_Land_Minimum")
     }
 
-    // dunno; claims compressed but not linked or chunked. and only 2 bytes. HC gives error.
+    // dunno; claims compressed but not linked or chunked. and only 2 bytes. HC gives error "SDreaddata return -1"
     @Test
     fun problemHCerror() {
-        compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf")
-        readNetchdfData(testData + "hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf", "/mod08/Data_Fields/Number_Pixels_Used_Land_Minimum")
-        // readHCdata(testData + "hdf4/nsidc/LAADS/MOD/MOD08_D3.A2007001.005.2007004130642.hdf", "/mod08/Data_Fields/Number_Pixels_Used_Land_Minimum")
+        val filename = testData + "hdf4/nsidc/GESC/AIRS/AIRS.2003.01.24.116.L2.RetSup_H.v5.0.14.0.G07295101113.hdf"
+        compareH4header(filename)
+        compareData(filename)
     }
 
     // @Test HC core dump

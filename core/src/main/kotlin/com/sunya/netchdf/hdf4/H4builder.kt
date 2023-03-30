@@ -13,7 +13,7 @@ import java.nio.charset.StandardCharsets
 class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     var rootBuilder: Group.Builder = Group.Builder("")
     val metadata = mutableListOf<Attribute>()
-    var structMetadata : String? = null
+    val structMetadata = mutableListOf<String>()
 
     private val alltags : List<Tag>
     private val completedObjects = mutableSetOf<Int>()
@@ -87,8 +87,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 
         metadata.forEach { makeVariableFromStringAttribute(it, rootBuilder) }
 
-        if (structMetadata != null) {
-            ODLparser(rootBuilder, false).applyStructMetadata(structMetadata!!)
+        if (structMetadata.isNotEmpty()) {
+            val sm = structMetadata.joinToString("")
+            ODLparser(rootBuilder, false).applyStructMetadata(sm)
         }
     }
 
@@ -291,8 +292,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                         val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > 4000
                         if (EOS.isMetadata(attr.name) || moveup) {
                             metadata.add(attr)
-                            if (attr.name == "StructMetadata.0") {
-                                this.structMetadata = attr.values[0] as String
+                            if (attr.name.startsWith("StructMetadata")) {
+                                this.structMetadata.add(attr.values[0] as String)
                             }
                         } else {
                             if (debugVGroupDetails) println("     add attribute ${attr}")
