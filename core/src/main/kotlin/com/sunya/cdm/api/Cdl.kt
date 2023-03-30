@@ -6,6 +6,8 @@ import com.sunya.cdm.util.escapeName
 import java.nio.ByteBuffer
 import java.util.*
 
+val strict = false
+
 fun cdl(netcdf : Netchdf) : String {
     val filename = netcdf.location().substringAfterLast('/')
     return buildString{
@@ -78,7 +80,8 @@ fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
     val typename = if (typedef != null) typedef.name else "" // datatype.cdlName
     val valueDatatype = if (typedef != null) typedef.baseType else datatype
     return buildString {
-        append("${indent}${typename} $varname:$name = ")
+        if (strict) append("${indent}${typename} $varname:$name = ")
+        else append("${indent}:$name = ")
         if (values.isEmpty()) {
             append("NIL")
         }

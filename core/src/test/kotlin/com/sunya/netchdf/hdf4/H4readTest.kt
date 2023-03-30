@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
+import com.sunya.netchdf.netcdf4.openNetchdfFile
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
@@ -113,11 +114,29 @@ class H4readTest {
         readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf", "Discarded_Packets") // , "/mod08/Data_Fields/Angstrom_Exponent_2_Ocean_Std_Deviation_Mean")
     }
 
+    @Test
+    fun problemDuplicateVariable() {
+        readH4header(testData + "hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
+    }
+
+    // /home/all/testdata/hdf4/NOAA.CRW.OAPS.25km.GCR.200402.hdf
     //home/all/testdata/hdf4/MYD021KM.A2008349.1800.005.2009329084841.hdf
     //home/all/testdata/cdmUnitTest/formats/hdf4/ssec/AIRS.2005.08.28.103.L1B.AIRS_Rad.v4.0.9.0.G05241172839.hdf, radiances
     //home/all/testdata/cdmUnitTest/formats/hdf4/MYD29.A2009152.0000.005.2009153124331.hdf, Sea_Ice_by_Reflectance
 
     //////////////////////////////////////////////////////////////////////
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun checkVersion(filename: String) {
+        openNetchdfFile(filename).use { ncfile ->
+            if (ncfile == null) {
+                println("Not a netchdf file=$filename ")
+                return
+            }
+            println("${ncfile.type()} $filename ")
+        }
+    }
 
     @ParameterizedTest
     @MethodSource("params")

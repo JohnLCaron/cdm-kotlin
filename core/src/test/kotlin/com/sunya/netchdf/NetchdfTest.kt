@@ -68,7 +68,7 @@ class NetchdfTest {
 
         var showDataRead = true
         var showData = false
-        var showFailedData = true
+        var showFailedData = false
         var showCdl = false
     }
 
@@ -285,8 +285,8 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Ne
         if (myvar.datatype == Datatype.CHAR) {
             compareCharData(myvar.fullname(), mydata, ncdata)
         } else {
-            if (!ArrayTyped.contentEquals(ncdata, mydata)) {
-                println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.name} ${ncvar.dimensions.map { it.name }}")
+            if (!ncdata.equals(mydata)) {
+                println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
                 if (NetchdfTest.showFailedData) {
                     println("\n mydata = $mydata")
                     println(" ncdata = $ncdata")
@@ -331,7 +331,7 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, ncfile: Netchdf, ncva
     if (myvar.datatype == Datatype.CHAR) {
         compareCharData(myvar.fullname(), mydata, ncdata)
     } else {
-        if (!ArrayTyped.contentEquals(ncdata, mydata)) {
+        if (!ncdata.equals(mydata)) {
             println(" *** FAIL comparing middle section variable = ${ncvar}")
             if (NetchdfTest.showFailedData) {
                 println(" mydata = $mydata")

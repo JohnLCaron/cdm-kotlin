@@ -518,7 +518,7 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
 class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var interlace: Short = 0 // Constant indicating interlace scheme used
     var nelems = 0 // number of entries in Vdata
-    var ivsize = 0 // Size of one Vdata entry
+    var ivsize = 0 // Size of one Vdata record
     var nfields: Short = 0 // Number of fields per entry in the Vdata: so one dimensional Structure(nelems)
     var fld_type = ShortArray(0) // Constant indicating the data type of the nth field of the Vdata
     var fld_isize = IntArray(0) // Size in bytes of the nth field of the Vdata
@@ -555,7 +555,7 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     }
 
     override fun toString(): String {
-        return super.toString() + " class= " + className + " name= " + name
+        return super.toString() + " name= '$name'"
     }
 
     override fun detail(): String {

@@ -59,7 +59,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     fun setData(data: TagData?, elemSize: Int) {
         this.tagData = data
         this.elemSize = elemSize
-        hasNoData = (data == null)
+        hasNoData = (data == null) || (data.offset < 0)
     }
 
     fun setFillValue(att: Attribute) {

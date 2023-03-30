@@ -51,7 +51,7 @@ data class ODLobject(var name: String) {
         return buildString {
             append("${indent}var $name\n")
             val nindent = indent.incr()
-            attributes.forEach { append("$nindent  ${it.component1()}=${it.component2()}\n") }
+            attributes.forEach { append("$nindent  '${it.component1()}'='${it.component2()}'\n") }
         }
     }
 }
@@ -75,7 +75,7 @@ class ODLgroup(var name: String, val parent: ODLgroup?) {
         return buildString {
             append("${indent}group $name\n")
             val nindent = indent.incr()
-            attributes.forEach { append("$nindent  ${it.component1()}=${it.component2()}\n") }
+            attributes.forEach { append("$nindent  '${it.component1()}'=${it.component2()}\n") }
             variables.forEach { append(it.toString(nindent)) }
             nested.forEach { append(it.toString(nindent)) }
         }
@@ -197,7 +197,6 @@ fun addMissingDimensions(group: ODLgroup, dims: MutableSet<String>) {
     }
     group.nested.forEach { addMissingDimensions(it, dims) }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -322,19 +321,22 @@ private fun stripQuotes(name: String): String {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
+private val showDetail = false
+private val showValidationFailures = false
+
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
     // LOOK should be All Variables named StructMetadata.n, where n= 1, 2, 3 ... are read in and their contents concatenated
     //   to make the structMetadata String.
     fun applyStructMetadata(structMetadata: String) : Boolean {
-       // println("structMetadata = \n$structMetadata")
+       if (showDetail) println("structMetadata = \n$structMetadata")
         val odl = ODLparseFromString((structMetadata))
-        //println("odl = \n$odl")
+        if (showDetail)  println("odl = \n$odl")
         val odlt = ODLtransform(odl)
         if (show) println("ODL transformed = \n$odlt")
 
         if (!odlt.validateStructMetadata(rootGroup)) {
-            println("***ODL did not validate")
+            if (showValidationFailures) println("***ODL did not validate")
             return false
         }
         odlt.applyStructMetadata(rootGroup)
