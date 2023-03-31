@@ -145,7 +145,7 @@ class HCheader(val filename: String) {
                 if (isNestedGroup(vclass)) {
                     VgroupGroup(session, g4, groupName, ref_array, tag_array)
                 } else if (isDimClass(vclass)) { // ??
-                    VgroupDim(session, g4, ref_array, tag_array)
+                    VgroupDim(ref_array, tag_array)
                 } else if (vclass == "Var0.0") { // ??
                     VgroupVar(session, g4, ref_array, tag_array)
                 } else if (vclass == "CDF0.0") {
@@ -193,14 +193,14 @@ class HCheader(val filename: String) {
                 VgroupRead(session, nested, ref)
             } else if (tage == TagEnum.NDG) {
                 val sds_index = SDreftoindex(sdsStartId, ref)
-                val sd = SDread(session, nested, sds_index)
+                SDread(session, nested, sds_index)
             } else if (tage == TagEnum.VH) {
-                val vs = VStructureRead(session, nested, ref, true)
+                VStructureRead(session, nested, ref, true)
             }
         }
     }
 
-    private fun VgroupDim(session: MemorySession, g4: Group4, ref_array: IntArray, tag_array: IntArray) {
+    private fun VgroupDim(ref_array: IntArray, tag_array: IntArray) {
         repeat(ref_array.size) { objIdx ->
             val tag = tag_array[objIdx]
             val ref = ref_array[objIdx]
@@ -219,7 +219,7 @@ class HCheader(val filename: String) {
             val tage = TagEnum.byCode(tag)
             if (tage == TagEnum.NDG) {
                 val sds_index = SDreftoindex(sdsStartId, ref)
-                val sd = SDread(session, g4, sds_index)
+                SDread(session, g4, sds_index)
                 // break
             }
         }

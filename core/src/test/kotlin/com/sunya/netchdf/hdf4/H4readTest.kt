@@ -5,6 +5,7 @@ import com.sunya.netchdf.*
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -50,44 +51,20 @@ class H4readTest {
         @JvmStatic
         @AfterAll
         fun afterAll() {
-            if (count > 0) println("$count files")
+            if (versions.size > 0) {
+                versions.keys.forEach{ println("$it = ${versions[it]!!.size } files") }
+            }
             Stats.show()
         }
 
-        private var count = 0
+        private val versions = mutableMapOf<String, MutableList<String>>()
     }
 
     @Test
-    fun unsolved1() { // H4 has atts n > 1
-        readH4header(testData + "cdmUnitTest/formats/hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf")
+    @Disabled
+    fun HCcoredump() { // HC coredump
+        readH4header("/home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
     }
-
-    @Test
-    fun chunkIterator() { // H4 has atts n > 1
-        testReadIterate(testData + "cdmUnitTest/formats/hdf4/ssec/AIRS.2005.08.28.103.L1B.AIRS_Rad.v4.0.9.0.G05241172839.hdf")
-    }
-
-    @Test
-    fun problem1() { // HC coredump
-        readH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
-        // compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD03.A2007001.0000.005.2007041030714.hdf")
-    }
-
-    @Test
-    fun problemData() {
-        readH4header(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
-        readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf", "Discarded_Packets") // , "/mod08/Data_Fields/Angstrom_Exponent_2_Ocean_Std_Deviation_Mean")
-    }
-
-    @Test
-    fun problemDuplicateVariable() {
-        readH4header(testData + "hdf4/AST_L1B_00307182004110047_08122004112525.hdf")
-    }
-
-    // /home/all/testdata/hdf4/NOAA.CRW.OAPS.25km.GCR.200402.hdf
-    //home/all/testdata/hdf4/MYD021KM.A2008349.1800.005.2009329084841.hdf
-    //home/all/testdata/cdmUnitTest/formats/hdf4/ssec/AIRS.2005.08.28.103.L1B.AIRS_Rad.v4.0.9.0.G05241172839.hdf, radiances
-    //home/all/testdata/cdmUnitTest/formats/hdf4/MYD29.A2009152.0000.005.2009153124331.hdf, Sea_Ice_by_Reflectance
 
     //////////////////////////////////////////////////////////////////////
     @ParameterizedTest
@@ -99,7 +76,8 @@ class H4readTest {
                 return
             }
             println("${ncfile.type()} $filename ")
-            count++
+            val paths = versions.getOrPut(ncfile.type()) { mutableListOf() }
+            paths.add(filename)
         }
     }
 

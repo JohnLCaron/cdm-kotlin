@@ -68,7 +68,7 @@ With these tools we can check that our code give the same results as the referen
 
 Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC. 
 
-There are ~470 hdf4 test files (all of them hdf-eos2) and ~800 netcdf3/4/hdf5 files. 
+There are ~470 hdf4 test files (270 of them hdf-eos2) and ~800 netcdf3/4/hdf5 files. 
 
 We need to get representative samples of recent files using these formats.
 

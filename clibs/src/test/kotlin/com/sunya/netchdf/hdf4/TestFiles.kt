@@ -32,24 +32,16 @@ class TestFiles {
                 .withRecursion()
                 .build()
 
-            val cdmUnitTest = testFilesIn(testData + "cdmUnitTest/formats/hdf4")
+            val hdfeos2 =
+                testFilesIn(testData + "devcdm/hdfeos2")
                     .withRecursion()
-                .addNameFilter { name -> !name.endsWith(".cdl") }
-                .addNameFilter { name -> !name.endsWith(".jpg") }
-                .addNameFilter { name -> !name.endsWith(".gif") }
-                .addNameFilter { name -> !name.endsWith(".ncml") }
-                .addNameFilter { name -> !name.endsWith(".png") }
-                .addNameFilter { name -> !name.endsWith(".pdf") }
-                .addNameFilter { name -> !name.endsWith(".tif") }
-                .addNameFilter { name -> !name.endsWith(".tiff") }
-                .addNameFilter { name -> !name.endsWith(".txt") }
-                .addNameFilter { name -> !name.endsWith(".xml") }
-                .build()
+                    .build()
 
-            return Stream.of(devcdm, hdf4).flatMap { i -> i}
+            return Stream.of(devcdm, hdfeos2, hdf4).flatMap { i -> i}
         }
 
         val filenames = mutableMapOf<String, MutableList<String>>()
+        val showAllFiles = true
 
         @JvmStatic
         @AfterAll
@@ -60,6 +52,13 @@ class TestFiles {
                 if (paths.size > 1) {
                     println("$it")
                     paths.forEach { println("  $it") }
+                }
+            }
+            if (showAllFiles) {
+                println("*** nfiles = ${filenames.size}")
+                filenames.keys.sorted().forEach {
+                    val paths = filenames[it]!!
+                    paths.forEach {path-> println("$path/$it") }
                 }
             }
         }
