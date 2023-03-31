@@ -17,67 +17,29 @@ class H4readTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val starter = Stream.of(
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/MI1B2T_B54_O003734_AN_05.hdf"), // sds
-                Arguments.of(testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF"), // RIG
-                Arguments.of(testData + "devcdm/hdf4/17766010.hdf"), // VH struct
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/f13_owsa_04010_09A.hdf"),
-            )
-
-            val hasGroups = Stream.of(
-                Arguments.of(testData + "netchdf/hdf4/jeffmc/swath.hdf"),
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/ncidc/AIRS.2002.09.01.L3.RetQuant_H030.v5.0.14.0.G07191213218.hdf"),
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/ncidc/AMSR_E_L2_Land_T06_200801012345_A.hdf"),
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/ncidc/MOD10A1.A2008001.h23v15.005.2008003161138.hdf"),
-            )
-
-            val sdsNotEos = Stream.of(
-                Arguments.of(testData + "devcdm/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf"),
-                Arguments.of(testData + "devcdm/hdf4/MAC07S0.A2008230.1250.002.2008233222357.hdf"),
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/c402_rp_02.diag.sfc.20020122_0130z.hdf"),
-                Arguments.of(testData + "cdmUnitTest/formats/hdf4/MI1B2T_B54_O003734_AN_05.hdf"),
-            )
 
             val hdfeos2 =
                 testFilesIn(testData + "devcdm/hdfeos2")
                     .withRecursion()
-                    .addNameFilter { name -> !name.endsWith("MISR_AM1_GP_GMP_P040_O003734_05.eos") } // corrupted ??
                     .build()
 
-            val moar4 =
-                testFilesIn(testData + "cdmUnitTest/formats/hdf4")
-                    .withRecursion()
-                    .withPathFilter { p -> !(p.toString().contains("/eos/"))}
-                    .addNameFilter { name -> !name.endsWith("2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf") } // reported bug in H4Clib
-                    .addNameFilter { name -> !name.endsWith("MOD021KM.A2004328.1735.004.2004329164007.hdf") } // corrupted ??
-                    .addNameFilter { name -> !name.endsWith("MYD021KM.A2008349.1800.005.2009329084841.hdf") } // corrupted ??
-                    .addNameFilter { name -> !name.endsWith("MOD02HKM.A2007016.0245.005.2007312120020.hdf") } // corrupted ??
-                    .addNameFilter { name -> !name.endsWith("MOD02OBC.A2007001.0005.005.2007307210540.hdf") } // corrupted ??
-                    .addNameFilter { name -> !name.endsWith("MOD021KM.A2001149.1030.003.2001154234131.hdf") } // corrupted ??
-                    .build()
+            val devcdm = testFilesIn(testData + "devcdm/hdf4")
+                .withRecursion()
+                .build()
 
-            val moarEos =
-                testFilesIn(testData + "cdmUnitTest/formats/hdf4/eos")
-                    .withRecursion()
-                    .addNameFilter { name -> !name.endsWith("MOD021KM.A2004328.1735.004.2004329164007.hdf") } // corrupted ??
-                    .addNameFilter { name -> !name.endsWith("MYD021KM.A2008349.1800.005.2009329084841.hdf") } // corrupted ??
-                    .build()
-
-            val hdf4 =
+            // remove files that core dump
+            val hdf4NoCore =
                 testFilesIn(testData + "hdf4")
                     .withRecursion()
-                    .addNameFilter { name -> !name.endsWith("sst.coralreef.fields.50km.n14.20010106.hdf") }
+                    //    .withPathFilter { p -> !(p.toString().contains("/eos/"))}
                     .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
-                    .addNameFilter { name -> !name.endsWith("closest_chlora.hdf") }
-                    .addNameFilter { name -> !name.endsWith(".ncml") }
-                    .addNameFilter { name -> !name.endsWith(".xml") }
-                    .addNameFilter { name -> !name.endsWith(".pdf") }
+                    .addNameFilter { name -> !name.endsWith("MOD01.A2007303.0325.005.2007306182401.hdf") }
+                    .addNameFilter { name -> !name.endsWith("MOD02OBC.A2007001.0005.005.2007307210540.hdf") }
+                    .addNameFilter { name -> !name.endsWith("MYD01.A2007001.0440.005.2007311085701.hdf") }
                     .build()
 
-            return hdf4
-           // return Stream.of(starter, hasGroups, sdsNotEos, hdf4, moar4).flatMap { i -> i}
+            return Stream.of(devcdm, hdfeos2, hdf4NoCore).flatMap { i -> i}
         }
-
 
         @JvmStatic
         @BeforeAll
@@ -88,8 +50,11 @@ class H4readTest {
         @JvmStatic
         @AfterAll
         fun afterAll() {
+            if (count > 0) println("$count files")
             Stats.show()
         }
+
+        private var count = 0
     }
 
     @Test
@@ -125,7 +90,6 @@ class H4readTest {
     //home/all/testdata/cdmUnitTest/formats/hdf4/MYD29.A2009152.0000.005.2009153124331.hdf, Sea_Ice_by_Reflectance
 
     //////////////////////////////////////////////////////////////////////
-
     @ParameterizedTest
     @MethodSource("params")
     fun checkVersion(filename: String) {
@@ -135,6 +99,7 @@ class H4readTest {
                 return
             }
             println("${ncfile.type()} $filename ")
+            count++
         }
     }
 

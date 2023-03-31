@@ -18,19 +18,19 @@ class Netcdf4 {
     // introduction of the _NCProperties attribute, this may be a useful indicator of the provenance of the file.
 
     companion object {
-        // Default fill values, used when _FillValue variable attribute is set.
-        const val  NC_FILL_BYTE: kotlin.Byte = -127
+        // Default fill values, used when _FillValue variable attribute is not set.
+        const val  NC_FILL_BYTE: Byte = -127
         const val  NC_FILL_CHAR = 0.toChar()
-        const val  NC_FILL_SHORT: Short = (-32767.toShort()).toShort()
+        const val  NC_FILL_SHORT: Short = (-32767.toShort()).toShort() // wtf ?
         const val  NC_FILL_INT: Int = -2147483647
-        const val  NC_FILL_FLOAT: kotlin.Float = 9.9692099683868690e+36f /* near 15 * 2^119 */
-        const val  NC_FILL_DOUBLE: kotlin.Double = 9.9692099683868690e+36
+        const val  NC_FILL_FLOAT: Float = 9.9692099683868690e+36f /* near 15 * 2^119 */
+        const val  NC_FILL_DOUBLE: Double = 9.9692099683868690e+36
 
-        const val  NC_FILL_UBYTE: kotlin.Byte = 255.toByte()
-        const val  NC_FILL_USHORT: Short = 65535.toShort()
-        const val  NC_FILL_UINT: Int = 4294967295L.toInt()
-        const val  NC_FILL_INT64: Long = -9223372036854775806L // 0x8000000000000002. Only bits 63 and 1 set.
-        const val  NC_FILL_UINT64: Long = -0x2L
+        val  NC_FILL_UBYTE: UByte = 255.toUByte()
+        val  NC_FILL_USHORT: UShort = 65535.toUShort() // whu not UShort ??
+        val  NC_FILL_UINT: UInt = 4294967295L.toUInt()
+        val  NC_FILL_INT64: Long = -9223372036854775806L // 0x8000000000000002. Only bits 63 and 1 set.
+        val  NC_FILL_UINT64: ULong = (-0x2L).toULong()
         const val  NC_FILL_STRING: String = ""
 
         const val NCPROPERTIES = "_NCProperties" //  Added  at creation time and never modified.

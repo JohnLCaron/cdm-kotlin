@@ -46,9 +46,9 @@ class HCheader(val filename: String) {
             this.read_access_mode = session.allocateUtf8String("r")
             build(session)
             this.rootGroup = rootGroup4.gb.build(null)
-            println("last seen")
+            // println("last seen")
         }
-        println("doesnt get here")
+        // println("doesnt get here")
     }
 
     @Throws(IOException::class)
@@ -154,6 +154,7 @@ class HCheader(val filename: String) {
                 }
             }
 
+            /*
             val nattrs = Vnattrs(vgroup_id)
             repeat(nattrs) { idx ->
                 val aname_p: MemorySegment = session.allocate(MAX_NAME)
@@ -169,6 +170,7 @@ class HCheader(val filename: String) {
                 val size = size_p[C_INT, 0]
                 if (debugVGroupDetails) println("    readVGroupAttr '$aname' datatype='$datatype' nvalues=$nvalues size =$size")
             }
+             */
         } finally {
             checkErr("Vdetach", Vdetach(vgroup_id))
         }

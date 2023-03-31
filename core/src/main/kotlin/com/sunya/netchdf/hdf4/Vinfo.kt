@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_BYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_CHAR
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_DOUBLE
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_FLOAT
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT
@@ -10,6 +11,7 @@ import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UBYTE
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_USHORT
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT64
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_STRING
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT64
 import java.nio.ByteOrder
 
@@ -71,24 +73,6 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
         return this
     }
 
-    fun getFillValueOrDefault() : Any {
-        return if (fillValue != null) fillValue!! else {
-            when (vb!!.datatype) {
-                Datatype.BYTE -> NC_FILL_BYTE
-                Datatype.CHAR, Datatype.UBYTE -> NC_FILL_UBYTE
-                Datatype.SHORT -> NC_FILL_SHORT
-                Datatype.USHORT -> NC_FILL_USHORT
-                Datatype.INT -> NC_FILL_INT
-                Datatype.UINT -> NC_FILL_UINT
-                Datatype.FLOAT -> NC_FILL_FLOAT
-                Datatype.DOUBLE -> NC_FILL_DOUBLE
-                Datatype.LONG -> NC_FILL_INT64
-                Datatype.ULONG -> NC_FILL_UINT64
-                else -> 0
-            }
-        }
-    }
-
     // make sure needed info is present : call this when variable needs to be read
     // this allows us to defer getting layout info until then
     fun setLayoutInfo(h4file: Hdf4File) {
@@ -139,5 +123,48 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
             append(" isChunked=$isChunked isCompressed=$isCompressed isLinked=$isLinked hasNoData=$hasNoData")
             append(" elemSize=$elemSize data start=$start length=$length tags=${tags.map{ it.refno }}")
         }
+    }
+}
+
+// #define FILL_BYTE    ((char)-127)        /* Largest Negative value */
+//#define FILL_CHAR    ((char)0)
+//#define FILL_SHORT    ((short)-32767)
+//#define FILL_LONG    ((long)-2147483647)
+
+// the netcdf default fill values
+internal fun getNcDefaultFillValue(datatype: Datatype): Any {
+    return when (datatype) {
+        Datatype.BYTE -> NC_FILL_BYTE
+        Datatype.UBYTE -> NC_FILL_UBYTE
+        Datatype.CHAR -> NC_FILL_CHAR
+        Datatype.SHORT -> NC_FILL_SHORT
+        Datatype.USHORT -> NC_FILL_USHORT
+        Datatype.INT -> NC_FILL_INT
+        Datatype.UINT -> NC_FILL_UINT
+        Datatype.FLOAT -> NC_FILL_FLOAT
+        Datatype.DOUBLE -> NC_FILL_DOUBLE
+        Datatype.LONG -> NC_FILL_INT64
+        Datatype.ULONG -> NC_FILL_UINT64
+        Datatype.STRING -> NC_FILL_STRING
+        else -> 0
+    }
+}
+
+// the Hdf4 SD default fill values, uses different values for the unsigned types.
+internal fun getSDefaultFillValue(datatype: Datatype): Any {
+    return when (datatype) {
+        Datatype.BYTE -> NC_FILL_BYTE
+        Datatype.UBYTE -> NC_FILL_BYTE.toUByte()
+        Datatype.CHAR -> NC_FILL_CHAR
+        Datatype.SHORT -> NC_FILL_SHORT
+        Datatype.USHORT -> NC_FILL_SHORT.toUShort()
+        Datatype.INT -> NC_FILL_INT
+        Datatype.UINT -> NC_FILL_INT.toUInt()
+        Datatype.FLOAT -> NC_FILL_FLOAT
+        Datatype.DOUBLE -> NC_FILL_DOUBLE
+        Datatype.LONG -> NC_FILL_INT64
+        Datatype.ULONG -> NC_FILL_INT64.toULong()
+        Datatype.STRING -> NC_FILL_STRING
+        else -> 0
     }
 }
