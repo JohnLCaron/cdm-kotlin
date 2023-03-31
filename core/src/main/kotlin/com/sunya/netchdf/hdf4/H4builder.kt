@@ -22,7 +22,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     private var imageCount = 0
 
     fun type() : String {
-        return if ( structMetadata == null) "hdf4    " else "hdf4-eos"
+        return if ( structMetadata.isEmpty()) "hdf4    " else "hdf-eos2"
     }
 
     init {
@@ -153,23 +153,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                 VgroupCDF(tagVG, parent)
             }
         }
-
-        /* attributes ??
-        val nattrs = mfhdf_h.Vnattrs(vgroup_id)
-        val aname_p: MemorySegment = session.allocate(MAX_NAME)
-        val datatype_p = session.allocate(mfhdf_h.C_INT, 0)
-        val nvalues_p = session.allocate(mfhdf_h.C_INT, 0)
-        val size_p = session.allocate(mfhdf_h.C_INT, 0)
-        repeat(nattrs) { idx ->
-            checkErr("Vattrinfo", mfhdf_h.Vattrinfo(vgroup_id, idx, aname_p, datatype_p, nvalues_p, size_p))
-            val aname = aname_p.getUtf8String(0)
-            val datatype = datatype_p[mfhdf_h.C_INT, 0]
-            val nvalues = nvalues_p[mfhdf_h.C_INT, 0]
-            val size = size_p[mfhdf_h.C_INT, 0]
-            if (com.sunya.netchdf.hdf4Clib.debugVGroupDetails) println("    readVGroupAttr '$aname' datatype='$datatype' nvalues=$nvalues size =$size")
-        }
-
-         */
     }
 
     private fun VgroupGroup(vgroup: TagVGroup, parent: Group.Builder) {

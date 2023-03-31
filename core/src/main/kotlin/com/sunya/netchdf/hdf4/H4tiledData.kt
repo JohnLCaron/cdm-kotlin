@@ -59,7 +59,7 @@ internal class H4CompressedDataChunk(
         if (bb != null) return bb!!
         if (compress != null) {
             // read compressed data in
-            val cdata = compress!!.getDataTag(h4)
+            val cdata = compress.getDataTag(h4)
             val input: InputStream
 
             // compressed data stored in one place

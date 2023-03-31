@@ -63,8 +63,13 @@ class NetchdfTest {
         @JvmStatic
         @AfterAll
         fun afterAll() {
+            if (versions.size > 0) {
+                versions.keys.forEach{ println("$it = ${versions[it]!!.size } files") }
+            }
             Stats.show()
         }
+
+        private val versions = mutableMapOf<String, MutableList<String>>()
 
         var showDataRead = true
         var showData = false
@@ -105,6 +110,8 @@ class NetchdfTest {
                 return
             }
             println("${ncfile.type()} $filename ")
+            val paths = versions.getOrPut(ncfile.type()) { mutableListOf() }
+            paths.add(filename)
         }
     }
 
