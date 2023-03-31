@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: Mar 28, 2023_
+_last updated: Mar 31, 2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -68,13 +68,15 @@ With these tools we can check that our code give the same results as the referen
 
 Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC. 
 
-There are ~450 hdf4 test files and ~800 netcdf3/4/hdf5 files. 
+There are ~470 hdf4 test files (all of them hdf-eos2) and ~800 netcdf3/4/hdf5 files. 
 
 We need to get representative samples of recent files using these formats.
 
 ### Scope
 
 We have the goal to give read access to all the content in HDF5, HDF4 and HDF-EOS files. 
+
+We are focussing on earth science data, and dont plan to support other uses.
 
 The library will be thread-safe for reading multiple files.
 

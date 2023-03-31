@@ -375,7 +375,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         vinfo.setVariable(vb)
         vinfo.setData(data, dataType.size)
 
-        // fill value?
+        // Apparently SD uses defaults (but not VS). They are sort-of NC, except for unsigned.
+        vinfo.fillValue = getSDefaultFillValue(dataType)
+        // then look for this tag. Elsewhere we look for _FillValue attribute.
         val tagFV = tagidMap.get(tagid(dimSDD.data_nt_ref, TagEnum.FV.code))
         if ((tagFV != null) and (tagFV is TagFV)) {
             vinfo.fillValue = (tagFV as TagFV).readFillValue(this, dataType)
@@ -710,7 +712,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return false
         }
 
-        private var debugTagSummary = true // show tags after everything is done.
+        private var debugTagSummary = false // show tags after everything is done.
         private var debugTag = false // show tags when reading in first time
         private var debugTagDetail = false // when showing tags, show detail or not
 

@@ -406,11 +406,11 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
 
         if (netchdf.type().contains("hdf4")) {
             Hdf4ClibFile(filename).use { ncfile ->
-                compareIterateWithNC(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
+                compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
         } else {
             NetcdfClibFile(filename).use { ncfile ->
-                compareIterateWithNC(netchdf, ncfile, varname, section)
+                compareIterateNetchdf(netchdf, ncfile, varname, section)
             }
         }
     }
@@ -545,7 +545,7 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Ne
         val ncdata = try {
             ncfile.readArrayData(ncvar, filledSection)
         } catch (e : Exception) {
-            println(" *** FAIL comparing data for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
+            println(" *** FAIL ncfile.readArrayData for variable = ${ncvar.datatype} ${ncvar.fullname()} ${ncvar.dimensions.map { it.name }}")
             throw e
         }
         println(" ${myvar.datatype} ${myvar.fullname()}[${filledSection}] = ${computeSize(mydata.shape)} elems" )
@@ -626,9 +626,9 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
-// compare reading data chunkIterate API with Netch and NC
+// compare reading data chunkIterate API with two Netchdf
 
-fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
+fun compareIterateNetchdf(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -682,7 +682,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
 
     if (sum1.isFinite() && sum2.isFinite()) {
         assertTrue(nearlyEquals(sum1, sum2), "$sum1 != $sum2 sum2")
-        println("sum = $sum1")
+        // println("sum = $sum1")
     }
 }
 

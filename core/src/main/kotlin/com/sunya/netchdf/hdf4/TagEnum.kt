@@ -65,7 +65,8 @@ enum class TagEnum(val desc: String, val code: Int) {
     SDT("Transpose", 709), // obsolete
     SDLNK("Links related to the dataset", 710), // links SDG and NDG
     NDG("Numeric Data Group", 720),
-    /* tag 721 reserved chouck 24-Nov-93 */
+    /* Objects of tag 721 are never actually written to the file.  The tag is needed to make things easier mixing
+       DFSD and SD style objects in the same file */
     CAL("Calibration information", 731),
     FV("Fill Value information", 732),
     BREQ("Beginning of required tags", 799),

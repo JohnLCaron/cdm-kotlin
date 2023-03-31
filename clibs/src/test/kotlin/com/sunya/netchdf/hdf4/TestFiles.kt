@@ -28,7 +28,25 @@ class TestFiles {
                     .addNameFilter { name -> !name.endsWith(".xml") }
                     .build()
 
-            return hdf4
+            val devcdm = testFilesIn(testData + "devcdm/hdf4")
+                .withRecursion()
+                .build()
+
+            val cdmUnitTest = testFilesIn(testData + "cdmUnitTest/formats/hdf4")
+                    .withRecursion()
+                .addNameFilter { name -> !name.endsWith(".cdl") }
+                .addNameFilter { name -> !name.endsWith(".jpg") }
+                .addNameFilter { name -> !name.endsWith(".gif") }
+                .addNameFilter { name -> !name.endsWith(".ncml") }
+                .addNameFilter { name -> !name.endsWith(".png") }
+                .addNameFilter { name -> !name.endsWith(".pdf") }
+                .addNameFilter { name -> !name.endsWith(".tif") }
+                .addNameFilter { name -> !name.endsWith(".tiff") }
+                .addNameFilter { name -> !name.endsWith(".txt") }
+                .addNameFilter { name -> !name.endsWith(".xml") }
+                .build()
+
+            return Stream.of(devcdm, hdf4).flatMap { i -> i}
         }
 
         val filenames = mutableMapOf<String, MutableList<String>>()
