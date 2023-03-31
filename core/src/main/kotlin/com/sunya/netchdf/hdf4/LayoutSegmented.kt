@@ -88,23 +88,23 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
     }
 
     private fun nextInner(first: Boolean): LayoutChunk {
-        if (first) {
+        return if (first) {
             val maxElemsInSeg = getMaxElemsInSeg(chunkOuter.srcElem)
             val nelems = min(maxElemsInSeg, needOuter)
             val destElem = chunkOuter.destElem
             val srcElem = chunkOuter.srcElem
-            return LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
+            LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
         } else {
             val destElem = chunkInner.nelems + chunkInner.destElem // increment using last chunks' value
             val srcElem = chunkInner.nelems  + chunkInner.srcElem
             val maxElemsInSeg = getMaxElemsInSeg(srcElem)
             val nelems = min(maxElemsInSeg, needOuter)
-            return LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
+            LayoutChunk(getStartPos(srcElem), srcElem, nelems, destElem)
         }
     }
 
-    // LOOK assumes that chunks dont cross Segments.
-    fun nextOuter(): LayoutChunk {
+    // LOOK assumes that chunks don't cross Segments.
+    private fun nextOuter(): LayoutChunk {
         val chunkOuter = chunker.next()
         val srcPos = getStartPos(chunkOuter.srcElem)
         needOuter = chunkOuter.nelems

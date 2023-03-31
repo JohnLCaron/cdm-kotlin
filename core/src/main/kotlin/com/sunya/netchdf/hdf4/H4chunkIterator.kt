@@ -10,7 +10,7 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-class H4chunkIterator(val h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
+class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
     private val debugChunking = false
 
     private val vinfo = v2.spObject as Vinfo

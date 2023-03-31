@@ -46,7 +46,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     // internal string valued
     var svalue : String? = null
 
-    // LOOK
+    // LOOK "always big-endian on disk"
     var endian = ByteOrder.BIG_ENDIAN // LOOK TABLE 2H Little-Endian Format Data Type Definitions
 
     fun setVariable(v: Variable.Builder) {
@@ -126,11 +126,6 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     }
 }
 
-// #define FILL_BYTE    ((char)-127)        /* Largest Negative value */
-//#define FILL_CHAR    ((char)0)
-//#define FILL_SHORT    ((short)-32767)
-//#define FILL_LONG    ((long)-2147483647)
-
 // the netcdf default fill values
 internal fun getNcDefaultFillValue(datatype: Datatype): Any {
     return when (datatype) {
@@ -149,6 +144,11 @@ internal fun getNcDefaultFillValue(datatype: Datatype): Any {
         else -> 0
     }
 }
+
+// #define FILL_BYTE    ((char)-127)        /* Largest Negative value */
+//#define FILL_CHAR    ((char)0)
+//#define FILL_SHORT    ((short)-32767)
+//#define FILL_LONG    ((long)-2147483647)
 
 // the Hdf4 SD default fill values, uses different values for the unsigned types.
 internal fun getSDefaultFillValue(datatype: Datatype): Any {
