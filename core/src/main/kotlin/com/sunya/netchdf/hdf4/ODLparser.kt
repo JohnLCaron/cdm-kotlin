@@ -322,12 +322,11 @@ private fun stripQuotes(name: String): String {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val showDetail = false
+private val showProblems = true
 private val showValidationFailures = false
 
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
-    // LOOK should be All Variables named StructMetadata.n, where n= 1, 2, 3 ... are read in and their contents concatenated
-    //   to make the structMetadata String.
     fun applyStructMetadata(structMetadata: String) : Boolean {
        if (showDetail) println("structMetadata = \n$structMetadata")
         val odl = ODLparseFromString((structMetadata))
@@ -337,7 +336,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
         if (!odlt.validateStructMetadata(rootGroup)) {
             if (showValidationFailures) println("***ODL did not validate")
-            return false
+            throw RuntimeException("ODL did not validate")
         }
         odlt.applyStructMetadata(rootGroup)
         return true
@@ -359,7 +358,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
                     val odlname = makeValidCdmObjectName(name)
                     val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
                     if (vb == null) {
-                        if (show) println("ODL cant find variable $name")
+                        if (showProblems) println(" *** ODL cant find variable $name")
                     } else {
                         vb.dimList = dimList
                         vb.dimensions.clear()
@@ -370,9 +369,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
         this.nested.forEach { odl ->
             val odlname = makeValidCdmObjectName(odl.name)
             val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
-            if (ngroup == null) {
-                if (show) println("ODL cant find group ${odl.name}")
-            } else {
+            if (ngroup != null) {
                 odl.applyStructMetadata(ngroup)
             }
         }
@@ -387,7 +384,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
                     val odlname = makeValidCdmObjectName(name)
                     val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
                     if (vb == null) {
-                        if (show) println("ODL cant find variable $name")
+                        println(" *** ODL cant find variable $name")
                         return false
                     }
                 }
@@ -395,10 +392,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
         }
         this.nested.forEach { odl ->
             val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
-            if (ngroup == null) {
-                if (show) println("ODL cant find group ${odl.name}")
-                return false
-            } else {
+            if (ngroup != null) {
                 if (!odl.validateStructMetadata(ngroup))
                     return false
             }
