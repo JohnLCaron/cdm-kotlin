@@ -1,14 +1,12 @@
-package com.sunya.netchdf.hdf4
+package com.sunya.testdata
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import test.util.testData
-import test.util.testFilesIn
 import java.util.stream.Stream
 
-class TestFiles {
+class SortFiles {
 
     companion object {
         @JvmStatic

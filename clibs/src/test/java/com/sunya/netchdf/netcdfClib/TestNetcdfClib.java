@@ -6,7 +6,7 @@ import java.lang.foreign.MemorySession;
 
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h;
 import org.junit.jupiter.api.Test;
-import test.util.TestFilesKt;
+import com.sunya.testdata.TestFilesKt;
 
 public class TestNetcdfClib {
 
