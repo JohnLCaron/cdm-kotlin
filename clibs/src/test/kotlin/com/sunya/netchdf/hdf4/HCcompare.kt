@@ -68,6 +68,19 @@ class HCcompare {
         compareH4header(filename)
     }
 
+    // ODL
+    @Test
+    fun problemWithODL() { // duplicate typedefs, look for ones that match before adding
+        val filename = testData + "hdf4/mak/MOD13Q1.2000.049.aust.005.b01.250m_ndvi.hdf"
+        readH4header(filename)
+    }
+    ///home/all/testdata/hdf4/mak/MOD13Q1.2000.049.aust.005.b01.250m_ndvi.hdf
+    //home/all/testdata/hdf4/mak/MOD13Q1.2008.353.aust.005.b01.250m_ndvi.hdf
+    ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_8.A2007001.005.2007012175136.hdf
+    ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_D.A2007001.005.2007004142531.hdf
+    ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_G.A2007001.0000.005.2007003022635.hdf
+
+
     //////////////////////////////////////////////////////////////////////
 
     @ParameterizedTest
