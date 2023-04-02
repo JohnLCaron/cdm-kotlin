@@ -1,12 +1,10 @@
 package com.sunya.netchdf.netcdf3
 
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
-import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
+import com.sunya.testdata.N3Files
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -18,28 +16,9 @@ class N3headerCompare {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream1 = Stream.of(
-                    Arguments.of(testData + "devcdm/netcdf3/simple_xy.nc"),
-                    Arguments.of(testData + "devcdm/netcdf3/longOffset.nc"),
-                    Arguments.of(testData + "devcdm/netcdf3/WMI_Lear-2003-05-28-212817.nc"),
-                    Arguments.of(testData + "devcdm/netcdf3/nctest_64bit_offset.nc"),
-                    Arguments.of(testData + "devcdm/netcdf3/WrfTimesStrUnderscore.nc"),
-                    Arguments.of(testData + "devcdm/netcdf3/testSpecialChars.nc"),
-                )
-            val stream2 =
-                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
-                    .withRecursion()
-                    .build()
-
-            return Stream.of(stream1, stream2).flatMap { i -> i};
+            return N3Files.params()
         }
     }
-
-    @Test
-    fun special() {
-        readN3header(testData + "cdmUnitTest/formats/netcdf3/files/nc_test_classic.nc4")
-    }
-
 
     @ParameterizedTest
     @MethodSource("params")

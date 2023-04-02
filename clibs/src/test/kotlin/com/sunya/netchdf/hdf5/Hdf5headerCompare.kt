@@ -2,12 +2,11 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.Netchdf
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.testdata.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals
@@ -22,31 +21,12 @@ class Hdf5headerCompare {
         fun params(): Stream<Arguments> {
             // 10 of 114 fail, because we compare with netcdf4 instead of hdf5 c library
 
-            val moar4 =
-                testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .withRecursion()
-                    .build()
-
-            val hdf5 =
-                testFilesIn(testData + "devcdm/hdf5")
-                    .withRecursion()
-                    .build()
-
-            val moar5 =
-                testFilesIn(testData + "cdmUnitTest/formats/hdf5")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .addNameFilter { name -> !name.endsWith(".xml") } // bug in clib
-                    .withRecursion()
-                    .build()
-
             val hdfeos5 =
                 testFilesIn(testData + "devcdm/hdfeos5")
                     .withRecursion()
                     .build()
 
-            // return hdfeos5
-            return Stream.of(moar4, hdf5, moar5).flatMap { i -> i };
+            return Stream.of( N4Files.params(),  H5Files.params()).flatMap { i -> i };
         }
     }
 

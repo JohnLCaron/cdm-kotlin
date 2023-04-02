@@ -111,7 +111,7 @@ class HCcompare {
                 //println("actual = $root")
                 //println("expect = $expect")
                 assertEquals(ncfile.cdl(), myfile.cdl())
-                println(myfile.cdl())
+                // println(myfile.cdl())
             }
         }
     }

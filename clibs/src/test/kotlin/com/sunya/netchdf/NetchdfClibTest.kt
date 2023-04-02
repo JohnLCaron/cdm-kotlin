@@ -7,9 +7,11 @@ import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
+import com.sunya.netchdf.hdf4.Hdf4File
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.testdata.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -17,8 +19,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.system.measureNanoTime
@@ -31,30 +31,7 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream3 =
-                testFilesIn(testData + "devcdm/netcdf3")
-                    .build()
-
-            val stream4 =
-                testFilesIn(testData + "devcdm/netcdf4")
-                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
-                    .build()
-
-            val moar3 =
-                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .withRecursion()
-                    .build()
-
-            val moar4 =
-            testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
-                    .withRecursion()
-                    .build()
-
-            // return Stream.of(stream3, stream4).flatMap { i -> i };
-            return Stream.of(stream3, stream4, moar3, moar4).flatMap { i -> i };
+            return Stream.of( N3Files.params(),  N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -288,7 +265,7 @@ h5dump
 
     @ParameterizedTest
     @MethodSource("params")
-    fun testCompareCdlWithClib(filename: String) {
+    fun testCdlWithClib(filename: String) {
         compareCdlWithClib(filename)
     }
 
@@ -360,7 +337,7 @@ fun compareCdlWithClib(filename: String) {
         println("${netchdf.type()} $filename ")
         println("\nnetchdf = ${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4") || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { hcfile ->
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
