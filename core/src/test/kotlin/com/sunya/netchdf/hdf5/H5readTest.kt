@@ -8,6 +8,7 @@ import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.readNetchIterate
 import com.sunya.netchdf.readNetchdfData
+import com.sunya.testdata.H5Files
 import com.sunya.testdata.testData
 import com.sunya.testdata.testFilesIn
 
@@ -26,20 +27,7 @@ class H5readTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val devcdm =
-                testFilesIn(testData + "devcdm/hdf5")
-                    .withRecursion()
-                    .build()
-
-            val cdmUnitTest =
-                testFilesIn(testData + "cdmUnitTest/formats/hdf5")
-                    .withPathFilter { p -> !p.toString().contains("exclude") and !p.toString().contains("problem") }
-                    .addNameFilter { name -> !name.endsWith(".xml") } // bug in clib
-                    .withRecursion()
-                    .build()
-
-            // return devcdm
-            return Stream.of(devcdm, cdmUnitTest).flatMap { i -> i };
+            return H5Files.params()
         }
 
         @JvmStatic

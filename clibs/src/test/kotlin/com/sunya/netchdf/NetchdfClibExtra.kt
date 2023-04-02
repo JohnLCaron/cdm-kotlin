@@ -2,6 +2,7 @@ package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
 import com.sunya.netchdf.netcdf4.openNetchdfFile
+import com.sunya.testdata.NetchdfExtraFiles
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -14,38 +15,12 @@ import java.util.stream.Stream
 
 // Compare header using cdl(!strict) with Netchdf and NetcdfClibFile
 // mostly fails in handling of types. nclib doesnt pass over all the types.
-class NetchdfExtra {
+class NetchdfClibExtra {
 
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream =
-                testFilesIn(testData + "netchdf")
-                    .withRecursion()
-                    // exclude hdf4 until we fix the core dump in the C library
-                    .withPathFilter { p -> !(p.toString().contains("hdf4") or p.toString().contains("exclude") or
-                            p.toString().contains("gilmore/data.nc") or p.toString().contains("barrodale/test.h5") or
-                            p.toString().contains("barrodale/test.h5") )}
-                    .addNameFilter { name -> !name.contains("_npp_") }          // disagree with netcdf4 library - need direct hdf5 c library ??
-                    .addNameFilter { name -> !name.endsWith("level2_MSG2_8bit_VISIR_STD_20091005_0700.H5") } // ditto
-                    .addNameFilter { name -> !name.endsWith("I3A_VHR_22NOV2007_0902_L1B_STD.h5") }          // ditto
-                    .addNameFilter { name -> !name.endsWith("H12007_1m_MLLW_1of6.bag") }                    // ditto
-                    .addNameFilter { name -> !name.endsWith("S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4") } // ditto
-                    .addNameFilter { name -> !name.endsWith("hdf") } // core dump
-                    .addNameFilter { name -> !name.endsWith(".cdl") }
-                    .addNameFilter { name -> !name.endsWith(".jpg") }
-                    .addNameFilter { name -> !name.endsWith(".gif") }
-                    .addNameFilter { name -> !name.endsWith(".ncml") }
-                    .addNameFilter { name -> !name.endsWith(".png") }
-                    .addNameFilter { name -> !name.endsWith(".pdf") }
-                    .addNameFilter { name -> !name.endsWith(".tif") }
-                    .addNameFilter { name -> !name.endsWith(".tiff") }
-                    .addNameFilter { name -> !name.endsWith(".txt") }
-                    .addNameFilter { name -> !name.endsWith(".xml") }
-                    .build()
-
-            // return moar3
-            return Stream.of(stream).flatMap { i -> i }
+            return NetchdfExtraFiles.params(true)
         }
 
         const val topdir = testData + "netchdf/"
@@ -108,17 +83,20 @@ class NetchdfExtra {
     @ParameterizedTest
     @MethodSource("params")
     fun testCompareCdlWithClib(filename: String) {
-        if (filename.contains("/npp/")) {
-            println("Clib cant open npp $filename")
-            // return
-        }
         compareCdlWithClib(filename)
     }
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readDataForProfiling(filename: String) {
+    fun readNetchdfData(filename: String) {
         readNetchdfData(filename, null)
+    }
+
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testCompareDataWithClib(filename: String) {
+        compareDataWithClib(filename)
     }
 
 }

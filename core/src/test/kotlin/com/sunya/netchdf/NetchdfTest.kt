@@ -8,6 +8,8 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
 import com.sunya.netchdf.netcdf4.openNetchdfFile
+import com.sunya.testdata.N3Files
+import com.sunya.testdata.N4Files
 import com.sunya.testdata.testData
 import com.sunya.testdata.testFilesIn
 import org.junit.jupiter.api.AfterAll
@@ -30,30 +32,7 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            val stream3 =
-                testFilesIn(testData + "devcdm/netcdf3")
-                    .build()
-
-            val stream4 =
-                testFilesIn(testData + "devcdm/netcdf4")
-                    .addNameFilter { name -> !name.endsWith("tst_grps.nc4") } // nested group typedefs
-                    .build()
-
-            val moar3 =
-                testFilesIn(testData + "cdmUnitTest/formats/netcdf3")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .withRecursion()
-                    .build()
-
-            val moar4 =
-            testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
-                    .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
-                    .withRecursion()
-                    .build()
-
-            // return Stream.of(stream3, stream4).flatMap { i -> i };
-            return Stream.of(stream3, stream4, moar3, moar4).flatMap { i -> i };
+            return Stream.of( N3Files.params(),  N4Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
