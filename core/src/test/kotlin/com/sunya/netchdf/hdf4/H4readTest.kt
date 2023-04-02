@@ -3,6 +3,7 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.netcdf4.openNetchdfFile
+import com.sunya.testdata.H4Files
 import com.sunya.testdata.testData
 import com.sunya.testdata.testFilesIn
 import org.junit.jupiter.api.AfterAll
@@ -20,28 +21,7 @@ class H4readTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-
-            val hdfeos2 =
-                testFilesIn(testData + "devcdm/hdfeos2")
-                    .withRecursion()
-                    .build()
-
-            val devcdm = testFilesIn(testData + "devcdm/hdf4")
-                .withRecursion()
-                .build()
-
-            // remove files that core dump
-            val hdf4NoCore =
-                testFilesIn(testData + "hdf4")
-                    .withRecursion()
-                    //    .withPathFilter { p -> !(p.toString().contains("/eos/"))}
-                    .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MOD01.A2007303.0325.005.2007306182401.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MOD02OBC.A2007001.0005.005.2007307210540.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MYD01.A2007001.0440.005.2007311085701.hdf") }
-                    .build()
-
-            return Stream.of(devcdm, hdfeos2, hdf4NoCore).flatMap { i -> i}
+            return H4Files.params()
         }
 
         @JvmStatic
