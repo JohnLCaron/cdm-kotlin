@@ -13,6 +13,7 @@ repositories {
 
 dependencies {
     api(project(":core"))
+    implementation(project(":testdata"))
     implementation(libs.microutils.logging)
     implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.6.4")
 

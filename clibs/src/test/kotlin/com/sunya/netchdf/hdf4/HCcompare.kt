@@ -10,8 +10,8 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import test.util.testData
-import test.util.testFilesIn
+import com.sunya.testdata.testData
+import com.sunya.testdata.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals

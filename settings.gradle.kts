@@ -18,3 +18,4 @@ dependencyResolutionManagement {
 
 include("clibs")
 include("core")
+include("testdata")

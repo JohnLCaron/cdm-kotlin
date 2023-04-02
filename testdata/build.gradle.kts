@@ -12,13 +12,9 @@ repositories {
 }
 
 dependencies {
-    implementation(libs.microutils.logging)
-    implementation("org.jetbrains.kotlinx", "kotlinx-coroutines-core", "1.6.4")
-
-    testImplementation(project(":testdata"))
-    testImplementation(libs.guava)
-    testImplementation(kotlin("test"))
-    testImplementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
+    implementation(libs.guava)
+    implementation(kotlin("test"))
+    implementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
 }
 
 tasks {
@@ -37,11 +33,11 @@ tasks {
         useJUnitPlatform()
         jvmArgs("--enable-preview")
         minHeapSize = "512m"
-        maxHeapSize = "8g"
+        maxHeapSize = "4g"
         // https://www.jvt.me/posts/2021/03/11/gradle-speed-parallel/
         // Configuration parameters to execute top-level classes in parallel but methods in same thread
         // https://junit.org/junit5/docs/current/user-guide/#writing-tests-parallel-execution
-        systemProperties["junit.jupiter.execution.parallel.enabled"] = "true"
+        systemProperties["junit.jupiter.execution.parallel.enabled"] = "false"
         systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
         systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
     }

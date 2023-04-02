@@ -1,4 +1,4 @@
-package test.util
+package com.sunya.testdata
 
 import org.junit.jupiter.api.Test
 

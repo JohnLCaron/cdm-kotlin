@@ -3,7 +3,7 @@ package com.sunya.netchdf.netcdf4
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
-import test.util.testData
+import com.sunya.testdata.testData
 import kotlin.test.assertEquals
 
 // trying to compare output with ncdump - h; probably get rid of

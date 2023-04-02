@@ -5,7 +5,7 @@ import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import org.junit.jupiter.api.Test
-import test.util.testData
+import com.sunya.testdata.testData
 import kotlin.system.measureNanoTime
 
 private const val showDetail = true
