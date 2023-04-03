@@ -12,7 +12,7 @@ import java.util.stream.Stream
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-// Compare header using cdl(!strict) with Hdf5File and NetcdfClibFile
+// Compare header with Hdf5File and NetcdfClibFile
 // sometime fail when they are not netcdf4 files, so nc4lib sees them as empty
 class Hdf5headerCompare {
 
@@ -31,13 +31,8 @@ class Hdf5headerCompare {
     }
 
     @Test
-    fun problem() {
-        compareH5andNclib(testData + "devcdm/hdf5/dstrarr.h5")
-    }
-
-    @Test
-    fun problem2() {
-        compareH5andNclib(testData + "devcdm/hdf5/i32be.h5")
+    fun testEos() {
+        compareH5andNclib(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
 
     @ParameterizedTest

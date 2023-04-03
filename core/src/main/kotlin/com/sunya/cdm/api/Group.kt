@@ -133,6 +133,17 @@ class Group(orgName : String,
             return if (egroup == null) false else groups.remove(egroup)
         }
 
+        // find the first nested group that matches the short name
+        fun findNestedGroupByShortName(shortName : String) : Builder? {
+            var found : Builder? = groups.find { it.name == shortName }
+            if (found != null) return found
+            groups.forEach {
+                found = it.findNestedGroupByShortName(shortName)
+                if (found != null) return@findNestedGroupByShortName found
+            }
+            return found
+        }
+
         /* dunno if its worth the complexity - not currently used
         fun isParent(other: Group.Builder): Boolean {
             var found: Group.Builder = other

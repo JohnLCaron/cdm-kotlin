@@ -51,10 +51,11 @@ class HCcompare {
 
     // ODL
     @Test
-    fun problemWithODL() { // duplicate typedefs, look for ones that match before adding
-        val filename = testData + "hdf4/mak/MOD13Q1.2000.049.aust.005.b01.250m_ndvi.hdf"
+    fun problemWithODL() {
+        val filename = testData + "hdf4/nsidc/LAADS/MOD/MODARNSS.Abracos_Hill.A2007001.1515.005.2007003050459.hdf"
         readH4header(filename)
     }
+    // /home/all/testdata/hdf4/mak/MOD13Q1.2000.049.aust.005.b01.250m_ndvi.hdf
     ///home/all/testdata/hdf4/mak/MOD13Q1.2000.049.aust.005.b01.250m_ndvi.hdf
     //home/all/testdata/hdf4/mak/MOD13Q1.2008.353.aust.005.b01.250m_ndvi.hdf
     ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_8.A2007001.005.2007012175136.hdf
@@ -98,8 +99,6 @@ class HCcompare {
         }
     }
 
-    // The netCDF-4 library can read HDF4 data files, if they were created with the SD (Scientific Data) API.
-    // https://docs.unidata.ucar.edu/nug/current/getting_and_building_netcdf.html#build_hdf4
     @ParameterizedTest
     @MethodSource("params")
     fun compareH4header(filename : String) {

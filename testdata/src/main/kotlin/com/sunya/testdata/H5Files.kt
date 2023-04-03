@@ -16,7 +16,7 @@ class H5Files {
             val cdmUnitTest =
                 testFilesIn(testData + "cdmUnitTest/formats/hdf5")
                     .withPathFilter { p -> !p.toString().contains("exclude") and !p.toString().contains("problem") }
-                    .addNameFilter { name -> !name.endsWith("groupHasCycle.h5") } // /home/all/testdata/devcdm/hdf5/groupHasCycle.h5
+                    .addNameFilter { name -> !name.endsWith("groupHasCycle.h5") } // /home/all/testdata/cdmUnitTest/formats/hdf5/groupHasCycle.h5
                     .addNameFilter { name -> !name.endsWith(".xml") }
                     .withRecursion()
                     .build()

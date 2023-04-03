@@ -96,9 +96,10 @@ enum class TagEnum(val desc: String, val code: Int) {
         private var hashCodes : MutableMap<Int, TagEnum>? = null
 
         fun byCode(code: Int): TagEnum {
-            if (hashCodes == null) {
-                hashCodes = mutableMapOf()
-                values().forEach { hashCodes!![it.code] = it}
+            if (hashCodes == null) { // LOOK may fail when multithreading
+                val mapit = mutableMapOf<Int, TagEnum>()
+                values().forEach { mapit[it.code] = it}
+                hashCodes = mapit
             }
             val te = hashCodes!![code]
             return te?: NONE

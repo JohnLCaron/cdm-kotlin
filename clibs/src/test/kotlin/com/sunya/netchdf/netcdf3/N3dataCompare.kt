@@ -21,9 +21,14 @@ class N3dataCompare {
         }
     }
 
+    // netcdf3 /home/all/testdata/netchdf/csiro/sixCells.nc 1.80 Mbytes
+    // float lat[0:1] = 2 elems
+    // this is the case where vsize=20, but calculated=8.
+    // the file looks like it did use 20 bytes, but hard to know as there's only 2 records.
+    // Im going to remove it from the test files (placed in exclude)
     @Test
-    fun awips() {
-        readDataCompareNC(testData + "cdmUnitTest/formats/netcdf3/awips.nc", "uw")
+    fun problem() {
+        readDataCompareNC(testData + "netchdf/csiro/sixCells.nc", null) // , "cellId")
     }
 
     @ParameterizedTest

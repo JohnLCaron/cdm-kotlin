@@ -11,11 +11,11 @@ class SortFiles {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            return H4Files.params()
+            return H5Files.params()
         }
 
         val filenames = mutableMapOf<String, MutableList<String>>()
-        val showAllFiles = false
+        val showAllFiles = true
 
         @JvmStatic
         @AfterAll

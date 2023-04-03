@@ -43,10 +43,13 @@ class H5builder(
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
     private val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
     private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
+    val structMetadata = mutableListOf<String>()
 
     val cdmRoot : Group
     fun formatType() : String {
-        return if (isNetcdf4) "netcdf4" else "hdf5   "
+        return if (isNetcdf4) "netcdf4 " else {
+            if (structMetadata.isEmpty()) "hdf5    " else "hdf-eos5"
+        }
     }
 
     init {
@@ -88,7 +91,14 @@ class H5builder(
         // build tree of H5groups
         val h5rootGroup = rootGroupBuilder.build()
         // convert into CDM
-        this.cdmRoot = this.buildCdm(h5rootGroup)
+        val rootBuilder = this.buildCdm(h5rootGroup)
+        // hdf-eos5
+        if (structMetadata.isNotEmpty()) {
+            val sm = structMetadata.joinToString("")
+            ODLparser(rootBuilder, true).applyStructMetadata(sm)
+        }
+
+        this.cdmRoot =  rootBuilder.build(null)
     }
 
     private fun readSuperBlock01(superblockStart : Long, state : OpenFileState, version : Int) : H5GroupBuilder {

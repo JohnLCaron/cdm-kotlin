@@ -78,9 +78,7 @@ class NetchdfTest {
         }
         }
     }
-
      */
-
     @Test
     @Disabled
     fun tst_grps() {
@@ -210,7 +208,6 @@ h5dump
       H5T_IEEE_F32LE "field2";
       H5T_IEEE_F32LE "field3";
    }
-
      */
 
     @Test
@@ -240,6 +237,14 @@ h5dump
         // showNetchdfHeader(filename, null)
         compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
         // compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
+    }
+
+    @Test
+    fun testGoes16() {
+        val filename = testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        compareCdlWithClib(filename)
+        compareDataWithClib(filename)
+        compareIterateWithClib(filename)
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -341,7 +346,7 @@ fun compareCdlWithClib(filename: String) {
             Hdf4ClibFile(filename).use { hcfile ->
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 assertEquals(ncfile.cdl(), netchdf.cdl())
             }
@@ -363,7 +368,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
             Hdf4ClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
@@ -385,7 +390,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
             Hdf4ClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section)
             }

@@ -32,7 +32,6 @@ class NetchdfExtraFiles {
                     .addNameFilter { name -> !name.endsWith("I3A_VHR_22NOV2007_0902_L1B_STD.h5") }          // ditto
                     .addNameFilter { name -> !name.endsWith("H12007_1m_MLLW_1of6.bag") }                    // ditto
                     .addNameFilter { name -> !name.endsWith("S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4") } // ditto
-                   //  .addNameFilter { name -> !name.endsWith("hdf") } // core dump
             }
 
             return builder.build()

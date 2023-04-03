@@ -249,16 +249,13 @@ class N3header(val raf: OpenFile, root: Group.Builder) {
       ncvarb.datatype = datatype
 
       // size and beginning data position in file
-      val vsize = raf.readInt(filePos)
+      val vsize = raf.readInt(filePos) // Use this, even if it disagrees with the "calculated" value. Clib recalculates.
       val begin = if (useLongOffset) raf.readLong(filePos) else raf.readInt(filePos).toLong()
       if (debugSize) {
         println(" name= $name type=$type vsize=$vsize velems=$velems begin=$begin isRecord=$isRecord attsPos=$varAttsPos")
         val calcVsize: Long = (velems + padding(velems)) * datatype.size
         if (vsize.toLong() != calcVsize) println(" *** readVsize $vsize != calcVsize $calcVsize")
       }
-      //if (vsize < 0) { // when does this happen ?? streaming i think
-      //  vsize = (velems.toInt() + padding(velems)) * datatype.size
-      //}
       val vinfo = Vinfo(name, vsize, begin, isRecord, datatype.size)
       ncvarb.spObject = vinfo
 

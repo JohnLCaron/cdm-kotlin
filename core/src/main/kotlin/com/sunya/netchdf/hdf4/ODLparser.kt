@@ -43,7 +43,7 @@ class EOS {
 
 private val renameGroups = listOf("SwathName", "GridName", "PointName")
 private val wantGroup = listOf("GeoField", "DataField")
-private val wantGroupNewName = listOf("Geolocation_Fields", "Data_Fields")
+private val wantGroupNewName = listOf("Geolocation Fields", "Data Fields")
 
 data class ODLobject(var name: String) {
     val attributes = mutableListOf<Pair<String, String>>()
@@ -60,6 +60,8 @@ class ODLgroup(var name: String, val parent: ODLgroup?) {
     val nested = mutableListOf<ODLgroup>()
     val variables = mutableListOf<ODLobject>()
     val attributes = mutableListOf<Pair<String, String>>()
+
+    fun isEmpty() = nested.isEmpty() and variables.isEmpty() and attributes.isEmpty()
 
     fun addVariable(name: String): ODLobject {
         val result = ODLobject(name)
@@ -322,7 +324,7 @@ private fun stripQuotes(name: String): String {
 ////////////////////////////////////////////////////////////////////////////////////////////////
 
 private val showDetail = false
-private val showProblems = true
+private val showProblems = false
 private val showValidationFailures = false
 
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
@@ -336,7 +338,8 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
         if (!odlt.validateStructMetadata(rootGroup)) {
             if (showValidationFailures) println("***ODL did not validate")
-            throw RuntimeException("ODL did not validate")
+            return false
+//            throw RuntimeException("ODL did not validate")
         }
         odlt.applyStructMetadata(rootGroup)
         return true
@@ -367,10 +370,12 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
             }
         }
         this.nested.forEach { odl ->
-            val odlname = makeValidCdmObjectName(odl.name)
-            val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
-            if (ngroup != null) {
-                odl.applyStructMetadata(ngroup)
+            if (!odl.isEmpty()) {
+                val ngroup = parent.findNestedGroupByShortName(odl.name) ?:
+                             parent.findNestedGroupByShortName(makeValidCdmObjectName(odl.name))
+                if (ngroup != null) {
+                    odl.applyStructMetadata(ngroup)
+                }
             }
         }
     }
@@ -391,10 +396,17 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
             }
         }
         this.nested.forEach { odl ->
-            val ngroup = parent.groups.find { it.name == odl.name } ?: parent.groups.find { makeValidCdmObjectName(it.name) == odl.name }
-            if (ngroup != null) {
-                if (!odl.validateStructMetadata(ngroup))
+            if (!odl.isEmpty()) {
+                val ngroup = parent.findNestedGroupByShortName(odl.name) ?:
+                             parent.findNestedGroupByShortName(makeValidCdmObjectName(odl.name))
+                if (ngroup == null) {
+                    println(" *** ODL cant find GROUP ${odl.name}")
+                    parent.findNestedGroupByShortName(makeValidCdmObjectName(odl.name))
                     return false
+                } else {
+                    if (!odl.validateStructMetadata(ngroup))
+                        return false
+                }
             }
         }
         return true

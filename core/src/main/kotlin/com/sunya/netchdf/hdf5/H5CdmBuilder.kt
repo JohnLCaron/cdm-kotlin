@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
@@ -15,11 +16,14 @@ import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
 import java.nio.*
 
+private const val strict = false
+private const val attLengthMax = 4000
+
 internal val includeOriginalAttributes = false
 internal val debugDimensionScales = false
 
-internal fun H5builder.buildCdm(h5root : H5Group) : Group {
-    return buildGroup(h5root).build(null)
+internal fun H5builder.buildCdm(h5root : H5Group) : Group.Builder {
+    return buildGroup(h5root)
 }
 
 internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
@@ -34,7 +38,17 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
         }
     }
 
-    group5.attributes().forEach { groupb.addAttribute( buildAttribute( it )) }
+    group5.attributes().forEach {
+        val attr = buildAttribute(it)
+        val moveup = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
+        if (moveup) { // too big for an attribute
+            val vb = Variable.Builder(attr.name).setDatatype(Datatype.STRING)
+            vb.spObject = DataContainerAttribute(it.name, H5TypeInfo(it.mdt), it.dataPos, it.mdt, it.mds)
+            groupb.addVariable( vb)
+        } else {
+            groupb.addAttribute(buildAttribute(it))
+        }
+    }
 
     group5.variables.filter{ it.isVariable }.forEach { groupb.addVariable( buildVariable( it )) }
 
@@ -157,6 +171,13 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     // stuff needed to read hdf5
     require (v5.dataObject.mdl != null)
     val vdata = DataContainerVariable(builder.name, h5type, v5, this)
+
+    if (v5.name.startsWith("StructMetadata")) {
+        val data = readRegularData(vdata, null)
+        require (data is ArrayString)
+        structMetadata.add(data.values.get(0))
+    }
+
     builder.spObject = vdata
     return builder
 }
