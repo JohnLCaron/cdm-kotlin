@@ -82,6 +82,22 @@ class H5readTest {
         readNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
     }
 
+    @Test
+    fun testGoes16() {
+        testOpenH5(testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc")
+    }
+
+    @Test
+    fun testEos() {
+        testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
+    }
+
+    // I think the npp put the structmetadata in the front of the file?
+    @Test
+    fun testNpp() {
+        testOpenH5(testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
+    }
+
     ///////////////////////////////////////////////////////////////////////////////////
 
     @ParameterizedTest

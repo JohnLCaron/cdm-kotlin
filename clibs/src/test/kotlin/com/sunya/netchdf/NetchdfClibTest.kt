@@ -239,6 +239,14 @@ h5dump
         // compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
     }
 
+    @Test
+    fun testGoes16() {
+        val filename = testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+        compareCdlWithClib(filename)
+        compareDataWithClib(filename)
+        compareIterateWithClib(filename)
+    }
+
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 
     @ParameterizedTest

@@ -21,7 +21,7 @@ dpkg -L libhdf5-dev
  /usr/include/hdf5/serial/hdf5.h
  /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so
 
-cd /home/oem/install/jextract-19/bin
+cd /home/stormy/install/jextract-19/bin
 
 netcdf library version 4.9.2-development of Mar 19 2023 10:42:31
 ./jextract --source \
@@ -39,6 +39,18 @@ netcdf library version 4.9.2-development of Mar 19 2023 10:42:31
     -l /home/oem/install/netcdf4/lib/libnetcdf.so \
     --output /home/oem/dev/github/cdm-kotlin/src/main/java \
     /home/oem/install/netcdf4/include/netcdf.h
+
+
+./jextract --source \
+    --header-class-name hdf5_h \
+    --target-package com.sunya.netchdf.hdf5Clib.ffm \
+    -I /usr/include/hdf5/serial/hdf5.h \
+    -l /usr/lib/x86_64-linux-gnu/hdf5/serial/libhdf5.so \
+    --output /home/oem/dev/github/cdm-kotlin/src/main/java \
+    /usr/include/hdf5/serial/hdf5.h
+
+/usr/include/hdf5/serial/hdf5.h
+
  */
 
 class NetcdfClibFile(val filename: String) : Netchdf {

@@ -28,6 +28,7 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
+            // return Stream.of( H5Files.params()).flatMap { i -> i };
             return Stream.of( N3Files.params(), N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
         }
 

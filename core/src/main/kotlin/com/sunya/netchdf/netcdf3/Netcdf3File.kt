@@ -26,7 +26,7 @@ class Netcdf3File(val filename : String) : Netchdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl() = cdl(this)
-    override fun type() = "netcdf3"
+    override fun type() = "netcdf3 "
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)

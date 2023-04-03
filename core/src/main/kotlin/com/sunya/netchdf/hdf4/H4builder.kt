@@ -10,6 +10,8 @@ import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
+private const val attLengthMax = 4000
+
 class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     var rootBuilder: Group.Builder = Group.Builder("")
     val metadata = mutableListOf<Attribute>()
@@ -272,7 +274,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     val attr = VStructureReadAttribute(tagVH)
                     if (attr != null) {
                         if (debugVGroupDetails) println("     read attribute ${attr.name}")
-                        val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > 4000
+                        val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
                         if (EOS.isMetadata(attr.name) || moveup) {
                             metadata.add(attr)
                             if (attr.name.startsWith("StructMetadata")) {
@@ -731,6 +733,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 // seriously fucked up to rely on these conventions
 
 fun isNestedGroup(className : String) : Boolean {
+    println("isNestedGroup $className")
     return className.startsWith("SWATH") or className.startsWith("GRID") or className.startsWith("POINT")
 }
 
