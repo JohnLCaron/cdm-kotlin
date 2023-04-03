@@ -25,7 +25,6 @@ import kotlin.system.measureNanoTime
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
 
-
 // Test files opened and read through openNetchdfFile().
 class NetchdfTest {
 

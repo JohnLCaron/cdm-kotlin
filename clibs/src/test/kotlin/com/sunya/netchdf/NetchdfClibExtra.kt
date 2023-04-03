@@ -26,7 +26,7 @@ class NetchdfClibExtra {
         const val topdir = testData + "netchdf/"
     }
 
-    // npp filers: superblock at file offset; reference data type
+    // npp files: superblock at file offset; reference data type
      //*** not a netchdf file = /media/twobee/netch/webb/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5
      //*** not a netchdf file = /media/twobee/netch/jasmine/VCBHO_npp_d20030125_t084955_e085121_b00015_c20071213022754_den_OPS_SEG.h5
      //*** not a netchdf file = /media/twobee/netch/jasmine/VCBHO_npp_d20030125_t084830_e084955_b00015_c20071213022754_den_OPS_SEG.h5

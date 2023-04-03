@@ -168,7 +168,7 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
+                    return ArrayUByte(wantSection.shape, values).makeStringsFromBytes() // LOOK
                 }
 
                 Datatype.DOUBLE -> {
