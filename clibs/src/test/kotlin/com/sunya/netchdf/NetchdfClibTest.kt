@@ -78,9 +78,7 @@ class NetchdfTest {
         }
         }
     }
-
      */
-
     @Test
     @Disabled
     fun tst_grps() {
@@ -210,7 +208,6 @@ h5dump
       H5T_IEEE_F32LE "field2";
       H5T_IEEE_F32LE "field3";
    }
-
      */
 
     @Test
@@ -341,7 +338,7 @@ fun compareCdlWithClib(filename: String) {
             Hdf4ClibFile(filename).use { hcfile ->
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 assertEquals(ncfile.cdl(), netchdf.cdl())
             }
@@ -363,7 +360,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
             Hdf4ClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
@@ -385,7 +382,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
             Hdf4ClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
-        } else {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section)
             }

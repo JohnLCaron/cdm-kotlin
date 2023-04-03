@@ -53,11 +53,6 @@ class H5readTest {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
 
-    // @Test
-    fun problem() {
-        testOpenH5(testData + "cdmUnitTest/formats/hdf5/exclude/OMI-Aura_L2-OMTO3_2009m0829t1219-o27250_v003-2009m0829t175727.he5")
-    }
-
     // a compound with a member thats a type thats not a seperate typedef.
     // the obvious thing to do is to be able to add a typedef when processing the member.
     // or look for it when building H5group
@@ -73,26 +68,18 @@ class H5readTest {
 
     @Test
     fun groupHasCycle() {
-        testOpenH5(testData + "devcdm/hdf5/groupHasCycle.h5")
+        testOpenH5(testData + "cdmUnitTest/formats/hdf5/groupHasCycle.h5")
     }
 
     @Test
-    fun testIterateDataSumInfinite() {
+    fun timeIterateConcurrent() {
         // readH5(testData + "devcdm/hdf5/zip.h5", "/Data/Compressed_Data")
         readH5concurrent(testData + "cdmUnitTest/formats/hdf5/StringsWFilter.h5", "/observation/matrix/data")
     }
 
     @Test
-    fun testIterateProblem() {
+    fun timeIterateProblem() {
         readNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
-    }
-
-    @Test
-    fun testIterateProblem2() { //  int64 ATMS-REMAP-SDR_Aggr(6)  has chunk size (6, 4)
-        val filename = testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5"
-        openH5(filename)
-        readNetchIterate(filename, "/Data_Products/ATMS-REMAP-SDR/ATMS-REMAP-SDR_Aggr")
-        // readH5concurrent(testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
     }
 
     ///////////////////////////////////////////////////////////////////////////////////

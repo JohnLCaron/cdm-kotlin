@@ -8,10 +8,7 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
 import com.sunya.netchdf.netcdf4.openNetchdfFile
-import com.sunya.testdata.N3Files
-import com.sunya.testdata.N4Files
-import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
+import com.sunya.testdata.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -31,7 +28,7 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            return Stream.of( N3Files.params(),  N4Files.params()).flatMap { i -> i };
+            return Stream.of( N3Files.params(), N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -74,7 +71,7 @@ class NetchdfTest {
     }
 
     @Test
-    fun problemNetchIterate() {
+    fun testNetchIterate() { // cant readArrayData too many bytes= 2_524_250_575
         readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
         // readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc", "/xma/dialoop_back")
     }
@@ -112,7 +109,6 @@ class NetchdfTest {
     fun testReadNetchIterate(filename: String) {
         readNetchIterate(filename)
     }
-
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
