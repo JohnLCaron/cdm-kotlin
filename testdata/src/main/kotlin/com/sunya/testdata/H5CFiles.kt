@@ -11,6 +11,7 @@ class H5CFiles {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val starting = Stream.of(
+                Arguments.of(testData + "cdmUnitTest/formats/hdf5/grid_1_3d_xyz_aug.h5 "),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/StringsWFilter.h5"),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/msg/test.h5"),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/extLink/extlink_source.h5 "),

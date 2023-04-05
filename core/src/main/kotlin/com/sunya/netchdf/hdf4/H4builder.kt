@@ -733,7 +733,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 // seriously fucked up to rely on these conventions
 
 fun isNestedGroup(className : String) : Boolean {
-    println("isNestedGroup $className")
     return className.startsWith("SWATH") or className.startsWith("GRID") or className.startsWith("POINT")
 }
 

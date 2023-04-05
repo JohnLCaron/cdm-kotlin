@@ -15,7 +15,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     val elemSize: Int = mdt.elemSize
     val endian: ByteOrder = mdt.endian()
     val isVlenString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
-    val isRefObject = if (mdt is DatatypeReference) mdt.referenceType == 0 else false // is a vlen string
+    val isRefObject = if (mdt is DatatypeReference) mdt.referenceType == 0 else false
 
     var unsigned = false
     var base: H5TypeInfo? = null // used for vlen, array
