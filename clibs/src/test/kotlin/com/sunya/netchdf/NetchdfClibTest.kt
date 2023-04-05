@@ -43,8 +43,13 @@ class NetchdfTest {
         @JvmStatic
         @AfterAll
         fun afterAll() {
+            if (versions.size > 0) {
+                versions.keys.forEach{ println("$it = ${versions[it]!!.size } files") }
+            }
             Stats.show()
         }
+
+        private val versions = mutableMapOf<String, MutableList<String>>()
 
         var showDataRead = true
         var showData = false
@@ -258,6 +263,8 @@ h5dump
                 return
             }
             println("${ncfile.type()} $filename ")
+            val paths = versions.getOrPut(ncfile.type()) { mutableListOf() }
+            paths.add(filename)
         }
     }
 
@@ -346,7 +353,7 @@ fun compareCdlWithClib(filename: String) {
             Hdf4ClibFile(filename).use { hcfile ->
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
-        } else if (netchdf.type().contains("netcdf")) {
+        } else { // if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 assertEquals(ncfile.cdl(), netchdf.cdl())
             }

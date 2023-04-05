@@ -394,6 +394,7 @@ class NCheader(val filename: String) {
         }
     }
 
+    // ?? LOOK
     private fun transcodeString(systemString: String): String {
         val byteArray = systemString.toByteArray(Charset.defaultCharset())
         return String(byteArray, StandardCharsets.UTF_8)

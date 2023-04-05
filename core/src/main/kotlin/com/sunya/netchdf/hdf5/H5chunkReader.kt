@@ -67,7 +67,7 @@ internal class H5chunkReader(val h5 : H5builder) {
 internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray, bb: ByteBuffer, nelems: Int, elemSize : Int): ArrayTyped<*> {
     val h5heap = H5heap(this)
 
-    if (h5type.isVString) {
+    if (h5type.isVlenString) {
         val sarray = mutableListOf<String>()
         for (i in 0 until nelems) {
             val sval = h5heap.readHeapString(bb, i * elemSize)

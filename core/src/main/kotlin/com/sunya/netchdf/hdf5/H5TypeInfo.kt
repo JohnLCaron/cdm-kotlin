@@ -2,7 +2,6 @@ package com.sunya.netchdf.hdf5
 
 import mu.KotlinLogging
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Typedef
 import java.nio.ByteOrder
 
 private const val warnings = true
@@ -15,7 +14,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     val hdfType: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize
     val endian: ByteOrder = mdt.endian()
-    val isVString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
+    val isVlenString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
     val isRefObject = if (mdt is DatatypeReference) mdt.referenceType == 0 else false // is a vlen string
 
     var unsigned = false
@@ -74,7 +73,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose
-            Datatype5.String -> Datatype.CHAR // fixed length strings. Variable strings are Datatype5.Vlen
+            Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
             Datatype5.Reference -> Datatype.LONG // addresses; type 1 gets converted to object name
 
             Datatype5.Opaque -> {
@@ -102,7 +101,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                 }
             }
             Datatype5.Vlen -> {
-                if (this.isVString or this.base!!.isVString or (this.base!!.hdfType == Datatype5.Reference)) Datatype.STRING else {
+                if (this.isVlenString or this.base!!.isVlenString or (this.base!!.hdfType == Datatype5.Reference)) Datatype.STRING else {
                     val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
                     return if (typedef == null) {
                         // theres no actual info in the typedef, so we will just allow this
@@ -120,7 +119,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     }
 
     override fun toString(): String {
-        return "H5TypeInfo(hdfType=$hdfType, elemSize=$elemSize, endian=$endian, isVString=$isVString, unsigned=$unsigned, base=$base)"
+        return "H5TypeInfo(hdfType=$hdfType, elemSize=$elemSize, endian=$endian, isVString=$isVlenString, unsigned=$unsigned, base=$base)"
     }
 
 
