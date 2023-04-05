@@ -264,6 +264,9 @@ internal class H5GroupBuilder(
         val variables = mutableListOf<H5Variable>()
         val typedefs = mutableListOf<H5Typedef>()
 
+        // we are leaving links out, since they just point to other, existing objects. is that ok??
+        // in H5Cbuilder, this is the !useSoftLinks option
+
         for (nested in nestedObjects) {
             if (nested.dataObject == null && nested.address == null) {
                 // see testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5"

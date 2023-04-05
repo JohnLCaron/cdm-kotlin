@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: Mar 31, 2023_
+_last updated: 4/4/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -11,7 +11,7 @@ Please contact me if you'd like to help out. Especially needed are test datasets
 #### Why this library? 
 
 There is so much important scientific data stored in the NetCDF and HDF file formats, that those formats will 
-never go away. It is important that there should be maintainable, independent libraries to read these files forever.
+never go away. It is important that there be maintainable, independent libraries to read these files forever.
 
 The Netcdf-Java library prototyped a "Common Data Model" (CDM) to provide a single API to access various file formats. 
 The netcdf* and hdf* file formats are similar enough to make a common API a practical and useful goal. 
@@ -31,9 +31,9 @@ always map to a user understandable data model. Semantics are left to data-write
 While this problem isn't specific to HDF file users, it is exacerbated by a "group of messages" design approach. Our 
 library tries to ameliorate these problems for non-expert readers.
 
-The HDF4 C library is a curious hodgepodge of disjointed APIs. Only some of the APIs needed to fully examine an HDF4 
-file in a general way are documented and given examples. This creates barriers to casual use of the C API for reading
-HDF4 files.
+The HDF4 C library is a curious hodgepodge of disjointed APIs. The HDF5 API is better and the Netcdf4 API much better.
+But all suffer from the limitations of the C language, the difficulty of writing good documentation for all skill levels 
+of programmers, and the need to support legacy APIs.
 
 HDF-EOS use an undocumented "Object Descriptor Language (ODL)" text format, which adds a dependency on the SDP Toolkit 
 and possibly other libraries. These toolkits also provide functionality such as handling projections and coordinate system 
@@ -63,14 +63,23 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 
 ### Testing
 
-We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C and HDF4 C libraries. 
+We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
 With these tools we can check that our code give the same results as the reference libraries.
 
 Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC. 
 
-There are ~470 hdf4 test files (270 of them hdf-eos2) and ~800 netcdf3/4/hdf5 files. 
+We have ~1680 test files. 
 
-We need to get representative samples of recent files using these formats.
+````
+hdf-eos2 = 274 files
+hdf4     = 203 files
+hdf5     = 215 files
+hdf-eos5 = 28 files
+netcdf3  = 812 files
+netcdf4  = 147 files
+````
+
+We need to get representative samples of recent files for better code coverage.
 
 ### Scope
 
@@ -86,7 +95,13 @@ We do not plan to provide write capabilities.
 
 (Work in progress)
 
+#### Differ from Netcdf4 data model
+
 * Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
 * Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
+* Opaque, Vlen typedefs ??
 * Opaque: hdf5 makes arrays of Opaque all the same size, which gives up some of its usefulness. If theres a need,
   we will allow Opaque(*) indicating that the sizes can vary.
+
+#### Differ from HDF5 data model
+* Not including symbolic links in a group, as these point to an existing dataset (variable)

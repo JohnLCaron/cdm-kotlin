@@ -158,7 +158,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 for (i in 0 until chunk.nelems()) {
                     val address: Long = chunk.srcPos() + layout.elemSize * i  // address of the heapId vs the heap id ??
                     val vlenArray = h5heap.getHeapDataArray(address, Datatype.LONG, base.endian)
-                    // LOOK require vlenArray is Array<Long>
+                    // so references are addresses; then use address to point to String
                     val refsArray = this.convertReferencesToDataObjectName(vlenArray as Array<Long>)
                     for (s in refsArray) {
                         refsList.add(s)

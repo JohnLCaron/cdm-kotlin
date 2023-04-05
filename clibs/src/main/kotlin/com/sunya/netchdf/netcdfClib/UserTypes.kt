@@ -179,7 +179,7 @@ internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : Memor
                 Datatype.DOUBLE -> address.getAtIndex(C_DOUBLE,  idx)
                 Datatype.FLOAT -> address.getAtIndex(C_FLOAT, idx)
                 Datatype.STRING -> address.getUtf8String(0)
-                else -> throw RuntimeException("readVlenAttValues unknown type = ${basetype}")
+                else -> throw RuntimeException("readVlenDataList unknown type = ${basetype}")
             }
             parray.add(wtf)
         }

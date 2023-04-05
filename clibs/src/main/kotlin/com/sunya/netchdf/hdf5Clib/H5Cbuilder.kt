@@ -5,24 +5,26 @@ import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Indent
 import com.sunya.netchdf.hdf4.ODLparser
 import com.sunya.netchdf.hdf5.Datatype5
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_IGNORE_ATTS
 import com.sunya.netchdf.hdf5Clib.ffm.*
 import com.sunya.netchdf.hdf5Clib.ffm.hdf5_h.*
+import com.sunya.netchdf.netcdfClib.ffm.netcdf_h
 import java.io.IOException
 import java.lang.foreign.*
 import java.nio.ByteBuffer
 
-const val MAX_NAME = 255L
+const val MAX_NAME = 2048L
 const val MAX_DIMS = 255L
 
 // Really a builder of the root Group.
 class H5Cbuilder(val filename: String) {
     val rootBuilder = Group.Builder("")
-    var formatType : String = ""
-
     val file_id : Long
-    val structMetadata = mutableListOf<String>()
-    internal val typeinfo = mutableListOf<H5CTypeInfo>() // by group ?
+    fun formatType() = if (structMetadata.isEmpty()) "hdf5    " else "hdf-eos5"
+
+    private val structMetadata = mutableListOf<String>()
+    private val typeinfoMap = mutableMapOf<H5CTypeInfo, MutableList<Group.Builder>>()
 
     init {
         MemorySession.openConfined().use { session ->
@@ -33,43 +35,43 @@ class H5Cbuilder(val filename: String) {
             file_id = H5Fopen(filenameSeg, H5F_ACC_RDONLY(), H5P_DEFAULT())
             if (debug) println("H5Fopen $filename fileHandle ${this.file_id}")
 
-            /* format
-            val format_p: MemorySegment = session.allocate(C_INT, 0)
-            checkErr("nc_inq_format", nc_inq_format(ncid, format_p))
-            this.format = format_p[C_INT, 0]
-            if (debugFormat) println(" nc_inq_format = ${netcdfFormat(this.format)}")
-            this.formatType = netcdfFormat(this.format).toString()
-
-            // format extended
-            val mode_p: MemorySegment = session.allocate(C_INT, 0)
-            checkErr("nc_inq_format_extended", nc_inq_format_extended(ncid, format_p, mode_p))
-            this.formatx = format_p[C_INT, 0]
-            this.mode = mode_p[C_INT, 0]
-            if (debugFormat) println(
-                " nc_inq_format_extended = ${netcdfFormatExtended(this.formatx)} " +
-                        "mode = 0x${java.lang.Long.toHexString(this.mode.toLong())} ${netcdfMode(this.mode)}"
-            )
-
-            val version = nc_inq_libvers().getUtf8String(0)
-            if (debugFormat) println(" nc_inq_libvers = $version")
-
-             */
-
             // read root group
             readGroup("/", GroupContext(session, rootBuilder, this.file_id, Indent(2, 0)))
-            println("here")
-            // rootGroup.addAttribute(Attribute(Netcdf4.NCPROPERTIES, version))
+        }
 
-            // hdf-eos5
-            if (structMetadata.isNotEmpty()) {
-                val sm = structMetadata.joinToString("")
-                ODLparser(rootBuilder, false).applyStructMetadata(sm)
+        addTypesToGroups()
+
+        // hdf-eos5
+        if (structMetadata.isNotEmpty()) {
+            val sm = structMetadata.joinToString("")
+            ODLparser(rootBuilder, false).applyStructMetadata(sm)
+        }
+    }
+
+    internal fun registerTypedef(typeInfo : H5CTypeInfo, gb : Group.Builder) : H5CTypeInfo {
+        val groups = typeinfoMap.getOrPut(typeInfo) { mutableListOf() }
+        groups.add(gb)
+        return typeInfo
+    }
+    internal fun findTypeFromId(typeId : Long) : H5CTypeInfo? {
+        return typeinfoMap.keys.find { H5Tequal(it.type_id, typeId) > 0 }
+    }
+    internal fun addTypesToGroups() {
+        typeinfoMap.forEach { typeInfo, groupList ->
+            if (groupList.size == 1) {
+                groupList[0].addTypedef(typeInfo.typedef!!)
+            } else {
+                var topgroup = groupList[0]
+                for (idx in 1 until groupList.size) {
+                    topgroup = topgroup.commonParent(groupList[idx])
+                }
+            topgroup.addTypedef(typeInfo.typedef!!)
             }
         }
     }
 
     private fun readGroup( g5name: String, context : GroupContext) {
-        println("${context.indent}readGroup for '$g5name'")
+        if (debug) println("${context.indent}readGroup for '$g5name'")
         // group = H5Gopen(file, "Data", H5P_DEFAULT);
         val groupName: MemorySegment = context.session.allocateUtf8String(g5name)
         val group_id : Long = H5Gopen2(context.group5id, groupName, H5P_DEFAULT())
@@ -126,9 +128,10 @@ class H5Cbuilder(val filename: String) {
         //A negative value causes the iterator to immediately return that value, indicating failure.
         //
         //herr_t H5Ovisit(hid_t 	obj_id, H5_index_t 	idx_type, H5_iter_order_t 	order, H5O_iterate_t 	op, void *op_data )
-        val opo_p = H5O_iterate_t.allocate(H5Oreceiver(nestedContext), context.session)
-        // H5Ovisit ( long obj_id,  int idx_type,  int order,  Addressable op,  Addressable op_data)
-        checkErr("H5Ovisit", H5Ovisit(group_id, H5_INDEX_NAME(), H5_ITER_INC(), opo_p, groupName))
+        //if (oldVisit) {
+        //    val opo_p = H5O_iterate_t.allocate(H5Oreceiver(nestedContext), context.session)
+        //    checkErr("H5Ovisit", H5Ovisit(group_id, H5_INDEX_NAME(), H5_ITER_INC(), opo_p, groupName))
+        //}
 
         val oinfo_p = H5O_info_t.allocate(context.session)
         checkErr("H5Oget_info", H5Oget_info(group_id, oinfo_p))
@@ -152,33 +155,14 @@ class H5Cbuilder(val filename: String) {
         //val status2 = H5Lvisit(group_id, groupName, H5P_DEFAULT());
         //if (debug) println("H5Lvisit $groupName group_id ${group_id}")
 
-
-        /* subgroups
-        val numGrps_p = session.allocate(C_INT, 0)
-        val MAX_GROUPS = 1000L // bad API
-        val grpids_p = session.allocateArray(C_INT, MAX_GROUPS)
-        checkErr("nc_inq_grps", nc_inq_grps(g4.grpid, numGrps_p, grpids_p))
-        val numGrps = numGrps_p[C_INT, 0]
-        if (numGrps == 0) {
-            return
-        }
-
-        for (idx in 0 until numGrps) {
-            val grpid = grpids_p.getAtIndex(ValueLayout.JAVA_INT, idx.toLong())
-            val name_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
-            checkErr("nc_inq_grpname", nc_inq_grpname(grpid, name_p))
-            val name = name_p.getUtf8String(0)
-            readGroup(session, Group5(grpid, Group.Builder(name), g4))
-        }
-
-         */
     }
 
+    // links are the subgroups and the data objects == variables.
     private inner class H5Lreceiver(val context : GroupContext) : H5L_iterate_t {
 
         override fun apply(group: Long, name_p: MemoryAddress, infoAddress: MemoryAddress, op_data: MemoryAddress): Int {
             val linkname = name_p.getUtf8String(0)
-            println("${context.indent}H5Lreceiver link='$linkname'")
+            if (debug) println("${context.indent}H5Lreceiver link='$linkname'")
             val indent = context.indent.incr()
 
             // long H5Oopen ( long loc_id,  Addressable name,  long lapl_id) {
@@ -188,28 +172,61 @@ class H5Cbuilder(val filename: String) {
             val oinfo_p = H5O_info_t.allocate(context.session)
             checkErr("H5Oget_info", H5Oget_info(loc_id, oinfo_p))
             val otype = H5O_info_t.`type$get`(oinfo_p)
-            println("${indent}otype=$otype")
+            val num_attr = H5O_info_t.`num_attrs$get`(oinfo_p)
 
             val info = H5L_info_t.ofAddress(infoAddress, context.session)
-            val type = H5L_info_t.`type$get`(info, 0L) // H5L_type_t
-            if (type == H5L_TYPE_HARD()) {
+            val ltype = H5L_info_t.`type$get`(info, 0L) // H5L_type_t
+            if (ltype == H5L_TYPE_HARD()) {
                 val address = H5L_info_t.u.`address$get`(info, 0L)
-                println("${indent}H5L_TYPE_HARD, address=$address")
-            } else if (type == H5L_TYPE_SOFT()) {
+                if (debug) println("${indent}H5L_TYPE_HARD, address=$address")
+            } else if (ltype == H5L_TYPE_SOFT()) {
                 val val_size = H5L_info_t.u.`val_size$get`(info, 0L)
-                println("${indent}H5L_TYPE_SOFT, val_size=$val_size")
+                if (debug) println("${indent}H5L_TYPE_SOFT, val_size=$val_size")
             }
-            // recurse
+            if (debugGraph) println("${context.indent}${H5O_TYPE.of(otype)} '$linkname' H5Lreceiver ${H5L_TYPE.of(ltype)}")
+
             if (otype == H5O_TYPE_GROUP()) {
                 val nestedGroup = Group.Builder(linkname)
                 context.group.addGroup(nestedGroup)
-                val nestedContext = context.copy(group = nestedGroup, indent = indent.incr())
+                val nestedContext = context.copy(group = nestedGroup)
                 readGroup(linkname, nestedContext)
                 return 0
+            } else if ((otype == H5O_TYPE_DATASET()) and ((ltype == H5L_TYPE_HARD()) or useSoftLinks)) {
+                // the soft links are symbolic links that point to existing
+                readDataset(linkname, num_attr.toInt(), context)
             }
             return 0
         }
     }
+
+    enum class H5O_TYPE { UNKNOWN, GROUP, DATASET, NAMED_DATATYPE;
+        companion object {
+            fun of(num: Int) : H5O_TYPE {
+                return when (num) {
+                    -1 -> UNKNOWN
+                    0 -> GROUP
+                    1 -> DATASET
+                    2 -> NAMED_DATATYPE
+                    else -> throw RuntimeException("Unknown H5O_TYPE $num")
+                }
+            }
+        }
+    }
+
+    enum class H5L_TYPE { ERROR, HARD, SOFT, EXTERNAL;
+        companion object {
+            fun of(num: Int) : H5L_TYPE {
+                return when (num) {
+                    -1 -> ERROR
+                    0 -> HARD
+                    1 -> SOFT
+                    64 -> EXTERNAL
+                    else -> throw RuntimeException("Unknown H5O_TYPE $num")
+                }
+            }
+        }
+    }
+
     // H5O_TYPE_UNKNOWN  Unknown object type
     // H5O_TYPE_GROUP Object is a group
     // H5O_TYPE_DATASET Object is a dataset
@@ -285,16 +302,16 @@ class H5Cbuilder(val filename: String) {
 
      */
 
+    // objects are the datasets. doesnt sem to be a API that doesnt descend into the subgroups
     private inner class H5Oreceiver(val context : GroupContext) : H5O_iterate_t {
 
         // typedef herr_t(* H5O_iterate_t) (hid_t obj, const char *name, const H5O_info_t *info, void *op_data)
         //     int apply(long obj, java.lang.foreign.MemoryAddress name, java.lang.foreign.MemoryAddress info, java.lang.foreign.MemoryAddress op_data);
         override fun apply(group: Long, name_p: MemoryAddress, infoAddress: MemoryAddress, op_data: MemoryAddress): Int {
             val linkname = name_p.getUtf8String(0)
-            println("${context.indent}H5Oreceiver link='$linkname'")
+            if (debug) println("${context.indent}H5Oreceiver link='$linkname'")
             if (linkname.contains("/")) // skip nested ones
                 return 0
-            val indent = context.indent.incr()
 
             // long H5Oopen ( long loc_id,  Addressable name,  long lapl_id) {
             val loc_id = H5Oopen(group, name_p, H5P_DEFAULT())
@@ -304,18 +321,8 @@ class H5Cbuilder(val filename: String) {
             checkErr("H5Oget_info", H5Oget_info(loc_id, oinfo_p))
             val otype = H5O_info_t.`type$get`(oinfo_p)
             val num_attr = H5O_info_t.`num_attrs$get`(oinfo_p)
-            println("${indent}otype=$otype, num_attr='$num_attr'")
+            if (debugGraph) println("${context.indent}${H5O_TYPE.of(otype)} '$linkname' H5Oreceiver")
 
-            /*
-            val info = H5L_info_t.ofAddress(infoAddress, context.session)
-            val type = H5L_info_t.`type$get`(info, 0L) // H5L_type_t
-            if (type == H5L_TYPE_HARD()) {
-                val address = H5L_info_t.u.`address$get`(info, 0L)
-                println("${indent}H5L_TYPE_HARD, address=$address")
-            } else if (type == H5L_TYPE_SOFT()) {
-                val val_size = H5L_info_t.u.`val_size$get`(info, 0L)
-                println("${indent}H5L_TYPE_SOFT, val_size=$val_size")
-            } */
             if (otype == H5O_TYPE_DATASET()) {
                 readDataset(linkname, num_attr.toInt(), context)
             }
@@ -325,9 +332,7 @@ class H5Cbuilder(val filename: String) {
 
     @Throws(IOException::class)
     private fun readDataset(obj_name: String, numAtts : Int, context: GroupContext) {
-        println("${context.indent}readDataset for '$obj_name'")
-        if (obj_name == "Geo-Location/Latitude")
-            println()
+        if (debug) println("${context.indent}readDataset for '$obj_name'")
         val indent = context.indent.incr()
 
         // hid_t H5Dopen2(hid_t loc_id, const char * name, hid_t dapl_id)
@@ -345,7 +350,7 @@ class H5Cbuilder(val filename: String) {
         val ndims = H5Sget_simple_extent_dims(dataspace_id, dims_p, maxdims_p)
         val dims = IntArray(ndims) { dims_p.getAtIndex(C_LONG, it.toLong()).toInt() }
         // hsize_t H5Dget_storage_size	(	hid_t 	attr_id	)
-        val size = H5Dget_storage_size(dataset_id)
+        // val size = H5Dget_storage_size(dataset_id)
 
         val type_id = H5Dget_type(dataset_id)
         val h5ctype = readH5CTypeInfo(context, type_id, obj_name)
@@ -360,68 +365,18 @@ class H5Cbuilder(val filename: String) {
 
         context.group.addVariable(vb)
 
-        println("${indent}'$obj_name' h5ctype=$h5ctype npoints=$dataspace_npoints data_size=$size" +
-                " dims=${dims.contentToString()}")
-
-        /*
-        val nvars_p = session.allocate(C_INT, 0)
-        checkErr("nc_inq_nvars", nc_inq_nvars(g4.grpid, nvars_p))
-        val nvars = nvars_p[C_INT, 0]
-        
-        val varids_p = session.allocateArray(C_INT, nvars.toLong())
-        checkErr("nc_inq_varids", nc_inq_varids(g4.grpid, nvars_p, varids_p))
-
-        val name_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
-        val xtype_p = session.allocate(C_INT, 0)
-        val ndims_p = session.allocate(C_INT, 0)
-        val dimids_p = session.allocateArray(C_INT, NC_MAX_DIMS().toLong())
-        val natts_p = session.allocate(C_INT, 0)
-
-        for (i in 0 until nvars.toLong()) {
-            val varid = varids_p.getAtIndex(ValueLayout.JAVA_INT, i)
-
-            // nc_inq_var(int ncid, int varid, char *name, nc_type *xtypep, int *ndimsp, int *dimidsp, int *nattsp);
-            checkErr("nc_inq_var", nc_inq_var(g4.grpid, varid, name_p, xtype_p, ndims_p, dimids_p, natts_p))
-
-            val vname: String = name_p.getUtf8String(0)
-            val typeid = xtype_p[C_INT, 0]
-            val ndims = ndims_p[C_INT, 0]
-            val natts = natts_p[C_INT, 0]
-            if (debug) println(" nc_inq_var $vname = $typeid $ndims $natts")
-
-            // figure out the dimensions
-            val dimIds = IntArray(ndims)
-            for (idx in 0 until ndims) {
-                dimIds[idx] = dimids_p.getAtIndex(C_INT, idx.toLong())
-            }
-
-            // create the Variable
-            val vb = Variable.Builder(vname)
-            vb.datatype = convertType(typeid)
-            vb.dimensions.addAll(g4.makeDimList(dimIds))
-
-            val usertype = if (typeid >= 32) userTypes[typeid] else null
-
-            vb.spObject = Vinfo(g4, varid, typeid, usertype)
-
-            // read Variable attributes
-            if (natts > 0) {
-                if (debug) println(" Variable attributes")
-                val atts: List<Attribute.Builder> = readAttributes(session, g4.grpid, varid, natts)
-                for (attb in atts) {
-                    val att = attb.build()
-                    vb.addAttribute(att)
-                }
-            }
-            g4.gb.addVariable(vb)
+        if (obj_name.startsWith("StructMetadata")) {
+            val data = readRegularData(context, dataset_id, h5ctype, dims)
+            require (data is ArrayString)
+            structMetadata.add(data.values.get(0))
         }
 
-         */
+        if (debug) println("${indent}'$obj_name' h5ctype=$h5ctype npoints=$dataspace_npoints dims=${dims.contentToString()}")
     }
 
     @Throws(IOException::class)
     private fun readAttributes(obj_name: String, numAtts : Int, context: GroupContext): List<Attribute> {
-        println("${context.indent}readAttributes for '$obj_name'")
+        if (debug) println("${context.indent}readAttributes for '$obj_name'")
         val results = mutableListOf<Attribute>()
 
         repeat(numAtts) { idx ->
@@ -447,6 +402,8 @@ class H5Cbuilder(val filename: String) {
             val aname: String = name_p.getUtf8String(0)
             if (HDF5_IGNORE_ATTS.contains(aname))
                 return@repeat
+            if (aname == "PALETTE")
+                println()
 
             // hid_t H5Aget_space	(	hid_t 	attr_id	)
             val dataspace_id = H5Aget_space(attr_id)
@@ -464,26 +421,11 @@ class H5Cbuilder(val filename: String) {
             // hid_t H5Dget_type	(	hid_t 	attr_id	)
             val type_id = H5Aget_type(attr_id)
             val h5ctype = readH5CTypeInfo(context, type_id, aname)
-            if (!h5ctype.isVlenString) {
-                val data_p = context.session.allocate(size)
-                // herr_t H5Aread(hid_t attr_id, hid_t 	type_id, void * 	buf)
-                checkErr("H5Aread", H5Aread(attr_id, h5ctype.type_id, data_p))
-                val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-                val bb = ByteBuffer.wrap(raw)
-                bb.order(h5ctype.endian)
 
-                //println("  '$aname' type_class=$type_class type_size=$type_size npoints=$dataspace_npoints data_size=$size" +
-                //    " dims=${dims.contentToString()}")
-                if (!h5ctype.isVlenString and (h5ctype.datatype5 != Datatype5.Vlen)) {
-                    require(size == nelems * h5ctype.elemSize)
-                }
-
-                val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
-                val att = Attribute(aname, values.datatype, values.toList())
-                results.add(att)
-            } else {
+            // read data
+            if (h5ctype.isVlenString) {
                 val strings_p: MemorySegment = context.session.allocateArray(ValueLayout.ADDRESS, nelems)
-                checkErr("H5Aread", H5Aread(attr_id, h5ctype.type_id, strings_p))
+                checkErr("H5Aread VlenString", H5Aread(attr_id, h5ctype.type_id, strings_p))
 
                 val slist = mutableListOf<String>()
                 for (i in 0 until nelems) {
@@ -501,211 +443,105 @@ class H5Cbuilder(val filename: String) {
 
                 // not sure about this
                 // checkErr("H5Dvlen_reclaim", H5Dvlen_reclaim(attr_id, h5ctype.type_id, H5S_ALL(), strings_p)) // ??
+            } else if (h5ctype.datatype5 == Datatype5.Vlen) {
+                // probably hvl_t
+                val vlen_p: MemorySegment = hvl_t.allocateArray(nelems.toInt(), context.session)
+                checkErr("H5Aread Vlen", H5Aread(attr_id, h5ctype.type_id, vlen_p))
+                val base = h5ctype.base!!
+                val values = if (base.datatype5 == Datatype5.Reference) {
+                    readVlenReferences(attr_id, nelems, vlen_p)
+                } else {
+                    readVlenDataList(nelems, base.datatype(), vlen_p)
+                }
+                val att = Attribute(aname, h5ctype.datatype(), values)
+                results.add(att)
+
+                // not sure about this
+                // checkErr("H5Dvlen_reclaim", H5Dvlen_reclaim(attr_id, h5ctype.type_id, H5S_ALL(), strings_p)) // ??
+            } else {
+                val data_p = context.session.allocate(size)
+                // herr_t H5Aread(hid_t attr_id, hid_t 	type_id, void * 	buf)
+                checkErr("H5Aread", H5Aread(attr_id, h5ctype.type_id, data_p))
+                val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+                val bb = ByteBuffer.wrap(raw)
+                bb.order(h5ctype.endian)
+
+                require(size == nelems * h5ctype.elemSize)
+
+                val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
+                val att = Attribute(aname, values.datatype, values.toList())
+                results.add(att)
             }
         }
 
         return results
     }
 
-    /*
-    fun readAttributeValues(session: MemorySession, grpid : Int, varid : Int, attname : String, datatype : Datatype, nelems : Long) : List<Any> {
-        val name_p: MemorySegment = session.allocateUtf8String(attname)
-        when (datatype) {
-            Datatype.BYTE -> {
-                val val_p = session.allocate(nelems) // add 1 to make sure its zero terminated ??
-                checkErr("nc_get_att_schar", nc_get_att_schar(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Byte>()
-                val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
-                for (i in 0 until nelems.toInt()) {
-                    result.add(raw[i])
+    // LOOK same as in nclib UserTypes
+    internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
+        val parray = mutableListOf<Any>()
+        for (elem in 0 until nelems) {
+            val count = hvl_t.`len$get`(vlen_p, elem)
+            val address: MemoryAddress = hvl_t.`p$get`(vlen_p, elem)
+            for (idx in 0 until count) {
+                val wtf = when (basetype) {
+                    Datatype.BYTE-> address.get(ValueLayout.JAVA_BYTE, idx)
+                    Datatype.SHORT -> address.getAtIndex(netcdf_h.C_SHORT, idx)
+                    Datatype.INT -> address.getAtIndex(netcdf_h.C_INT, idx)
+                    Datatype.LONG -> address.getAtIndex(netcdf_h.C_LONG, idx)
+                    Datatype.DOUBLE -> address.getAtIndex(netcdf_h.C_DOUBLE,  idx)
+                    Datatype.FLOAT -> address.getAtIndex(netcdf_h.C_FLOAT, idx)
+                    Datatype.STRING -> address.getUtf8String(0)
+                    else -> throw RuntimeException("readVlenDataList unknown type = ${basetype}")
                 }
-                return result
+                parray.add(wtf)
             }
-
-            Datatype.UBYTE -> {
-                val val_p = session.allocate(nelems) // add 1 to make sure its zero terminated ??
-                checkErr("nc_get_att_uchar", nc_get_att_uchar(grpid, varid, name_p, val_p))
-                val result = mutableListOf<UByte>()
-                val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
-                for (i in 0 until nelems.toInt()) {
-                    result.add(raw[i].toUByte())
-                }
-                return result
-            }
-
-            Datatype.CHAR -> {
-                if (nelems == 0L) return emptyList()
-                val val_p = session.allocate(nelems+1) // add 1 to make sure its zero terminated ??
-                checkErr("nc_get_att_text", nc_get_att_text(grpid, varid, name_p, val_p))
-                val text: String = val_p.getUtf8String(0)
-                return listOf(text)
-                // return if (text.isNotEmpty()) listOf(text) else emptyList() LOOK NIL
-            }
-
-            Datatype.DOUBLE -> {
-                val val_p = session.allocateArray(C_DOUBLE, nelems)
-                checkErr("nc_get_att_double", nc_get_att_double(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Double>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_DOUBLE, i))
-                }
-                return result
-            }
-
-            Datatype.FLOAT -> {
-                val val_p = session.allocateArray(C_FLOAT, nelems)
-                checkErr("nc_get_att_float", nc_get_att_float(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Float>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_FLOAT, i))
-                }
-                return result
-            }
-
-            Datatype.INT -> {
-                val val_p = session.allocateArray(C_INT, nelems)
-                checkErr("nc_get_att_int", nc_get_att_int(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Int>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_INT, i))
-                }
-                return result
-            }
-
-            Datatype.UINT -> {
-                val val_p = session.allocateArray(C_INT, nelems)
-                checkErr("nc_get_att_uint", nc_get_att_uint(grpid, varid, name_p, val_p))
-                val result = mutableListOf<UInt>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_INT, i).toUInt())
-                }
-                return result
-            }
-
-            Datatype.LONG -> {
-                val val_p = session.allocateArray(ValueLayout.JAVA_LONG as MemoryLayout, nelems)
-                checkErr("nc_get_att_longlong", nc_get_att_longlong(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Long>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_LONG, i))
-                }
-                return result
-            }
-
-            Datatype.ULONG -> {
-                val val_p = session.allocateArray(ValueLayout.JAVA_LONG as MemoryLayout, nelems)
-                checkErr("nc_get_att_ulonglong", nc_get_att_ulonglong(grpid, varid, name_p, val_p))
-                val result = mutableListOf<ULong>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_LONG, i).toULong())
-                }
-                return result
-            }
-
-            Datatype.SHORT -> {
-                val val_p = session.allocateArray(C_SHORT, nelems)
-                checkErr("nc_get_att_short", nc_get_att_short(grpid, varid, name_p, val_p))
-                val result = mutableListOf<Short>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
-                }
-                return result
-            }
-
-            Datatype.USHORT -> {
-                val val_p = session.allocateArray(C_SHORT, nelems)
-                checkErr("nc_get_att_ushort", nc_get_att_ushort(grpid, varid, name_p, val_p))
-                val result = mutableListOf<UShort>()
-                for (i in 0 until nelems) {
-                    result.add(val_p.getAtIndex(ValueLayout.JAVA_SHORT, i).toUShort())
-                }
-                return result
-            }
-
-            Datatype.STRING -> {
-                // this is fixed length, right? assume 0 terminated ???
-                val strings_p : MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
-                /* for (i in 0 until nelems) {
-                    // Allocate a string off-heap, then store a pointer to it
-                    val cString: MemorySegment = session.allocate(NC_MAX_ATTRS().toLong()) // LOOK wrong
-                    strings_p.setAtIndex(ValueLayout.ADDRESS, i, cString)
-                } */
-                // ( int ncid,  int varid,  Addressable name,  Addressable ip)
-                checkErr("nc_get_att_string", nc_get_att_string(grpid, varid, name_p, strings_p))
-                //val suggestions: MemoryAddress = strings_p.get(ValueLayout.ADDRESS, 0)
-                val result = mutableListOf<String>()
-                for (i in 0 until nelems) {
-                    // val s1 = strings_p.getUtf8String(i*8) // LOOK wrong
-                    val s2 : MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
-                    if (s2 != MemoryAddress.NULL) {
-                        val value = s2.getUtf8String(0)
-                        val tvalue = transcodeString(value)
-                        result.add(tvalue)
-                    } else {
-                        result.add("")
-                    }
-                }
-                // nc_free_string() or does session handle this ??
-                return result
-            }
-
-            else -> throw RuntimeException("Unsupported attribute data type == $datatype")
         }
+        return parray
     }
 
-    private fun transcodeString(systemString: String): String {
-        val byteArray = systemString.toByteArray(Charset.defaultCharset())
-        return String(byteArray, StandardCharsets.UTF_8)
+    internal fun readVlenReferences(obj_id : Long, nelems : Long, vlen_p : MemorySegment) : List<String> {
+        val parray = mutableListOf<String>()
+        for (elem in 0 until nelems) {
+            val count = hvl_t.`len$get`(vlen_p, elem)
+            val address: MemoryAddress = hvl_t.`p$get`(vlen_p, elem)
+            // hid_t H5Rdereference1(hid_t obj_id, H5R_type_t ref_type, const void *ref)
+            // H5Rdereference1 ( long obj_id,  int ref_type,  Addressable ref)
+            val ref_id = H5Rdereference1(obj_id, H5R_OBJECT(), address)
+            repeat(count.toInt()) {
+                parray.add(address.getUtf8String(0))
+            }
+        }
+        return parray
     }
 
-    internal class ConvertedType internal constructor(val dt: Datatype) {
-        var isVlen = false
-    }
+    internal fun readRegularData(context : GroupContext, datasetId : Long, h5ctype : H5CTypeInfo, dims : IntArray) : ArrayTyped<*> {
+        val size = dims.computeSize() * h5ctype.elemSize.toLong()
+        val data_p = context.session.allocate(size)
 
-     */
+        // int H5Dread ( long dset_id,  long mem_type_id,  long mem_space_id,  long file_space_id,  long plist_id,  Addressable buf) {
+        // herr_t H5Dread(hid_t dset_id, hid_t 	mem_type_id, hid_t 	mem_space_id, hid_t file_space_id, hid_t dxpl_id, void *buf)
+        //[in]	dset_id	Dataset identifier Identifier of the dataset to read from
+        //[in]	mem_type_id	Identifier of the memory datatype
+        //[in]	mem_space_id	Identifier of the memory dataspace
+        //[in]	file_space_id	Identifier of the dataset's dataspace in the file
+        //[in]	dxpl_id	Identifier of a transfer property list
+        //[out]	buf	Buffer to receive data read from file
+
+        checkErr("H5Dread", H5Dread(datasetId, h5ctype.type_id, H5S_ALL(), H5S_ALL(), H5P_DEFAULT(), data_p))
+        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
+        val bb = ByteBuffer.wrap(raw)
+        bb.order(h5ctype.endian)
+
+        return processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
+    }
 
     companion object {
-        val debug = true
-        val debugFormat = false
+        val debug = false
+        val debugGraph = true
+        val useSoftLinks = false
     }
 }
-
-/*
-fun convertType(type: Int): Datatype {
-    return when (type) {
-        NC_BYTE() -> Datatype.BYTE
-        NC_CHAR() -> Datatype.CHAR
-        NC_SHORT()-> Datatype.SHORT
-        NC_INT() -> Datatype.INT
-        NC_FLOAT() -> Datatype.FLOAT
-        NC_DOUBLE() -> Datatype.DOUBLE
-        NC_UBYTE() -> Datatype.UBYTE
-        NC_USHORT() -> Datatype.USHORT
-        NC_UINT() -> Datatype.UINT
-        NC_INT64() -> Datatype.LONG
-        NC_UINT64() -> Datatype.ULONG
-        NC_STRING() -> Datatype.STRING
-        else -> {
-            val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
-            return when (userType.typedef.kind) {
-                TypedefKind.Enum -> {
-                    when (userType.size) {
-                        1 -> Datatype.ENUM1.withTypedef(userType.typedef)
-                        2 -> Datatype.ENUM2.withTypedef(userType.typedef)
-                        4 -> Datatype.ENUM4.withTypedef(userType.typedef)
-                        else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
-                    }
-                }
-                TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
-                TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
-                TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
-                else -> throw RuntimeException("Unsupported data type == $type")
-            }
-        }
-    }
-}
-
-     */
 
 fun checkErr (where : String, ret: Int) {
     if (ret != 0) {
@@ -742,7 +578,10 @@ internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatyp
         Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
         Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
-        else -> throw IllegalStateException("unimplemented type= $datatype")
+        else -> {
+            return ArraySingle(shape, Datatype.INT, 0)
+            // throw IllegalStateException("unimplemented type= $datatype")
+        }
     }
 
     /*

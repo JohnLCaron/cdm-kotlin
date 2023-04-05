@@ -144,16 +144,8 @@ class Group(orgName : String,
             return found
         }
 
-        /* dunno if its worth the complexity - not currently used
-        fun isParent(other: Group.Builder): Boolean {
-            var found: Group.Builder = other
-            while (found != this && found.parent != null) {
-                found = found.parent!!
-            }
-            return found == this
-        }
-
-        fun commonParent(other : Group.Builder) : Group.Builder? {
+        // find the common parent
+        fun commonParent(other : Group.Builder) : Group.Builder {
             if (this == other) return this
             if (this.isParent(other)) return this
             if (other.isParent(this)) return other
@@ -161,9 +153,17 @@ class Group(orgName : String,
             while (found != null && !found.isParent(this)) {
                 found = found.parent
             }
-            return found
+            return found!! // single rooted tree, cant be null
         }
-         */
+
+        // am I the parent of other?
+        fun isParent(other: Group.Builder): Boolean {
+            var found: Group.Builder = other
+            while (found != this && found.parent != null) {
+                found = found.parent!!
+            }
+            return found == this
+        }
 
         fun build(parent : Group?) : Group {
             val useName = makeValidCdmObjectName(name)

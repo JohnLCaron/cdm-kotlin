@@ -334,7 +334,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
         val odl = ODLparseFromString((structMetadata))
         if (showDetail)  println("odl = \n$odl")
         val odlt = ODLtransform(odl)
-        if (show) println("ODL transformed = \n$odlt")
+        if (show or showDetail) println("ODL transformed = \n$odlt")
 
         if (!odlt.validateStructMetadata(rootGroup)) {
             if (showValidationFailures) println("***ODL did not validate")

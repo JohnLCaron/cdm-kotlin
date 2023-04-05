@@ -12,7 +12,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
     override fun location() = filename
     override fun cdl() = cdl(this)
 
-    override fun type() = header.formatType
+    override fun type() = header.formatType()
 
     override fun close() {
         val status = H5Fclose(header.file_id)

@@ -400,10 +400,6 @@ class NCheader(val filename: String) {
         return String(byteArray, StandardCharsets.UTF_8)
     }
 
-    internal class ConvertedType internal constructor(val dt: Datatype) {
-        var isVlen = false
-    }
-
     internal class Group4(val grpid: Int, val gb: Group.Builder, val parent: Group4?) {
         var dimIds : IntArray? = null
         var udimIds : IntArray? = null

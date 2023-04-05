@@ -18,9 +18,9 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         // "Determines whether two datatype identifiers refer to the same datatype"
         // htri_t H5Tequal	(	hid_t 	type1_id, hid_t 	type2_id)
         // is it object identity, or content identity or?
-        val existing = typeinfo.find { H5Tequal(it.type_id, type_id) > 0 }
-        if (existing != null) {
-            return existing
+        val existing = findTypeFromId(type_id)
+        if (existing?.typedef != null) {
+            return registerTypedef(existing, context.group)
         }
     }
 
@@ -68,10 +68,8 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         }
 
         val typedef = CompoundTypedef(name, members)
-        context.group.addTypedef(typedef)
         val result =  H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, typedef, null)
-        typeinfo.add(result)
-        return result
+        return registerTypedef(result, context.group)
     }
 
     if (datatype5 == Datatype5.Enumerated) {
@@ -104,12 +102,11 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         }
         // EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, String>)
         val typedef = EnumTypedef(name, datatype, members)
-        context.group.addTypedef(typedef)
         val result = H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, typedef)
-        typeinfo.add(result)
-        return result
+        return registerTypedef(result, context.group)
     }
 
+    // LOOK not registering Opaque typedef
     if (datatype5 == Datatype5.Opaque) {
         // char* H5Tget_tag	(	hid_t 	type	)
         val tag_p = H5Tget_tag(type_id)
@@ -117,11 +114,10 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         // class OpaqueTypedef(name : String, val elemSize : Int)
         val typedef = OpaqueTypedef(name, type_size) // LOOK not making into an opague typedef. TBD
         // context.group.addTypedef(typedef)
-        val result =  H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null)
-        typeinfo.add(result)
-        return result
+        return H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null)
     }
 
+    // LOOK registering Vlen typedef
     if (datatype5 == Datatype5.Vlen) {
         // hid_t H5Tget_super	(	hid_t 	type	)
         val base_type_id = H5Tget_super(type_id)
@@ -129,10 +125,8 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
 
         // class VlenTypedef(name : String, baseType : Datatype)
         val typedef = VlenTypedef(name, basetype.datatype())
-        context.group.addTypedef(typedef)
         val result = H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, typedef, basetype)
-        typeinfo.add(result)
-        return result
+        return registerTypedef(result, context.group)
     }
 
     if (datatype5 == Datatype5.Array) {
@@ -142,8 +136,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         val dims_p = context.session.allocateArray(C_LONG as MemoryLayout, MAX_DIMS)
         val ndims = H5Tget_array_dims2(type_id, dims_p)
         val dims = IntArray(ndims) { dims_p.getAtIndex(C_LONG, it.toLong()).toInt() } // where to put this ??
-        val result = H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null, basetype, dims)
-        return result
+        return H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null, basetype, dims)
     }
 
     // regular
