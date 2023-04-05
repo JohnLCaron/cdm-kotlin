@@ -34,7 +34,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     group5.typedefs.forEach {
         val typedef = buildTypedef(groupb, it )
         if (this.addTypedef(it.mdtAddress, typedef, it.mdtHash)) {
-            groupb.typedefs.add(typedef)
+            groupb.addTypedef(typedef)
         }
     }
 
@@ -102,7 +102,7 @@ internal fun H5builder.buildCompoundTypedef(groupb : Group.Builder, name : Strin
         }
         if (nestedTypedef != null) {
             if (this.addTypedef(member.mdt.address, nestedTypedef, member.mdt.hashCode())) {
-                groupb.typedefs.add(nestedTypedef)
+                groupb.addTypedef(nestedTypedef)
             }
         }
     }

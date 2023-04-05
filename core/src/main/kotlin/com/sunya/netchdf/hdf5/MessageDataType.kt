@@ -445,7 +445,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
 
 @Throws(IOException::class)
 fun H5builder.readStructureMember(state: OpenFileState, version: Int, structSize: Int): StructureMember5 {
-    // dont know how long it is, read until 0 terminated and then (if version < 8) pad to 8 bytes
+    // dont know how long it is, read until 0 terminated and then (if version < 3) pad to 8 bytes
     val pad = if (version < 3) 8 else 0
     val name = this.readStringZ(state, pad)
     val offset = if (version < 3) {
@@ -468,7 +468,7 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, structSize
         val mdt = this.readDatatypeMessage(state)
         return StructureMember5(name, offset, reducedDims, mdt)
     }
-
+    // version > 1
     val mdt = this.readDatatypeMessage(state)
     if (mdt.type == Datatype5.Array) {
         val arrayMdt = mdt as DatatypeArray

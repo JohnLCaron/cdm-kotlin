@@ -6,6 +6,7 @@ import com.sunya.cdm.iosp.*
 import com.sunya.cdm.util.unsignedByteToShort
 import com.sunya.cdm.util.unsignedIntToLong
 import com.sunya.cdm.util.unsignedShortToInt
+import com.sunya.netchdf.hdf4.ODLparser
 import com.sunya.netchdf.netcdf4.NetchdfFileFormat
 import mu.KotlinLogging
 import java.io.IOException
@@ -95,7 +96,7 @@ class H5builder(
         // hdf-eos5
         if (structMetadata.isNotEmpty()) {
             val sm = structMetadata.joinToString("")
-            ODLparser(rootBuilder, true).applyStructMetadata(sm)
+            ODLparser(rootBuilder, false).applyStructMetadata(sm)
         }
 
         this.cdmRoot =  rootBuilder.build(null)
@@ -414,6 +415,7 @@ class H5builder(
         val HDF5_REFERENCE_LIST = "REFERENCE_LIST"
 
         val HDF5_SPECIAL_ATTS = listOf(HDF5_CLASS)
+        val HDF5_IGNORE_ATTS = listOf(HDF5_CLASS, HDF5_DIMENSION_LIST, HDF5_DIMENSION_SCALE, HDF5_DIMENSION_LABELS, HDF5_DIMENSION_NAME, HDF5_REFERENCE_LIST)
 
 
         // debugging

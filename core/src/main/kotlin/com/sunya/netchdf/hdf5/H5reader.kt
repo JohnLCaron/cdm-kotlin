@@ -137,7 +137,7 @@ internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endi
 internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantedSection : Section) : ArrayTyped<*> {
     val h5heap = H5heap(this)
 
-    if (dc.h5type.isVString) {
+    if (dc.h5type.isVlenString) {
         val sarray = mutableListOf<String>()
         while (layout.hasNext()) {
             val chunk: Layout.Chunk = layout.next()

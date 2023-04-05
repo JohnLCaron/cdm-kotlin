@@ -48,17 +48,15 @@ class Hdf5headerCompare {
     @MethodSource("params")
     fun compareH5andNclib(filename: String) {
         println("=================")
-        val h5file = Hdf5File(filename, true)
-        println("${h5file.type()} $filename ")
-        println("\n${h5file.cdl()}")
+        Hdf5File(filename, true).use { h5file ->
+            println("${h5file.type()} $filename ")
+            println("\n${h5file.cdl()}")
 
-        val nclibfile : Netchdf = NetcdfClibFile(filename)
-        println("ncfile = ${nclibfile.cdl()}")
-
-        assertEquals(nclibfile.cdl(), h5file.cdl())
-
-        h5file.close()
-        nclibfile.close()
+            NetcdfClibFile(filename).use { nclibfile ->
+                println("ncfile = ${nclibfile.cdl()}")
+                assertEquals(nclibfile.cdl(), h5file.cdl())
+            }
+        }
     }
 
 }
