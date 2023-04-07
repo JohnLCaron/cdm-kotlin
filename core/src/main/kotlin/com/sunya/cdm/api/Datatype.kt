@@ -25,11 +25,12 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         val ENUM2 = Datatype("ushort enum", 2)
         val ENUM4 = Datatype("uint enum", 4)
 
-        //// object types are variable length; inside a structure, they have 32 bit indices onto a heap
+        //// object types are variable length; inside a structure, they have 32 bit index onto a heap
         val STRING = Datatype("string", 4)
         val COMPOUND = Datatype("compound", 4)
         val OPAQUE = Datatype("opaque", 4)
         val VLEN = Datatype("vlen", 4)
+        val REFERENCE = Datatype("reference", 4) // string = full path to referenced dataset
     }
 
     override fun toString(): String {

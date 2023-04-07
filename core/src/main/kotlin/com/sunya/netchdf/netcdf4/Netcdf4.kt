@@ -50,5 +50,7 @@ class Netcdf4 {
 
         // appended to variable when it conflicts with dimension scale
         val NETCDF4_NON_COORD = "_nc4_non_coord_"
+
+        val NETCDF4_NOT_VARIABLE = "This is a netCDF dimension but not a netCDF variable"
     }
 }

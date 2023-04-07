@@ -47,7 +47,7 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
         for (idx in rank - 1 downTo firstDim) {
             product *= intersectSpace.shape[idx]
         }
-        this.nelems = if ((rank == 1) and (merge == Merge.notFirst)) 1 else product
+        this.nelems = if ((rank == 1) && (merge == Merge.notFirst)) 1 else product
 
         // the digit to increment when iterating
         this.incrDigit = if (firstDim == 0) 0 else firstDim - 1
@@ -64,7 +64,7 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
 
         var mergeDims = 0 // how many dimensions can be merged?
         for (idx in intersect.rank - 1 downTo mergeDownto) {
-            if ((intersect.shape[idx] == dataChunkShape[idx]) and (intersect.shape[idx] == dataSubsetShape[idx])) {
+            if ((intersect.shape[idx] == dataChunkShape[idx]) && (intersect.shape[idx] == dataSubsetShape[idx])) {
                 mergeDims++
             } else {
                 break

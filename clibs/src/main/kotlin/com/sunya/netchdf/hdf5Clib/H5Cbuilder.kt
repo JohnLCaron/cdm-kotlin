@@ -4,11 +4,16 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Indent
 import com.sunya.netchdf.hdf4.ODLparser
-import com.sunya.netchdf.hdf5.Datatype5
+import com.sunya.netchdf.hdf5.*
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_IGNORE_ATTS
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SKIP_ATTS
 import com.sunya.netchdf.hdf5Clib.ffm.*
 import com.sunya.netchdf.hdf5Clib.ffm.hdf5_h.*
+import com.sunya.netchdf.netcdf4.Netcdf4
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h
 import java.io.IOException
 import java.lang.foreign.*
@@ -25,6 +30,7 @@ class H5Cbuilder(val filename: String) {
 
     private val structMetadata = mutableListOf<String>()
     private val typeinfoMap = mutableMapOf<H5CTypeInfo, MutableList<Group.Builder>>()
+    private val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
 
     init {
         MemorySession.openConfined().use { session ->
@@ -40,6 +46,7 @@ class H5Cbuilder(val filename: String) {
         }
 
         addTypesToGroups()
+        convertReferences(rootBuilder)
 
         // hdf-eos5
         if (structMetadata.isNotEmpty()) {
@@ -48,6 +55,7 @@ class H5Cbuilder(val filename: String) {
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
     internal fun registerTypedef(typeInfo : H5CTypeInfo, gb : Group.Builder) : H5CTypeInfo {
         val groups = typeinfoMap.getOrPut(typeInfo) { mutableListOf() }
         groups.add(gb)
@@ -69,7 +77,52 @@ class H5Cbuilder(val filename: String) {
             }
         }
     }
+    ////////////////////////////////////////////////////////////////////////////////
+    fun convertReferences(gb : Group.Builder) {
+        val refAtts = gb.attributes.filter{ it.datatype == Datatype.REFERENCE}
+        refAtts.forEach { att ->
+            val convertAtt = convertAttribute(att)
+            if (convertAtt != null) {
+                gb.addAttribute(convertAtt)
+            }
+            gb.attributes.remove(att)
+        }
 
+        gb.variables.forEach{ vb ->
+            val refAtts = vb.attributes.filter{ it.datatype == Datatype.REFERENCE}
+            refAtts.forEach { att ->
+                val convertAtt = convertAttribute(att)
+                if (convertAtt != null) {
+                    if (att.name == HDF5_DIMENSION_LIST) {
+                        vb.dimList = convertAtt.values as List<String>
+                    } else {
+                        vb.addAttribute(convertAtt)
+                    }
+                }
+                vb.attributes.remove(att)
+            }
+        }
+
+        gb.groups.forEach{ convertReferences(it) }
+    }
+
+    fun convertAttribute(att : Attribute) : Attribute? {
+        val svalues = mutableListOf<String>()
+        att.values.forEach {
+            val dsetId = it as Long
+             val pair = datasetMap[dsetId]
+              if (pair == null)  {
+                println("Cant find dataset reference for $att")
+                return null
+            }
+            val (gb, vb) = pair
+            val name = vb.fullname(gb)
+            svalues.add(name)
+        }
+        return att.copy(values=svalues)
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
     private fun readGroup( g5name: String, context : GroupContext) {
         if (debug) println("${context.indent}readGroup for '$g5name'")
         // group = H5Gopen(file, "Data", H5P_DEFAULT);
@@ -113,33 +166,23 @@ class H5Cbuilder(val filename: String) {
         val op_p = H5L_iterate_t.allocate(H5Lreceiver(nestedContext), context.session)
         checkErr("H5Literate", H5Literate(group_id, H5_INDEX_NAME(), H5_ITER_INC(), idx_p, op_p, groupName))
 
-        // H5O_iterate_t
-        //typedef herr_t(* H5O_iterate_t) (hid_t obj, const char *name, const H5O_info_t *info, void *op_data)
-        //Prototype for H5Ovisit(), H5Ovisit_by_name() operator (version 3)
-        //
-        //Parameters
-        //[in]	obj	Object that serves as the root of the iteration; the same value as the H5Ovisit() obj_id parameter
-        //[in]	name	Name of object, relative to obj, being examined at current step of the iteration
-        //[out]	info	Information about that object
-        //[in,out]	op_data	User-defined pointer to data required by the application in processing the object; a pass-through of the op_data pointer provided with the H5Ovisit3() function call
-        //Returns
-        //Zero causes the iterator to continue, returning zero when the iteration is complete.
-        //A positive value causes the iterator to immediately return that positive value, indicating short-circuit success.
-        //A negative value causes the iterator to immediately return that value, indicating failure.
-        //
-        //herr_t H5Ovisit(hid_t 	obj_id, H5_index_t 	idx_type, H5_iter_order_t 	order, H5O_iterate_t 	op, void *op_data )
-        //if (oldVisit) {
-        //    val opo_p = H5O_iterate_t.allocate(H5Oreceiver(nestedContext), context.session)
-        //    checkErr("H5Ovisit", H5Ovisit(group_id, H5_INDEX_NAME(), H5_ITER_INC(), opo_p, groupName))
-        //}
-
         val oinfo_p = H5O_info_t.allocate(context.session)
         checkErr("H5Oget_info", H5Oget_info(group_id, oinfo_p))
         val num_attr = H5O_info_t.`num_attrs$get`(oinfo_p)
-        val atts = readAttributes(g5name, num_attr.toInt(), context)
-        atts.forEach{context.group.addAttribute(it)}
+        val atts = readAttributes(group_id, g5name, num_attr.toInt(), context)
 
-        // LOOK 1.12 uses H5Lvisit2, we probably want to upgrade
+        atts.forEach { attr ->
+            val moveup = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
+            if (moveup) { // too big for an attribute
+                val vb = Variable.Builder(attr.name).setDatatype(Datatype.STRING)
+                // LOOK vb.spObject = DataContainerAttribute(it.name, H5TypeInfo(it.mdt), it.dataPos, it.mdt, it.mds)
+                context.group.addVariable( vb)
+            } else {
+                context.group.addAttribute(attr)
+            }
+        }
+
+        // LOOK 1.12 uses H5Lvisit2, we might want to upgrade?
         // see https://docs.hdfgroup.org/hdf5/v1_12/
         //     public static int H5Lvisit ( long grp_id,  int idx_type,  int order,  Addressable op,  Addressable op_data) {
         // Recursively visits all links starting from a specified group.
@@ -154,7 +197,6 @@ class H5Cbuilder(val filename: String) {
         //val groupName2: MemorySegment = session.allocateUtf8String(g5name)
         //val status2 = H5Lvisit(group_id, groupName, H5P_DEFAULT());
         //if (debug) println("H5Lvisit $groupName group_id ${group_id}")
-
     }
 
     // links are the subgroups and the data objects == variables.
@@ -192,7 +234,7 @@ class H5Cbuilder(val filename: String) {
                 readGroup(linkname, nestedContext)
                 return 0
             } else if ((otype == H5O_TYPE_DATASET()) and ((ltype == H5L_TYPE_HARD()) or useSoftLinks)) {
-                // the soft links are symbolic links that point to existing
+                // the soft links are symbolic links that point to existing datasets
                 readDataset(linkname, num_attr.toInt(), context)
             }
             return 0
@@ -227,109 +269,6 @@ class H5Cbuilder(val filename: String) {
         }
     }
 
-    // H5O_TYPE_UNKNOWN  Unknown object type
-    // H5O_TYPE_GROUP Object is a group
-    // H5O_TYPE_DATASET Object is a dataset
-    // H5O_TYPE_NAMED_DATATYPE Object is a named data type
-    // H5O_TYPE_NTYPES  Number of different object types (must be last!)
-
-    // typedef enum {
-    //    H5L_TYPE_ERROR = (-1),      /* Invalid link type id         */
-    //    H5L_TYPE_HARD = 0,          /* Hard link id                 */
-    //    H5L_TYPE_SOFT = 1,          /* Soft link id                 */
-    //    H5L_TYPE_EXTERNAL = 64,     /* External link id             */
-    //    H5L_TYPE_MAX = 255	        /* Maximum link type id         */
-    //} H5L_type_t;
-
-    /*
-    @Throws(IOException::class)
-    private fun readGroupDimensions(session: MemorySession, g4: Group5) {
-        //// Get dimension ids
-        val numDims_p = session.allocate(C_INT, 0)
-        // nc_inq_ndims(int ncid, int *ndimsp);
-        //     public static int nc_inq_ndims ( int ncid,  Addressable ndimsp) {
-        checkErr("nc_inq_ndims", nc_inq_ndims(g4.grpid, numDims_p))
-        val numDims = numDims_p[C_INT, 0]
-
-        val dimids_p = session.allocateArray(C_INT, numDims.toLong())
-        // nc_inq_dimids(int ncid, int *ndims, int *dimids, int include_parents);
-        // public static int nc_inq_dimids ( int ncid,  Addressable ndims, java.lang.foreign.Addressable dimids,  int include_parents) {
-        checkErr("nc_inq_dimids", nc_inq_dimids(g4.grpid, numDims_p, dimids_p, 0))
-        val numDims2 = numDims_p[C_INT, 0]
-        if (debug) print(" nc_inq_dimids ndims = $numDims2")
-        if (numDims != numDims2) {
-            throw RuntimeException("numDimsInGroup $numDims != numDimsInGroup2 $numDims2")
-        }
-        val dimIds = IntArray(numDims)
-        for (i in 0 until numDims) {
-            dimIds[i] = dimids_p.getAtIndex(C_INT, i.toLong())
-        }
-        if (debug) println(" dimids = ${dimIds.toList()}")
-        g4.dimIds = dimIds
-
-        //// Get unlimited dimension ids
-        checkErr("nc_inq_unlimdims", nc_inq_unlimdims(g4.grpid, numDims_p, dimids_p))
-        val unumDims = numDims_p[C_INT, 0]
-        val udimIds = IntArray(unumDims)
-        for (i in 0 until unumDims) {
-            udimIds[i] = dimids_p.getAtIndex(C_INT, i.toLong())
-        }
-        if (debug) println(" nc_inq_unlimdims ndims = $unumDims udimIds = ${udimIds.toList()}")
-        g4.udimIds = udimIds
-
-        val dimName_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
-        val size_p = session.allocate(C_LONG, 0)
-        for (dimId in dimIds) {
-            // LOOK size_t
-            // nc_inq_dim(int ncid, int dimid, char *name, size_t *lenp);
-            //     public static int nc_inq_dim ( int ncid,  int dimid,  Addressable name,  Addressable lenp) {
-            checkErr("nc_inq_dim", nc_inq_dim(g4.grpid, dimId, dimName_p, size_p))
-            val dimName: String = dimName_p.getUtf8String(0)
-            val dimLength = size_p[C_LONG, 0]
-            val isUnlimited = udimIds.contains(dimId)
-            if (debug) println(" nc_inq_dim $dimId = $dimName $dimLength $isUnlimited")
-
-            if (dimName.startsWith("phony_dim_")) {
-                val dimension = Dimension(dimLength.toInt())
-                g4.dimHash[dimId] = dimension
-            } else {
-                val dimension = Dimension(dimName, dimLength.toInt(), true)
-                g4.gb.addDimension(dimension)
-                g4.dimHash[dimId] = dimension
-            }
-        }
-    }
-
-     */
-
-    // objects are the datasets. doesnt sem to be a API that doesnt descend into the subgroups
-    private inner class H5Oreceiver(val context : GroupContext) : H5O_iterate_t {
-
-        // typedef herr_t(* H5O_iterate_t) (hid_t obj, const char *name, const H5O_info_t *info, void *op_data)
-        //     int apply(long obj, java.lang.foreign.MemoryAddress name, java.lang.foreign.MemoryAddress info, java.lang.foreign.MemoryAddress op_data);
-        override fun apply(group: Long, name_p: MemoryAddress, infoAddress: MemoryAddress, op_data: MemoryAddress): Int {
-            val linkname = name_p.getUtf8String(0)
-            if (debug) println("${context.indent}H5Oreceiver link='$linkname'")
-            if (linkname.contains("/")) // skip nested ones
-                return 0
-
-            // long H5Oopen ( long loc_id,  Addressable name,  long lapl_id) {
-            val loc_id = H5Oopen(group, name_p, H5P_DEFAULT())
-
-            // int H5Oget_info ( long loc_id,  Addressable oinfo) {
-            val oinfo_p = H5O_info_t.allocate(context.session)
-            checkErr("H5Oget_info", H5Oget_info(loc_id, oinfo_p))
-            val otype = H5O_info_t.`type$get`(oinfo_p)
-            val num_attr = H5O_info_t.`num_attrs$get`(oinfo_p)
-            if (debugGraph) println("${context.indent}${H5O_TYPE.of(otype)} '$linkname' H5Oreceiver")
-
-            if (otype == H5O_TYPE_DATASET()) {
-                readDataset(linkname, num_attr.toInt(), context)
-            }
-            return 0
-        }
-    }
-
     @Throws(IOException::class)
     private fun readDataset(obj_name: String, numAtts : Int, context: GroupContext) {
         if (debug) println("${context.indent}readDataset for '$obj_name'")
@@ -337,10 +276,10 @@ class H5Cbuilder(val filename: String) {
 
         // hid_t H5Dopen2(hid_t loc_id, const char * name, hid_t dapl_id)
         val obj_name_p: MemorySegment = context.session.allocateUtf8String(obj_name)
-        val dataset_id = H5Dopen2(context.group5id,  obj_name_p, H5P_DEFAULT())
+        val datasetId = H5Dopen2(context.group5id,  obj_name_p, H5P_DEFAULT())
 
         // hid_t H5Dget_space	(	hid_t 	attr_id	)
-        val dataspace_id = H5Dget_space(dataset_id)
+        val dataspace_id = H5Dget_space(datasetId)
         // hssize_t H5Sget_select_npoints	(	hid_t 	spaceid	)
         val dataspace_npoints = H5Sget_select_npoints(dataspace_id)
         // int H5Sget_simple_extent_dims	(	hid_t 	space_id, hsize_t 	dims[], hsize_t 	maxdims[] )
@@ -349,24 +288,43 @@ class H5Cbuilder(val filename: String) {
         val maxdims_p = context.session.allocateArray(C_LONG  as MemoryLayout, MAX_DIMS)
         val ndims = H5Sget_simple_extent_dims(dataspace_id, dims_p, maxdims_p)
         val dims = IntArray(ndims) { dims_p.getAtIndex(C_LONG, it.toLong()).toInt() }
-        // hsize_t H5Dget_storage_size	(	hid_t 	attr_id	)
-        // val size = H5Dget_storage_size(dataset_id)
 
-        val type_id = H5Dget_type(dataset_id)
+        val type_id = H5Dget_type(datasetId)
         val h5ctype = readH5CTypeInfo(context, type_id, obj_name)
 
         // create the Variable
         val vb = Variable.Builder(obj_name)
         vb.datatype = h5ctype.datatype()
-        vb.setDimensionsAnonymous(dims)
 
-        val atts = readAttributes(obj_name, numAtts, context)
-        vb.attributes.addAll(atts)
+        var isDimensionScale = false
+        var isVariable = true
+        val atts = readAttributes(datasetId, obj_name, numAtts, context)
+        atts.forEach { att ->
+            if (att.name == HDF5_CLASS && (att.values[0] as String) == HDF5_DIMENSION_SCALE) {
+                isDimensionScale = true
+            } else if (att.name == HDF5_DIMENSION_NAME && (att.values[0] as String).startsWith(Netcdf4.NETCDF4_NOT_VARIABLE)) {
+                isVariable = false
+            }
+        }
+        val fatts = if (!isDimensionScale) {
+            vb.setDimensionsAnonymous(dims)
+            atts
+        } else {
+            val dim = Dimension(obj_name, dims[0])
+            context.group.addDimension(dim)
+            vb.addDimension(dim)
+            if (hideInternalAttributes) atts.filter{ !HDF5_IGNORE_ATTS.contains(it.name) } else atts
+        }
 
-        context.group.addVariable(vb)
+        vb.attributes.addAll(fatts)
+        if (isVariable) context.group.addVariable(vb)
+
+        // datasetId is transient
+        val address = H5Dget_offset(datasetId)
+        if (address > 0) datasetMap[address] = Pair(context.group, vb)
 
         if (obj_name.startsWith("StructMetadata")) {
-            val data = readRegularData(context, dataset_id, h5ctype, dims)
+            val data = readRegularData(context, datasetId, h5ctype, dims)
             require (data is ArrayString)
             structMetadata.add(data.values.get(0))
         }
@@ -375,7 +333,7 @@ class H5Cbuilder(val filename: String) {
     }
 
     @Throws(IOException::class)
-    private fun readAttributes(obj_name: String, numAtts : Int, context: GroupContext): List<Attribute> {
+    private fun readAttributes(dataset_id : Long, obj_name: String, numAtts : Int, context: GroupContext): List<Attribute> {
         if (debug) println("${context.indent}readAttributes for '$obj_name'")
         val results = mutableListOf<Attribute>()
 
@@ -400,10 +358,8 @@ class H5Cbuilder(val filename: String) {
             val name_p = context.session.allocate(MAX_NAME)
             val name_len = H5Aget_name(attr_id, MAX_NAME, name_p)
             val aname: String = name_p.getUtf8String(0)
-            if (HDF5_IGNORE_ATTS.contains(aname))
+            if (hideInternalAttributes && HDF5_SKIP_ATTS.contains(aname))
                 return@repeat
-            if (aname == "PALETTE")
-                println()
 
             // hid_t H5Aget_space	(	hid_t 	attr_id	)
             val dataspace_id = H5Aget_space(attr_id)
@@ -444,20 +400,33 @@ class H5Cbuilder(val filename: String) {
                 // not sure about this
                 // checkErr("H5Dvlen_reclaim", H5Dvlen_reclaim(attr_id, h5ctype.type_id, H5S_ALL(), strings_p)) // ??
             } else if (h5ctype.datatype5 == Datatype5.Vlen) {
-                // probably hvl_t
                 val vlen_p: MemorySegment = hvl_t.allocateArray(nelems.toInt(), context.session)
                 checkErr("H5Aread Vlen", H5Aread(attr_id, h5ctype.type_id, vlen_p))
                 val base = h5ctype.base!!
-                val values = if (base.datatype5 == Datatype5.Reference) {
-                    readVlenReferences(attr_id, nelems, vlen_p)
+                val att = if (base.datatype5 == Datatype5.Reference) {
+                    val values = readVlenReferences(attr_id, nelems, vlen_p)
+                    Attribute(aname, Datatype.REFERENCE, values)
                 } else {
-                    readVlenDataList(nelems, base.datatype(), vlen_p)
+                    val values = readVlenData(nelems, base.datatype(), vlen_p)
+                    Attribute(aname, h5ctype.datatype(), values)
                 }
-                val att = Attribute(aname, h5ctype.datatype(), values)
                 results.add(att)
 
                 // not sure about this
                 // checkErr("H5Dvlen_reclaim", H5Dvlen_reclaim(attr_id, h5ctype.type_id, H5S_ALL(), strings_p)) // ??
+            } else if (h5ctype.datatype5 == Datatype5.Reference) {
+                val refdata_p = context.session.allocate(nelems.toInt() * size)
+                checkErr("H5Aread", H5Aread(attr_id, h5ctype.type_id, refdata_p))
+                //     public static long H5Rdereference1 ( long obj_id,  int ref_type,  Addressable ref) {
+                // LOOK nelems??
+
+                // long H5Rdereference2 ( long obj_id,  long oapl_id,  int ref_type,  Addressable ref)
+                // Returns identifier of referenced object
+                val refobjId = H5Rdereference2(attr_id, H5P_DEFAULT(), H5R_OBJECT(), refdata_p)
+                val address = H5Dget_offset(refobjId)
+                val att = Attribute(aname, Datatype.REFERENCE, listOf(address))
+                results.add(att)
+
             } else {
                 val data_p = context.session.allocate(size)
                 // herr_t H5Aread(hid_t attr_id, hid_t 	type_id, void * 	buf)
@@ -465,7 +434,6 @@ class H5Cbuilder(val filename: String) {
                 val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
                 val bb = ByteBuffer.wrap(raw)
                 bb.order(h5ctype.endian)
-
                 require(size == nelems * h5ctype.elemSize)
 
                 val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
@@ -478,7 +446,7 @@ class H5Cbuilder(val filename: String) {
     }
 
     // LOOK same as in nclib UserTypes
-    internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
+    internal fun readVlenData(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
         val parray = mutableListOf<Any>()
         for (elem in 0 until nelems) {
             val count = hvl_t.`len$get`(vlen_p, elem)
@@ -500,17 +468,16 @@ class H5Cbuilder(val filename: String) {
         return parray
     }
 
-    internal fun readVlenReferences(obj_id : Long, nelems : Long, vlen_p : MemorySegment) : List<String> {
-        val parray = mutableListOf<String>()
+    internal fun readVlenReferences(obj_id : Long, nelems : Long, vlen_p : MemorySegment) : List<Long> {
+        val parray = mutableListOf<Long>()
         for (elem in 0 until nelems) {
             val count = hvl_t.`len$get`(vlen_p, elem)
             val address: MemoryAddress = hvl_t.`p$get`(vlen_p, elem)
             // hid_t H5Rdereference1(hid_t obj_id, H5R_type_t ref_type, const void *ref)
             // H5Rdereference1 ( long obj_id,  int ref_type,  Addressable ref)
-            val ref_id = H5Rdereference1(obj_id, H5R_OBJECT(), address)
-            repeat(count.toInt()) {
-                parray.add(address.getUtf8String(0))
-            }
+            val refobjId = H5Rdereference1(obj_id, H5R_OBJECT(), address)
+            val refaddress = H5Dget_offset(refobjId)
+            parray.add(refaddress)
         }
         return parray
     }
@@ -538,8 +505,9 @@ class H5Cbuilder(val filename: String) {
 
     companion object {
         val debug = false
-        val debugGraph = true
+        val debugGraph = false
         val useSoftLinks = false
+        val hideInternalAttributes = true
     }
 }
 

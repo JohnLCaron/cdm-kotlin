@@ -101,15 +101,15 @@ internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, 
         Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
         Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
         Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
+        Datatype.REFERENCE, Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
         Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, h5type.elemSize)
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }
 
-    if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
+    /* if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
         return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
-    }
+    } */
 
     return result
 }
