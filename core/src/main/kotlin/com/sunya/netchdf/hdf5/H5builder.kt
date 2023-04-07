@@ -42,9 +42,11 @@ class H5builder(
     internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
+
     private val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
     private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
     val structMetadata = mutableListOf<String>()
+    val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
 
     val cdmRoot : Group
     fun formatType() : String {
@@ -93,6 +95,8 @@ class H5builder(
         val h5rootGroup = rootGroupBuilder.build()
         // convert into CDM
         val rootBuilder = this.buildCdm(h5rootGroup)
+        convertReferences(rootBuilder)
+
         // hdf-eos5
         if (structMetadata.isNotEmpty()) {
             val sm = structMetadata.joinToString("")
@@ -414,33 +418,9 @@ class H5builder(
         val HDF5_DIMENSION_NAME = "NAME"
         val HDF5_REFERENCE_LIST = "REFERENCE_LIST"
 
-        val HDF5_SPECIAL_ATTS = listOf(HDF5_CLASS)
-        val HDF5_IGNORE_ATTS = listOf(HDF5_CLASS, HDF5_DIMENSION_LIST, HDF5_DIMENSION_SCALE, HDF5_DIMENSION_LABELS, HDF5_DIMENSION_NAME, HDF5_REFERENCE_LIST)
-
-
-        // debugging
-        private val debugVlen = false
-        private val debug1 = false
-        private val debugDetail = false
-        private val debugPos = false
-        private val debugHeap = false
-        private val debugV = false
-        private val debugGroupBtree = false
-        private val debugDataBtree = false
-        private val debugBtree2 = false
-        private val debugContinueMessage = false
-        private val debugTracker = false
-        private val debugSoftLink = false
-        private val debugHardLink = false
-        private val debugSymbolTable = false
-        private val warnings = true
-        private val debugReference = false
-        private val debugCreationOrder = false
-        private val debugStructure = false
-        private val debugDimensionScales = false
-
-        // NULL string value, following netCDF-C, set to NIL
-        val NULL_STRING_VALUE = "NIL"
+        val HDF5_SPECIAL_ATTS = listOf<String>()
+        val HDF5_SKIP_ATTS = listOf(HDF5_DIMENSION_LABELS, HDF5_REFERENCE_LIST)
+        val HDF5_IGNORE_ATTS = listOf(HDF5_CLASS, HDF5_DIMENSION_LIST, HDF5_DIMENSION_SCALE, HDF5_DIMENSION_LABELS, HDF5_REFERENCE_LIST, HDF5_DIMENSION_NAME)
 
         private val magicHeader = byteArrayOf(
             0x89.toByte(),
@@ -469,5 +449,50 @@ class H5builder(
    * 3) all variables' dimensions have a dimension scale
    */
         private val KNOWN_FILTERS = 3
+    }
+
+    ////////////////////////////////////////////////////////////////////////////////
+    fun convertReferences(gb : Group.Builder) {
+        val refAtts = gb.attributes.filter{ it.datatype == Datatype.REFERENCE}
+        refAtts.forEach { att ->
+            val convertAtt = convertAttribute(att)
+            if (convertAtt != null) {
+                gb.addAttribute(convertAtt)
+            }
+            gb.attributes.remove(att)
+        }
+
+        gb.variables.forEach{ vb ->
+            val refAtts = vb.attributes.filter{ it.datatype == Datatype.REFERENCE}
+            refAtts.forEach { att ->
+                val convertAtt = convertAttribute(att)
+                if (convertAtt != null) {
+                    if (att.name == HDF5_DIMENSION_LIST) {
+                        vb.dimList = convertAtt.values as List<String>
+                    } else {
+                        vb.addAttribute(convertAtt)
+                    }
+                }
+                vb.attributes.remove(att)
+            }
+        }
+
+        gb.groups.forEach{ convertReferences(it) }
+    }
+
+    fun convertAttribute(att : Attribute) : Attribute? {
+        val svalues = mutableListOf<String>()
+        att.values.forEach {
+            val dsetId = it as Long
+            val pair = datasetMap[dsetId]
+            if (pair == null)  {
+                println("Cant find dataset reference for $att")
+                return null
+            }
+            val (gb, vb) = pair
+            val name = vb.fullname(gb)
+            svalues.add(name)
+        }
+        return att.copy(values=svalues)
     }
 }

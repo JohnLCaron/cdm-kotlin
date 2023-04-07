@@ -165,6 +165,10 @@ class Group(orgName : String,
             return found == this
         }
 
+        fun fullname() : String {
+            return if (parent == null) "" else "${parent!!.fullname()}/$name"
+        }
+
         fun build(parent : Group?) : Group {
             val useName = makeValidCdmObjectName(name)
             return Group(useName, typedefs, dimensions, attributes, variables, groups, parent)

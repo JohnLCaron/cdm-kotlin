@@ -74,7 +74,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose
             Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
-            Datatype5.Reference -> Datatype.LONG // addresses; type 1 gets converted to object name
+            Datatype5.Reference -> Datatype.REFERENCE // addresses; type 1 gets converted to object name
 
             Datatype5.Opaque -> {
                 val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
@@ -101,7 +101,7 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                 }
             }
             Datatype5.Vlen -> {
-                if (this.isVlenString or this.base!!.isVlenString or (this.base!!.hdfType == Datatype5.Reference)) Datatype.STRING else {
+                if (this.isVlenString or this.base!!.isVlenString) Datatype.STRING else {
                     val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
                     return if (typedef == null) {
                         // theres no actual info in the typedef, so we will just allow this

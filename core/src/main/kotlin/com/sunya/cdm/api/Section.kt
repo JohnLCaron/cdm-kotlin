@@ -382,7 +382,7 @@ class Section {
             // if s is already filled, use it
             var ok = true
             for (i in shape.indices) {
-                ok = ok and (s.getRange(i) != null)
+                ok = ok && (s.getRange(i) != null)
             }
             return if (ok) s else Section(s.ranges, shape)
 

@@ -117,7 +117,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         return H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null)
     }
 
-    // LOOK registering Vlen typedef
+    // LOOK not registering Vlen typedef
     if (datatype5 == Datatype5.Vlen) {
         // hid_t H5Tget_super	(	hid_t 	type	)
         val base_type_id = H5Tget_super(type_id)
@@ -126,7 +126,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         // class VlenTypedef(name : String, baseType : Datatype)
         val typedef = VlenTypedef(name, basetype.datatype())
         val result = H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, typedef, basetype)
-        return registerTypedef(result, context.group)
+        return result // registerTypedef(result, context.group)
     }
 
     if (datatype5 == Datatype5.Array) {
@@ -183,7 +183,7 @@ internal class H5CTypeInfo(val type_id: Long, type_class : Int, val elemSize : I
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
             Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
-            Datatype5.Reference -> Datatype.LONG // addresses; type 1 gets converted to object name
+            Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
             Datatype5.Compound -> Datatype.COMPOUND.withTypedef(typedef!!)
             Datatype5.Enumerated -> {
@@ -206,3 +206,34 @@ internal class H5CTypeInfo(val type_id: Long, type_class : Int, val elemSize : I
         }
     }
 }
+
+/** References from H5T.c
+    /* Object reference (i.e. object header address in file) */
+    H5T_INIT_TYPE(OBJREF, H5T_STD_REF_OBJ_g, ALLOC, -, SET, H5R_OBJ_REF_BUF_SIZE)
+    objref = dt;    /* Keep type for later */
+
+    /* Dataset Region reference (i.e. selection inside a dataset) */
+    H5T_INIT_TYPE(REGREF, H5T_STD_REF_DSETREG_g, ALLOC, -, SET, H5R_DSET_REG_REF_BUF_SIZE)
+
+    rbuf = malloc(sizeof(hobj_ref_t)*SPACE1_DIM1);
+    // Read selection from disk
+    ret=H5Dread(dataset, H5T_STD_REF_OBJ, H5S_ALL, H5S_ALL, H5P_DEFAULT, rbuf);
+    // Open dataset object
+    dset2 = H5Rdereference(dataset, H5R_OBJECT, &rbuf[0]);
+
+   H5 is returning the name of the object, instead of the object. so "cdmUnitTest/formats/hdf5/msg/test.h5" has an
+   attribute thats a reference, intended to point to another object. instead we are returning the name:
+           :PALETTE = color_palette ;
+   so i guess we have to add references? or read in the dataset and store into teh attribute??
+   and then, there are several "color_palette" datasets in the file: ubyte color_palette(256, 3) with their own attributes.
+    group: visualisation5 {
+        variables:
+            ubyte color_palette(256, 3) ;
+                :PAL_COLORMODEL = "RGB" ;
+                :PAL_TYPE = "STANDARD8" ;
+                :PAL_VERSION = "1.2" ;
+    }
+   so would need the full path
+
+   could just return the object name, except the name is in the link, not the object.
+ */

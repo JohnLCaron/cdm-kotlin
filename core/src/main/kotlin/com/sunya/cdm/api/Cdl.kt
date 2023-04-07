@@ -6,6 +6,8 @@ import com.sunya.cdm.util.escapeName
 import java.nio.ByteBuffer
 import java.util.*
 
+
+// TODO dont show attributes ??
 val strict = false
 
 fun cdl(netcdf : Netchdf) : String {
@@ -93,7 +95,7 @@ fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
                     append(", ")
                 }
                 when (valueDatatype) {
-                    Datatype.STRING -> append("\"${escapeCdl(it as String)}\"")
+                    Datatype.STRING, Datatype.REFERENCE -> append("\"${escapeCdl(it as String)}\"")
                     Datatype.FLOAT -> append("${it}f")
                     Datatype.SHORT -> append("${it}s")
                     Datatype.BYTE -> append("${it}b")

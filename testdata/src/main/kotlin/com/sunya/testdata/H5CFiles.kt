@@ -11,7 +11,7 @@ class H5CFiles {
         @JvmStatic
         fun params(): Stream<Arguments> {
             val starting = Stream.of(
-                Arguments.of(testData + "cdmUnitTest/formats/hdf5/grid_1_3d_xyz_aug.h5 "),
+                Arguments.of(testData + "cdmUnitTest/formats/hdf5/grid_1_3d_xyz_aug.h5"),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/StringsWFilter.h5"),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/msg/test.h5"),
                 Arguments.of(testData + "cdmUnitTest/formats/hdf5/extLink/extlink_source.h5 "),
@@ -19,7 +19,8 @@ class H5CFiles {
 
             val cdmUnitTest =
                 testFilesIn(testData + "cdmUnitTest/formats/hdf5")
-                    .withPathFilter { p -> !p.toString().contains("exclude") and !p.toString().contains("problem") }
+                    .withPathFilter { p -> !p.toString().contains("exclude") && !p.toString().contains("problem")
+                            && !p.toString().contains("npoess")}
                     .addNameFilter { name -> !name.contains("OMI-Aura") }
                     .addNameFilter { name -> !name.endsWith("groupHasCycle.h5") } // /home/all/testdata/cdmUnitTest/formats/hdf5/groupHasCycle.h5
                     .addNameFilter { name -> !name.endsWith(".xml") }

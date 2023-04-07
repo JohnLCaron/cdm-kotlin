@@ -6,21 +6,23 @@ import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.array.StructureMember
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LABELS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_NAME
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_SCALE
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_REFERENCE_LIST
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SPECIAL_ATTS
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NON_COORD
+import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_NOT_VARIABLE
 import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
 import java.nio.*
 
 private const val strict = false
-private const val attLengthMax = 4000
+const val attLengthMax = 4000
 
 internal val includeOriginalAttributes = false
-internal val debugDimensionScales = false
+internal val debugDimensionScales = true
 
 internal fun H5builder.buildCdm(h5root : H5Group) : Group.Builder {
     return buildGroup(h5root)
@@ -46,11 +48,16 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
             vb.spObject = DataContainerAttribute(it.name, H5TypeInfo(it.mdt), it.dataPos, it.mdt, it.mds)
             groupb.addVariable( vb)
         } else {
-            groupb.addAttribute(buildAttribute(it))
+            groupb.addAttribute(attr)
         }
     }
 
-    group5.variables.filter{ it.isVariable }.forEach { groupb.addVariable( buildVariable( it )) }
+    group5.variables.filter{ it.isVariable }.forEach {
+        var vb = buildVariable( it )
+        groupb.addVariable( vb)
+        val address = it.dataObject.address
+        if (address > 0) datasetMap[address] = Pair(groupb, vb)
+    }
 
     group5.nestedGroups.forEach { groupb.addGroup( buildGroup( it )) }
 
@@ -58,11 +65,11 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     while (iter.hasNext()) {
         val attname = iter.next().name
         if (NETCDF4_SPECIAL_ATTS.contains(attname)) {
-            if (strict) iter.remove()
+            if (!includeOriginalAttributes) iter.remove()
             isNetcdf4 = true
         }
         if (HDF5_SPECIAL_ATTS.contains(attname)) {
-            if (strict) iter.remove()
+            if (!includeOriginalAttributes) iter.remove()
         }
     }
     return groupb
@@ -121,6 +128,8 @@ internal fun buildEnumTypedef(name : String, mess: DatatypeEnum): EnumTypedef {
 }
 
 internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
+    if (att5.name ==  "PALETTE")
+        println()
     val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
     if (debugTypedefs and (typedef != null)) {
         println(" made attribute ${att5.name} from typedef ${typedef!!.name}@${att5.mdt.address}")
@@ -160,11 +169,11 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     while (iter.hasNext()) {
         val attname = iter.next().name
         if (NETCDF4_SPECIAL_ATTS.contains(attname)) {
-            if (strict) iter.remove()
+            if (!includeOriginalAttributes) iter.remove()
             isNetcdf4 = true
         }
         if (HDF5_SPECIAL_ATTS.contains(attname)) {
-            if (strict) iter.remove()
+            if (!includeOriginalAttributes) iter.remove()
         }
     }
 
@@ -177,7 +186,6 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
         require (data is ArrayString)
         structMetadata.add(data.values.get(0))
     }
-
     builder.spObject = vdata
     return builder
 }
@@ -423,15 +431,15 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
                 h5variable.mds.isUnlimited
             )
             h5variable.hasNetcdfDimensions = true
-            if (!includeOriginalAttributes) {
-                removeAtts.add(it)
-            }
+            removeAtts.add(it)
             if (h5variable.mds.rank() > 1) {
                 h5variable.is2DCoordinate = true
             }
         }
     }
-    removeAtts.forEach { h5variable.removeAtt(it)}
+    if (!includeOriginalAttributes) {
+        removeAtts.forEach { h5variable.removeAtt(it)}
+    }
 }
 
 // add a dimension, return its name
@@ -551,13 +559,12 @@ internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group:
                     }
                 }
                 removeAtts.add(matt)
-
             }
 
             HDF5_DIMENSION_NAME -> {
                 val att = buildAttribute(matt)
                 val value: String = att.values[0] as String
-                if (value.startsWith("This is a netCDF dimension but not a netCDF variable")) {
+                if (value.startsWith(NETCDF4_NOT_VARIABLE)) {
                     h5variable.isVariable = false
                     isNetcdf4 = true
                 }
@@ -567,10 +574,11 @@ internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group:
                 }
             }
 
-            // HDF5_DIMENSION_LABELS,
+            HDF5_DIMENSION_LABELS,
             HDF5_REFERENCE_LIST -> removeAtts.add(matt)
         }
     }
+
     if (!includeOriginalAttributes) {
         removeAtts.forEach { h5variable.removeAtt(it) }
     }

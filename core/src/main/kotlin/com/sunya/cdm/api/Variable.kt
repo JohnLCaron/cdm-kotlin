@@ -77,6 +77,10 @@ data class Variable(
             }
         }
 
+        fun fullname(group : Group.Builder) : String {
+            return if (group.fullname() == "") name else "${group.fullname()}/$name"
+        }
+
         fun build(group : Group) : Variable {
             var useDimensions = dimensions.toList()
             if (dimList != null) {
