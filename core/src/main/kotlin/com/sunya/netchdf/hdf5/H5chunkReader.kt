@@ -17,7 +17,7 @@ internal class H5chunkReader(val h5 : H5builder) {
         val h5type = vinfo.h5type
 
         val elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
-        val datatype = vinfo.h5type.datatype(h5)
+        val datatype = vinfo.h5type.datatype()
 
         val wantSpace = IndexSpace(wantSection)
         val sizeBytes = wantSpace.totalElements * elemSize
@@ -55,7 +55,7 @@ internal class H5chunkReader(val h5 : H5builder) {
         bb.order(vinfo.h5type.endian)
         val shape = wantSpace.shape
 
-        return if (h5type.hdfType == Datatype5.Vlen) {
+        return if (h5type.datatype5 == Datatype5.Vlen) {
             h5.processVlenIntoArray(h5type, shape, bb, wantSpace.totalElements.toInt(), elemSize)
         } else {
             h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize)
@@ -77,7 +77,7 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
 
     } else {
         val base = h5type.base!!
-        if (base.hdfType == Datatype5.Reference) {
+        if (base.datatype5 == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             for (i in 0 until nelems) {
                 val heapId = h5heap.readHeapIdentifier(bb, i * elemSize)
@@ -94,7 +94,7 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
         // general case is to read an array of vlen objects
         // each vlen generates an Array of type baseType
         val listOfArrays = mutableListOf<Array<*>>()
-        val readDatatype = base.datatype(this)
+        val readDatatype = base.datatype()
         for (i in 0 until nelems) {
             val heapId = h5heap.readHeapIdentifier(bb, i * elemSize)
             val vlenArray = h5heap.getHeapDataArray(heapId, readDatatype, base.endian)

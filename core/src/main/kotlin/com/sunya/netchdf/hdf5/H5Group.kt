@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.Dimension
-import com.sunya.cdm.api.TypedefKind
 import com.sunya.cdm.iosp.OpenFileState
 import java.io.IOException
 import java.nio.ByteOrder
@@ -262,7 +261,7 @@ internal class H5GroupBuilder(
 
     fun build() : H5Group {
         val variables = mutableListOf<H5Variable>()
-        val typedefs = mutableListOf<H5Typedef>()
+        val typedefs = mutableListOf<H5typedef>()
 
         // we are leaving links out, since they just point to other, existing objects. is that ok??
         // in H5Cbuilder, this is the !useSoftLinks option
@@ -287,7 +286,7 @@ internal class H5GroupBuilder(
             }
             // might be both a variable and a typedef
             if (nested.isTypedef) {
-                val typedef = H5Typedef(nested.dataObject!!)
+                val typedef = H5typedef(nested.dataObject!!)
                 typedefs.add(typedef)
             }
         }
@@ -318,52 +317,12 @@ internal class H5Variable(val header : H5builder, val dataObject: DataObject) {
     fun removeAtt(att : AttributeMessage) = dataObject.attributes.remove(att)
 }
 
-internal class H5Typedef(val dataObject: DataObject) {
-    var enumMessage : DatatypeEnum? = null
-    var vlenMessage : DatatypeVlen? = null
-    var opaqueMessage : DatatypeOpaque? = null
-    var compoundMessage : DatatypeCompound? = null
-
-    val kind : TypedefKind
-    val mdtAddress : Long
-    val mdtHash : Int
-
-    init {
-        require(dataObject.mdt != null)
-        mdtAddress = dataObject.mdt.address
-        mdtHash = dataObject.mdt.hashCode()
-
-        when (dataObject.mdt.type) {
-            Datatype5.Enumerated -> {
-                this.enumMessage = (dataObject.mdt) as DatatypeEnum
-                kind = TypedefKind.Enum
-            }
-            Datatype5.Vlen -> {
-                this.vlenMessage = (dataObject.mdt) as DatatypeVlen
-                kind = TypedefKind.Vlen
-            }
-            Datatype5.Opaque -> {
-                this.opaqueMessage = (dataObject.mdt) as DatatypeOpaque
-                kind = TypedefKind.Opaque
-            }
-            Datatype5.Compound -> {
-                this.compoundMessage = (dataObject.mdt) as DatatypeCompound
-                kind = TypedefKind.Compound
-            }
-            else -> {
-                kind = TypedefKind.Unknown
-            }
-        }
-        if (debugTypedefs) println("H5Typedef mdtAddress=$mdtAddress mdtHash=$mdtHash kind=$kind")
-    }
-}
-
 internal class H5Group(
     val name: String,
     val dataObject: DataObject,
     val nestedGroups : List<H5Group>,
     val variables : List<H5Variable>,
-    val typedefs : List<H5Typedef>,
+    val typedefs : List<H5typedef>,
 ) {
     val dimMap = mutableMapOf<String, Dimension>()
     val dimList = mutableListOf<Dimension>() // need to track dimension order

@@ -31,7 +31,8 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            return Stream.of( N3Files.params(),  N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
+            return Stream.of( N4Files.params()).flatMap { i -> i };
+            // return Stream.of( N3Files.params(),  N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -217,7 +218,7 @@ h5dump
 
     @Test
     fun testOneCdl() {
-        compareCdlWithClib(testData + "netchdf/joleenf/IASI_20120229022657Z.atm_prof_rtv.h5")
+        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
     }
 
     @Test

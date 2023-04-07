@@ -1,20 +1,13 @@
 package com.sunya.netchdf.hdf5
 
-import mu.KotlinLogging
-import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.*
 import java.nio.ByteOrder
 
-private const val warnings = true
-private val logger = KotlinLogging.logger("H5Type")
-private val defaultDatatype = Datatype.STRING
-
-// everything needed to read data from a dataset (attribute, variable) in HDF5
-// sometime you need to read data before you have a cdm object, eg for attributes
-internal class H5TypeInfo(mdt: DatatypeMessage) {
-    val hdfType: Datatype5 = mdt.type
+internal fun H5builder.makeH5TypeInfo(mdt: DatatypeMessage, typedef : Typedef? = null) : H5TypeInfo {
+    val datatype5: Datatype5 = mdt.type
     val elemSize: Int = mdt.elemSize
     val endian: ByteOrder = mdt.endian()
-    val isVlenString = if (mdt is DatatypeVlen) mdt.isVString else false // is a vlen string
+    val isVlenString = if (mdt is DatatypeVlen) mdt.isVString else false
     val isRefObject = if (mdt is DatatypeReference) mdt.referenceType == 0 else false
 
     var unsigned = false
@@ -22,47 +15,41 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
     val mdtAddress = mdt.address // used to look up typedefs
     val mdtHash = mdt.hashCode() // used to look up typedefs
 
-    init {
-        if (hdfType == Datatype5.Fixed) {
-            unsigned = (mdt as DatatypeFixed).unsigned
+    if (datatype5 == Datatype5.Fixed) {
+        unsigned = (mdt as DatatypeFixed).unsigned
 
-        } else if (hdfType == Datatype5.BitField) {
-            unsigned = (mdt as DatatypeBitField).unsigned
+    } else if (datatype5 == Datatype5.BitField) {
+        unsigned = (mdt as DatatypeBitField).unsigned
 
-        } else if (hdfType == Datatype5.Vlen) { // variable length array
-            val vlenMdt = mdt as DatatypeVlen
-            base = H5TypeInfo(vlenMdt.base)
+    } else if (datatype5 == Datatype5.Vlen) { // variable length array
+        val vlenMdt = mdt as DatatypeVlen
+        base = makeH5TypeInfo(vlenMdt.base)
 
-        } else if (hdfType == Datatype5.Array) { // array : used for structure members
-            val arrayMdt = mdt as DatatypeArray
-            base = H5TypeInfo(arrayMdt.base)
-        }
+    } else if (datatype5 == Datatype5.Array) { // array : used for structure members
+        val arrayMdt = mdt as DatatypeArray
+        base = makeH5TypeInfo(arrayMdt.base)
     }
 
-    /*
-     * Value Description
-     * 0 Fixed-Point
-     * 1 Floating-point
-     * 2 Time
-     * 3 String
-     * 4 Bit field
-     * 5 Opaque
-     * 6 Compound
-     * 7 Reference
-     * 8 Enumerated
-     * 9 Variable-Length
-     * 10 Array
-     */
+    val useTypedef = typedef ?: findTypedef(mdtAddress, mdtHash)
+
+    return H5TypeInfo(isVlenString, isRefObject, datatype5, elemSize, !unsigned, endian,
+        mdtAddress, mdtHash, base, useTypedef)
+}
+
+internal data class H5TypeInfo(val isVlenString: Boolean, val isRefObject : Boolean, val datatype5 : Datatype5, val elemSize : Int,
+                               val signed : Boolean, val endian : ByteOrder, val mdtAddress : Long, val mdtHash : Int,
+                               val base : H5TypeInfo? = null, val typedef : Typedef? = null, val dims : IntArray? = null) {
+
     // Call this after all the typedefs have been found
-    fun datatype(h5builder : H5builder): Datatype {
-        return when (hdfType) {
+    fun datatype(): Datatype {
+        return when (datatype5) {
             Datatype5.Fixed, Datatype5.BitField ->
                 when (this.elemSize) {
-                    1 -> Datatype.BYTE.withSignedness(!unsigned)
-                    2 -> Datatype.SHORT.withSignedness(!unsigned)
-                    4 -> Datatype.INT.withSignedness(!unsigned)
-                    8 -> Datatype.LONG.withSignedness(!unsigned)
-                    else -> throw RuntimeException("Bad hdf5 integer type ($hdfType) with size= ${this.elemSize}")
+                    1 -> Datatype.BYTE.withSignedness(signed)
+                    2 -> Datatype.SHORT.withSignedness(signed)
+                    4 -> Datatype.INT.withSignedness(signed)
+                    8 -> Datatype.LONG.withSignedness(signed)
+                    else -> throw RuntimeException("Bad hdf5 integer type ($datatype5) with size= ${this.elemSize}")
                 }
 
             Datatype5.Floating ->
@@ -72,27 +59,19 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                     else -> throw RuntimeException("Bad hdf5 float type with size= ${this.elemSize}")
                 }
 
-            Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose
+            Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
             Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
-            Datatype5.Reference -> Datatype.REFERENCE // addresses; type 1 gets converted to object name
+            Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
 
-            Datatype5.Opaque -> {
-                val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
-                    return if (typedef == null) {
-                        // theres no actual info in the typedef, so we will just allow this
-                        logger.warn("Cant find Opaque typedef for $this")
-                        Datatype.OPAQUE
-                    } else {
-                        Datatype.OPAQUE.withTypedef(typedef)
-                    }
-            }
+            Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
 
             Datatype5.Compound -> {
-                val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash) ?: throw RuntimeException("Cant find Compound typedef for $this")
-                Datatype.COMPOUND.withTypedef(typedef)
+                if (typedef == null)
+                    println()
+                Datatype.COMPOUND.withTypedef(typedef!!)
             }
+
             Datatype5.Enumerated -> {
-                val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash) ?: throw RuntimeException("Cant find Enum typedef for $this")
                 when (this.elemSize) {
                     1 -> Datatype.ENUM1.withTypedef(typedef)
                     2 -> Datatype.ENUM2.withTypedef(typedef)
@@ -100,27 +79,15 @@ internal class H5TypeInfo(mdt: DatatypeMessage) {
                     else -> throw RuntimeException("Bad hdf5 enum type with size= ${this.elemSize}")
                 }
             }
+
             Datatype5.Vlen -> {
-                if (this.isVlenString or this.base!!.isVlenString) Datatype.STRING else {
-                    val typedef = h5builder.findTypedef(this.mdtAddress, this.mdtHash)
-                    return if (typedef == null) {
-                        // theres no actual info in the typedef, so we will just allow this
-                        logger.warn("Cant find Vlen typedef for $this")
-                        Datatype.VLEN
-                    } else {
-                        Datatype.VLEN.withTypedef(typedef)
-                    }
-                }
+                if (isVlenString || this.base!!.isVlenString) Datatype.STRING
+                else Datatype.VLEN.withTypedef(typedef)
             }
+
             Datatype5.Array -> {
-                return this.base!!.datatype(h5builder) // ??
+                return this.base!!.datatype() // ??
             }
         }
     }
-
-    override fun toString(): String {
-        return "H5TypeInfo(hdfType=$hdfType, elemSize=$elemSize, endian=$endian, isVString=$isVlenString, unsigned=$unsigned, base=$base)"
-    }
-
-
 }

@@ -24,12 +24,12 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val wantSection = Section.fill(section, shape)
     val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, IndexSpace(wantSection))
 
-    if (h5type.hdfType == Datatype5.Vlen) {
+    if (h5type.datatype5 == Datatype5.Vlen) {
         return readVlenDataWithLayout(dc, layout, wantSection)
     }
 
-    val datatype: Datatype = h5type.datatype(this)
-    if (h5type.hdfType == Datatype5.Compound) {
+    val datatype: Datatype = h5type.datatype()
+    if (h5type.datatype5 == Datatype5.Compound) {
         require(datatype == Datatype.COMPOUND)
         requireNotNull(datatype.typedef)
         require(datatype.typedef is CompoundTypedef)
@@ -39,7 +39,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val dataArray = readDataWithLayout(state, layout, datatype, wantSection.shape, h5type)
 
     // convert attributes to enum strings
-    if (h5type.hdfType == Datatype5.Enumerated) {
+    if (h5type.datatype5 == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = dc.mdt as DatatypeEnum
         return dataArray.convertEnums(enumMsg.valuesMap)
@@ -79,14 +79,14 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
 
 internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo, elemSize : Int): ArrayTyped<*> {
 
-    if (h5type.hdfType == Datatype5.Compound) {
+    if (h5type.datatype5 == Datatype5.Compound) {
         val members = (datatype.typedef as CompoundTypedef).members
         val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
         return processCompoundData(sdataArray, bb.order())
     }
 
     // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
-    if (h5type.hdfType == Datatype5.String) {
+    if (h5type.datatype5 == Datatype5.String) {
         val extshape = IntArray(shape.size + 1) {if (it == shape.size) elemSize else shape[it] }
         val result = ArrayUByte(extshape, bb)
         return result.makeStringsFromBytes()
@@ -151,7 +151,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
 
     } else {
         val base = dc.h5type.base!!
-        if (base.hdfType == Datatype5.Reference) {
+        if (base.datatype5 == Datatype5.Reference) {
             val refsList = mutableListOf<String>()
             while (layout.hasNext()) {
                 val chunk: Layout.Chunk = layout.next()
@@ -171,7 +171,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
         // general case is to read an array of vlen objects
         // each vlen generates an Array of type baseType
         val listOfArrays = mutableListOf<Array<*>>()
-        val readDatatype = base.datatype(this)
+        val readDatatype = base.datatype()
         var count = 0
         while (layout.hasNext()) {
             val chunk: Layout.Chunk = layout.next()
