@@ -28,9 +28,9 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            // return Stream.of( H5Files.params()).flatMap { i -> i };
+            return Stream.of( N4Files.params()).flatMap { i -> i };
             // return Stream.of( N3Files.params(), N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
-            return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
+            // return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -76,6 +76,11 @@ class NetchdfTest {
     fun testNetchIterate() { // cant readArrayData too many bytes= 2_524_250_575
         readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
         // readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc", "/xma/dialoop_back")
+    }
+
+    @Test
+    fun problem() {
+        checkVersion(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////

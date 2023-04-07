@@ -12,7 +12,7 @@ import java.nio.ByteOrder
 internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long, name : String) : H5CTypeInfo {
     // H5T_class_t H5Tget_class	(	hid_t 	type_id	)
     val tclass = H5Tget_class(type_id)
-    var datatype5 = Datatype5.of(tclass)
+    val datatype5 = Datatype5.of(tclass)
 
     if (datatype5 == Datatype5.Compound || datatype5 == Datatype5.Enumerated || datatype5 == Datatype5.Vlen || datatype5 == Datatype5.Opaque) {
         // "Determines whether two datatype identifiers refer to the same datatype"
@@ -60,7 +60,6 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
                 dims = basetype.dims!!
                 val base_type_id = H5Tget_super(mtype_id) // in case its an array??
                 val basetype2 = readH5CTypeInfo(context, base_type_id, mname)
-                println("basetype = $basetype basetype2 = $basetype2")
                 basetype = basetype2
             }
             // val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray
@@ -143,25 +142,11 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
     return H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian)
 }
 
-internal class H5CTypeInfo(val type_id: Long, type_class : Int, val elemSize : Int, val signed : Boolean, val endian : ByteOrder,
+internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val elemSize : Int, val signed : Boolean, val endian : ByteOrder,
                            val typedef : Typedef?  = null, val base : H5CTypeInfo? = null, val dims : IntArray? = null) {
     val datatype5 = Datatype5.of(type_class)
     val isVlenString = H5Tis_variable_str(type_id) > 0
 
-    /*
-     * Value Description
-     * 0 Fixed-Point
-     * 1 Floating-point
-     * 2 Time
-     * 3 String
-     * 4 Bit field
-     * 5 Opaque
-     * 6 Compound
-     * 7 Reference
-     * 8 Enumerated
-     * 9 Variable-Length
-     * 10 Array
-     */
     // Call this after all the typedefs have been found
     fun datatype(): Datatype {
         return when (datatype5) {
@@ -196,7 +181,7 @@ internal class H5CTypeInfo(val type_id: Long, type_class : Int, val elemSize : I
             }
 
             Datatype5.Vlen -> {
-                if (isVlenString or this.base!!.isVlenString or (this.base!!.datatype5 == Datatype5.Reference)) Datatype.STRING
+                if (isVlenString or this.base!!.isVlenString or (this.base.datatype5 == Datatype5.Reference)) Datatype.STRING
                 else Datatype.VLEN.withTypedef(typedef)
             }
 

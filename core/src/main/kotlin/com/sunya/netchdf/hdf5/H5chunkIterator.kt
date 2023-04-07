@@ -29,7 +29,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
 
         h5type = vinfo.h5type
         elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
-        datatype = h5type.datatype(h5)
+        datatype = h5type.datatype()
 
         val btreeNew = BTree1(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
         tiledData = H5TiledData(btreeNew)
@@ -82,7 +82,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         bb.limit(bb.capacity())
         bb.order(h5type.endian)
 
-        val array = if (h5type.hdfType == Datatype5.Vlen) {
+        val array = if (h5type.datatype5 == Datatype5.Vlen) {
             h5.processVlenIntoArray(h5type, intersectSpace.shape, bb, intersectSpace.totalElements.toInt(), elemSize)
         } else {
             h5.processDataIntoArray(bb, datatype, intersectSpace.shape, h5type, elemSize)

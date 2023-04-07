@@ -39,12 +39,13 @@ class H5builder(
 
     var isNetcdf4 = false
 
+    private val typeinfoMap = mutableMapOf<Typedef, MutableList<Group.Builder>>()
+    private val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
+    private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
+
     internal val hashGroups = mutableMapOf<Long, H5GroupBuilder>() // key =  btreeAddress
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
-
-    private val typedefMap = mutableMapOf<Long, Typedef>() // key = mdt address
-    private val typedefMdtHash = mutableMapOf<Int, Typedef>() // key = mdt hash
     val structMetadata = mutableListOf<String>()
     val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
 
@@ -93,8 +94,10 @@ class H5builder(
 
         // build tree of H5groups
         val h5rootGroup = rootGroupBuilder.build()
+
         // convert into CDM
         val rootBuilder = this.buildCdm(h5rootGroup)
+        addTypesToGroups()
         convertReferences(rootBuilder)
 
         // hdf-eos5
@@ -271,24 +274,6 @@ class H5builder(
         return dobj
     }
 
-    // LOOK typedefs are global to the file, rather than being contained in a group. Barf.
-    fun addTypedef(mdtAddress : Long, typedef : Typedef, mdtHash : Int) : Boolean {
-        if (typedefMdtHash[mdtHash] != null) {
-            if (debugTypedefs) println("already have typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
-            return false
-        }
-        typedefMap[mdtAddress] = typedef
-        if (debugTypedefs) println("add typdef ${typedef.name}@${mdtAddress} hash=$mdtHash")
-
-        // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
-        typedefMdtHash[mdtHash] = typedef
-        return true
-    }
-
-    fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
-        return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
-    }
-
     //////////////////////////////////////////////////////////////
     // utilities
 
@@ -449,6 +434,45 @@ class H5builder(
    * 3) all variables' dimensions have a dimension scale
    */
         private val KNOWN_FILTERS = 3
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    private fun addTypedef(typeInfo : H5TypeInfo) : Boolean {
+        if (typedefMdtHash[typeInfo.mdtHash] != null) {
+            if (debugTypedefs) println("already have typdef ${typeInfo.typedef!!.name}@${typeInfo.mdtAddress} hash=${typeInfo.mdtHash}")
+            return false
+        }
+        typedefMap[typeInfo.mdtAddress] = typeInfo.typedef!!
+        if (debugTypedefs) println("add typdef ${typeInfo.typedef.name}@${typeInfo.mdtAddress} hash=${typeInfo.mdtHash}")
+
+        // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
+        typedefMdtHash[typeInfo.mdtHash] = typeInfo.typedef
+        return true
+    }
+    fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
+        return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
+    }
+    internal fun registerTypedef(typeInfo : H5TypeInfo, gb : Group.Builder) : H5TypeInfo {
+        val existing = findTypedef(typeInfo.mdtAddress, typeInfo.mdtHash)
+        if (existing == null) {
+            addTypedef(typeInfo)
+            val groups = typeinfoMap.getOrPut(typeInfo.typedef!!) { mutableListOf() }
+            groups.add(gb)
+        } else {
+            val groups = typeinfoMap.getOrPut(existing) { mutableListOf() }
+            groups.add(gb)
+        }
+        return typeInfo
+    }
+    internal fun addTypesToGroups() {
+        typeinfoMap.forEach { typedef, groupList ->
+            var topgroup = groupList[0]
+            for (idx in 1 until groupList.size) {
+                topgroup = topgroup.commonParent(groupList[idx])
+            }
+            topgroup.addTypedef(typedef)
+        }
     }
 
     ////////////////////////////////////////////////////////////////////////////////

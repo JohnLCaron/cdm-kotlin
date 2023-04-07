@@ -233,7 +233,7 @@ class H5Cbuilder(val filename: String) {
                 val nestedContext = context.copy(group = nestedGroup)
                 readGroup(linkname, nestedContext)
                 return 0
-            } else if ((otype == H5O_TYPE_DATASET()) and ((ltype == H5L_TYPE_HARD()) or useSoftLinks)) {
+            } else if (otype == H5O_TYPE_DATASET() && (ltype == H5L_TYPE_HARD() || useSoftLinks)) {
                 // the soft links are symbolic links that point to existing datasets
                 readDataset(linkname, num_attr.toInt(), context)
             }
@@ -328,6 +328,7 @@ class H5Cbuilder(val filename: String) {
             require (data is ArrayString)
             structMetadata.add(data.values.get(0))
         }
+        if (debugGraph && vb.datatype == Datatype.COMPOUND) println("${context.indent}${vb.name} ${vb.datatype}")
 
         if (debug) println("${indent}'$obj_name' h5ctype=$h5ctype npoints=$dataspace_npoints dims=${dims.contentToString()}")
     }
@@ -505,7 +506,7 @@ class H5Cbuilder(val filename: String) {
 
     companion object {
         val debug = false
-        val debugGraph = false
+        val debugGraph = true
         val useSoftLinks = false
         val hideInternalAttributes = true
     }

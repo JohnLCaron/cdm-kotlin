@@ -1,6 +1,7 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
+import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SKIP_ATTS
 import com.sunya.netchdf.netcdf3.*
 import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormat
 import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormatExtended
@@ -209,7 +210,9 @@ class NCheader(val filename: String) {
                 val atts: List<Attribute.Builder> = readAttributes(session, g4.grpid, varid, natts)
                 for (attb in atts) {
                     val att = attb.build()
-                    vb.addAttribute(att)
+                    if (!HDF5_SKIP_ATTS.contains(att.name)) {
+                        vb.addAttribute(att)
+                    }
                 }
             }
             g4.gb.addVariable(vb)
