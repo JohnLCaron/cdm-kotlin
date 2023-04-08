@@ -9,6 +9,7 @@ import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
 import com.sunya.netchdf.hdf4.Hdf4File
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
+import com.sunya.netchdf.hdf5Clib.Hdf5ClibFile
 import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.netchdf.netcdfClib.NetcdfClibFile
 import com.sunya.testdata.*
@@ -52,6 +53,7 @@ class NetchdfTest {
 
         private val versions = mutableMapOf<String, MutableList<String>>()
 
+        var compareMiddleSection = false
         var showDataRead = true
         var showData = false
         var showFailedData = true
@@ -342,7 +344,7 @@ fun readNcData(filename: String, varname: String? = null, section: Section? = nu
 
 fun compareCdlWithClib(filename: String) {
     println("=================")
-    openNetchdfFile(filename, true).use { netchdf ->
+    openNetchdfFile(filename, false).use { netchdf ->
         if (netchdf == null) {
             println("*** not a netchdf file = $filename")
             return
@@ -354,10 +356,16 @@ fun compareCdlWithClib(filename: String) {
             Hdf4ClibFile(filename).use { hcfile ->
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
-        } else { // if (netchdf.type().contains("netcdf")) {
+        } else if (netchdf.type().contains("netcdf")) {
             NetcdfClibFile(filename).use { ncfile ->
                 assertEquals(ncfile.cdl(), netchdf.cdl())
             }
+        }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
+            Hdf5ClibFile(filename).use { ncfile ->
+                assertEquals(ncfile.cdl(), netchdf.cdl())
+            }
+        } else {
+            println("*** no c library to compare for $filename")
         }
     }
 }
@@ -380,6 +388,12 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
             NetcdfClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
+        }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
+            Hdf5ClibFile(filename).use { ncfile ->
+                compareNetcdfData(netchdf, ncfile, varname, section)
+            }
+        } else {
+            println("*** no c library to compare for $filename")
         }
     }
 }
@@ -402,6 +416,12 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
             NetcdfClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section)
             }
+        } else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
+            Hdf5ClibFile(filename).use { ncfile ->
+                compareIterateNetchdf(netchdf, ncfile, varname, section)
+            }
+        } else {
+            println("*** no c library to compare for $filename")
         }
     }
 }
@@ -562,7 +582,7 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Ne
             }
         }
     }
-    if (ncvar.nelems > 8 && ncvar.datatype != Datatype.CHAR) {
+    if (NetchdfTest.compareMiddleSection && ncvar.nelems > 8 && ncvar.datatype != Datatype.CHAR) {
         compareMiddleSection(myfile, myvar, ncfile, ncvar, ncvar.shape)
     }
 }

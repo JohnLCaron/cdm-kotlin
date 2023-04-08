@@ -34,6 +34,11 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         val wantSection = Section.fill(section, v2.shape)
 
+        // promoted attributes
+        if (v2.spObject is DataContainerAttribute) {
+            return header.readRegularData(v2.spObject, section)
+        }
+
         val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.onlyFillValue) { // fill value only, no data
             return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
@@ -42,7 +47,9 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
         try {
              if (vinfo.isChunked) {
                 return H5chunkReader(header).readChunkedData(v2, wantSection)
-            } else {
+             } else if (vinfo.isCompact) {
+                 return header.readCompactData(vinfo, wantSection)
+             } else {
                 return header.readRegularData(vinfo, wantSection)
             }
         } catch (ex: Exception) {

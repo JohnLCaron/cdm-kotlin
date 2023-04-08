@@ -39,8 +39,8 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
 
     group5.attributes().forEach {
         val attr = buildAttribute(it)
-        val moveup = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
-        if (moveup) { // too big for an attribute
+        val promoted = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
+        if (promoted) { // too big for an attribute
             val vb = Variable.Builder(attr.name).setDatatype(Datatype.STRING)
             vb.spObject = DataContainerAttribute(it.name, makeH5TypeInfo(it.mdt), it.dataPos, it.mdt, it.mds)
             groupb.addVariable( vb)
@@ -150,7 +150,7 @@ internal open class DataContainerAttribute(
     override val mds: DataspaceMessage,
     ) : DataContainer {
         override val storageDims = mds.dims
-    }
+}
 
 internal class DataContainerVariable(
     override val name: String,
@@ -167,6 +167,7 @@ internal class DataContainerVariable(
     val mfp = v5.mfp
 
     val isChunked : Boolean
+    val isCompact : Boolean
     val elementSize : Int // total length in bytes on disk of one element
     val onlyFillValue : Boolean // no data at all
     val fillValue : Any?
@@ -177,6 +178,8 @@ internal class DataContainerVariable(
             is DataLayoutContiguous -> h5.getFileOffset(mdl.dataAddress)
             is DataLayoutContiguous3 -> h5.getFileOffset(mdl.dataAddress)
             is DataLayoutChunked -> mdl.btreeAddress // offset will be added in BTreeData
+            is DataLayoutCompact -> -2L // data is in mdl.compactData
+            is DataLayoutCompact3 -> -2L // data is in mdl.compactData
             else -> -1 // LOOK compact?
         }
 
@@ -184,10 +187,11 @@ internal class DataContainerVariable(
         fillValue = getFillValueNonDefault(h5, v5, h5type)
         onlyFillValue = (dataPos == -1L)
 
+        isCompact = (mdl.layoutClass == LayoutClass.Compact)
         isChunked = (mdl.layoutClass == LayoutClass.Chunked)
         when (mdl) {
             is DataLayoutCompact -> {
-                this.storageDims = mds.dims
+                this.storageDims = mds.dims // LOOK why not mdl.dims?
                 this.elementSize = mdt.elemSize
             }
             is DataLayoutCompact3 -> {

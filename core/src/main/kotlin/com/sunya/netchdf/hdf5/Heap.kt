@@ -109,7 +109,7 @@ internal class H5heap(val header: H5builder) {
         // address must be absolute, getFileOffset already added
         constructor(address: Long) {
             if (address < 0 || address >= raf.size) {
-                throw IllegalStateException("$address out of bounds; address ")
+                throw IllegalStateException("$address out of bounds; eof=${raf.size} ")
             }
 
             // header information is in le byte order
@@ -159,7 +159,7 @@ class GlobalHeap(h5: H5builder, address: Long) {
     init {
         val filePos: Long = h5.getFileOffset(address)
         if (filePos < 0 || filePos >= h5.raf.size) {
-            throw IllegalStateException("$filePos out of bounds; address=$address ")
+            throw IllegalStateException("$filePos out of bounds; eof=${h5.raf.size} ")
         }
 
         // header information is in le byte order

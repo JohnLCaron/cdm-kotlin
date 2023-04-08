@@ -3,6 +3,7 @@ package com.sunya.cdm.array
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.computeSize
 import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
@@ -136,19 +137,20 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
     }
 }
 
-open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray) {
+open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
     val nelems = dims.computeSize()
 
     // LOOK clumsy
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
+        bb.order(this.endian ?: sdata.bb.order())
         val offset = sdata.offset + this.offset
         if ((offset < 0) or (offset >= bb.capacity()))
             println()
 
         if (nelems > 1) {
             val memberBB = ByteBuffer.allocate(nelems * datatype.size) // why cant we use a view ??
-            memberBB.order(sdata.bb.order())
+            memberBB.order(this.endian ?: sdata.bb.order())
             repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
             return when (datatype) {
                 Datatype.BYTE -> ArrayByte(dims, memberBB)

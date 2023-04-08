@@ -59,6 +59,9 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
     val isFloatingPoint: Boolean
         get() =  (this == FLOAT) || (this == DOUBLE)
 
+    val isEnum: Boolean
+        get() =  (this == ENUM1) || (this == ENUM2) || (this == ENUM4)
+
     /**
      * Returns the DataType that is related to `this`, but with the specified signedness.
      * This method is only meaningful for [integral][.isIntegral] data types; if it is called on a non-integral

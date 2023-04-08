@@ -38,7 +38,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val state = OpenFileState(0, h5type.endian)
     val dataArray = readDataWithLayout(state, layout, datatype, wantSection.shape, h5type)
 
-    // convert attributes to enum strings
+    // convert enums to strings
     if (h5type.datatype5 == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = dc.mdt as DatatypeEnum
@@ -46,6 +46,21 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     }
 
     return dataArray
+}
+
+// LOOK: not subsetting
+@Throws(IOException::class)
+internal fun H5builder.readCompactData(vinfo : DataContainerVariable, filledSection : Section): ArrayTyped<*> {
+    val bb = when (vinfo.mdl) {
+        is DataLayoutCompact -> vinfo.mdl.compactData
+        is DataLayoutCompact3 -> vinfo.mdl.compactData
+        else -> throw RuntimeException("CompactData must be DataLayoutCompact or DataLayoutCompact3")
+    }
+    bb.position(0)
+    bb.limit(bb.capacity())
+    bb.order(vinfo.h5type.endian)
+
+    return this.processDataIntoArray(bb, vinfo.h5type.datatype(), filledSection.shape, vinfo.h5type, vinfo.elementSize)
 }
 
 // handles reading data with a Layout. LOOK: Fill Value ??
@@ -56,7 +71,7 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
         throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
     }
     val bb = ByteBuffer.allocate(sizeBytes.toInt())
-    bb.order(state.byteOrder)
+    bb.order(h5type.base?.endian ?: h5type.endian)
 
     var count = 0
     while (layout.hasNext()) {
@@ -73,6 +88,7 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
     }
     bb.position(0)
     bb.limit(bb.capacity())
+    bb.order(h5type.endian)
 
     return this.processDataIntoArray(bb, datatype, shape, h5type, layout.elemSize)
 }

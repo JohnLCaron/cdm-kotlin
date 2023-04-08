@@ -63,7 +63,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
                 basetype = basetype2
             }
             // val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray
-            members.add(StructureMember(mname, basetype.datatype(), moffset.toInt(), dims)) // assume scalar for the moment
+            members.add(StructureMember(mname, basetype.datatype(), moffset.toInt(), dims, basetype.endian)) // assume scalar for the moment
         }
 
         val typedef = CompoundTypedef(name, members)
