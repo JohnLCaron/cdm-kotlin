@@ -117,10 +117,10 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
     }
 }
 
-fun ArrayStructureData.putStringsOnHeap(lamda : (Int) -> String) {
-    members.filter { it.datatype == Datatype.STRING }.forEach { member ->
+fun ArrayStructureData.putStringsOnHeap(lamda : (StructureMember, Int) -> List<String>) {
+    members.filter { it.datatype.isVlenString }.forEach { member ->
         this.forEach { sdata ->
-            val sval = lamda(sdata.offset + member.offset)
+            val sval = lamda(member, sdata.offset + member.offset)
             sdata.putOnHeap(member, sval)
         }
     }
@@ -140,13 +140,11 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
 open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
     val nelems = dims.computeSize()
 
-    // LOOK clumsy
+    // LOOK clumsy Any
     open fun value(sdata: ArrayStructureData.StructureData): Any {
         val bb = sdata.bb
         bb.order(this.endian ?: sdata.bb.order())
         val offset = sdata.offset + this.offset
-        if ((offset < 0) or (offset >= bb.capacity()))
-            println()
 
         if (nelems > 1) {
             val memberBB = ByteBuffer.allocate(nelems * datatype.size) // why cant we use a view ??
@@ -164,7 +162,15 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
                 Datatype.FLOAT -> ArrayFloat(dims, memberBB.asFloatBuffer())
                 Datatype.DOUBLE -> ArrayDouble(dims, memberBB.asDoubleBuffer())
                 Datatype.CHAR -> makeStringZ(bb, offset, nelems)
-                else -> throw RuntimeException("unimplemented array of $datatype")
+                Datatype.STRING -> {
+                    if (datatype.isVlenString) {
+                        val ret = sdata.getFromHeap(offset)
+                        if (ret == null) "unknown" else ret
+                    } else {
+                        makeStringZ(bb, offset, nelems)
+                    }
+                }
+                else -> throw RuntimeException("unimplemented datatype=$datatype")
             }
         }
 
@@ -181,8 +187,12 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             Datatype.DOUBLE -> bb.getDouble(offset)
             Datatype.CHAR -> makeStringZ(bb, offset, nelems)
             Datatype.STRING -> {
-                val ret = sdata.getFromHeap(offset)
-                if (ret == null) "unknown" else ret as String
+                if (datatype.isVlenString) {
+                    val ret = sdata.getFromHeap(offset)
+                    if (ret == null) "unknown" else (ret as List<String>)[0]
+                } else {
+                    makeStringZ(bb, offset, nelems)
+                }
             }
             Datatype.VLEN -> {
                 val ret = sdata.getFromHeap(offset)

@@ -167,7 +167,7 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
-            Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
+            Datatype5.String -> Datatype.STRING.withVlen(isVlenString)
             Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
             Datatype5.Compound -> Datatype.COMPOUND.withTypedef(typedef!!)

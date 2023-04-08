@@ -88,7 +88,7 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
     }
     bb.position(0)
     bb.limit(bb.capacity())
-    bb.order(h5type.endian)
+    bb.order(h5type.base?.endian ?: h5type.endian)
 
     return this.processDataIntoArray(bb, datatype, shape, h5type, layout.elemSize)
 }
@@ -133,7 +133,14 @@ internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, 
 // Put the variable length members (vlen, string) on the heap
 internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endian : ByteOrder) : ArrayStructureData {
     val h5heap = H5heap(this)
-    sdataArray.putStringsOnHeap {  offset -> h5heap.readHeapString(sdataArray.bb, offset)!! }
+    sdataArray.putStringsOnHeap {  member, offset ->
+        val result = mutableListOf<String>()
+        repeat(member.nelems) {
+            val sval = h5heap.readHeapString(sdataArray.bb, offset + it * 16) // 16 byte "heap ids" are in the ByteBuffer
+            result.add(sval!!) // 16 byte "heap ids" are in the ByteBuffer
+        }
+        result
+    }
 
     sdataArray.putVlensOnHeap { member, offset ->
         val listOfArrays = mutableListOf<Array<*>>()

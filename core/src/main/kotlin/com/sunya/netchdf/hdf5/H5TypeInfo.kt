@@ -40,7 +40,6 @@ internal data class H5TypeInfo(val isVlenString: Boolean, val isRefObject : Bool
                                val signed : Boolean, val endian : ByteOrder, val mdtAddress : Long, val mdtHash : Int,
                                val base : H5TypeInfo? = null, val typedef : Typedef? = null, val dims : IntArray? = null) {
 
-    // Call this after all the typedefs have been found
     fun datatype(): Datatype {
         return when (datatype5) {
             Datatype5.Fixed, Datatype5.BitField ->
@@ -60,14 +59,12 @@ internal data class H5TypeInfo(val isVlenString: Boolean, val isRefObject : Bool
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
-            Datatype5.String -> if ((isVlenString) or (elemSize > 1)) Datatype.STRING else Datatype.CHAR
+            Datatype5.String -> Datatype.STRING.withVlen(isVlenString)
             Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
 
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
 
             Datatype5.Compound -> {
-                if (typedef == null)
-                    println()
                 Datatype.COMPOUND.withTypedef(typedef!!)
             }
 
@@ -81,7 +78,7 @@ internal data class H5TypeInfo(val isVlenString: Boolean, val isRefObject : Bool
             }
 
             Datatype5.Vlen -> {
-                if (isVlenString || this.base!!.isVlenString) Datatype.STRING
+                if (isVlenString || this.base!!.isVlenString) Datatype.STRING.withVlen(true)
                 else Datatype.VLEN.withTypedef(typedef)
             }
 

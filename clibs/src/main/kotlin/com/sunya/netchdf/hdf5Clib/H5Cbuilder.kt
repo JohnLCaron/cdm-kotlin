@@ -574,10 +574,13 @@ internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatyp
 // LOOK duplicate from NetcdfClibFile
 // Put the variable length members (vlen, string) on the heap
 internal fun processCompoundData(session : MemorySession, sdataArray : ArrayStructureData, data_p : MemorySegment) : ArrayStructureData {
-
-    sdataArray.putStringsOnHeap {  offset ->
-        val address = data_p.get(ValueLayout.ADDRESS, (offset).toLong())
-        address.getUtf8String(0)
+    sdataArray.putStringsOnHeap {  member, offset ->
+        val values = mutableListOf<String>()
+        repeat(member.nelems) {
+            values.add("dunno") // see readVlenStrings above ??
+            // values.add(data_p.getAtIndex(ValueLayout.ADDRESS, it.toLong()).getUtf8String(0))
+        }
+        values
     }
 
     sdataArray.putVlensOnHeap { member, offset ->
