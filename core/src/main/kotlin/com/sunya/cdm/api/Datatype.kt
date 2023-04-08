@@ -6,7 +6,7 @@ package com.sunya.cdm.api
  * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  */
-data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null) {
+data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
 
     companion object {
         val BYTE = Datatype("byte", 1)
@@ -37,8 +37,8 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         return if (this == VLEN) "$cdlName ${typedef?.baseType?.cdlName}" else cdlName
     }
 
-    val isString : Boolean
-        get() = (this == STRING) || (this == CHAR)
+    val isVlenString : Boolean
+        get() = this.cdlName == "string" && (isVlen != null) && isVlen
 
     val isNumeric: Boolean
         get() = (this == FLOAT) || (this == DOUBLE) || isIntegral
@@ -80,6 +80,8 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
     /** Used for Hdf5 Enum, Compound, Opaque, Vlen.
      * The last two arent particularly useful, but we leave them in to agree with the Netcdf4 C library. */
     fun withTypedef(typedef : Typedef?) : Datatype = this.copy(typedef = typedef)
+
+    fun withVlen(isVlen : Boolean) : Datatype = this.copy(isVlen = isVlen)
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true

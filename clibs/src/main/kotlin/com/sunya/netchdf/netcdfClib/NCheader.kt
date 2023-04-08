@@ -445,7 +445,8 @@ fun convertType(type: Int): Datatype {
         NC_UINT() -> Datatype.UINT
         NC_INT64() -> Datatype.LONG
         NC_UINT64() -> Datatype.ULONG
-        NC_STRING() -> Datatype.STRING
+        NC_STRING() -> Datatype.STRING.withVlen(true)
+
         else -> {
             val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
             return when (userType.typedef.kind) {

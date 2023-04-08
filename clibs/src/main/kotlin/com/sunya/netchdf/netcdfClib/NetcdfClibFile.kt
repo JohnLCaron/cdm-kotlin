@@ -118,9 +118,9 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val members = (datatype.typedef as CompoundTypedef).members
                     val sdataArray = ArrayStructureData(wantSection.shape, bb, userType.size, members)
                     // strings vs array of strings, also duplicate readCompoundAttValues
-                    sdataArray.putStringsOnHeap {  offset ->
+                    sdataArray.putStringsOnHeap {  member, offset ->
                         val address = val_p.get(ValueLayout.ADDRESS, (offset).toLong())
-                        address.getUtf8String(0)
+                        listOf(address.getUtf8String(0)) // LOOK not right
                     }
                     sdataArray.putVlensOnHeap { member, offset ->
                         // look duplicate (maybe)

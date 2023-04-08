@@ -254,9 +254,9 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
 
     val members = (userType.typedef as CompoundTypedef).members
     val sdataArray = ArrayStructureData(intArrayOf(nelems.toInt()), bb, userType.size, members)
-    sdataArray.putStringsOnHeap {  offset ->
+    sdataArray.putStringsOnHeap {  member, offset ->
         val address = val_p.get(ADDRESS, (offset).toLong())
-        address.getUtf8String(0)
+        listOf(address.getUtf8String(0)) // LOOK not right
         // LOOK heres a pointer, see decodeCompoundAttData():
         //             lval = getNativeAddr(pos, nc4bytes);
         //            Pointer p = new Pointer(lval);
