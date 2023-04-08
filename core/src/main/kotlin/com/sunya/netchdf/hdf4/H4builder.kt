@@ -274,8 +274,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     val attr = VStructureReadAttribute(tagVH)
                     if (attr != null) {
                         if (debugVGroupDetails) println("     read attribute ${attr.name}")
-                        val moveup = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
-                        if (EOS.isMetadata(attr.name) || moveup) {
+                        val promoted = attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
+                        if (EOS.isMetadata(attr.name) || promoted) {
                             metadata.add(attr)
                             if (attr.name.startsWith("StructMetadata")) {
                                 this.structMetadata.add(attr.values[0] as String)

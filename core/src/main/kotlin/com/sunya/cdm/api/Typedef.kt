@@ -33,10 +33,10 @@ private fun showDims(dims : IntArray) : String {
     buildString {
         append("(")
         dims.forEachIndexed { idx, num ->
-            if (idx > 1) append(",")
+            if (idx > 0) append(",")
             append("$num")
-            append(")")
         }
+        append(")")
     }
 }
 

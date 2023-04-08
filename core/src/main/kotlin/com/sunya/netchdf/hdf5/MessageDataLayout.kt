@@ -115,7 +115,7 @@ open class DataLayoutMessage(layoutClassNum: Int)  : MessageHeader(MessageType.L
     val layoutClass = LayoutClass.of(layoutClassNum)
     override fun show() : String = "class=$layoutClass"
 }
-data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer?) : DataLayoutMessage(0)
+data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer) : DataLayoutMessage(0)
 
 data class DataLayoutContiguous(val dims : IntArray, val dataAddress: Long) : DataLayoutMessage(1) {
     override fun show() : String = "class=$layoutClass dims=${dims.contentToString()} dataAddress=$dataAddress"
@@ -124,7 +124,7 @@ data class DataLayoutChunked(val version : Int, val dims : IntArray, val btreeAd
     override fun show(): String = "class=$layoutClass dims=${dims.contentToString()} btreeAddress=$btreeAddress chunkedElementSize=$chunkedElementSize"
 }
 
-data class DataLayoutCompact3(val compactData: ByteBuffer?) : DataLayoutMessage(0)
+data class DataLayoutCompact3(val compactData: ByteBuffer) : DataLayoutMessage(0)
 
 data class DataLayoutContiguous3(val dataAddress: Long, val dataSize: Long) : DataLayoutMessage(1) {
     override fun show(): String = "class=$layoutClass dataAddress=$dataAddress dataSize=$dataSize"

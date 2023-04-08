@@ -236,8 +236,8 @@ class HCheader(val filename: String) {
             }
 
             if (debugVGroupDetails) println("     read attribute ${attr3.name}")
-            val moveup = attr3.isString && attr3.values.size == 1 && (attr3.values[0] as String).length > 4000
-            if (EOS.isMetadata(attr3.name) || moveup) {
+            val promoted = attr3.isString && attr3.values.size == 1 && (attr3.values[0] as String).length > 4000
+            if (EOS.isMetadata(attr3.name) || promoted) {
                 metadata.add(attr3)
                 if (attr3.name.startsWith("StructMetadata")) {
                     this.structMetadata.add(attr3.values[0] as String)

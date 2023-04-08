@@ -21,6 +21,12 @@ class N3dataCompare {
         }
     }
 
+    @Test
+    fun cdf5() {
+        val filename = testData + "recent/cdf5/jays_DOMAIN000.nc"
+        val myfile = Netcdf3File(filename)
+    }
+
     // netcdf3 /home/all/testdata/netchdf/csiro/sixCells.nc 1.80 Mbytes
     // float lat[0:1] = 2 elems
     // this is the case where vsize=20, but calculated=8.

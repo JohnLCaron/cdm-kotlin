@@ -34,7 +34,8 @@ class H5CFiles {
                     .build()
 
             // return devcdm
-            return Stream.of(cdmUnitTest, devcdm).flatMap { i -> i };
+            return Stream.of( devcdm, cdmUnitTest).flatMap { i -> i };
+
         }
     }
 }
