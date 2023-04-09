@@ -19,7 +19,11 @@ class N3Files {
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream3, moar3).flatMap { i -> i };
+            val cdf5 = Stream.of(
+                Arguments.of(testData + "recent/cdf5/jays_DOMAIN000.nc"),
+            )
+
+            return Stream.of(stream3, moar3, cdf5).flatMap { i -> i };
         }
     }
 }

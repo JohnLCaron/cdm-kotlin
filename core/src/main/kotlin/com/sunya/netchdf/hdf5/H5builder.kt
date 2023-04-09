@@ -51,8 +51,8 @@ class H5builder(
 
     val cdmRoot : Group
     fun formatType() : String {
-        return if (isNetcdf4) "netcdf4 " else {
-            if (structMetadata.isEmpty()) "hdf5    " else "hdf-eos5"
+        return if (isNetcdf4) "netcdf4  " else {
+            if (structMetadata.isEmpty()) "hdf5     " else "hdf-eos5 "
         }
     }
 

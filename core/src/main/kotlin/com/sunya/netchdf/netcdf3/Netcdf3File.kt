@@ -26,13 +26,13 @@ class Netcdf3File(val filename : String) : Netchdf {
     override fun rootGroup() = rootGroup
     override fun location() = filename
     override fun cdl() = cdl(this)
-    override fun type() = "netcdf3 "
+    override fun type() = header.formatType()
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
     override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
         val wantSection = Section.fill(section, v2.shape)
-        val vinfo = v2.spObject as N3header.Vinfo
+        val vinfo = v2.spObject as VinfoN3
         val layout = if (!v2.hasUnlimited()) {
             LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(wantSection))
         } else {
@@ -50,9 +50,9 @@ class Netcdf3File(val filename : String) : Netchdf {
         return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
     }
 
-    private inner class NCmaxIterator(val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
-        val vinfo = v2.spObject as N3header.Vinfo
+        val vinfo = v2.spObject as VinfoN3
         private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
 
         override fun computeNext() {
@@ -79,7 +79,7 @@ class Netcdf3File(val filename : String) : Netchdf {
     @Throws(IOException::class)
     private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
         require(wantSection.size() == layout.totalNelems)
-        val vinfo = v2.spObject as N3header.Vinfo
+        val vinfo = v2.spObject as VinfoN3
         val totalNbytes = (vinfo.elemSize * layout.totalNelems)
         require(totalNbytes < Int.MAX_VALUE)
         val values = ByteBuffer.allocate(totalNbytes.toInt())
@@ -97,13 +97,17 @@ class Netcdf3File(val filename : String) : Netchdf {
 
         return when (v2.datatype) {
             Datatype.BYTE -> ArrayByte(wantSection.shape, values)
+            Datatype.UBYTE -> ArrayUByte(wantSection.shape, values)
             Datatype.CHAR -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes() // LOOK
             Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
             Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values.asDoubleBuffer())
             Datatype.FLOAT -> ArrayFloat(wantSection.shape, values.asFloatBuffer())
             Datatype.INT -> ArrayInt(wantSection.shape, values.asIntBuffer())
+            Datatype.UINT -> ArrayUInt(wantSection.shape, values.asIntBuffer())
             Datatype.LONG -> ArrayLong(wantSection.shape, values.asLongBuffer())
+            Datatype.ULONG -> ArrayULong(wantSection.shape, values.asLongBuffer())
             Datatype.SHORT -> ArrayShort(wantSection.shape, values.asShortBuffer())
+            Datatype.USHORT -> ArrayUShort(wantSection.shape, values.asShortBuffer())
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }

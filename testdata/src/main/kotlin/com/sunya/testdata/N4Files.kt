@@ -20,7 +20,12 @@ class N4Files {
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream4, moar4).flatMap { i -> i };
+            val recent =
+                testFilesIn(testData + "recent/goes16")
+                    .withRecursion()
+                    .build()
+
+            return Stream.of(stream4, moar4, recent).flatMap { i -> i };
         }
     }
 }
