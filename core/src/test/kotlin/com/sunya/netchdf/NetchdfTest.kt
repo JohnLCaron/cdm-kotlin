@@ -28,9 +28,9 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            return Stream.of( N4Files.params()).flatMap { i -> i };
+            //return Stream.of( N3Files.params()).flatMap { i -> i };
             // return Stream.of( N3Files.params(), N4Files.params(), H4Files.params(), H5Files.params()).flatMap { i -> i };
-            // return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
+            return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -43,7 +43,9 @@ class NetchdfTest {
         @AfterAll
         fun afterAll() {
             if (versions.size > 0) {
-                versions.keys.forEach{ println("$it = ${versions[it]!!.size } files") }
+                versions.keys.forEach{ println(" $it = ${versions[it]!!.size } files") }
+                val total = versions.keys.map{ versions[it]!!.size }.sum()
+                println("total # files = $total")
             }
             Stats.show()
         }
@@ -80,7 +82,7 @@ class NetchdfTest {
 
     @Test
     fun problem() {
-        checkVersion(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
+        checkVersion(testData + "devcdm/netcdf3/nctest_classic.nc")
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////

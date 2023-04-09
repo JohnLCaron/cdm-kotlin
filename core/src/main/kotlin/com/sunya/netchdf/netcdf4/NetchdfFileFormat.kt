@@ -107,7 +107,7 @@ import java.nio.charset.StandardCharsets
  * (https://earthdata.nasa.gov/sites/default/files/esdswg/spg/rfc/esds-rfc-011/ESDS-RFC-011v2.00.pdf)
  *
  * The 64-bit data CDF-5 format specification is available in
- * http://cucis.ece.northwestern.edu/projects/PnetCDF/CDF-5.html.
+ * http://cucis.ece.northwestern.edu/projects/PnetCDF/CDF-5.html
  */
 
 /** Enumeration of the kinds of NetCDF file formats. NC_FORMAT_64BIT_DATA is not currently supported in this library.  */
