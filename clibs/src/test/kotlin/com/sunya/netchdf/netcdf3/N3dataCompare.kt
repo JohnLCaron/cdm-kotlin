@@ -33,8 +33,18 @@ class N3dataCompare {
     // the file looks like it did use 20 bytes, but hard to know as there's only 2 records.
     // Im going to remove it from the test files (placed in exclude)
     @Test
-    fun problem() {
+    fun calcRecordSize() {
         readDataCompareNC(testData + "netchdf/csiro/sixCells.nc", null) // , "cellId")
+    }
+
+    @Test
+    fun vsizeCdf1() {
+        readDataCompareNC(testData + "devcdm/netcdf3/tst_small_classic.nc", null) // , "cellId")
+    }
+
+    @Test
+    fun vsizeCdf2() {
+        readDataCompareNC(testData + "devcdm/netcdf3/tst_small_64bit.nc", null) // , "cellId")
     }
 
     @ParameterizedTest

@@ -87,14 +87,13 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
       val uvar = unlimitedVariables[0]
       val dtype = uvar.datatype
       if (dtype == Datatype.CHAR || dtype == Datatype.BYTE || dtype == Datatype.SHORT) {
-
         var nelems = 1L
         for (dim in uvar.dimensions) {
           if (dim != unlimitedDimension) nelems *= dim.length
         }
         val vinfo = uvar.spObject as VinfoN3
         val padding = padding(nelems * dtype.size)
-        val calcVsize: Long = nelems * dtype.size + padding
+        val calcVsize: Long = nelems * dtype.size // no padding
 
         if (calcVsize != vinfo.vsize) {
           if (debugHeaderSize) {
@@ -181,7 +180,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
         }
         dims.add(dim)
         dimIdx.add(dimIndex)
-        dimIdx.add(dim.length)
+        dimLengths.add(dim.length)
       }
       ncvarb.dimensions.addAll(dims)
       if (debug) println("  reading variable ${name} pos=${filePos.pos} dimIdx = ${dimIdx}")

@@ -325,7 +325,7 @@ private fun stripQuotes(name: String): String {
 
 private val showDetail = false
 private val showProblems = false
-private val showValidationFailures = false
+private val showValidationFailures = true
 
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
@@ -383,6 +383,20 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
     // assumes that the existing variables are already in groups; adjust dimensions and add attributes
     fun ODLgroup.validateStructMetadata(parent: Group.Builder) : Boolean {
         this.variables.forEach { v ->
+            if (v.name == "Dimensions") {
+                v.attributes.forEach { att ->
+                    try {
+                        val dimLength = att.component2().toInt()
+                        if (dimLength == 0) {
+                            println(" *** ODL has zero dimension length for ${att.component1()}")
+                            return false
+                        }
+                    } catch (ex : Exception) {
+                        println(" *** ODL cant parse dimension ${att.component1()} length ${att.component2()}")
+                        return false
+                    }
+                }
+            }
             if (v.name == "Variables") {
                 v.attributes.forEach { att ->
                     val name = att.component1()

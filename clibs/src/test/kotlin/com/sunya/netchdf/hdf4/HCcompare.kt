@@ -62,6 +62,12 @@ class HCcompare {
     ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_D.A2007001.005.2007004142531.hdf
     ///home/all/testdata/hdf4/nsidc/LAADS/MOD/MODCSR_G.A2007001.0000.005.2007003022635.hdf
 
+    @Test
+    fun odlHasZeroDimension() {
+        val filename = testData + "hdf4/nsidc/GESC/AIRS/AIRS.2007.10.17.L1B.Cal_Subset.v5.0.16.0.G07292194950.hdf"
+        // readH4header(filename)
+        compareData(filename, "/L1B_AIRS_Cal_Subset/Data_Fields/radiances")
+    }
 
     //////////////////////////////////////////////////////////////////////
 
