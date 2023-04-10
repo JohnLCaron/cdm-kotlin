@@ -21,13 +21,17 @@ class SortFiles {
         @AfterAll
         fun afterAll() {
             println("*** nfiles = ${filenames.size}")
+            var dups = 0
             filenames.keys.sorted().forEach {
                 val paths = filenames[it]!!
                 if (paths.size > 1) {
                     println("$it")
                     paths.forEach { println("  $it") }
                 }
+                dups += paths.size - 1
             }
+            println("*** nduplicates = ${dups}")
+
             if (showAllFiles) {
                 println("*** nfiles = ${filenames.size}")
                 filenames.keys.sorted().forEach {

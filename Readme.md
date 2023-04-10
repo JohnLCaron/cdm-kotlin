@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 4/9/2023_
+_last updated: 4/10/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -70,18 +70,18 @@ With these tools we can be confident that our library gives the same results as 
 
 Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC for the code classes.
 
-We have ~1680 test files. 
+We have ~1500 test files:
 
 ````
-hdf4      = 203 files
-hdf-eos2  = 274 files
-hdf5      = 213 files
-hdf-eos5  =  28 files
-netcdf3.2 =  99 files
-netcdf3   = 713 files
-netcdf4   = 148 files
-netcdf3.5 =   1 files
-````
+ hdf4      = 201 files
+ hdf-eos2  = 267 files
+ hdf5      = 144 files
+ hdf-eos5  =  19 files
+ netcdf3   = 663 files
+ netcdf3.2 =  84 files
+ netcdf3.5 =   1 files
+ netcdf4   =  99 files
+ ````
 
 We need to get representative samples of recent files for improved testing and code coverage.
 

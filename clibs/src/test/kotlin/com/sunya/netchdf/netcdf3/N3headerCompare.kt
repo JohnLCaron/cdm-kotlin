@@ -23,9 +23,9 @@ class N3headerCompare {
     @ParameterizedTest
     @MethodSource("params")
     fun checkVersion(filename: String) {
-        NetcdfClibFile(filename).use { ncfile ->
+        Netcdf3File(filename).use { ncfile ->
             println("${ncfile.type()} $filename ")
-            assertTrue((ncfile.type() == "NC_FORMAT_CLASSIC") or (ncfile.type() == "NC_FORMAT_64BIT_OFFSET"))
+            assertTrue((ncfile.type().contains("netcdf3")))
         }
     }
 
