@@ -34,7 +34,6 @@ class H5Cbuilder(val filename: String) {
     init {
         MemorySession.openConfined().use { session ->
             val filenameSeg: MemorySegment = session.allocateUtf8String(filename)
-            val fileHandle: MemorySegment = session.allocate(C_INT, 0)
 
             //     public static long H5Fopen ( Addressable filename,  int flags,  long access_plist) {
             file_id = H5Fopen(filenameSeg, H5F_ACC_RDONLY(), H5P_DEFAULT())
@@ -88,8 +87,8 @@ class H5Cbuilder(val filename: String) {
         }
 
         gb.variables.forEach{ vb ->
-            val refAtts = vb.attributes.filter{ it.datatype == Datatype.REFERENCE}
-            refAtts.forEach { att ->
+            val refVAtts = vb.attributes.filter{ it.datatype == Datatype.REFERENCE}
+            refVAtts.forEach { att ->
                 val convertAtt = convertAttribute(att)
                 if (convertAtt != null) {
                     if (att.name == HDF5_DIMENSION_LIST) {
@@ -111,7 +110,7 @@ class H5Cbuilder(val filename: String) {
             val dsetId = it as Long
              val pair = datasetMap[dsetId]
               if (pair == null)  {
-                println("Cant find dataset reference for $att")
+                println("H5C cant find dataset reference for $att")
                 return null
             }
             val (gb, vb) = pair
@@ -235,6 +234,9 @@ class H5Cbuilder(val filename: String) {
             } else if (otype == H5O_TYPE_DATASET() && (ltype == H5L_TYPE_HARD() || useSoftLinks)) {
                 // the soft links are symbolic links that point to existing datasets
                 readDataset(linkname, num_attr.toInt(), context)
+            } else if (otype == H5O_TYPE_NAMED_DATATYPE()) {
+                val type_id = H5Topen2(context.group5id,  name_p, H5P_DEFAULT())
+                readH5CTypeInfo(context, type_id, linkname)
             }
             return 0
         }
@@ -324,7 +326,7 @@ class H5Cbuilder(val filename: String) {
         if (address > 0) datasetMap[address] = Pair(context.group, vb)
 
         if (obj_name.startsWith("StructMetadata")) {
-            val data = readRegularData(context.session, datasetId, h5ctype, dims)
+            val data = readRegularData(context.session, datasetId, h5ctype, Section(dims))
             require (data is ArrayString)
             structMetadata.add(data.values.get(0))
         }
@@ -400,7 +402,7 @@ class H5Cbuilder(val filename: String) {
 
             } else if (h5ctype.datatype5 == Datatype5.Reference) {
                 val refdata_p = context.session.allocate(nelems.toInt() * size)
-                checkErr("H5Aread", H5Aread(attr_id, h5ctype.type_id, refdata_p))
+                checkErr("H5Aread Reference", H5Aread(attr_id, h5ctype.type_id, refdata_p))
                 //     public static long H5Rdereference1 ( long obj_id,  int ref_type,  Addressable ref) {
                 // LOOK nelems??
 
@@ -420,8 +422,19 @@ class H5Cbuilder(val filename: String) {
                 bb.order(h5ctype.endian)
                 require(size == nelems * h5ctype.elemSize)
 
-                val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
-                val att = Attribute(aname, values.datatype, values.toList())
+                val datatype = h5ctype.datatype()
+                val att = if (nelems == 0L) {
+                    Attribute(aname, datatype, listOf<Any>())
+                } else if (datatype == Datatype.COMPOUND) {
+                    val members = (datatype.typedef as CompoundTypedef).members
+                    val sdataArray =  ArrayStructureData(dims, bb, h5ctype.elemSize, members)
+                    processCompoundData(context.session, sdataArray, data_p)
+                    Attribute(aname, datatype, sdataArray.toList())
+
+                } else {
+                    val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
+                    Attribute(aname, values.datatype, values.toList())
+                }
                 results.add(att)
             }
         }
@@ -500,11 +513,7 @@ fun checkErr (where : String, ret: Int) {
     }
 }
 
-
-internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, dims : IntArray) : ArrayTyped<*> {
-    val size = dims.computeSize() * h5ctype.elemSize.toLong()
-    val data_p = session.allocate(size)
-
+internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayTyped<*> {
     // int H5Dread ( long dset_id,  long mem_type_id,  long mem_space_id,  long file_space_id,  long plist_id,  Addressable buf) {
     // herr_t H5Dread(hid_t dset_id, hid_t 	mem_type_id, hid_t 	mem_space_id, hid_t file_space_id, hid_t dxpl_id, void *buf)
     //[in]	dset_id	Dataset identifier Identifier of the dataset to read from
@@ -514,12 +523,28 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     //[in]	dxpl_id	Identifier of a transfer property list
     //[out]	buf	Buffer to receive data read from file
 
-    checkErr("H5Dread", H5Dread(datasetId, h5ctype.type_id, H5S_ALL(), H5S_ALL(), H5P_DEFAULT(), data_p))
+    // file_space_id is used to specify only the selection within the file dataset's dataspace.
+    // Any dataspace specified in file_space_id is ignored by the library and the dataset's dataspace is always used. WTF?
+    // file_space_id can be the constant H5S_ALL, which indicates that the entire file dataspace, as defined by the
+    // current dimensions of the dataset, is to be selected.
+    //
+    // mem_space_id is used to specify both the memory dataspace and the selection within that dataspace.
+    // mem_space_id can be the constant H5S_ALL, in which case the file dataspace is used for the memory dataspace
+    // and the selection defined with file_space_id is used for the selection within that dataspace.
+    // checkErr("H5Dread", H5Dread(datasetId, h5ctype.type_id, H5S_ALL(), spaceId, H5P_DEFAULT(), data_p))
+
+    val datatype = h5ctype.datatype()
+    val dims = want.shape
+    val size = want.computeSize() * h5ctype.elemSize.toLong()
+    val data_p = session.allocate(size)
+
+    val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
+    checkErr("H5Dread", H5Dread(datasetId, h5ctype.type_id, memSpaceId, fileSpaceId, H5P_DEFAULT(), data_p))
+
     val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
     val bb = ByteBuffer.wrap(raw)
     bb.order(h5ctype.endian)
 
-    val datatype = h5ctype.datatype()
     if (datatype == Datatype.COMPOUND) {
         val members = (datatype.typedef as CompoundTypedef).members
         val sdataArray =  ArrayStructureData(dims, bb, h5ctype.elemSize, members)
@@ -527,6 +552,47 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     }
 
     return processDataIntoArray(bb, h5ctype.datatype5, datatype, dims, h5ctype.elemSize)
+}
+
+internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : Pair<Long, Long> {
+    val datatype = h5ctype.datatype()
+    val size = want.computeSize() * h5ctype.elemSize.toLong()
+    println("readRegularData $want start=${want.origin.contentToString()} shape=${want.shape.contentToString()} ${want.computeSize()} $datatype size=$size")
+    val rank = want.rank().toLong()
+    if (rank == 0L) { // scalar
+        return Pair(H5S_ALL(), H5S_ALL())
+    }
+
+    val origin_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    val shape_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    val stride_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    val block_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    for (idx in 0 until rank) {
+        origin_p.setAtIndex(C_LONG, idx, want.origin(idx.toInt()).toLong())
+        shape_p.setAtIndex(C_LONG, idx, want.shape(idx.toInt()).toLong())
+        stride_p.setAtIndex(C_LONG, idx, want.stride(idx.toInt()).toLong())
+        block_p.setAtIndex(C_LONG, idx, 1L)
+    }
+
+    val fileSpaceId : Long = H5Dget_space(datasetId)
+    //     public static int H5Sselect_hyperslab ( long space_id,  int op,  Addressable start,  Addressable _stride,  Addressable count,  Addressable _block) {
+    checkErr("H5Sselect_hyperslab", H5Sselect_hyperslab(fileSpaceId, H5S_SELECT_SET(), origin_p, stride_p, shape_p, block_p))
+
+    val start_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    val end_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    H5Sget_select_bounds(fileSpaceId, start_p, end_p)
+    val start = LongArray(rank.toInt()) { start_p.getAtIndex(C_LONG, it.toLong()) }
+    val end = LongArray(rank.toInt()) { end_p.getAtIndex(C_LONG, it.toLong()) }
+    println("  selection ${start.contentToString()} ${end.contentToString()}")
+
+    val dims_p = session.allocateArray(C_LONG as MemoryLayout, rank)
+    for (idx in 0 until rank) {
+        dims_p.setAtIndex(C_LONG, idx, want.shape(idx.toInt()).toLong())
+    }
+    // hid_t H5Screate_simple	(	int 	rank, const hsize_t 	dims[], const hsize_t 	maxdims[]
+    // long H5Screate_simple ( int rank,  Addressable dims,  Addressable maxdims)
+    val memSpaceId : Long = H5Screate_simple(rank.toInt(), dims_p, dims_p)
+    return Pair(memSpaceId, fileSpaceId)
 }
 
 internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatype: Datatype, shape : IntArray, elemSize : Int): ArrayTyped<*> {
@@ -560,13 +626,6 @@ internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatyp
         val enumTypedef = datatype.typedef as EnumTypedef
         return result.convertEnums(enumTypedef.values)
     }
-
-    /*
-    if ((h5type.hdfType == Datatype5.Reference) and h5type.isRefObject) {
-        return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
-    }
-
-     */
 
     return result
 }

@@ -845,7 +845,7 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype, b
     val shape = intArrayOf(nelems)
 
     if (datatype == Datatype.CHAR) {
-        val svalue = makeStringZ(bb.array(), Hdf4ClibFile.valueCharset)
+        val svalue = makeStringZ(bb.array(), 0, Hdf4ClibFile.valueCharset)
         return Attribute(name, svalue)
     }
 

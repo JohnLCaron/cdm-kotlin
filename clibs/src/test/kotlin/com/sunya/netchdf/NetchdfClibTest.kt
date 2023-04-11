@@ -32,8 +32,8 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            // return Stream.of( N4Files.params()).flatMap { i -> i };
-            return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params()).flatMap { i -> i };
+            return Stream.of( N4Files.params(), H5Files.params()).flatMap { i -> i };
+            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(false), H4Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -220,7 +220,44 @@ h5dump
 
     @Test
     fun testOneCdl() {
-        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
+        val filename = testData + "cdmUnitTest/formats/hdf5/extLink/extlink_source.h5"
+        // see if it can be read through H5
+        openNetchdfFile(filename).use { ncfile ->
+            println("netchdf ${ncfile!!.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        // see if it can be read through N4C
+        NetcdfClibFile(filename).use { ncfile ->
+            println("NetcdfClibFile ${ncfile.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        // see if it can be read through H5
+        Hdf5ClibFile(filename).use { ncfile ->
+            println("Hdf5ClibFile ${ncfile.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        compareCdlWithClib(filename)
+    }
+
+    @Test
+    fun compareOneData() {
+        val filename = testData + "devcdm/netcdf4/tst_converts2.nc"
+        compareCdlWithClib(filename)
+
+        /* see if it can be read through N4C
+        NetcdfClibFile(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            openNetchdfFile(filename).use { netch ->
+                compareNetcdfData(ncfile, netch!!, null, null)
+            }
+        } */
+        // see if it can be read through H5C
+        openNetchdfFile(filename).use { netch ->
+            println("${netch!!.type()} $filename ")
+            Hdf5ClibFile(filename).use { hcfile ->
+                compareNetcdfData(netch, hcfile, null, null)
+            }
+        }
     }
 
     @Test

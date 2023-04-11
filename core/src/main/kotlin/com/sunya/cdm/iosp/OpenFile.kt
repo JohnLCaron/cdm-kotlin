@@ -175,7 +175,7 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
     fun readString(state : OpenFileState, nbytes : Int, charset : Charset): String {
         val dst = ByteArray(nbytes)
         readBytesUnchecked(state, dst)
-        return makeStringZ(dst, charset)
+        return makeStringZ(dst, 0, charset)
     }
 
     fun readArrayByte(state : OpenFileState, nelems : Int): Array<Byte> {
@@ -217,8 +217,8 @@ data class OpenFileState(var pos : Long, var byteOrder : ByteOrder = ByteOrder.L
 }
 
 // terminate at a zero
-fun makeStringZ(bb : ByteArray, charset : Charset): String {
+fun makeStringZ(ba : ByteArray, start : Int, charset : Charset = StandardCharsets.UTF_8): String {
     var count = 0
-    while (count < bb.size && bb[count].toInt() != 0) count++
-    return String(bb, 0, count, charset)
+    while (start+count < ba.size && ba[start+count] != 0.toByte()) count++
+    return String(ba, start, count, charset)
 }
