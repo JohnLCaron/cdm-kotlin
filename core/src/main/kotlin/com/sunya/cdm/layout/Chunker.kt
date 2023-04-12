@@ -103,14 +103,11 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     // transfer from src to dst buffer, using my computed chunks
     internal fun transfer(src: ByteBuffer, elemSize : Int, dst: ByteBuffer) {
         for (chunk in this) {
-            src.position(elemSize * chunk.srcElem.toInt())
-            dst.position(elemSize * chunk.destElem.toInt())
-            // Object src,  int  srcPos, Object dest, int destPos, int length
             System.arraycopy(
                 src.array(),
-                elemSize * chunk.srcElem.toInt(),
+                src.arrayOffset() + elemSize * chunk.srcElem.toInt(),
                 dst.array(),
-                elemSize * chunk.destElem.toInt(),
+                dst.arrayOffset() + elemSize * chunk.destElem.toInt(),
                 elemSize * chunk.nelems,
             )
         }
@@ -123,9 +120,9 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
             // Object src,  int  srcPos, Object dest, int destPos, int length
             System.arraycopy(
                 src.array(),
-                elemSize * chunk.srcElem.toInt(),
+                src.arrayOffset() + elemSize * chunk.srcElem.toInt(),
                 dst.array(),
-                elemSize * dstElem,
+                dst.arrayOffset() + elemSize * dstElem,
                 elemSize * chunk.nelems,
             )
             dstElem += chunk.nelems

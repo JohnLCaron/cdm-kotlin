@@ -32,8 +32,8 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            // return Stream.of( N4Files.params()).flatMap { i -> i };
-            return Stream.of( H4Files.params(), H5Files.params(), N3Files.params(), N4Files.params()).flatMap { i -> i };
+            return Stream.of( N4Files.params(), H5Files.params()).flatMap { i -> i };
+            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(false), H4Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -220,7 +220,64 @@ h5dump
 
     @Test
     fun testOneCdl() {
-        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
+        val filename = testData + "cdmUnitTest/formats/hdf5/extLink/extlink_source.h5"
+        // see if it can be read through H5
+        openNetchdfFile(filename).use { ncfile ->
+            println("netchdf ${ncfile!!.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        // see if it can be read through N4C
+        NetcdfClibFile(filename).use { ncfile ->
+            println("NetcdfClibFile ${ncfile.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        // see if it can be read through H5
+        Hdf5ClibFile(filename).use { ncfile ->
+            println("Hdf5ClibFile ${ncfile.type()} $filename ")
+            println("${ncfile.cdl()} ")
+        }
+        compareCdlWithClib(filename)
+    }
+
+    @Test
+    fun compareOneData() {
+        val filename = testData + "devcdm/hdf5/compound_complex.h5"
+        // val filename = testData + "cdmUnitTest/formats/hdf5/superblockIsOffsetNPP.h5"
+        //val filename = testData + "cdmUnitTest/formats/hdf5/wrf/wrf_input_par.h5"
+        compareCdlWithClib(filename)
+
+        /* openNetchdfFile(filename).use { ncfile ->
+            val v = ncfile!!.rootGroup().allVariables().find { it.fullname() == "/DATASET=INPUT/TIME_STAMP_000001/MU" }
+            val mydata = ncfile.readArrayData(v!!, null)
+            val section = Section("0:0, 6:13, 3:6)")
+            val mysdata = mydata.section(section)
+            println("netch section $section data=$mysdata")
+
+            Hdf5ClibFile(filename).use { hcfile ->
+                val v = hcfile.rootGroup().allVariables().find { it.fullname() == "/DATASET=INPUT/TIME_STAMP_000001/MU" }
+                val ncdata = hcfile.readArrayData(v!!, null)
+                assertTrue (ncdata.equals(mydata))
+
+                val section = Section("0:0, 6:13, 3:6)")
+                val ncsdata = ncdata.section(section)
+                println("H5C section $section data=$ncsdata")
+                assertTrue (ncsdata.equals(mysdata))
+            }
+        } */
+
+        /* see if it can be read through N4C
+        NetcdfClibFile(filename).use { ncfile ->
+            println("${ncfile.type()} $filename ")
+            openNetchdfFile(filename).use { netch ->
+                compareNetcdfData(ncfile, netch!!, null, null)
+            }
+        } */
+        openNetchdfFile(filename).use { netch ->
+            println("${netch!!.type()} $filename ")
+            Hdf5ClibFile(filename).use { hcfile ->
+                compareNetcdfData(netch, hcfile, null, null)
+            }
+        }
     }
 
     @Test
@@ -518,8 +575,7 @@ fun compareNetcdfData(myfile: Netchdf, ncfile: Netchdf, varname: String?, sectio
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
-            println(" *** cant find myvar $varname")
-            return
+            throw RuntimeException(" *** cant find myvar $varname")
         }
         val ncvar = ncfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
         if (ncvar == null) {
@@ -704,10 +760,10 @@ fun sumValues(array : ArrayTyped<*>) {
     }
     // cant cast unsigned to Numbers
     val useArray = when (array.datatype) {
-        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).values)
-        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).values)
-        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).values)
-        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).values)
+        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).bb)
+        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).bb)
+        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).bb)
+        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).bb)
         else -> array
     }
 

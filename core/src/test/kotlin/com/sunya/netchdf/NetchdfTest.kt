@@ -473,10 +473,10 @@ fun sumValues(array : ArrayTyped<*>, sum : AtomicDouble) {
     }
     // cant cast unsigned to Numbers
     val useArray = when (array.datatype) {
-        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).values)
-        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).values)
-        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).values)
-        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).values)
+        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).bb)
+        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).bb)
+        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).bb)
+        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).bb)
         else -> array
     }
 

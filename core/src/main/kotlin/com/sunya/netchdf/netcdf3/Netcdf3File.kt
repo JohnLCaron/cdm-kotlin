@@ -100,14 +100,14 @@ class Netcdf3File(val filename : String) : Netchdf {
             Datatype.UBYTE -> ArrayUByte(wantSection.shape, values)
             Datatype.CHAR -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes() // LOOK
             Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values.asDoubleBuffer())
-            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values.asFloatBuffer())
-            Datatype.INT -> ArrayInt(wantSection.shape, values.asIntBuffer())
-            Datatype.UINT -> ArrayUInt(wantSection.shape, values.asIntBuffer())
-            Datatype.LONG -> ArrayLong(wantSection.shape, values.asLongBuffer())
-            Datatype.ULONG -> ArrayULong(wantSection.shape, values.asLongBuffer())
-            Datatype.SHORT -> ArrayShort(wantSection.shape, values.asShortBuffer())
-            Datatype.USHORT -> ArrayUShort(wantSection.shape, values.asShortBuffer())
+            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values)
+            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values)
+            Datatype.INT -> ArrayInt(wantSection.shape, values)
+            Datatype.UINT -> ArrayUInt(wantSection.shape, values)
+            Datatype.LONG -> ArrayLong(wantSection.shape, values)
+            Datatype.ULONG -> ArrayULong(wantSection.shape, values)
+            Datatype.SHORT -> ArrayShort(wantSection.shape, values)
+            Datatype.USHORT -> ArrayUShort(wantSection.shape, values)
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }

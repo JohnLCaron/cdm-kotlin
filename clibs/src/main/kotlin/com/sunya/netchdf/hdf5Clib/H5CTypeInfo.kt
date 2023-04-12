@@ -125,7 +125,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         // class VlenTypedef(name : String, baseType : Datatype)
         val typedef = VlenTypedef(name, basetype.datatype())
         val result = H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, typedef, basetype)
-        return result // registerTypedef(result, context.group)
+        return registerTypedef(result, context.group)
     }
 
     if (datatype5 == Datatype5.Array) {

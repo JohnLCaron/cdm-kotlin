@@ -48,7 +48,8 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
              if (vinfo.isChunked) {
                 return H5chunkReader(header).readChunkedData(v2, wantSection)
              } else if (vinfo.isCompact) {
-                 return header.readCompactData(vinfo, wantSection)
+                 val alldata = header.readCompactData(vinfo, v2.shape)
+                 return alldata.section(wantSection)
              } else {
                 return header.readRegularData(vinfo, wantSection)
             }

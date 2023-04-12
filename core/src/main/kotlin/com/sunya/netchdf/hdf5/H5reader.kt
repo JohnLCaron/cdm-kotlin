@@ -50,7 +50,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
 
 // LOOK: not subsetting
 @Throws(IOException::class)
-internal fun H5builder.readCompactData(vinfo : DataContainerVariable, filledSection : Section): ArrayTyped<*> {
+internal fun H5builder.readCompactData(vinfo : DataContainerVariable, shape : IntArray): ArrayTyped<*> {
     val bb = when (vinfo.mdl) {
         is DataLayoutCompact -> vinfo.mdl.compactData
         is DataLayoutCompact3 -> vinfo.mdl.compactData
@@ -60,7 +60,7 @@ internal fun H5builder.readCompactData(vinfo : DataContainerVariable, filledSect
     bb.limit(bb.capacity())
     bb.order(vinfo.h5type.endian)
 
-    return this.processDataIntoArray(bb, vinfo.h5type.datatype(), filledSection.shape, vinfo.h5type, vinfo.elementSize)
+    return this.processDataIntoArray(bb, vinfo.h5type.datatype(), shape, vinfo.h5type, vinfo.elementSize)
 }
 
 // handles reading data with a Layout. LOOK: Fill Value ??
@@ -111,14 +111,14 @@ internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
         Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.REFERENCE, Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
+        Datatype.SHORT -> ArrayShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.INT -> ArrayInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.FLOAT -> ArrayFloat(shape, bb)
+        Datatype.DOUBLE -> ArrayDouble(shape, bb)
+        Datatype.REFERENCE, Datatype.LONG -> ArrayLong(shape, bb)
+        Datatype.ULONG -> ArrayULong(shape, bb)
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, h5type.elemSize)
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }

@@ -845,21 +845,21 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype, b
     val shape = intArrayOf(nelems)
 
     if (datatype == Datatype.CHAR) {
-        val svalue = makeStringZ(bb.array(), Hdf4ClibFile.valueCharset)
+        val svalue = makeStringZ(bb.array(), 0, Hdf4ClibFile.valueCharset)
         return Attribute(name, svalue)
     }
 
     val values = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
         Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
+        Datatype.SHORT -> ArrayShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.INT -> ArrayInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.FLOAT -> ArrayFloat(shape, bb)
+        Datatype.DOUBLE -> ArrayDouble(shape, bb)
+        Datatype.LONG -> ArrayLong(shape, bb)
+        Datatype.ULONG -> ArrayULong(shape, bb)
         else -> throw IllegalStateException("unimplemented type= $datatype")
     }
     return Attribute(name, datatype, values.toList())

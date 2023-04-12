@@ -1,6 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.iosp.OpenFileState
+import com.sunya.cdm.iosp.makeStringZ
 import com.sunya.netchdf.hdf5.FilterType.Companion.fromId
 import java.io.IOException
 import java.nio.ByteBuffer
@@ -439,35 +440,7 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
             array("linkName", 1, "linkNameLength")
         }
     if (debugMessage) rawdata.show()
-
     val linkName = rawdata.getString("linkName")
-    val linkType = if (flags and 8 != 0) {
-        rawdata.getByte("linkType").toInt() // 0 = hard, 1 = soft, 64 = external
-    } else 0
-
-    if (linkType == 0) {
-        // "A hard link (should never be stored in the file)" wtf?
-        val linkAddress = this.readOffset(state)
-        if (debugGroup) println(" LinkHard $linkName $linkAddress")
-        return LinkHard(linkType, linkName, linkAddress)
-    }
-
-    val linkInfo =
-        when (linkType) {
-            1 -> {
-                val len = raf.readShort(state)
-                raf.readString(state, len.toInt())
-            }
-
-            64 -> {
-                val len = raf.readShort(state)
-                raf.readString(state, len.toInt()) // actually 2 strings - see docs
-            }
-
-            else -> {
-                throw RuntimeException("Unknown link type")
-            }
-        }
 
     // CreationOrder field - not currently used
     // This 64-bit value is an index of the link’s creation time within the group. Values start at 0 when
@@ -475,12 +448,37 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
     // group does not change existing links’ creation order field.
     // Hmm are we supposed to sort by creation order ??
 
-    if (debugGroup) println(" LinkSoft $linkName $linkInfo")
-    return LinkSoft(
-        linkType,
-        linkName,
-        linkInfo
-    )
+    val linkType = if (flags and 8 != 0) {
+        rawdata.getByte("linkType").toInt() // 0 = hard, 1 = soft, 64 = external
+    } else 0
+    if (debugGroup) println(" LinkSoft $linkName linkType=$linkType")
+
+    when (linkType) {
+        0 -> {
+            // "A hard link (should never be stored in the file)" wtf?
+            val linkAddress = this.readOffset(state)
+            if (debugGroup) println(" LinkHard $linkName $linkAddress")
+            return LinkHard(linkType, linkName, linkAddress)
+        }
+
+        1 -> {
+            val len = raf.readShort(state)
+            val linkInfo = raf.readString(state, len.toInt())
+            return LinkSoft(linkType, linkName, linkInfo)
+        }
+
+        64 -> {
+            val len = raf.readShort(state)
+            val ba = raf.readBytes(state, len.toInt())
+            val version = ba[0]
+            val fileName = makeStringZ(ba, 1)
+            val objName = makeStringZ(ba, 2 + fileName.length)
+            return LinkExternal(linkType, linkName, version, fileName, objName)
+        }
+        else -> {
+            throw RuntimeException("Unknown link type=$linkType")
+        }
+    }
 }
 
 open class LinkMessage(val linkType: Int, val linkName: String) : MessageHeader(MessageType.Link) {
@@ -493,8 +491,9 @@ open class LinkMessage(val linkType: Int, val linkName: String) : MessageHeader(
         return "type=$typen name=$linkName"
     }
 }
-open class LinkSoft(linkType: Int, linkName: String, val linkInfo: String) : LinkMessage(linkType, linkName)
 open class LinkHard(linkType: Int, linkName: String, val linkAddress: Long) : LinkMessage(linkType, linkName)
+open class LinkSoft(linkType: Int, linkName: String, val linkInfo: String) : LinkMessage(linkType, linkName)
+open class LinkExternal(linkType: Int, linkName: String, val version : Byte, val fileName: String, val objName: String) : LinkMessage(linkType, linkName)
 
 ////////////////////////////////////////// 10 NOT USED
 

@@ -359,7 +359,7 @@ internal fun H5builder.makeDimensions(parentGroup: Group.Builder, h5group: H5Gro
 
 // find the Dimension Scale objects, turn them into shared dimensions
 // always has attribute CLASS = "DIMENSION_SCALE"
-// note that we dont bother looking at their REFERENCE_LIST
+// note that we dont bother looking at REFERENCE_LIST
 @Throws(IOException::class)
 internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h5variable: H5Variable) {
 
@@ -485,6 +485,11 @@ internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group:
     h5variable.attributes().forEach { matt ->
         when (matt.name) {
             HDF5_DIMENSION_LIST -> {
+                // LOOK theory is that a HDF5_DIMENSION_LIST that is a vlen of reference is a netcdf4 file
+                if (matt.mdt.type == Datatype5.Vlen && (matt.mdt is DatatypeVlen) && (matt.mdt as DatatypeVlen).base.type == Datatype5.Reference) {
+                    isNetcdf4 = true
+                }
+
                 // references : may extend the dimension rank?
                 val att: Attribute = buildAttribute(matt) // this reads in the data
                 if (att.values.size != h5variable.mds.rank()) {
