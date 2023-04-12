@@ -32,8 +32,8 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            return Stream.of( N4Files.params(), H5Files.params()).flatMap { i -> i };
-            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(false), H4Files.params()).flatMap { i -> i };
+            // return Stream.of( NetchdfExtraFiles.params(false)).flatMap { i -> i };
+            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(false), H4Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -88,140 +88,20 @@ class NetchdfTest {
     }
      */
     @Test
-    @Disabled
+    // @Disabled
     fun tst_grps() {
         compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
     }
 
-    /* testNestedStructure
-    Relies on field1 and fields2 mdt hash matching s1_t hash, so not added again.
-    no obvious reason why mdts are not shared.
-    <netcdf testNestedStructure {
-      types:
-        compound s1_t {
-          int x ;
-          int y ;
-        }; // s1_t
-        compound s2_t {
-          s1_t field1 ;
-          s1_t field2 ;
-        }; // s2_t
-      variables:
-        s2_t x ;
-    }
-     */
     @Test
-    fun testNestedStructure() {
-        compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/testNestedStructure.nc")
-    }
-
-    @Test
-    @Disabled
-    fun hdfeos() {
-        compareCdlWithClib(testData + "devcdm/hdfeos5/structmetadata_eos.h5")
-    }
-
-    /*structmetadata_eos.h5
-netcdf structmetadata_eos {
-  group: HDFEOS INFORMATION {
-    variables:
-      string StructMetadata.0 ;
-  }
-}
-nc_inq_var return -101 = NetCDF: HDF error
-*/
-
-
-    // possible bug in netcdf4
-    @Test
-    @Disabled
     fun compoundAttributeTest() {
         compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }
-    /*snake@jlc:~/dev/github/cdm-kotlin$ ncdump -h /media/snake/0B681ADF0B681ADF1/thredds-test-data/local/thredds-test-data/cdmUnitTest/formats/netcdf4/compound-attribute-test.nc
-netcdf compound-attribute-test {
-types:
-  compound compound_type {
-    float field0 ;
-    float field1 ;
-    float field2 ;
-    float field3 ;
-  }; // compound_type
-  compound compound_att_string {
-    string field0 ;
-    string field1 ;
-    string field2 ;
-    string field3 ;
-  }; // compound_att_string
-  compound compound_att_char_array {
-    char field0(4) ;
-    char field1(4) ;
-    char field2(4) ;
-    char field3(4) ;
-  }; // compound_att_char_array
-  compound compound_att_float {
-    float field0 ;
-    float field1 ;
-    float field2 ;
-    float field3 ;
-  }; // compound_att_float
-dimensions:
-	dim0 = 2 ;
-variables:
-	compound_type compound_test(dim0) ;
-		compound_att_char_array compound_test:att_char_array_test = {{"a"}, {"1"}, {"abc"}, {"123"}} ;
-		compound_type           compound_test:att_primitive_test = {1, 2, 3, 4} ;
-		compound_att_string     compound_test:att_string_test = {"string for field 0", "field 1 has something", "hey look at me!", "writer\'s block"} ;
-}
-nclib
-   compound_type compound_test(dim0);
-      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
-      compound_type           compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
-      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
-
-h5lib LOOK I think compound_att_float is correct, compound_type has same hash, but wrong
-    compound_type compound_test(dim0);
-      compound_att_char_array compound_test:att_char_array_test = {field0 = "a   ", field1 = "1   ", field2 = "abc ", field3 = "123 "};
-      compound_att_float      compound_test:att_primitive_test = {field0 = 1.0, field1 = 2.0, field2 = 3.0, field3 = 4.0};
-      compound_att_string     compound_test:att_string_test = {field0 = "string for field 0", field1 = "field 1 has something", field2 = "hey look at me!", field3 = "writer's block"};
-
-h5dump
-  compound_att_char_array looks like it should be an array os "strings" of size 1
-
-  H5T_ARRAY { [4] H5T_STRING {
-         STRSIZE 1;
-         STRPAD H5T_STR_NULLTERM;
-         CSET H5T_CSET_ASCII;
-         CTYPE H5T_C_S1;
-      } } "field0";
-
-      compound_att_string should be "strings" of vlen i guess
-      H5T_STRING {
-         STRSIZE H5T_VARIABLE;
-         STRPAD H5T_STR_NULLTERM;
-         CSET H5T_CSET_ASCII;
-         CTYPE H5T_C_S1;
-      } "field0";
-
-         DATATYPE "compound_type" H5T_COMPOUND {
-      H5T_IEEE_F32LE "field0";
-      H5T_IEEE_F32LE "field1";
-      H5T_IEEE_F32LE "field2";
-      H5T_IEEE_F32LE "field3";
-   }
-   same as
-      DATATYPE "compound_att_float" H5T_COMPOUND {
-      H5T_IEEE_F32LE "field0";
-      H5T_IEEE_F32LE "field1";
-      H5T_IEEE_F32LE "field2";
-      H5T_IEEE_F32LE "field3";
-   }
-     */
 
     @Test
     fun testOneCdl() {
-        val filename = testData + "cdmUnitTest/formats/hdf5/extLink/extlink_source.h5"
-        // see if it can be read through H5
+        val filename = testData + "netchdf/tomas/S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4"
+        /* see if it can be read through H5
         openNetchdfFile(filename).use { ncfile ->
             println("netchdf ${ncfile!!.type()} $filename ")
             println("${ncfile.cdl()} ")
@@ -231,11 +111,10 @@ h5dump
             println("NetcdfClibFile ${ncfile.type()} $filename ")
             println("${ncfile.cdl()} ")
         }
-        // see if it can be read through H5
         Hdf5ClibFile(filename).use { ncfile ->
             println("Hdf5ClibFile ${ncfile.type()} $filename ")
             println("${ncfile.cdl()} ")
-        }
+        } */
         compareCdlWithClib(filename)
     }
 
@@ -286,30 +165,6 @@ h5dump
             testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc",
             "/xma/dialoop_back"
         )
-    }
-
-    @Test
-    fun hasMissing() {
-        val filename =
-            testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
-        readNetchdfData(filename, "CMI", Section(":, :"))
-        readNetchdfData(filename, "DQF", Section(":, :"))
-    }
-
-    @Test
-    fun readIterateCompareNC() {
-        val filename = testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc"
-        // showNetchdfHeader(filename, null)
-        compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
-        // compareIterateWithClib(testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc", "CMI")
-    }
-
-    @Test
-    fun testGoes16() {
-        val filename = testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
-        compareCdlWithClib(filename)
-        compareDataWithClib(filename)
-        compareIterateWithClib(filename)
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -725,7 +580,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
     val time1 = measureNanoTime {
         val chunkIter = myfile.chunkIterator(myvar)
         for (pair in chunkIter) {
-            // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
+            println(" compareOneVarIterate myvar=${myvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
             sumValues(pair.array)
             countChunks++
         }
@@ -738,7 +593,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
     val time2 = measureNanoTime {
         val chunkIter = ncfile.chunkIterator(ncvar)
         for (pair in chunkIter) {
-            // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
+            println(" compareOneVarIterate ncvar=${ncvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
             sumValues(pair.array)
             countChunks++
         }

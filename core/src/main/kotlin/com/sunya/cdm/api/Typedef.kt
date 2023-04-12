@@ -12,6 +12,22 @@ abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : 
     val name = makeValidCdmObjectName(orgName)
 
     abstract fun cdl(indent : Indent): String
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is Typedef) return false
+
+        if (kind != other.kind) return false
+        if (baseType != other.baseType) return false
+        return name == other.name
+    }
+
+    override fun hashCode(): Int {
+        var result = kind.hashCode()
+        result = 31 * result + baseType.hashCode()
+        result = 31 * result + name.hashCode()
+        return result
+    }
 }
 
 class CompoundTypedef(name : String, val members : List<StructureMember>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
@@ -25,6 +41,20 @@ class CompoundTypedef(name : String, val members : List<StructureMember>) : Type
             }
             append("${indent}}; // $name")
         }
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is CompoundTypedef) return false
+        if (!super.equals(other)) return false
+
+        return members == other.members
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + members.hashCode()
+        return result
     }
 }
 
@@ -57,6 +87,20 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
     /** Convert array of ENUM into equivalent array of String */
     fun ArrayTyped<*>.convertEnums(): ArrayString {
         return this.convertEnums(values)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is EnumTypedef) return false
+        if (!super.equals(other)) return false
+
+        return values == other.values
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + values.hashCode()
+        return result
     }
 }
 
@@ -91,6 +135,20 @@ class OpaqueTypedef(name : String, val elemSize : Int) : Typedef(TypedefKind.Opa
     override fun cdl(indent : Indent): String {
         return "${indent}opaque($elemSize) $name ;"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is OpaqueTypedef) return false
+        if (!super.equals(other)) return false
+
+        return elemSize == other.elemSize
+    }
+
+    override fun hashCode(): Int {
+        var result = super.hashCode()
+        result = 31 * result + elemSize
+        return result
+    }
 }
 
 // dont really need a typedef, no extra information
@@ -98,4 +156,11 @@ class VlenTypedef(name : String, baseType : Datatype) : Typedef(TypedefKind.Vlen
     override fun cdl(indent : Indent) : String {
         return "${indent}${baseType.cdlName}(*) $name ;"
     }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is VlenTypedef) return false
+        return super.equals(other)
+    }
+
 }

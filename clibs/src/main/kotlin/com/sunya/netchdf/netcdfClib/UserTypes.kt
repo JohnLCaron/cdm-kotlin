@@ -79,11 +79,10 @@ internal fun NCheader.readUserTypes(session: MemorySession, grpid: Int, gb: Grou
             }
             else -> throw RuntimeException()
         }
-        gb.typedefs.add(typedef)
         if (NCheader.debug) println(" typedef $name $size $baseTypeId $nfields ${typedef.kind} ${typedef.baseType}")
 
         val ut = UserType(grpid, userTypeId, name, size.toInt(), baseTypeId, typedef)
-        userTypes[userTypeId] = ut
+        registerTypedef(ut, gb)
     }
 }
 

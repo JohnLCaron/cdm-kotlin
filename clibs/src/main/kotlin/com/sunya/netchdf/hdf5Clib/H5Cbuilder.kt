@@ -28,7 +28,9 @@ class H5Cbuilder(val filename: String) {
     fun formatType() = if (structMetadata.isEmpty()) "hdf5    " else "hdf-eos5"
 
     private val structMetadata = mutableListOf<String>()
-    private val typeinfoMap = mutableMapOf<H5CTypeInfo, MutableList<Group.Builder>>()
+    private val typeinfoMap = mutableMapOf<Typedef, MutableList<Group.Builder>>()
+    private val typeinfoList = mutableListOf<H5CTypeInfo>()
+    private val typeinfoMap2 = mutableMapOf<H5CTypeInfo, MutableList<Group.Builder>>()
     private val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
 
     init {
@@ -54,16 +56,16 @@ class H5Cbuilder(val filename: String) {
     }
 
     ///////////////////////////////////////////////////////////////////////////////////////////
-    internal fun registerTypedef(typeInfo : H5CTypeInfo, gb : Group.Builder) : H5CTypeInfo {
-        val groups = typeinfoMap.getOrPut(typeInfo) { mutableListOf() }
+    internal fun registerTypedef2(typeInfo : H5CTypeInfo, gb : Group.Builder) : H5CTypeInfo {
+        val groups = typeinfoMap2.getOrPut(typeInfo) { mutableListOf() }
         groups.add(gb)
         return typeInfo
     }
-    internal fun findTypeFromId(typeId : Long) : H5CTypeInfo? {
-        return typeinfoMap.keys.find { H5Tequal(it.type_id, typeId) > 0 }
+    internal fun findTypeFromId2(typeId : Long) : H5CTypeInfo? {
+        return typeinfoMap2.keys.find { H5Tequal(it.type_id, typeId) > 0 }
     }
-    internal fun addTypesToGroups() {
-        typeinfoMap.forEach { typeInfo, groupList ->
+    internal fun addTypesToGroups2() {
+        typeinfoMap2.forEach { typeInfo, groupList ->
             if (groupList.size == 1) {
                 groupList[0].addTypedef(typeInfo.typedef!!)
             } else {
@@ -75,6 +77,31 @@ class H5Cbuilder(val filename: String) {
             }
         }
     }
+
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    internal fun registerTypedef(typeInfo : H5CTypeInfo, gb : Group.Builder) : H5CTypeInfo {
+        typeinfoList.add(typeInfo)
+        val groups = typeinfoMap.getOrPut(typeInfo.typedef!!) { mutableListOf() }
+        groups.add(gb)
+        return typeInfo
+    }
+    internal fun findTypeFromId(typeId : Long) : H5CTypeInfo? {
+        return typeinfoList.find { H5Tequal(it.type_id, typeId) > 0 }
+    }
+    internal fun addTypesToGroups() {
+        typeinfoMap.forEach { typedef, groupList ->
+            if (groupList.size == 1) {
+                groupList[0].addTypedef(typedef)
+            } else {
+                var topgroup = groupList[0]
+                for (idx in 1 until groupList.size) {
+                    topgroup = topgroup.commonParent(groupList[idx])
+                }
+                topgroup.addTypedef(typedef)
+            }
+        }
+    }
+
     ////////////////////////////////////////////////////////////////////////////////
     fun convertReferences(gb : Group.Builder) {
         val refAtts = gb.attributes.filter{ it.datatype == Datatype.REFERENCE}

@@ -116,7 +116,6 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
         return H5CTypeInfo(type_id, tclass, type_size, type_sign, type_endian, null)
     }
 
-    // LOOK not registering Vlen typedef
     if (datatype5 == Datatype5.Vlen) {
         // hid_t H5Tget_super	(	hid_t 	type	)
         val base_type_id = H5Tget_super(type_id)
@@ -167,7 +166,7 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
-            Datatype5.String -> Datatype.STRING.withVlen(isVlenString)
+            Datatype5.String -> if (isVlenString || elemSize > 1) Datatype.STRING.withVlen(isVlenString) else Datatype.CHAR
             Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
             Datatype5.Compound -> Datatype.COMPOUND.withTypedef(typedef!!)
