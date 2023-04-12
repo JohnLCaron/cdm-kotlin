@@ -33,7 +33,7 @@ class NetchdfTest {
         @JvmStatic
         fun params(): Stream<Arguments> {
             // return Stream.of( NetchdfExtraFiles.params(false)).flatMap { i -> i };
-            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(false), H4Files.params()).flatMap { i -> i };
+            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(true), H4Files.params()).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -120,10 +120,10 @@ class NetchdfTest {
 
     @Test
     fun compareOneData() {
-        val filename = testData + "devcdm/hdf5/compound_complex.h5"
+        val filename = testData + "cdmUnitTest/formats/hdf5/20130212_CN021_P3_222k_B02_WD7195FBPAT10231Nat_Nat_Std_CHTNWD_OP3_14.mip222k.oschp"
         // val filename = testData + "cdmUnitTest/formats/hdf5/superblockIsOffsetNPP.h5"
         //val filename = testData + "cdmUnitTest/formats/hdf5/wrf/wrf_input_par.h5"
-        compareCdlWithClib(filename)
+        // compareCdlWithClib(filename)
 
         /* openNetchdfFile(filename).use { ncfile ->
             val v = ncfile!!.rootGroup().allVariables().find { it.fullname() == "/DATASET=INPUT/TIME_STAMP_000001/MU" }
@@ -151,12 +151,7 @@ class NetchdfTest {
                 compareNetcdfData(ncfile, netch!!, null, null)
             }
         } */
-        openNetchdfFile(filename).use { netch ->
-            println("${netch!!.type()} $filename ")
-            Hdf5ClibFile(filename).use { hcfile ->
-                compareNetcdfData(netch, hcfile, null, null)
-            }
-        }
+        compareDataWithClib(filename)
     }
 
     @Test
@@ -482,7 +477,7 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Ne
                 } else {
                     println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
                 }
-                assertTrue(false, "variable ${myvar.name}")
+                assertTrue(false, "variable ${myvar.fullname()}")
                 return
             } else {
                 if (NetchdfTest.showData) {
