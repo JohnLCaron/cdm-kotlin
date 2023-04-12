@@ -4,7 +4,7 @@ import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat
+import com.sunya.netchdf.NetchdfFileFormat
 import java.io.IOException
 import java.nio.ByteOrder
 import java.nio.charset.Charset

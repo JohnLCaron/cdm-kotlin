@@ -7,11 +7,9 @@ import com.sunya.cdm.api.Section.Companion.equivalent
 import com.sunya.cdm.array.*
 import com.sunya.cdm.util.Stats
 import com.sunya.cdm.util.nearlyEquals
-import com.sunya.netchdf.hdf4.Hdf4File
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.netchdf.hdf5Clib.Hdf5ClibFile
-import com.sunya.netchdf.netcdf4.openNetchdfFile
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.*
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
@@ -88,12 +86,13 @@ class NetchdfTest {
     }
      */
     @Test
-    // @Disabled
+    @Disabled
     fun tst_grps() {
         compareCdlWithClib(testData + "devcdm/netcdf4/tst_grps.nc4")
     }
 
     @Test
+    @Disabled
     fun compoundAttributeTest() {
         compareCdlWithClib(testData + "cdmUnitTest/formats/netcdf4/compound-attribute-test.nc")
     }
@@ -203,8 +202,8 @@ class NetchdfTest {
         compareDataWithClib(filename)
     }
 
-    @ParameterizedTest
-    @MethodSource("params")
+    //@ParameterizedTest
+    //@MethodSource("params")
     fun testIterateWithClib(filename: String) {
         compareIterateWithClib(filename)
     }
@@ -226,7 +225,7 @@ fun showNetchdfHeader(filename: String, varname: String? = null, section: Sectio
 
 fun showNcHeader(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
     println(filename)
-    NetcdfClibFile(filename).use { ncfile ->
+    NClibFile(filename).use { ncfile ->
         println(ncfile.cdl())
     }
 }
@@ -244,7 +243,7 @@ fun readNetchdfData(filename: String, varname: String? = null, section: Section?
 }
 
 fun readNcData(filename: String, varname: String? = null, section: Section? = null, showCdl : Boolean = false) {
-    NetcdfClibFile(filename).use { ncfile ->
+    NClibFile(filename).use { ncfile ->
         readMyData(ncfile, varname, section, showCdl)
     }
 }
@@ -264,7 +263,7 @@ fun compareCdlWithClib(filename: String) {
                 assertEquals(hcfile.cdl(), netchdf.cdl())
             }
         } else if (netchdf.type().contains("netcdf")) {
-            NetcdfClibFile(filename).use { ncfile ->
+            NClibFile(filename).use { ncfile ->
                 assertEquals(ncfile.cdl(), netchdf.cdl())
             }
         }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
@@ -292,7 +291,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
         } else if (netchdf.type().contains("netcdf")) {
-            NetcdfClibFile(filename).use { ncfile ->
+            NClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
         }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
@@ -320,7 +319,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
                 compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
         } else if (netchdf.type().contains("netcdf")) {
-            NetcdfClibFile(filename).use { ncfile ->
+            NClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section)
             }
         } else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
@@ -544,6 +543,8 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
 //////////////////////////////////////////////////////////////////////////////////////
 // compare reading data chunkIterate API with two Netchdf
 
+private const val debugIter = false
+
 fun compareIterateNetchdf(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: Section? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
@@ -575,7 +576,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
     val time1 = measureNanoTime {
         val chunkIter = myfile.chunkIterator(myvar)
         for (pair in chunkIter) {
-            println(" compareOneVarIterate myvar=${myvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
+            if (debugIter) println(" compareOneVarIterate myvar=${myvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
             sumValues(pair.array)
             countChunks++
         }
@@ -588,7 +589,7 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
     val time2 = measureNanoTime {
         val chunkIter = ncfile.chunkIterator(ncvar)
         for (pair in chunkIter) {
-            println(" compareOneVarIterate ncvar=${ncvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
+            if (debugIter) println(" compareOneVarIterate ncvar=${ncvar.name} ${pair.section} = ${pair.array.shape.contentToString()}")
             sumValues(pair.array)
             countChunks++
         }

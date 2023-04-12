@@ -3,7 +3,6 @@ package com.sunya.netchdf.hdf4
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
-import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.testdata.H4Files
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Disabled
@@ -12,7 +11,6 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.assertEquals

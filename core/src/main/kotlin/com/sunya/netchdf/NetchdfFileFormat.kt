@@ -1,4 +1,4 @@
-package com.sunya.netchdf.netcdf4
+package com.sunya.netchdf
 
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState

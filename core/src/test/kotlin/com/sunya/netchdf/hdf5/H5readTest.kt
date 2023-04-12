@@ -167,9 +167,6 @@ class H5readTest {
         var countChunks = 0
         val time1 = measureNanoTime {
             val chunkIter = myFile.chunkIterator(myvar)
-            if (chunkIter == null) {
-                return 0
-            }
             for (pair in chunkIter) {
                 // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
                     sumValues(pair.array)
