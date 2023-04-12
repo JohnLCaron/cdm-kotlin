@@ -1,10 +1,14 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.api.Section.Companion.equivalent
+import com.sunya.cdm.layout.Chunker
+import com.sunya.cdm.layout.IndexSpace
+import java.nio.ByteBuffer
 
-abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : Iterable<T> {
+abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val shape : IntArray) : Iterable<T> {
     val nelems = computeSize(shape).toInt()
 
     override fun toString(): String {
@@ -64,10 +68,27 @@ abstract class ArrayTyped<T>(val datatype : Datatype, val shape : IntArray) : It
             return count
         }
     }
+
+    abstract fun section(section : Section) : ArrayTyped<T>
+
+    protected fun sectionFrom(section : Section) : ByteBuffer {
+        val sectionSize = computeSize(section.shape).toInt()
+        if (sectionSize == nelems)
+            return bb
+
+        val dst = ByteBuffer.allocate(sectionSize * datatype.size)
+        val chunker = Chunker(IndexSpace(this.shape), IndexSpace(section))
+        chunker.transfer(bb, datatype.size, dst)
+
+        bb.position(0)
+        dst.position(0)
+
+        return dst
+    }
 }
 
 // An array of any shape that has a single value for all elements, usually the fill value
-class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) : ArrayTyped<T>(datatype, shape) {
+class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) : ArrayTyped<T>(ByteBuffer.allocate(1), datatype, shape) {
     override fun iterator(): Iterator<T> = SingleIterator()
     private inner class SingleIterator : AbstractIterator<T>() {
         private var idx = 0
@@ -79,4 +100,11 @@ class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) :
             append("ArraySingle shape=${shape.contentToString()} data= $fillValue\n")
         }
     }
+
+    override fun section(section : Section) : ArrayTyped<T> {
+        return ArraySingle(section.shape, datatype, fillValue)
+    }
+
 }
+
+

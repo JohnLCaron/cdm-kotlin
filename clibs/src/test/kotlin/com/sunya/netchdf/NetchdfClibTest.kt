@@ -241,8 +241,29 @@ h5dump
 
     @Test
     fun compareOneData() {
-        val filename = testData + "devcdm/netcdf4/tst_converts2.nc"
+        val filename = testData + "devcdm/hdf5/compound_complex.h5"
+        // val filename = testData + "cdmUnitTest/formats/hdf5/superblockIsOffsetNPP.h5"
+        //val filename = testData + "cdmUnitTest/formats/hdf5/wrf/wrf_input_par.h5"
         compareCdlWithClib(filename)
+
+        /* openNetchdfFile(filename).use { ncfile ->
+            val v = ncfile!!.rootGroup().allVariables().find { it.fullname() == "/DATASET=INPUT/TIME_STAMP_000001/MU" }
+            val mydata = ncfile.readArrayData(v!!, null)
+            val section = Section("0:0, 6:13, 3:6)")
+            val mysdata = mydata.section(section)
+            println("netch section $section data=$mysdata")
+
+            Hdf5ClibFile(filename).use { hcfile ->
+                val v = hcfile.rootGroup().allVariables().find { it.fullname() == "/DATASET=INPUT/TIME_STAMP_000001/MU" }
+                val ncdata = hcfile.readArrayData(v!!, null)
+                assertTrue (ncdata.equals(mydata))
+
+                val section = Section("0:0, 6:13, 3:6)")
+                val ncsdata = ncdata.section(section)
+                println("H5C section $section data=$ncsdata")
+                assertTrue (ncsdata.equals(mysdata))
+            }
+        } */
 
         /* see if it can be read through N4C
         NetcdfClibFile(filename).use { ncfile ->
@@ -251,7 +272,6 @@ h5dump
                 compareNetcdfData(ncfile, netch!!, null, null)
             }
         } */
-        // see if it can be read through H5C
         openNetchdfFile(filename).use { netch ->
             println("${netch!!.type()} $filename ")
             Hdf5ClibFile(filename).use { hcfile ->
@@ -555,8 +575,7 @@ fun compareNetcdfData(myfile: Netchdf, ncfile: Netchdf, varname: String?, sectio
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
-            println(" *** cant find myvar $varname")
-            return
+            throw RuntimeException(" *** cant find myvar $varname")
         }
         val ncvar = ncfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
         if (ncvar == null) {
@@ -741,10 +760,10 @@ fun sumValues(array : ArrayTyped<*>) {
     }
     // cant cast unsigned to Numbers
     val useArray = when (array.datatype) {
-        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).values)
-        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).values)
-        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).values)
-        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).values)
+        Datatype.UBYTE -> ArrayByte(array.shape, (array as ArrayUByte).bb)
+        Datatype.USHORT -> ArrayShort(array.shape, (array as ArrayUShort).bb)
+        Datatype.UINT -> ArrayInt(array.shape, (array as ArrayUInt).bb)
+        Datatype.ULONG -> ArrayLong(array.shape, (array as ArrayULong).bb)
         else -> array
     }
 

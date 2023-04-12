@@ -147,8 +147,8 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     with (datatype.typedef as EnumTypedef) {
                         when (datatype) {
                             Datatype.ENUM1 -> return ArrayUByte(wantSection.shape, values).convertEnums()
-                            Datatype.ENUM2 -> return ArrayUShort(wantSection.shape, values.asShortBuffer()).convertEnums()
-                            Datatype.ENUM4 -> return ArrayUInt(wantSection.shape, values.asIntBuffer()).convertEnums()
+                            Datatype.ENUM2 -> return ArrayUShort(wantSection.shape, values).convertEnums()
+                            Datatype.ENUM4 -> return ArrayUInt(wantSection.shape, values).convertEnums()
                             else -> throw RuntimeException()
                         }
                     }
@@ -186,9 +186,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_DOUBLE, nelems)
                     checkErr("nc_get_vars_double",
                         nc_get_vars_double(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = DoubleBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(8 * nelems.toInt())
+                    val dvalues = values.asDoubleBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_DOUBLE, i))
+                        dvalues.put(i.toInt(), val_p.getAtIndex(C_DOUBLE, i))
                     }
                     return ArrayDouble(wantSection.shape, values)
                 }
@@ -197,9 +198,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_FLOAT, nelems)
                     checkErr("nc_get_vars_float",
                         nc_get_vars_float(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = FloatBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(4 * nelems.toInt())
+                    val fvalues = values.asFloatBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_FLOAT, i))
+                        fvalues.put(i.toInt(), val_p.getAtIndex(C_FLOAT, i))
                     }
                     return ArrayFloat(wantSection.shape, values)
                 }
@@ -209,9 +211,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_INT, nelems)
                     checkErr("nc_get_vars_int",
                         nc_get_vars_int(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = IntBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(4 * nelems.toInt())
+                    val ivalues = values.asIntBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
+                        ivalues.put(i.toInt(), val_p.getAtIndex(C_INT, i))
                     }
                     return ArrayInt(wantSection.shape, values)
                 }
@@ -221,9 +224,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_INT, nelems)
                     checkErr("nc_get_vars_uint",
                         nc_get_vars_uint(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = IntBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(4 * nelems.toInt())
+                    val ivalues = values.asIntBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(JAVA_INT, i))
+                        ivalues.put(i.toInt(), val_p.getAtIndex(C_INT, i))
                     }
                     return ArrayUInt(wantSection.shape, values)
                 }
@@ -233,9 +237,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_LONG as MemoryLayout, nelems)
                     checkErr("nc_get_vars_long",
                         nc_get_vars_long(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = LongBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(8 * nelems.toInt())
+                    val lvalues = values.asLongBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
+                        lvalues.put(i.toInt(), val_p.getAtIndex(C_LONG, i))
                     }
                     return ArrayLong(wantSection.shape, values)
                 }
@@ -245,9 +250,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_LONG  as MemoryLayout, nelems)
                     checkErr("nc_get_vars_ulonglong",
                         nc_get_vars_ulonglong(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = LongBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(8 * nelems.toInt())
+                    val lvalues = values.asLongBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(JAVA_LONG, i))
+                        lvalues.put(i.toInt(), val_p.getAtIndex(C_LONG, i))
                     }
                     return ArrayULong(wantSection.shape, values)
                 }
@@ -256,9 +262,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_SHORT, nelems)
                     checkErr("nc_get_vars_short",
                         nc_get_vars_short(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = ShortBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(2 * nelems.toInt())
+                    val svalues = values.asShortBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
+                        svalues.put(i.toInt(), val_p.getAtIndex(C_SHORT, i))
                     }
                     return ArrayShort(wantSection.shape, values)
                 }
@@ -267,9 +274,10 @@ class NetcdfClibFile(val filename: String) : Netchdf {
                     val val_p = session.allocateArray(C_SHORT, nelems)
                     checkErr("nc_get_vars_ushort",
                         nc_get_vars_ushort(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
-                    val values = ShortBuffer.allocate(nelems.toInt())
+                    val values = ByteBuffer.allocate(2 * nelems.toInt())
+                    val svalues = values.asShortBuffer()
                     for (i in 0 until nelems) {
-                        values.put(i.toInt(), val_p.getAtIndex(ValueLayout.JAVA_SHORT, i))
+                        svalues.put(i.toInt(), val_p.getAtIndex(C_SHORT, i))
                     }
                     return ArrayUShort(wantSection.shape, values)
                 }

@@ -1,8 +1,12 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
+import com.sunya.cdm.layout.IndexND
+import com.sunya.cdm.layout.IndexSpace
+import java.nio.ByteBuffer
 
-class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Datatype) : ArrayTyped<Any>(Datatype.VLEN, shape) {
+class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Datatype) : ArrayTyped<Any>(ByteBuffer.allocate(1), Datatype.VLEN, shape) {
 
     // iterate over all the values, needed eg for toList()
     override fun iterator(): Iterator<Any> = AllIterator()
@@ -43,4 +47,12 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
         return result
     }
 
+    override fun section(section: Section): ArrayVlen {
+        val odo = IndexND(IndexSpace(section), this.shape)
+        val sectionList = mutableListOf<Array<*>>()
+        for (index in odo) {
+            sectionList.add(values[odo.element().toInt()])
+        }
+        return ArrayVlen(section.shape, sectionList, baseType)
+    }
 }

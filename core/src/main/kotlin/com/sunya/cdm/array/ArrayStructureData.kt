@@ -1,6 +1,7 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
@@ -8,8 +9,8 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
-class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
-    : ArrayTyped<ArrayStructureData.StructureData>(Datatype.COMPOUND, shape) {
+class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
+    : ArrayTyped<ArrayStructureData.StructureData>(bb, Datatype.COMPOUND, shape) {
 
     init {
         require(bb.capacity() >= recsize * shape.computeSize())
@@ -54,6 +55,10 @@ class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : In
                 append("\n")
             }
         }
+    }
+
+    override fun section(section : Section) : ArrayStructureData {
+        return ArrayStructureData(section.shape, sectionFrom(section), recsize, members)
     }
 
     inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
@@ -152,15 +157,15 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
             repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
             return when (datatype) {
                 Datatype.BYTE -> ArrayByte(dims, memberBB)
-                Datatype.SHORT -> ArrayShort(dims, memberBB.asShortBuffer())
-                Datatype.INT -> ArrayInt(dims, memberBB.asIntBuffer())
-                Datatype.LONG -> ArrayLong(dims, memberBB.asLongBuffer())
+                Datatype.SHORT -> ArrayShort(dims, memberBB)
+                Datatype.INT -> ArrayInt(dims, memberBB)
+                Datatype.LONG -> ArrayLong(dims, memberBB)
                 Datatype.UBYTE -> ArrayUByte(dims, memberBB)
-                Datatype.USHORT -> ArrayUShort(dims, memberBB.asShortBuffer())
-                Datatype.UINT -> ArrayUInt(dims, memberBB.asIntBuffer())
-                Datatype.ULONG -> ArrayULong(dims, memberBB.asLongBuffer())
-                Datatype.FLOAT -> ArrayFloat(dims, memberBB.asFloatBuffer())
-                Datatype.DOUBLE -> ArrayDouble(dims, memberBB.asDoubleBuffer())
+                Datatype.USHORT -> ArrayUShort(dims, memberBB)
+                Datatype.UINT -> ArrayUInt(dims, memberBB)
+                Datatype.ULONG -> ArrayULong(dims, memberBB)
+                Datatype.FLOAT -> ArrayFloat(dims, memberBB)
+                Datatype.DOUBLE -> ArrayDouble(dims, memberBB)
                 Datatype.CHAR -> makeStringZ(bb, offset, nelems)
                 Datatype.STRING -> {
                     if (datatype.isVlenString) {

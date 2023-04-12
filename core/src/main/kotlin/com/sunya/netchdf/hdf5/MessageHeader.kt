@@ -440,8 +440,6 @@ fun H5builder.readLinkMessage(state: OpenFileState): LinkMessage {
             array("linkName", 1, "linkNameLength")
         }
     if (debugMessage) rawdata.show()
-    rawdata.show()
-
     val linkName = rawdata.getString("linkName")
 
     // CreationOrder field - not currently used

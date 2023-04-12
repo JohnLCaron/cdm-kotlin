@@ -428,7 +428,7 @@ class H5Cbuilder(val filename: String) {
                 } else if (datatype == Datatype.COMPOUND) {
                     val members = (datatype.typedef as CompoundTypedef).members
                     val sdataArray =  ArrayStructureData(dims, bb, h5ctype.elemSize, members)
-                    processCompoundData(context.session, sdataArray, data_p)
+                    processCompoundData(context.session, sdataArray, bb)
                     Attribute(aname, datatype, sdataArray.toList())
 
                 } else {
@@ -547,8 +547,8 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
 
     if (datatype == Datatype.COMPOUND) {
         val members = (datatype.typedef as CompoundTypedef).members
-        val sdataArray =  ArrayStructureData(dims, bb, h5ctype.elemSize, members)
-        return processCompoundData(session, sdataArray, data_p)
+        val sdataArray = ArrayStructureData(dims, bb, h5ctype.elemSize, members)
+        return processCompoundData(session, sdataArray, bb)
     }
 
     return processDataIntoArray(bb, h5ctype.datatype5, datatype, dims, h5ctype.elemSize)
@@ -606,14 +606,14 @@ internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatyp
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
         Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
-        Datatype.SHORT -> ArrayShort(shape, bb.asShortBuffer())
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb.asShortBuffer())
-        Datatype.INT -> ArrayInt(shape, bb.asIntBuffer())
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb.asIntBuffer())
-        Datatype.FLOAT -> ArrayFloat(shape, bb.asFloatBuffer())
-        Datatype.DOUBLE -> ArrayDouble(shape, bb.asDoubleBuffer())
-        Datatype.LONG -> ArrayLong(shape, bb.asLongBuffer())
-        Datatype.ULONG -> ArrayULong(shape, bb.asLongBuffer())
+        Datatype.SHORT -> ArrayShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.INT -> ArrayInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.FLOAT -> ArrayFloat(shape, bb)
+        Datatype.DOUBLE -> ArrayDouble(shape, bb)
+        Datatype.LONG -> ArrayLong(shape, bb)
+        Datatype.ULONG -> ArrayULong(shape, bb)
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
         else -> {
             return ArraySingle(shape, Datatype.INT, 0)
@@ -630,23 +630,26 @@ internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatyp
     return result
 }
 
-// LOOK duplicate from NetcdfClibFile
 // Put the variable length members (vlen, string) on the heap
-internal fun processCompoundData(session : MemorySession, sdataArray : ArrayStructureData, data_p : MemorySegment) : ArrayStructureData {
-    sdataArray.putStringsOnHeap {  member, offset ->
+internal fun processCompoundData(session : MemorySession, sdataArray : ArrayStructureData, bb : ByteBuffer) : ArrayStructureData {
+    sdataArray.putStringsOnHeap {  member, moffset ->
         val values = mutableListOf<String>()
-        repeat(member.nelems) {
-            values.add("dunno") // see readVlenStrings above ??
-            // values.add(data_p.getAtIndex(ValueLayout.ADDRESS, it.toLong()).getUtf8String(0))
+        repeat(member.nelems) { idx ->
+            // MemoryAddress get(ValueLayout.OfAddress layout, long offset) {
+            val longAddress = bb.getLong(moffset + idx * 8)
+            val address = MemoryAddress.ofLong(longAddress)
+            val sval = address.getUtf8String(0)
+            values.add(sval)
         }
         values
     }
 
-    sdataArray.putVlensOnHeap { member, offset ->
+    sdataArray.putVlensOnHeap { member, moffset ->
         val listOfVlen = mutableListOf<Array<*>>()
-        for (elem in 0 until member.nelems) {
-            val arraySize = data_p.get(ValueLayout.JAVA_LONG, (offset).toLong()).toInt()
-            val address = data_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
+        repeat(member.nelems) { idx ->
+            val arraySize = bb.getLong(moffset + idx * 8).toInt()
+            val longAddress = bb.getLong(moffset + idx * 8 + 8)
+            val address = MemoryAddress.ofLong(longAddress)
             listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
         }
         ArrayVlen(member.dims, listOfVlen, member.datatype)
@@ -666,42 +669,5 @@ private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : D
         else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
     }
 }
-
-/*
-Datatype.COMPOUND -> {
-    requireNotNull(userType)
-    requireNotNull(datatype.typedef)
-    require(datatype.typedef is CompoundTypedef)
-
-    val nbytes = nelems * userType.size // LOOK relation of userType.size to datatype.size ??
-    val val_p = session.allocate(nbytes)
-    com.sunya.netchdf.netcdfClib.checkErr(
-        "compound nc_get_vars",
-        netcdf_h.nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p)
-    )
-    val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
-    val bb = ByteBuffer.wrap(raw)
-    bb.order(ByteOrder.LITTLE_ENDIAN)
-
-    val members = (datatype.typedef as CompoundTypedef).members
-    val sdataArray = ArrayStructureData(wantSection.shape, bb, userType.size, members)
-    // strings vs array of strings, also duplicate readCompoundAttValues
-    sdataArray.putStringsOnHeap {  offset ->
-        val address = val_p.get(ValueLayout.ADDRESS, (offset).toLong())
-        address.getUtf8String(0)
-    }
-    sdataArray.putVlensOnHeap { member, offset ->
-        // look duplicate (maybe)
-        val listOfVlen = mutableListOf<Array<*>>()
-        for (elem in 0 until member.nelems) {
-            val arraySize = val_p.get(ValueLayout.JAVA_LONG, (offset).toLong()).toInt()
-            val address = val_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
-            listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
-        }
-        ArrayVlen(member.dims, listOfVlen, member.datatype)
-    }
-    return sdataArray
-}
- */
 
 data class GroupContext(val session : MemorySession, val group: Group.Builder, val group5id: Long, val indent : Indent)

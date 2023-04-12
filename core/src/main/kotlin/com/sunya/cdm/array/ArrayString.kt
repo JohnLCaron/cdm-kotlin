@@ -1,11 +1,15 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Section.Companion.breakoutInner
 import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.layout.IndexND
+import com.sunya.cdm.layout.IndexSpace
+import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
-class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(Datatype.STRING, shape) {
+class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(ByteBuffer.allocate(1), Datatype.STRING, shape) {
 
     constructor(shape : IntArray, valueArray : Array<String>) : this (shape, valueArray.toList())
 
@@ -23,6 +27,14 @@ class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<Stri
         }
     }
 
+    override fun section(section : Section) : ArrayString {
+        val odo = IndexND(IndexSpace(section), this.shape)
+        val sectionList = mutableListOf<String>()
+        for (index in odo) {
+            sectionList.add( values[odo.element().toInt()])
+        }
+        return ArrayString(section.shape, sectionList)
+    }
 }
 
 

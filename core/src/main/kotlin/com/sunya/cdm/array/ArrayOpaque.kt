@@ -1,10 +1,11 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.Section
 import java.nio.ByteBuffer
 
 // LOOK not dealing with n > 1
-class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(Datatype.OPAQUE, shape) {
+class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(values, Datatype.OPAQUE, shape) {
     init {
         require(nelems * size <= values.capacity())
     }
@@ -22,6 +23,10 @@ class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : A
 
     override fun toString(): String {
         return "ArrayOpaque(size=$size, nelems=$nelems, \n values=${showValues()})"
+    }
+
+    override fun section(section : Section) : ArrayOpaque {
+        return ArrayOpaque(section.shape, sectionFrom(section), size)
     }
 
 }
