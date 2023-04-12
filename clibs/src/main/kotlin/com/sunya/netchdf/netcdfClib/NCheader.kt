@@ -13,54 +13,53 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
-internal val userTypes = mutableMapOf<Int, UserType>() // hash by typeid
 
-// Really a builder of the root Group.
 class NCheader(val filename: String) {
     val rootGroup = Group.Builder("")
-    var formatType : String = ""
+    val formatType: String
 
-    private var ncid = 0
-    private var format = 0
-    private var formatx = 0
+    private val ncid: Int
+    private val format: Int
+    private val formatx: Int
     private var mode = 0
+
+    internal val userTypes = mutableMapOf<Int, UserType>() // map by typeid
+    internal val typeinfoMap = mutableMapOf<Typedef, MutableList<Group.Builder>>()
 
     init {
         MemorySession.openConfined().use { session ->
-            build(session)
+            val filenameSeg: MemorySegment = session.allocateUtf8String(filename)
+            val fileHandle: MemorySegment = session.allocate(C_INT, 0)
+
+            checkErr("nc_open", nc_open(filenameSeg, 0, fileHandle))
+            this.ncid = fileHandle[C_INT, 0]
+            if (debug) println("nc_open $filename fileHandle ${this.ncid}")
+
+            // format
+            val format_p: MemorySegment = session.allocate(C_INT, 0)
+            checkErr("nc_inq_format", nc_inq_format(ncid, format_p))
+            this.format = format_p[C_INT, 0]
+            if (debugFormat) println(" nc_inq_format = ${netcdfFormat(this.format)}")
+            this.formatType = netcdfFormat(this.format).toString()
+
+            // format extended
+            val mode_p: MemorySegment = session.allocate(C_INT, 0)
+            checkErr("nc_inq_format_extended", nc_inq_format_extended(ncid, format_p, mode_p))
+            this.formatx = format_p[C_INT, 0]
+            this.mode = mode_p[C_INT, 0]
+            if (debugFormat) println(
+                " nc_inq_format_extended = ${netcdfFormatExtended(this.formatx)} " +
+                        "mode = 0x${java.lang.Long.toHexString(this.mode.toLong())} ${netcdfMode(this.mode)}"
+            )
+
+            val version = nc_inq_libvers().getUtf8String(0)
+            if (debugFormat) println(" nc_inq_libvers = $version")
+
+            readGroup(session, Group4(ncid, rootGroup, null))
+            // rootGroup.addAttribute(Attribute(Netcdf4.NCPROPERTIES, version))
+
+            addTypesToGroups()
         }
-    }
-
-    @Throws(IOException::class)
-    private fun build(session: MemorySession) {
-        val filenameSeg: MemorySegment = session.allocateUtf8String(filename)
-        val fileHandle: MemorySegment = session.allocate(C_INT, 0)
-
-        checkErr("nc_open", nc_open(filenameSeg, 0, fileHandle))
-        this.ncid = fileHandle[C_INT, 0]
-        if (debug) println("nc_open $filename fileHandle ${this.ncid}")
-
-        // format
-        val format_p: MemorySegment = session.allocate(C_INT, 0)
-        checkErr("nc_inq_format", nc_inq_format(ncid, format_p))
-        this.format = format_p[C_INT, 0]
-        if (debugFormat) println(" nc_inq_format = ${netcdfFormat(this.format)}")
-        this.formatType = netcdfFormat(this.format).toString()
-
-        // format extended
-        val mode_p: MemorySegment = session.allocate(C_INT, 0)
-        checkErr("nc_inq_format_extended", nc_inq_format_extended(ncid, format_p, mode_p))
-        this.formatx = format_p[C_INT, 0]
-        this.mode = mode_p[C_INT, 0]
-        if (debugFormat) println(" nc_inq_format_extended = ${netcdfFormatExtended(this.formatx)} " +
-                "mode = 0x${java.lang.Long.toHexString(this.mode.toLong())} ${netcdfMode(this.mode)}")
-
-        val version = nc_inq_libvers().getUtf8String(0)
-        if (debugFormat) println(" nc_inq_libvers = $version")
-
-        // read root group
-        readGroup(session, Group4(ncid, rootGroup, null))
-        // rootGroup.addAttribute(Attribute(Netcdf4.NCPROPERTIES, version))
     }
 
     private fun readGroup(session: MemorySession, g4: Group4) {
@@ -71,7 +70,7 @@ class NCheader(val filename: String) {
 
         // group attributes
         val numAtts_p = session.allocate(C_INT, 0)
-        checkErr("nc_inq_natts", nc_inq_natts(g4.grpid, numAtts_p)) { "g4.grpid= ${g4.grpid}"}
+        checkErr("nc_inq_natts", nc_inq_natts(g4.grpid, numAtts_p)) { "g4.grpid= ${g4.grpid}" }
         val numAtts = numAtts_p[C_INT, 0]
 
         if (numAtts > 0) {
@@ -167,7 +166,7 @@ class NCheader(val filename: String) {
         val nvars_p = session.allocate(C_INT, 0)
         checkErr("nc_inq_nvars", nc_inq_nvars(g4.grpid, nvars_p))
         val nvars = nvars_p[C_INT, 0]
-        
+
         val varids_p = session.allocateArray(C_INT, nvars.toLong())
         checkErr("nc_inq_varids", nc_inq_varids(g4.grpid, nvars_p, varids_p))
 
@@ -252,7 +251,14 @@ class NCheader(val filename: String) {
         return result
     }
 
-    fun readAttributeValues(session: MemorySession, grpid : Int, varid : Int, attname : String, datatype : Datatype, nelems : Long) : List<Any> {
+    fun readAttributeValues(
+        session: MemorySession,
+        grpid: Int,
+        varid: Int,
+        attname: String,
+        datatype: Datatype,
+        nelems: Long
+    ): List<Any> {
         val name_p: MemorySegment = session.allocateUtf8String(attname)
         when (datatype) {
             Datatype.BYTE -> {
@@ -279,7 +285,7 @@ class NCheader(val filename: String) {
 
             Datatype.CHAR -> {
                 if (nelems == 0L) return emptyList()
-                val val_p = session.allocate(nelems+1) // add 1 to make sure its zero terminated ??
+                val val_p = session.allocate(nelems + 1) // add 1 to make sure its zero terminated ??
                 checkErr("nc_get_att_text", nc_get_att_text(grpid, varid, name_p, val_p))
                 val text: String = val_p.getUtf8String(0)
                 return listOf(text)
@@ -368,7 +374,7 @@ class NCheader(val filename: String) {
 
             Datatype.STRING -> {
                 // this is fixed length, right? assume 0 terminated ???
-                val strings_p : MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
+                val strings_p: MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
                 /* for (i in 0 until nelems) {
                     // Allocate a string off-heap, then store a pointer to it
                     val cString: MemorySegment = session.allocate(NC_MAX_ATTRS().toLong()) // LOOK wrong
@@ -380,7 +386,7 @@ class NCheader(val filename: String) {
                 val result = mutableListOf<String>()
                 for (i in 0 until nelems) {
                     // val s1 = strings_p.getUtf8String(i*8) // LOOK wrong
-                    val s2 : MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
+                    val s2: MemoryAddress = strings_p.getAtIndex(ValueLayout.ADDRESS, i)
                     if (s2 != MemoryAddress.NULL) {
                         val value = s2.getUtf8String(0)
                         val tvalue = transcodeString(value)
@@ -397,6 +403,31 @@ class NCheader(val filename: String) {
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
+    internal fun registerTypedef(userType: UserType, gb: Group.Builder): UserType {
+        userTypes[userType.typeid] = userType
+        val groups = typeinfoMap.getOrPut(userType.typedef) { mutableListOf() }
+        groups.add(gb)
+        return userType
+    }
+
+    /* internal fun findTypeFromId(typeId : Long) : Typedef? {
+        return typeinfoMap.keys.find { hdf5_h.H5Tequal(it.type_id, typeId) > 0 }
+    } */
+    internal fun addTypesToGroups() {
+        typeinfoMap.forEach { typedef, groupList ->
+            if (groupList.size == 1) {
+                groupList[0].addTypedef(typedef)
+            } else {
+                var topgroup = groupList[0]
+                for (idx in 1 until groupList.size) {
+                    topgroup = topgroup.commonParent(groupList[idx])
+                }
+                topgroup.addTypedef(typedef)
+            }
+        }
+    }
+
     // ?? LOOK
     private fun transcodeString(systemString: String): String {
         val byteArray = systemString.toByteArray(Charset.defaultCharset())
@@ -404,64 +435,64 @@ class NCheader(val filename: String) {
     }
 
     internal class Group4(val grpid: Int, val gb: Group.Builder, val parent: Group4?) {
-        var dimIds : IntArray? = null
-        var udimIds : IntArray? = null
+        var dimIds: IntArray? = null
+        var udimIds: IntArray? = null
         val dimHash = mutableMapOf<Int, Dimension>()
 
         init {
             parent?.gb?.addGroup(gb)
         }
 
-        fun makeDimList(dimIds : IntArray) : List<Dimension> {
+        fun makeDimList(dimIds: IntArray): List<Dimension> {
             return dimIds.map {
                 findDim(it) ?: Dimension("", it, false)
             }
         }
 
-        fun findDim(dimId : Int) : Dimension? {
+        fun findDim(dimId: Int): Dimension? {
             return dimHash[dimId] ?: parent?.findDim(dimId)
         }
-
     }
 
-    internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int, val userType : UserType?)
+    internal data class Vinfo(val g4: Group4, val varid: Int, val typeid: Int, val userType: UserType?)
 
     companion object {
         val debug = false
         val debugFormat = false
     }
-}
 
-fun convertType(type: Int): Datatype {
-    return when (type) {
-        NC_BYTE() -> Datatype.BYTE
-        NC_CHAR() -> Datatype.CHAR
-        NC_SHORT()-> Datatype.SHORT
-        NC_INT() -> Datatype.INT
-        NC_FLOAT() -> Datatype.FLOAT
-        NC_DOUBLE() -> Datatype.DOUBLE
-        NC_UBYTE() -> Datatype.UBYTE
-        NC_USHORT() -> Datatype.USHORT
-        NC_UINT() -> Datatype.UINT
-        NC_INT64() -> Datatype.LONG
-        NC_UINT64() -> Datatype.ULONG
-        NC_STRING() -> Datatype.STRING.withVlen(true)
+    fun convertType(type: Int): Datatype {
+        return when (type) {
+            NC_BYTE() -> Datatype.BYTE
+            NC_CHAR() -> Datatype.CHAR
+            NC_SHORT() -> Datatype.SHORT
+            NC_INT() -> Datatype.INT
+            NC_FLOAT() -> Datatype.FLOAT
+            NC_DOUBLE() -> Datatype.DOUBLE
+            NC_UBYTE() -> Datatype.UBYTE
+            NC_USHORT() -> Datatype.USHORT
+            NC_UINT() -> Datatype.UINT
+            NC_INT64() -> Datatype.LONG
+            NC_UINT64() -> Datatype.ULONG
+            NC_STRING() -> Datatype.STRING.withVlen(true)
 
-        else -> {
-            val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
-            return when (userType.typedef.kind) {
-                TypedefKind.Enum -> {
-                    when (userType.size) {
-                        1 -> Datatype.ENUM1.withTypedef(userType.typedef)
-                        2 -> Datatype.ENUM2.withTypedef(userType.typedef)
-                        4 -> Datatype.ENUM4.withTypedef(userType.typedef)
-                        else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
+            else -> {
+                val userType: UserType = userTypes[type] ?: throw RuntimeException("Unknown User data type == $type")
+                return when (userType.typedef.kind) {
+                    TypedefKind.Enum -> {
+                        when (userType.size) {
+                            1 -> Datatype.ENUM1.withTypedef(userType.typedef)
+                            2 -> Datatype.ENUM2.withTypedef(userType.typedef)
+                            4 -> Datatype.ENUM4.withTypedef(userType.typedef)
+                            else -> throw RuntimeException("Unknown enum elem size == ${userType.size}")
+                        }
                     }
+
+                    TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
+                    TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
+                    TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
+                    else -> throw RuntimeException("Unsupported data type == $type")
                 }
-                TypedefKind.Opaque -> Datatype.OPAQUE.withTypedef(userType.typedef)
-                TypedefKind.Vlen -> Datatype.VLEN.withTypedef(userType.typedef)
-                TypedefKind.Compound -> Datatype.COMPOUND.withTypedef(userType.typedef)
-                else -> throw RuntimeException("Unsupported data type == $type")
             }
         }
     }

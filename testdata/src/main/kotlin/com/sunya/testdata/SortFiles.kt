@@ -15,7 +15,7 @@ class SortFiles {
         }
 
         val filenames = mutableMapOf<String, MutableList<String>>()
-        val showAllFiles = false
+        val showAllFiles = true
 
         @JvmStatic
         @AfterAll

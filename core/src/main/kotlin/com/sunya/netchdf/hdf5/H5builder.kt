@@ -475,6 +475,44 @@ class H5builder(
         }
     }
 
+    ///////////////////////////////////////////////////////////////////////////////////////////
+
+    /*
+    private fun addTypedef(typeInfo : H5TypeInfo) : Boolean {
+        if (typedefMdtHash[typeInfo.mdtHash] != null) {
+            if (debugTypedefs) println("already have typdef ${typeInfo.typedef!!.name}@${typeInfo.mdtAddress} hash=${typeInfo.mdtHash}")
+            return false
+        }
+        typedefMap[typeInfo.mdtAddress] = typeInfo.typedef!!
+        if (debugTypedefs) println("add typdef ${typeInfo.typedef.name}@${typeInfo.mdtAddress} hash=${typeInfo.mdtHash}")
+
+        // use object identity instead of a shared object. seems like a bug in netcdf4 to me.
+        typedefMdtHash[typeInfo.mdtHash] = typeInfo.typedef
+        return true
+    }
+    fun findTypedef(mdtAddress : Long, mdtHash : Int) : Typedef? {
+        return typedefMap[mdtAddress] ?: typedefMdtHash[mdtHash]
+    }
+    internal fun registerTypedef(typeInfo : H5TypeInfo, gb : Group.Builder) : H5TypeInfo {
+        val already = typeinfoMap[typeInfo.typedef] != null
+        if (!already) {
+            addTypedef(typeInfo)
+        }
+        val groups = typeinfoMap.getOrPut(typeInfo.typedef!!) { mutableListOf() }
+        groups.add(gb)
+        return typeInfo
+    }
+    internal fun addTypesToGroups() {
+        typeinfoMap.forEach { typedef, groupList ->
+            var topgroup = groupList[0]
+            for (idx in 1 until groupList.size) {
+                topgroup = topgroup.commonParent(groupList[idx])
+            }
+            topgroup.addTypedef(typedef)
+        }
+    } */
+
+
     ////////////////////////////////////////////////////////////////////////////////
     fun convertReferences(gb : Group.Builder) {
         val refAtts = gb.attributes.filter{ it.datatype == Datatype.REFERENCE}

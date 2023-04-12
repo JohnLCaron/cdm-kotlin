@@ -70,8 +70,8 @@ class NetcdfClibFile(val filename: String) : Netchdf {
         require(nelems < Int.MAX_VALUE)
 
         val vinfo = v2.spObject as NCheader.Vinfo
-        val datatype = convertType(vinfo.typeid)
-        val userType = userTypes[vinfo.typeid]
+        val datatype = header.convertType(vinfo.typeid)
+        val userType = header.userTypes[vinfo.typeid]
 
         MemorySession.openConfined().use { session ->
             val longArray = MemoryLayout.sequenceLayout(v2.rank.toLong(), C_LONG)
@@ -86,7 +86,7 @@ class NetcdfClibFile(val filename: String) : Netchdf {
 
             when (datatype) {
                 Datatype.VLEN -> {
-                    val basetype = convertType(userType!!.baseTypeid)
+                    val basetype = header.convertType(userType!!.baseTypeid)
                     // an array of vlen structs. each vlen has an address and a size
                     val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
                     checkErr("vlen nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, vlen_p))
