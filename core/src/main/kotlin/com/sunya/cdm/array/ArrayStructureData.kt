@@ -105,7 +105,6 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
                 val val1 = m.value(this)
                 val val2 = om.value(other)
                 if (val1 != val2) {
-                    val1.equals(val2) // debug
                     return false
                 }
             }
@@ -226,18 +225,14 @@ open class StructureMember(val name: String, val datatype : Datatype, val offset
 
         if (name != other.name) return false
         if (datatype != other.datatype) return false
-        if (offset != other.offset) return false
         if (!dims.contentEquals(other.dims)) return false
-        if (endian != other.endian) return false
         return nelems == other.nelems
     }
 
     override fun hashCode(): Int {
         var result = name.hashCode()
         result = 31 * result + datatype.hashCode()
-        result = 31 * result + offset
         result = 31 * result + dims.contentHashCode()
-        result = 31 * result + (endian?.hashCode() ?: 0)
         result = 31 * result + nelems
         return result
     }
