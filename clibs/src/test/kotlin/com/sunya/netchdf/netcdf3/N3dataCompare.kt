@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.N3Files
 import com.sunya.testdata.testData
 import java.util.*
@@ -55,7 +55,7 @@ class N3dataCompare {
 
     fun readDataCompareNC(filename : String, varname : String?) {
         val myfile = Netcdf3File(filename)
-        val ncfile = NetcdfClibFile(filename)
+        val ncfile = NClibFile(filename)
         println(filename)
         println(myfile.cdl())
         compareNetcdfData(myfile, ncfile, varname)

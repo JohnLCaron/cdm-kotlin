@@ -1,6 +1,6 @@
 package com.sunya.netchdf.netcdf4
 
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import com.sunya.testdata.testData
@@ -193,7 +193,7 @@ variables:
     fun readN4header(filename : String, expect : String) {
         println("=================")
         println(filename)
-        NetcdfClibFile(filename).use { ncfile ->
+        NClibFile(filename).use { ncfile ->
             //println("actual = ${ncfile.cdlStrict().normalize()}")
             //println("expect = ${expect.normalize()}")
             assertEquals(normalize(expect), normalize(ncfile.cdl()))

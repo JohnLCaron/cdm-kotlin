@@ -3,9 +3,9 @@ package com.sunya.netchdf.netcdfClib
 import com.sunya.cdm.api.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SKIP_ATTS
 import com.sunya.netchdf.netcdf3.*
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormat
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormatExtended
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfMode
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfFormat
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfFormatExtended
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfMode
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*

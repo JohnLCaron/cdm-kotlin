@@ -51,7 +51,7 @@ netcdf library version 4.9.2-development of Mar 19 2023 10:42:31
 
  */
 
-class NetcdfClibFile(val filename: String) : Netchdf {
+class NClibFile(val filename: String) : Netchdf {
     private val header: NCheader = NCheader(filename)
     private val rootGroup: Group = header.rootGroup.build(null)
 

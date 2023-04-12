@@ -2,8 +2,8 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.api.Section.Companion.computeSize
-import com.sunya.netchdf.netcdf4.openNetchdfFile
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.openNetchdfFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import org.junit.jupiter.api.Test
 import com.sunya.testdata.testData
 import kotlin.system.measureNanoTime
@@ -124,9 +124,9 @@ class H5dataTiming {
     }
 
     fun readNetchData(filename: String, varname: String, readSection : Section, useOld : Boolean): Double {
-        openNetchdfFile(filename)!!.use { h5file ->
+        return openNetchdfFile(filename).use { h5file ->
             // println(h5file.cdl())
-            val myvar = h5file.rootGroup().variables.find { it.name == varname }
+            val myvar = h5file!!.rootGroup().variables.find { it.name == varname }
 
             var size : Long = 0L
             val elapsed = measureNanoTime {
@@ -137,12 +137,12 @@ class H5dataTiming {
             val tookPer = size / elapsed
             val what = if (useOld) "old" else "new"
             if (showDetail) println(" $what readNetchdf[$readSection] took ${"%.4f".format(elapsed)} secs; read values/sec = ${"%.0f".format(tookPer)} size=$size")
-            return tookPer
+            tookPer
         }
     }
 
     fun readNcdata(filename: String, varname: String, readSection : Section) : Double {
-        NetcdfClibFile(filename).use { h5file ->
+        NClibFile(filename).use { h5file ->
             // println(h5file.cdl())
             val myvar = h5file.rootGroup().variables.find { it.name == varname }
 

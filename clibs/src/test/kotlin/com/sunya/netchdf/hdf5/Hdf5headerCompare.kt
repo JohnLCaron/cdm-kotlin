@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.Netchdf
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.*
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
@@ -52,7 +51,7 @@ class Hdf5headerCompare {
             println("${h5file.type()} $filename ")
             println("\n${h5file.cdl()}")
 
-            NetcdfClibFile(filename).use { nclibfile ->
+            NClibFile(filename).use { nclibfile ->
                 println("ncfile = ${nclibfile.cdl()}")
                 assertEquals(nclibfile.cdl(), h5file.cdl())
             }

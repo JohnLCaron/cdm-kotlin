@@ -1,18 +1,18 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_BYTE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_CHAR
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_DOUBLE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_FLOAT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_SHORT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UBYTE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_USHORT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT64
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_STRING
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT64
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_BYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_CHAR
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_DOUBLE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_FLOAT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_INT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_SHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UBYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UINT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_USHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_INT64
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_STRING
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UINT64
 import java.nio.ByteOrder
 
 internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {

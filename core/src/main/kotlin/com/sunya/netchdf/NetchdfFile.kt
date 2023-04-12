@@ -1,4 +1,4 @@
-package com.sunya.netchdf.netcdf4
+package com.sunya.netchdf
 
 import com.sunya.cdm.api.Netchdf
 import com.sunya.cdm.iosp.*
