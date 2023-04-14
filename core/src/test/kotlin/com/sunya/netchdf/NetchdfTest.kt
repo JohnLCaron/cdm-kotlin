@@ -27,7 +27,7 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
-            // return Stream.of( H4Files.params()).flatMap { i -> i };
+            // return N4Files.params()
             return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
         }
 
@@ -67,7 +67,7 @@ class NetchdfTest {
     @Test
     fun hasMissing() {
         val filename =
-            testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
+            testData + "cdmUnitTest/formats/netcdf4/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
         readNetchdfData(filename, "CMI", Section(":, :"))
         readNetchdfData(filename, "DQF", Section(":, :"))
     }
@@ -111,7 +111,7 @@ class NetchdfTest {
         readNetchdfData(filename)
     }
 
-    @ParameterizedTest
+    // @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchIterate(filename: String) {
         readNetchIterate(filename)

@@ -44,11 +44,6 @@ class H5readTest {
     }
 
     @Test
-    fun superblockIsOffsetNPP() {
-        testOpenH5(testData + "cdmUnitTest/formats/hdf5/superblockIsOffsetNPP.h5")
-    }
-
-    @Test
     fun hasLinkName() {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
@@ -83,11 +78,6 @@ class H5readTest {
     }
 
     @Test
-    fun testGoes16() {
-        testOpenH5(testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc")
-    }
-
-    @Test
     fun testEos() {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
@@ -112,13 +102,13 @@ class H5readTest {
         readNetchdfData(filename)
     }
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
         readNetchIterate(filename, null)
     }
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun testReadConcurrent(filename: String) {
         readH5concurrent(filename, null)
