@@ -19,7 +19,7 @@ class N4Files {
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream4, moar4).flatMap { i -> i };
+            return Stream.of(stream4, moar4).flatMap { i -> i }
         }
     }
 }

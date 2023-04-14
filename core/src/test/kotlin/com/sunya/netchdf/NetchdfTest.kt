@@ -27,8 +27,10 @@ class NetchdfTest {
     companion object {
         @JvmStatic
         fun params(): Stream<Arguments> {
+            return testFilesIn(testData + "devcdm").withRecursion().build()
+            // return Stream.of(devcdm).flatMap { i -> i }
             // return N4Files.params()
-            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
+            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
         }
 
         @JvmStatic
