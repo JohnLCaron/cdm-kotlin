@@ -62,6 +62,9 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
 
     @Throws(IOException::class)
     override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?) : Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
         val wantSection = SectionP.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable

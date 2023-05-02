@@ -50,6 +50,9 @@ class Hdf4File(val filename : String) : Netchdf {
     }
 
     override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
         val wantSection = SectionP.fill(section, v2.shape)
         val vinfo = v2.spObject as Vinfo
 
@@ -69,7 +72,7 @@ class Hdf4File(val filename : String) : Netchdf {
                 val indexSection = maxIterator.next()
                 if (debugChunking) println("  chunk=${indexSection}")
 
-                val section = indexSection.section()
+                val section = indexSection.section(v2.shape)
                 val array = if (v2.datatype == Datatype.COMPOUND) {
                     readStructureDataArray(v2, section)
                 } else {

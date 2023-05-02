@@ -41,7 +41,6 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
         // wtf? 17086 -> return TagVGroup(icode, refno, offset, length)
         else -> {
             if ((xtag > 1) and !obsolete.contains(tagEnum)) {
-                val wtf = TagEnum.byCode(btag)
                 println(" Unknown xtag=$xtag btag=$btag refno=$refno")
             }
             return Tag(xtag, refno, offset, length)

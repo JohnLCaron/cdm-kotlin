@@ -265,8 +265,6 @@ class TestChunker {
 
     @Test
     fun testChunkUpper3() {
-        //         val wantSection = Section("5:8, 20:29, 5:24")
-        //        val dataChunk = IndexSpace(Section("2:5, 15:25, 0:30"))
         val wantSection = SectionL.fromSpec("5:8, 20:29, 5:24")
         val dataChunk = makeChunk("2:5, 15:25, 0:30")
         runChunkerTest(dataChunk, wantSection, 20, 6, true, Merge.none) { count ->

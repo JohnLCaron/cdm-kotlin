@@ -481,8 +481,8 @@ fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncf
 
 ///////////////////////////////////////////////////////////
 fun sumValues(array : ArrayTyped<*>, sum : AtomicDouble) {
-    if (array is ArraySingle) {
-        return // fillValue the same ??
+    if (array is ArraySingle || array is ArrayEmpty) {
+        return // test fillValue the same ??
     }
     // cant cast unsigned to Numbers
     val useArray = when (array.datatype) {

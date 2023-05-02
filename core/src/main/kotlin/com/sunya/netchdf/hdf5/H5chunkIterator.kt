@@ -86,6 +86,6 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         }
 
 
-        return ArraySection(array, intersectSpace.section()) // LOOK use space instead of Section ??
+        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 }
