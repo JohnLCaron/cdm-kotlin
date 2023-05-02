@@ -1,6 +1,7 @@
 package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.api.SectionL
 import java.nio.ByteBuffer
 
 enum class Merge { all, none, notFirst }
@@ -14,9 +15,9 @@ enum class Merge { all, none, notFirst }
 
  * @param dataChunk the dataChunk, may have a trailing dimension that is ignored
  * @param wantSpace the requested section of data.
- * @param mergeFirst merge strategy for dimensions that can be merged and still keep contiguous transfer
+ * @param merge merge strategy for dimensions that can be merged and still keep contiguous transfer
  */
-class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merge.all) : AbstractIterator<TransferChunk>() {
+class Chunker(val dataChunk: IndexSpace, val wantSpace: IndexSpace, merge : Merge = Merge.all) : AbstractIterator<TransferChunk>() {
 
     val nelems: Int // number of elements to read at one time
     val totalNelems: Long // total number of elements in wantSection
@@ -43,20 +44,22 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
         // the first dimension to merge
         val firstDim = if (rank == mergeNDims) 0 else rank - mergeNDims - 1
 
-        var product = 1
+        var product = 1L
         for (idx in rank - 1 downTo firstDim) {
             product *= intersectSpace.shape[idx]
         }
-        this.nelems = if ((rank == 1) && (merge == Merge.notFirst)) 1 else product
+        this.nelems = if ((rank == 1) && (merge == Merge.notFirst)) 1 else product.toInt()
 
         // the digit to increment when iterating
         this.incrDigit = if (firstDim == 0) 0 else firstDim - 1
     }
 
-    fun countMergeDims(
+    constructor(section : SectionL, merge : Merge = Merge.all) : this(IndexSpace(section.varShape), IndexSpace(section), merge)
+
+    private fun countMergeDims(
         intersect: IndexSpace,
-        dataChunkShape: IntArray,
-        dataSubsetShape: IntArray,
+        dataChunkShape: LongArray,
+        dataSubsetShape: LongArray,
         merge: Merge
     ): Int {
         if (merge == Merge.none) return 0
@@ -97,7 +100,7 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     }
 
     override fun toString(): String {
-        return "Chunker(nelems=$nelems, totalNelems=$totalNelems, dstOdometer=$dstOdometer)"
+        return "Chunker(nelems=$nelems, totalNelems=$totalNelems, dataChunk=$dataChunk, wantSpace=$wantSpace)"
     }
 
     // transfer from src to dst buffer, using my computed chunks
@@ -143,7 +146,7 @@ class Chunker(dataChunk: IndexSpace, wantSpace: IndexSpace, merge : Merge = Merg
     }
 }
 
-private val debugChunking = false
+private const val debugChunking = false
 
 internal fun transferMissingNelems(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
     if (fillValue == null) {

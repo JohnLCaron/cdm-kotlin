@@ -29,11 +29,14 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         val status = H5Fclose(header.file_id)
     }
 
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val fillSection = Section.fill(section, v2.shape)
+    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
+        return readArrayData(v2, SectionP.fill(section, v2.shape))
+    }
+
+    internal fun readArrayData(v2: Variable, fillSection: SectionL): ArrayTyped<*> {
         if (v2.spObject is Attribute) {
             val att = v2.spObject as Attribute
-            return ArrayString(v2.shape, att.values as List<String>)
+            return ArrayString(v2.shape.toIntArray(), att.values as List<String>)
         }
         val vinfo = v2.spObject as Vinfo5C
         //    internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, dims : IntArray) : ArrayTyped<*>
@@ -42,15 +45,15 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
                 readVlenStrings(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
             } else if (vinfo.h5ctype.datatype5 == Datatype5.Vlen) {
                 readVlens(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
-             } else {
+            } else {
                 readRegularData(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
             }
         }
     }
 
-    internal fun readVlenStrings(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayString {
+    internal fun readVlenStrings(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : ArrayString {
         val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
-        val nelems = want.computeSize()
+        val nelems = want.totalElements
         val strings_p: MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
         checkErr("H5Dread VlenString",
             hdf5_h.H5Dread(datasetId, h5ctype.type_id, memSpaceId, fileSpaceId, hdf5_h.H5P_DEFAULT(), strings_p)
@@ -69,12 +72,12 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         }
         // not sure about this
         // checkErr("H5Dvlen_reclaim", H5Dvlen_reclaim(attr_id, h5ctype.type_id, H5S_ALL(), strings_p)) // ??
-        return ArrayString(want.shape, slist)
+        return ArrayString(want.shape.toIntArray(), slist)
     }
 
-    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayVlen {
+    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : ArrayVlen {
         val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
-        val nelems = want.computeSize()
+        val nelems = want.totalElements
         val vlen_p: MemorySegment = hvl_t.allocateArray(nelems.toInt(), session)
         checkErr(
             "H5Dread VlenData",
@@ -89,7 +92,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
             val address = hvl_t.`p$get`(vlen_p, elem)
             listOfVlen.add(readVlenArray(arraySize, address, basetype))
         }
-        return ArrayVlen(want.shape, listOfVlen, basetype)
+        return ArrayVlen(want.shape.toIntArray(), listOfVlen, basetype)
     }
 
     private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {
@@ -104,14 +107,14 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
-        val filled = Section.fill(section, v2.shape)
-        return H5CmaxIterator(v2, filled, maxElements ?: 100_000)
+    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+        return H5CmaxIterator(v2, section, maxElements ?: 100_000)
     }
 
-    private inner class H5CmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class H5CmaxIterator(val v2: Variable, section : SectionP?, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
-        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+        val filled = SectionP.fill(section, v2.shape)
+        private val maxIterator  = MaxChunker(maxElems,  filled)
 
         override fun computeNext() {
             if (maxIterator.hasNext()) {

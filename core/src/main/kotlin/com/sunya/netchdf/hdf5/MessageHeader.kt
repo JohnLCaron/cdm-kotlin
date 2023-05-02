@@ -263,7 +263,7 @@ fun H5builder.readDataspaceMessage(state: OpenFileState): DataspaceMessage {
 
     return DataspaceMessage(
         DataspaceType.of(type),
-        rawdata.getIntArray("dims"),
+        rawdata.getLongArray("dims"),
         isUnlimited,
     )
 }
@@ -283,7 +283,7 @@ enum class DataspaceType(val num: Int) {
     }
 }
 
-data class DataspaceMessage(val type: DataspaceType, val dims: IntArray, val isUnlimited : Boolean)
+data class DataspaceMessage(val type: DataspaceType, val dims: LongArray, val isUnlimited : Boolean)
     : MessageHeader(MessageType.Dataspace) {
 
     fun rank(): Int = dims.size

@@ -21,8 +21,8 @@ internal class BTree1(
     val h5: H5builder,
     val rootNodeAddress: Long,
     val nodeType : Int,  // 0 = group/symbol table, 1 = raw data chunks
-    val varShape: IntArray = intArrayOf(), // not needed for group
-    val storageSize: IntArray = intArrayOf(), // not needed for group
+    val varShape: LongArray = longArrayOf(), // not needed for group symbols
+    val storageSize: LongArray = longArrayOf(), // not needed for group  symbols
 ) {
     private val ndimStorage: Int = storageSize.size
 
@@ -85,11 +85,7 @@ internal class BTree1(
                 } else {
                     val chunkSize = h5.raf.readInt(state)
                     val filterMask = h5.raf.readInt(state)
-                    val inner = IntArray(ndimStorage) { j ->
-                        val loffset: Long = h5.raf.readLong(state)
-                        require(loffset < Int.MAX_VALUE) // why?
-                        loffset.toInt()
-                    }
+                    val inner = LongArray(ndimStorage) { j -> h5.raf.readLong(state) }
                     val key = DataChunkKey(chunkSize, filterMask, inner)
                     val childPointer = h5.readAddress(state) // 4 or 8 bytes, then add fileOffset
                     dataChunkEntries.add(DataChunkEntry(level, this, idx, key, childPointer))
@@ -104,7 +100,7 @@ internal class BTree1(
     /** @param key the byte offset into the local heap for the first object name in the subtree which that key describes. */
     data class GroupEntry(val key : Long, val childAddress : Long)
 
-    data class DataChunkKey(val chunkSize: Int, val filterMask : Int, val offsets: IntArray) {
+    data class DataChunkKey(val chunkSize: Int, val filterMask : Int, val offsets: LongArray) {
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
             if (other !is DataChunkKey) return false

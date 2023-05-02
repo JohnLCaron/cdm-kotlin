@@ -8,24 +8,22 @@ import java.io.IOException
 interface Netchdf : Closeable {
     fun location() : String
     fun type() : String
-    val size : Long get() = 0
+    val size : Long get() = 0L
     fun rootGroup() : Group
     fun cdl() : String
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun readArrayData(v2: Variable, section: Section? = null) : ArrayTyped<*>
+    fun readArrayData(v2: Variable, section: SectionP? = null) : ArrayTyped<*>
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun chunkIterator(v2: Variable, section: Section? = null, maxElements : Int? = null) : Iterator<ArraySection>
+    fun chunkIterator(v2: Variable, section: SectionP? = null, maxElements : Int? = null) : Iterator<ArraySection>
 }
 
-data class ArraySection(val array : ArrayTyped<*>, val section : Section)
+data class ArraySection(val array : ArrayTyped<*>, val section : SectionL)
 
 // Experimental
-fun Netchdf.chunkConcurrent(v2: Variable, section: Section? = null, maxElements : Int? = null, lamda : (ArraySection) -> Unit) {
+fun Netchdf.chunkConcurrent(v2: Variable, section: SectionP? = null, maxElements : Int? = null, lamda : (ArraySection) -> Unit) {
     val reader = ReadChunkConcurrent()
     val chunkIter = this.chunkIterator( v2, section, maxElements)
-    if (chunkIter != null) {
-        reader.readChunks(20, chunkIter, lamda)
-    }
+    reader.readChunks(20, chunkIter, lamda)
 }

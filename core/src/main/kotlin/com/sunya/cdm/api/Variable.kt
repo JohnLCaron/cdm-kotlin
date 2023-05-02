@@ -12,8 +12,8 @@ data class Variable(
 ) {
     val name = makeValidCdmObjectName(orgName)
     val rank : Int = dimensions.size
-    val shape : IntArray = dimensions.map { it.length }.toIntArray()
-    val nelems : Long = Section.computeSize(this.shape)
+    val shape : LongArray = dimensions.map { it.length }.toLongArray()
+    val nelems : Long = this.shape.computeSize()
 
     fun fullname() : String {
         return if (group.fullname() == "") name else "${group.fullname()}/$name"
@@ -29,9 +29,7 @@ data class Variable(
         if (datatype != other.datatype) return false
         if (dimensions != other.dimensions) return false
         if (attributes != other.attributes) return false
-        if (!shape.contentEquals(other.shape)) return false
-
-        return true
+        return shape.contentEquals(other.shape)
     }
 
     override fun hashCode(): Int {
@@ -44,7 +42,7 @@ data class Variable(
     }
 
     fun nameAndShape(): String {
-        return "${datatype} ${fullname()}${shape.contentToString()}"
+        return "$datatype ${fullname()}${shape.contentToString()}"
     }
 
     class Builder(val name : String) {
@@ -69,11 +67,19 @@ data class Variable(
             return this
         }
 
-        fun setDimensionsAnonymous(shape : IntArray) {
+        fun setDimensionsAnonymous(shape : LongArray) {
             dimensions.clear()
             dimList = null
             for (len in shape) {
                 dimensions.add(Dimension("", len, false))
+            }
+        }
+
+        fun setDimensionsAnonymous(shape : IntArray) {
+            dimensions.clear()
+            dimList = null
+            for (len in shape) {
+                dimensions.add(Dimension("", len.toLong(), false))
             }
         }
 
@@ -95,12 +101,12 @@ data class Variable(
             val name = makeValidCdmObjectName(dimName)
             var d = group.findDimension(name)
             if (d == null) {
-                try {
-                    val length = dimName.toInt()
-                    d = Dimension("", length, false)
+                d = try {
+                    val length = dimName.toLong()
+                    Dimension("", length, false)
                 } catch(e : Exception) {
                     group.findDimension(name)
-                    d = Dimension("", 1, false)
+                    Dimension("", 1L, false)
                 }
             }
             return d!!

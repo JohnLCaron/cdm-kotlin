@@ -451,7 +451,7 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, structSize
     val offset = if (version < 3) {
         raf.readInt(state) // always 4 bytes
     } else {
-        // var length of bytes, stupid
+        // variable length of bytes, so stupid
         this.readVariableSizeMax(state, structSize.toLong()).toInt()
     }
 

@@ -1,8 +1,6 @@
 package com.sunya.cdm.array
 
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.*
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.Charset
@@ -57,8 +55,8 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
         }
     }
 
-    override fun section(section : Section) : ArrayStructureData {
-        return ArrayStructureData(section.shape, sectionFrom(section), recsize, members)
+    override fun section(section : SectionL) : ArrayStructureData {
+        return ArrayStructureData(section.shape.toIntArray(), sectionFrom(section), recsize, members)
     }
 
     inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
@@ -141,6 +139,7 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
     }
 }
 
+// dim lengths here are ints; Hdf4,5 only supports ints.
 open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
     val nelems = dims.computeSize()
 

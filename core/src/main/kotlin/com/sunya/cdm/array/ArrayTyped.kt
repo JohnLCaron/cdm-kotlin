@@ -1,15 +1,13 @@
 package com.sunya.cdm.array
 
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Section.Companion.computeSize
-import com.sunya.cdm.api.Section.Companion.equivalent
+import com.sunya.cdm.api.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
 
+// here, shape must be integers, since size cant exceed 32 bits
 abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val shape : IntArray) : Iterable<T> {
-    val nelems = computeSize(shape).toInt()
+    val nelems = shape.computeSize()
 
     override fun toString(): String {
         return buildString {
@@ -69,10 +67,12 @@ abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val s
         }
     }
 
-    abstract fun section(section : Section) : ArrayTyped<T>
+    // create a section of this Array. LOOK not checking section against array shape.
+    // This makes a copy. might do logical sections in the future.
+    abstract fun section(section : SectionL) : ArrayTyped<T>
 
-    protected fun sectionFrom(section : Section) : ByteBuffer {
-        val sectionSize = computeSize(section.shape).toInt()
+    protected fun sectionFrom(section : SectionL) : ByteBuffer {
+        val sectionSize = section.totalElements.toInt()
         if (sectionSize == nelems)
             return bb
 
@@ -101,10 +101,17 @@ class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) :
         }
     }
 
-    override fun section(section : Section) : ArrayTyped<T> {
-        return ArraySingle(section.shape, datatype, fillValue)
+    override fun section(section : SectionL) : ArrayTyped<T> {
+        return ArraySingle(section.shape.toIntArray(), datatype, fillValue)
     }
+}
 
+// An empty array of any shape that has mo values
+class ArrayEmpty<T>(shape : IntArray, datatype : Datatype) : ArrayTyped<T>(ByteBuffer.allocate(1), datatype, shape) {
+    override fun iterator(): Iterator<T> = listOf<T>().iterator()
+    override fun section(section : SectionL) : ArrayTyped<T> {
+        return this
+    }
 }
 
 

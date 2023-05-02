@@ -106,7 +106,7 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
 
 /** Convert array of ENUM into equivalent array of String */
 fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
-    val size = Section.computeSize(this.shape).toInt()
+    val size = this.shape.computeSize()
     val enumIter = this.iterator()
     val stringValues = List(size) {
         val enumVal = enumIter.next()

@@ -1,7 +1,8 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayUByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<UByte>(values, Datatype.UBYTE, shape) {
@@ -12,7 +13,7 @@ class ArrayUByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<UByte>(
         override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++].toUByte())
     }
 
-    override fun section(section : Section) : ArrayUByte {
-        return ArrayUByte(section.shape, sectionFrom(section))
+    override fun section(section : SectionL) : ArrayUByte {
+        return ArrayUByte(section.shape.toIntArray(), sectionFrom(section))
     }
 }

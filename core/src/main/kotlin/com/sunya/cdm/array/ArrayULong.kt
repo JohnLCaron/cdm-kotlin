@@ -1,7 +1,8 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayULong(shape : IntArray, bb : ByteBuffer) : ArrayTyped<ULong>(bb, Datatype.ULONG, shape) {
@@ -15,7 +16,7 @@ class ArrayULong(shape : IntArray, bb : ByteBuffer) : ArrayTyped<ULong>(bb, Data
         }
     }
 
-    override fun section(section : Section) : ArrayULong {
-        return ArrayULong(section.shape, sectionFrom(section))
+    override fun section(section : SectionL) : ArrayULong {
+        return ArrayULong(section.shape.toIntArray(), sectionFrom(section))
     }
 }

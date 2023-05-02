@@ -1,7 +1,8 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayInt(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Int>(bb, Datatype.INT, shape) {
@@ -13,7 +14,7 @@ class ArrayInt(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Int>(bb, Datatype
         override fun computeNext() = if (idx >= values.limit()) done() else setNext(values[idx++])
     }
 
-    override fun section(section : Section) : ArrayInt {
-        return ArrayInt(section.shape, sectionFrom(section))
+    override fun section(section : SectionL) : ArrayInt {
+        return ArrayInt(section.shape.toIntArray(), sectionFrom(section))
     }
 }

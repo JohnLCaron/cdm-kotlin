@@ -71,6 +71,14 @@ class StructDsl(val name : String, val bb : ByteBuffer, val flds : List<StructFl
             IntArray(fld.nelems) { idx -> bb.getLong(fld.pos + fld.elemSize * idx).toInt() }
         else throw RuntimeException("$fld must be 4 or 8")
     }
+    fun getLongArray(fldName : String) : LongArray {
+        val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
+        return if (fld.elemSize == 4)
+            LongArray(fld.nelems) { idx -> bb.getInt(fld.pos + fld.elemSize * idx).toLong() }
+        else if (fld.elemSize == 8)
+            LongArray(fld.nelems) { idx -> bb.getLong(fld.pos + fld.elemSize * idx) }
+        else throw RuntimeException("$fld must be 4 or 8")
+    }
     fun getByteBuffer(fldName : String) : ByteBuffer {
         val fld = fldm[fldName] ?: throw IllegalArgumentException("StructDsl $name has no fld '$fldName'")
         return bb.slice(fld.pos, fld.nelems * fld.elemSize)
