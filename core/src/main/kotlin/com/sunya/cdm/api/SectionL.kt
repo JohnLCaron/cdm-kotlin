@@ -13,10 +13,7 @@ data class SectionL(val ranges : List<LongProgression>, val varShape : LongArray
         require(totalElements >= 0) // make sure no overflow
     }
 
-    constructor(shape: LongArray) : this( shape.map {
-        LongProgression.fromClosedRange(0L, it - 1L, 1L) }, shape)
-
-    constructor(shape: LongArray, varShape : LongArray) : this( shape.map {
+    constructor(varShape: LongArray) : this( varShape.map {
         LongProgression.fromClosedRange(0L, it - 1L, 1L) }, varShape)
 
     companion object {

@@ -76,7 +76,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
 
-        return ArraySection(array, intersectSpace.section()) // LOOK use space instead of Section ??
+        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 
 }

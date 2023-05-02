@@ -46,6 +46,11 @@ class H4readTest {
         readH4header("/home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
     }
 
+    @Test
+    fun problem() {
+        readNetchIterate("/home/all/testdata/hdf4/96108_08.hdf")
+    }
+
     //////////////////////////////////////////////////////////////////////
     @ParameterizedTest
     @MethodSource("params")
@@ -81,7 +86,7 @@ class H4readTest {
     @ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
-        readNetchIterate(filename, null)
+        readNetchIterate(filename)
     }
 
 }

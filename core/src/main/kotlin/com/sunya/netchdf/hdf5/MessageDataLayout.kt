@@ -92,7 +92,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
             2 -> DataLayoutChunked(version, rawdata.getIntArray("dims"), rawdata.getLong("btreeAddress"), rawdata.getInt("chunkedElementSize"))
             else -> throw RuntimeException()
         }
-    } else throw RuntimeException()
+    } else throw RuntimeException() // TODO version 4 not supported
 
 }
 

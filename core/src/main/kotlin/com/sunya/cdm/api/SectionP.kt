@@ -17,7 +17,7 @@ data class SectionP(val ranges : List<LongProgression?>) {
         for (i in ranges.indices) {
             val r = ranges[i] ?: continue
             if (r.isEmpty()) {
-                return if (shape[i] != 0L) "Illegal Range for dimension $i: empty range only for unlimited dimension len = 0" else continue
+                return if (shape[i] != 0L) "Illegal Range for dimension $i: empty range only allowed for unlimited dimension len = 0" else continue
             }
             if (r.last >= shape[i]) return "Illegal Range for dimension $i: last requested ${r.last} > max ${shape[i]-1}"
         }

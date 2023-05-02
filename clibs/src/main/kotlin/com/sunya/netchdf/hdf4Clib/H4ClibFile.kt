@@ -89,7 +89,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
                 val indexSection = maxIterator.next()
                 if (debugChunking) println("  chunk=${indexSection}")
 
-                val section = indexSection.section()
+                val section = indexSection.section(v2.shape)
                 val array = readArrayData(v2, section)
                 setNext(ArraySection(array, section))
             } else {

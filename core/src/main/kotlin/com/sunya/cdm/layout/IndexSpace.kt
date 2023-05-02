@@ -6,10 +6,7 @@ import com.sunya.cdm.api.toLongArray
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * A rectangular subsection of indices
- * Replaces Section for data chunk layout. no stride, negative indices are allowed.
- */
+/** A rectangular subsection of indices, going from start to start + shape */
 data class IndexSpace(val start : LongArray, val shape : LongArray) {
     val rank = start.size
     val totalElements = shape.computeSize()
@@ -22,9 +19,8 @@ data class IndexSpace(val start : LongArray, val shape : LongArray) {
     constructor(section : SectionL) : this(section.ranges.map { it.first() }.toLongArray(), section.shape)
     constructor(rank : Int, start : LongArray, shape : LongArray) : this( LongArray(rank) { start[it] }, LongArray(rank) { shape[it] })
 
-    fun section() : SectionL {
-        val useShape = if (shape.size == start.size) shape else LongArray(start.size) { shape[it] }
-        return SectionL(start, useShape)
+    fun section(varShape : LongArray) : SectionL {
+        return SectionL(ranges, varShape)
     }
 
     fun contains(pt : LongArray): Boolean {

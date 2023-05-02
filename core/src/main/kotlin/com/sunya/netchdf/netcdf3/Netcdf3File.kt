@@ -49,6 +49,9 @@ class Netcdf3File(val filename : String) : Netchdf {
     }
 
     override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
         val wantSection = SectionP.fill(section, v2.shape)
         return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
     }
@@ -62,7 +65,7 @@ class Netcdf3File(val filename : String) : Netchdf {
             if (maxIterator.hasNext()) {
                 val indexSection = maxIterator.next()
                 if (debugChunking) println("  chunk=${indexSection}")
-                val section = indexSection.section()
+                val section = indexSection.section(v2.shape)
 
                 val layout = if (!v2.hasUnlimited()) {
                     LayoutRegular(vinfo.begin, vinfo.elemSize, section)

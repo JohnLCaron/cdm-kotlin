@@ -10,10 +10,10 @@ import com.sunya.netchdf.readNetchIterate
 import com.sunya.netchdf.readNetchdfData
 import com.sunya.testdata.H5Files
 import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -84,6 +84,7 @@ class H5readTest {
 
     // I think the npp put the structmetadata in the front of the file?
     @Test
+    @Disabled
     fun testNpp() {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
     }

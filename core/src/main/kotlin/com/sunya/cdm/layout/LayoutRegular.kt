@@ -13,6 +13,7 @@ class LayoutRegular(startPos: Long, elemSize: Int, wantSection: SectionL) : Layo
     private val chunker: Chunker
     private val startPos : Long // starting position
     override val elemSize : Int // size of each element
+    override val totalNelems: Long
 
     init {
         require(startPos >= 0)
@@ -20,10 +21,8 @@ class LayoutRegular(startPos: Long, elemSize: Int, wantSection: SectionL) : Layo
         this.startPos = startPos
         this.elemSize = elemSize
         chunker = Chunker(wantSection) // one big chunk
+        totalNelems = chunker.totalNelems
     }
-
-    override val totalNelems: Long
-        get() = chunker.totalNelems
 
     override fun hasNext(): Boolean {
         return chunker.hasNext()
