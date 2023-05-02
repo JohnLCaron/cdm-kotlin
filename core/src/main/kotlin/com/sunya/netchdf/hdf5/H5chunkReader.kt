@@ -1,8 +1,9 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.SectionL
 import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.toIntArray
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
@@ -12,11 +13,11 @@ import java.nio.ByteBuffer
 internal class H5chunkReader(val h5 : H5builder) {
     private val debugChunking = false
 
-    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
+    internal fun readChunkedData(v2: Variable, wantSection : SectionL) : ArrayTyped<*> {
         val vinfo = v2.spObject as DataContainerVariable
         val h5type = vinfo.h5type
 
-        val elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
+        val elemSize = vinfo.storageDims[vinfo.storageDims.size - 1].toInt() // last one is always the elements size
         val datatype = vinfo.h5type.datatype()
 
         val wantSpace = IndexSpace(wantSection)
@@ -53,7 +54,7 @@ internal class H5chunkReader(val h5 : H5builder) {
         bb.position(0)
         bb.limit(bb.capacity())
         bb.order(vinfo.h5type.endian)
-        val shape = wantSpace.shape
+        val shape = wantSpace.shape.toIntArray()
 
         return if (h5type.datatype5 == Datatype5.Vlen) {
             h5.processVlenIntoArray(h5type, shape, bb, wantSpace.totalElements.toInt(), elemSize)

@@ -1,16 +1,13 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.ArraySection
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
+class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : SectionL) : AbstractIterator<ArraySection>() {
     private val debugChunking = false
 
     private val vinfo = v2.spObject as Vinfo
@@ -22,7 +19,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
     private val chunkIterator : Iterator<H4CompressedDataChunk>
 
     init {
-        tiledData = H4tiledData(h4, v2.shape, vinfo.chunkLengths, vinfo.chunks!!)
+        tiledData = H4tiledData(h4, wantSection.varShape, vinfo.chunkLengths, vinfo.chunks!!)
         if (debugChunking) println(" ${tiledData.tiling}")
         chunkIterator = tiledData.findDataChunks(wantSpace).iterator()
     }
@@ -36,7 +33,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
     }
 
     private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection {
-        val dataSpace = IndexSpace(v2.rank, dataChunk.offsets, vinfo.chunkLengths)
+        val dataSpace = IndexSpace(v2.rank, dataChunk.offsets.toLongArray(), vinfo.chunkLengths.toLongArray())
         val useEntireChunk = wantSpace.contains(dataSpace)
         val intersectSpace = if (useEntireChunk) dataSpace else wantSpace.intersect(dataSpace)
 
@@ -63,7 +60,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
         bb.limit(bb.capacity())
         bb.order(vinfo.endian)
 
-        val shape = wantSpace.shape
+        val shape = wantSpace.shape.toIntArray()
         val array = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
             Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)

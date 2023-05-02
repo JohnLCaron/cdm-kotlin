@@ -1,14 +1,15 @@
 package com.sunya.cdm.layout
 
+import com.sunya.cdm.api.SectionL
+
 /**
  * LayoutRegular has data stored in row-major order, like netcdf non-record variables.
  *
  * @param startPos starting address (bytes) of the complete source data array.
  * @param elemSize size of an element in bytes.
- * @param varShape shape of the entire data array. must have rank &gt; 0
- * @param wantSpace the wanted section of data
+ * @param wantSection the wanted section of data, along wit the variable's shape
  */
-class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSpace: IndexSpace) : Layout {
+class LayoutRegular(startPos: Long, elemSize: Int, wantSection: SectionL) : Layout {
     private val chunker: Chunker
     private val startPos : Long // starting position
     override val elemSize : Int // size of each element
@@ -18,7 +19,7 @@ class LayoutRegular(startPos: Long, elemSize: Int, varShape: IntArray, wantSpace
         require(elemSize > 0)
         this.startPos = startPos
         this.elemSize = elemSize
-        chunker = Chunker(IndexSpace(varShape), wantSpace) // one big chunk
+        chunker = Chunker(wantSection) // one big chunk
     }
 
     override val totalNelems: Long

@@ -130,16 +130,13 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
     for (i in 0 until numdims) {
       val name = readString()!!
       val len = if (isPnetcdf) raf.readLong(filePos) else raf.readInt(filePos).toLong()
-      if (len > Int.MAX_VALUE) {
-        throw RuntimeException("Dimension $name length $len too big")
-      }
 
       var dim: Dimension
       if (len == 0L) {
-        dim = Dimension(name, numrecs.toInt())
+        dim = Dimension(name, numrecs, true)
         unlimitedDimension = dim
       } else {
-        dim = Dimension(name, len.toInt())
+        dim = Dimension(name, len, true)
       }
       root.addDimension(dim)
       if (debug) println("  dim $dim pos=${filePos.pos} isRecord=${dim == unlimitedDimension}")
@@ -169,7 +166,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
       val rank: Int = if (isPnetcdf) raf.readLong(filePos).toInt() else raf.readInt(filePos)
       val dims = mutableListOf<Dimension>()
       val dimIdx = mutableListOf<Int>()
-      val dimLengths = mutableListOf<Int>()
+      val dimLengths = mutableListOf<Long>()
       for (j in 0 until rank) {
         val dimIndex: Int = if (isPnetcdf) raf.readLong(filePos).toInt() else raf.readInt(filePos)
         val dim: Dimension = root.dimensions[dimIndex]

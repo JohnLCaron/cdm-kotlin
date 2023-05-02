@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.api.Section.Companion.computeSize
 import com.sunya.cdm.array.ArrayString
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
@@ -17,7 +16,6 @@ import com.sunya.netchdf.netcdf4.Netcdf4.NETCDF4_SPECIAL_ATTS
 import java.io.IOException
 import java.nio.*
 
-private const val strict = false
 const val attLengthMax = 4000
 
 internal val includeOriginalAttributes = false
@@ -50,8 +48,8 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     }
 
     group5.variables.filter{ it.isVariable }.forEach {
-        var vb = buildVariable( it )
-        groupb.addVariable( vb)
+        val vb = buildVariable( it )
+        groupb.addVariable(vb)
         val address = it.dataObject.address
         if (address > 0) datasetMap[address] = Pair(groupb, vb)
     }
@@ -139,7 +137,7 @@ internal interface DataContainer {
     val dataPos: Long
     val mdt: DatatypeMessage
     val mds: DataspaceMessage
-    val storageDims : IntArray
+    val storageDims : LongArray
 }
 
 internal open class DataContainerAttribute(
@@ -161,7 +159,7 @@ internal class DataContainerVariable(
     override val dataPos : Long
     override val mdt: DatatypeMessage = v5.mdt
     override val mds: DataspaceMessage = v5.mds
-    override val storageDims : IntArray // dimensions
+    override val storageDims : LongArray // dimensions
 
     val mdl = v5.mdl
     val mfp = v5.mfp
@@ -200,19 +198,17 @@ internal class DataContainerVariable(
             }
             is DataLayoutContiguous -> {
                 this.storageDims = mds.dims
-                val nelems = computeSize(this.storageDims).toInt()
-                this.elementSize = (mdt.elemSize / nelems)
+                val nelems = this.storageDims.computeSize()
+                this.elementSize = (mdt.elemSize / nelems).toInt()
             }
             is DataLayoutContiguous3 -> {
                 this.storageDims = mds.dims
-                val nelems = computeSize(this.storageDims).toInt()
-                this.elementSize = (mdt.elemSize / nelems)
+                val nelems = this.storageDims.computeSize()
+                this.elementSize = (mdt.elemSize / nelems).toInt()
             }
             is DataLayoutChunked -> {
-                this.storageDims = mdl.dims // LOOK
-                this.elementSize = storageDims[storageDims.size - 1] // last number is element size
-                // make the data btree, entries are not read in, but the point is to cache it ??
-                // this.btree = DataBTree(h5, this.dataPos, shape, this.storageSize, null)
+                this.storageDims = mdl.chunkDims.toLongArray()
+                this.elementSize = storageDims[storageDims.size - 1].toInt() // last number is element size
             }
             else -> throw RuntimeException()
         }
@@ -375,7 +371,6 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
                 h5group,
                 h5variable.name,
                 h5variable.mds.dims[0],
-                h5variable.mds.isUnlimited
             )
             h5variable.hasNetcdfDimensions = true
             removeAtts.add(it)
@@ -394,8 +389,7 @@ private fun addSharedDimension(
     parent: Group.Builder,
     h5group: H5Group,
     name: String,
-    length: Int,
-    isUnlimited: Boolean
+    length: Long,
 ): String {
     val dimName = name.substringAfterLast('/')
     var d = h5group.dimMap[dimName] // first look in current group
@@ -416,7 +410,7 @@ private fun addSharedDimension(
 // look for unlimited dimensions without dimension scale - must get length from the variable
 // LOOK this implies that different variables might have different dimension lengths.
 //   so, underlying "h5dataset" not same as cdm variable
-private fun extendDimension(parent: Group.Builder, h5group: H5Group, name: String, length: Int): String {
+private fun extendDimension(parent: Group.Builder, h5group: H5Group, name: String, length: Long): String {
     val dimName = name.substringAfterLast('/')
     val d = h5group.findDimension(dimName) // first look in current group
     if (d != null) {
@@ -431,7 +425,7 @@ private fun extendDimension(parent: Group.Builder, h5group: H5Group, name: Strin
 }
 
 internal fun findDimensionScales2D(h5group: H5Group, h5variable: H5Variable) {
-    val lens: IntArray = h5variable.mds.dims
+    val lens: LongArray = h5variable.mds.dims
     if (debugDimensionScales and (lens.size > 2)) {
         println("DIMENSION_LIST: dimension scale > 2 = ${h5variable.name}")
         return

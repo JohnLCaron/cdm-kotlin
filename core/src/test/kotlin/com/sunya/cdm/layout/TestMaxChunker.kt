@@ -1,6 +1,8 @@
 package com.sunya.cdm.layout
 
+import com.sunya.cdm.api.SectionL
 import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.toLongArray
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 
@@ -23,7 +25,7 @@ class TestMaxChunker {
 
     fun testMaxChunker(shape : IntArray, max : Int) {
         var totalTransfer = 0
-        val chunker = MaxChunker(max, IndexSpace(shape), shape)
+        val chunker = MaxChunker(max, SectionL(shape.toLongArray()))
         println("shape=${shape.contentToString()} total=${shape.computeSize()} maxElems=$max ")
         for (chunk in chunker) {
             println("  chunk=${chunk}")

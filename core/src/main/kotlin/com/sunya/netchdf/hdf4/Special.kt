@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.SectionL
 import com.sunya.cdm.array.ArrayInt
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
@@ -61,10 +62,11 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
             vinfo.tagData = h4file.header.tagidMap[H4builder.tagid(chunkTableTag.refno, TagEnum.VS.code)] as TagData
             vinfo.elemSize = chunkTableTag.ivsize
             vinfo.setLayoutInfo(h4file)
-            val shape = intArrayOf (chunkTableTag.nelems)
+            val shape = longArrayOf (chunkTableTag.nelems.toLong())
+            val section = SectionL(shape)
 
             val members = chunkTableTag.readStructureMembers()
-            val sdataArray = readStructureDataArray(h4file.header, vinfo, shape, members)
+            val sdataArray = readStructureDataArray(h4file.header, vinfo, section, members)
             // println(sdataArray)
 
             // reading in the entire chunkList

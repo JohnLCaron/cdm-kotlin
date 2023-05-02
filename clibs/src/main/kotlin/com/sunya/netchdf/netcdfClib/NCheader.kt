@@ -151,10 +151,10 @@ class NCheader(val filename: String) {
             if (debug) println(" nc_inq_dim $dimId = $dimName $dimLength $isUnlimited")
 
             if (dimName.startsWith("phony_dim_")) {
-                val dimension = Dimension(dimLength.toInt())
+                val dimension = Dimension(dimLength)
                 g4.dimHash[dimId] = dimension
             } else {
-                val dimension = Dimension(dimName, dimLength.toInt(), true)
+                val dimension = Dimension(dimName, dimLength, true)
                 g4.gb.addDimension(dimension)
                 g4.dimHash[dimId] = dimension
             }
@@ -445,7 +445,7 @@ class NCheader(val filename: String) {
 
         fun makeDimList(dimIds: IntArray): List<Dimension> {
             return dimIds.map {
-                findDim(it) ?: Dimension("", it, false)
+                findDim(it) ?: Dimension(it)
             }
         }
 

@@ -19,7 +19,6 @@ cd /home/oem/install/jextract-19/bin
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
-import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.MaxChunker
 
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
@@ -46,22 +45,25 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 
     // LOOK SDreadchunk ??
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val filled = Section.fill(section, v2.shape)
+    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
+        return readArrayData(v2, SectionP.fill(section, v2.shape))
+    }
+
+    internal fun readArrayData(v2: Variable, filled: SectionL): ArrayTyped<*> {
         val vinfo = v2.spObject as Vinfo4
 
         val datatype = v2.datatype
-        val nbytes = filled.size() * datatype.size
+        val nbytes = filled.totalElements * datatype.size
         if (nbytes == 0L) {
-            return ArraySingle(filled.shape, v2.datatype, 0)
+            return ArraySingle(filled.shape.toIntArray(), v2.datatype, 0)
         }
 
         if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)
 
         } else if (vinfo.vsInfo != null) {
-            val startRecord = if (filled.rank() == 0) 0 else filled.origin(0)
-            val numRecords = if (filled.rank() == 0) 1 else filled.shape(0)
+            val startRecord = if (filled.rank == 0) 0 else filled.ranges[0].first.toInt()
+            val numRecords = if (filled.rank == 0) 1 else filled.shape[0].toInt()
             return readVSdata(header.fileOpenId, vinfo.vsInfo!!, datatype, startRecord, numRecords)
 
         } else if (vinfo.grIndex != null) {
@@ -73,14 +75,14 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         throw RuntimeException("cant read ${v2.name}")
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
-        val filled = Section.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+        val filled = SectionP.fill(section, v2.shape)
         return HCmaxIterator(v2, filled, maxElements ?: 100_000)
     }
 
-    private inner class HCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class HCmaxIterator(val v2: Variable, wantSection : SectionL, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
-        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+        private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
         override fun computeNext() {
             if (maxIterator.hasNext()) {
@@ -101,18 +103,19 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 }
 
-fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection: Section, nbytes: Long): ArrayTyped<*> {
-    val rank = filledSection.rank()
+fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, wantSection: SectionL, nbytes: Long): ArrayTyped<*> {
+    val rank = wantSection.rank
 
     MemorySession.openConfined().use { session ->
         val intArray = MemoryLayout.sequenceLayout(rank.toLong(), C_INT)
         val origin_p = session.allocateArray(intArray, rank.toLong())
         val shape_p = session.allocateArray(intArray, rank.toLong())
         val stride_p = session.allocateArray(intArray, rank.toLong())
-        for (i in 0 until rank) {
-            origin_p.setAtIndex(C_INT, i.toLong(), filledSection.origin(i))
-            shape_p.setAtIndex(C_INT, i.toLong(), filledSection.shape(i))
-            stride_p.setAtIndex(C_INT, i.toLong(), filledSection.stride(i))
+        for (idx in 0 until rank) {
+            val range = wantSection.ranges[idx]
+            origin_p.setAtIndex(C_INT, idx.toLong(), range.first.toInt())
+            shape_p.setAtIndex(C_INT, idx.toLong(), wantSection.shape[idx].toInt())
+            stride_p.setAtIndex(C_INT, idx.toLong(), range.step.toInt())
         }
         val data_p = session.allocate(nbytes)
 
@@ -122,7 +125,7 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, filledSection:
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
             values.order(ByteOrder.nativeOrder())
-            return shapeData(datatype, values, filledSection.shape)
+            return shapeData(datatype, values, wantSection.shape.toIntArray())
 
         } finally {
             SDendaccess(sds_id)
@@ -169,27 +172,22 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum
     }
 }
 
-fun readGRdata(
-            grStartId: Int,
-            grIdx: Int,
-            datatype: Datatype,
-            filledSection: Section,
-            nbytes: Long
-): ArrayTyped<*> {
+fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: SectionL, nbytes: Long): ArrayTyped<*> {
 
     MemorySession.openConfined().use { session ->
         // flip the shape
-        val rank = filledSection.shape.size
-        val flipShape = IntArray(rank) { filledSection.shape[rank - it - 1] }
+        val rank = wantSection.rank
+        val flipShape = IntArray(rank) { wantSection.shape[rank - it - 1].toInt() }
 
         val intArray = MemoryLayout.sequenceLayout(rank.toLong(), C_INT)
         val origin_p = session.allocateArray(intArray, rank.toLong())
         val shape_p = session.allocateArray(intArray, rank.toLong())
         val stride_p = session.allocateArray(intArray, rank.toLong())
-        for (i in 0 until rank) {
-            origin_p.setAtIndex(C_INT, i.toLong(), filledSection.origin(i))
-            shape_p.setAtIndex(C_INT, i.toLong(), flipShape[i])
-            stride_p.setAtIndex(C_INT, i.toLong(), filledSection.stride(i))
+        for (idx in 0 until rank) {
+            val range = wantSection.ranges[idx]
+            origin_p.setAtIndex(C_INT, idx.toLong(), range.first.toInt())
+            shape_p.setAtIndex(C_INT, idx.toLong(), wantSection.shape[idx].toInt())
+            stride_p.setAtIndex(C_INT, idx.toLong(), range.step.toInt())
         }
         val data_p = session.allocate(nbytes)
 
@@ -199,7 +197,7 @@ fun readGRdata(
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
             values.order(ByteOrder.nativeOrder())
-            return shapeData(datatype, values, filledSection.shape)
+            return shapeData(datatype, values, wantSection.shape.toIntArray())
         } finally {
             GRendaccess(grId)
         }

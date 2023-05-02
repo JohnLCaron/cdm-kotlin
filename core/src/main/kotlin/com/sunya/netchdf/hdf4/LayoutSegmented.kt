@@ -1,8 +1,9 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.toIntArray
 import com.sunya.cdm.layout.Chunker
-import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.Layout
 import com.sunya.cdm.layout.LayoutChunk
 import kotlin.math.min
@@ -15,11 +16,10 @@ import kotlin.math.min
  * @param segPos starting address of each segment.
  * @param segSize number of bytes in each segment, multiple of elemSize
  * @param elemSize size of an element in bytes.
- * @param srcShape shape of the entire variables' data (in elements)
  * @param wantSection the wanted section of data (in elements)
  */
-class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, srcShape: IntArray, wantSection: IndexSpace)
-    : Layout {
+class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, wantSection: SectionL) : Layout {
+    val srcShape = wantSection.varShape.toIntArray()
 
     override val totalNelems: Long
     private val segPos : LongArray // bytes
@@ -27,7 +27,7 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
     private val segMax : LongArray // elems
 
     // outer chunk deals with the wanted section of data
-    private val chunker = Chunker(IndexSpace(srcShape), wantSection) // One  big chunk
+    private val chunker = Chunker(wantSection) // One  big chunk
     private var chunkOuter = LayoutChunk(0, 0, 0, 0)
 
     // inner chunk = deal with segmentation
@@ -50,7 +50,7 @@ class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSiz
             totalBytes += segSize[i].toLong()
             segMax[i] = totalBytes / elemSize
         }
-        require(totalBytes >= computeSize(srcShape) * elemSize)
+        require(totalBytes >= srcShape.computeSize() * elemSize)
         totalNelems = chunker.totalNelems
     }
 

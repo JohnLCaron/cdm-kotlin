@@ -348,9 +348,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             vb.addDimension(dim)
             parent.addDimensionIfNotExists(dim)
         }
-        // sometimes dont any or enough names, use anon dimensions for remaining
+        // sometimes dont have any or enough names, use anon dimensions for remaining
         for (dimidx in ndimNames until rank) {
-            val dim = Dimension("", dimSDD.shape[dimidx], false)
+            val dim = Dimension(dimSDD.shape[dimidx]) // anon
             vb.addDimension(dim)
         }
 
@@ -636,8 +636,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         vinfo.elemSize = datatype.size
 
         // assume dimensions are not shared
-        vb.dimensions.add(Dimension("ydim", dimTag.ydim, false))
-        vb.dimensions.add(Dimension("xdim", dimTag.xdim, false))
+        vb.dimensions.add(Dimension("ydim", dimTag.ydim.toLong(), false))
+        vb.dimensions.add(Dimension("xdim", dimTag.xdim.toLong(), false))
 
         vinfo.setVariable(vb)
         imageCount++

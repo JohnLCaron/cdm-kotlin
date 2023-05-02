@@ -1,15 +1,17 @@
 package com.sunya.cdm.layout
 
+import com.sunya.cdm.api.SectionL
+
 /**
  * Translate between 1D "element" and nD "index".
  * Keeps "current index" state.
- * Seperately, it provides iterators over the nD indices, aka an "odometer",
+ * Separately, it provides iterators over the nD indices, aka an "odometer",
  * @param section : a section of the entire datashape.
  * @param datashape : The datashape. May have an extra dimension, which is ignored.
  */
-class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArray> {
+class IndexND(val section : IndexSpace, datashape : LongArray) : Iterable<LongArray> {
     val rank = section.rank
-    val current = section.start.copyOf()
+    val current : LongArray = section.start.copyOf()
     val totalElements = section.totalElements
     val strider : LongArray
 
@@ -26,7 +28,9 @@ class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArra
         }
     }
 
-    fun incr(incrdigit: Int): IntArray = current.incr(incrdigit)
+    constructor(section : SectionL) : this(IndexSpace(section), section.varShape)
+
+    fun incr(incrdigit: Int): LongArray = current.incr(incrdigit)
 
     /** Get the 1D element from the current nD index. */
     fun element() : Long {
@@ -36,17 +40,17 @@ class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArra
     }
 
     /** Set the nD index from the 1D element. Return current index. */
-    fun set(element: Long) : IntArray {
+    fun set(element: Long) : LongArray {
         var total = element
         for (dim in 0 until rank) {
-            current[dim] = (total / strider[dim]).toInt()
+            current[dim] = (total / strider[dim])
             total -= (current[dim] * strider[dim])
         }
         return current
     }
 
     // increment the fastest digit
-    private fun IntArray.incr(): IntArray {
+    private fun LongArray.incr(): LongArray {
         var digit: Int = rank - 1
         while (digit >= 0) {
             this[digit]++
@@ -58,7 +62,7 @@ class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArra
     }
 
     // increment the given digit
-    private fun IntArray.incr(incrdigit : Int): IntArray {
+    private fun LongArray.incr(incrdigit : Int): LongArray {
         require(incrdigit in 0 until rank)
         var digit = incrdigit
         while (digit >= 0) {
@@ -76,8 +80,8 @@ class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArra
     }
 
     /** An iterator over the full nD index space. */
-    override fun iterator() : Iterator<IntArray> = Odometer()
-    private inner class Odometer() : AbstractIterator<IntArray>() {
+    override fun iterator() : Iterator<LongArray> = Odometer()
+    private inner class Odometer : AbstractIterator<LongArray>() {
         var count = 0
         var first = true
 
@@ -93,7 +97,7 @@ class IndexND(val section : IndexSpace, datashape : IntArray) : Iterable<IntArra
                 current.incr()
             }
             count++
-            setNext(intArrayOf(*current))
+            setNext(longArrayOf(*current))
             first = false
         }
     }
