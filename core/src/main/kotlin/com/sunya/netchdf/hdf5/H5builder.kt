@@ -530,7 +530,7 @@ class H5builder(
                 val convertAtt = convertAttribute(att)
                 if (convertAtt != null) {
                     if (att.name == HDF5_DIMENSION_LIST) {
-                        vb.dimList = convertAtt.values as List<String>
+                        vb.dimNames = convertAtt.values as List<String>
                     } else {
                         vb.addAttribute(convertAtt)
                     }

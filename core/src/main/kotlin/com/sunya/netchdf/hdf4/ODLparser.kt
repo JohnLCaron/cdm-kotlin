@@ -363,7 +363,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
                     if (vb == null) {
                         if (showProblems) println(" *** ODL cant find variable $name")
                     } else {
-                        vb.dimList = dimList
+                        vb.dimNames = dimList
                         vb.dimensions.clear()
                     }
                 }

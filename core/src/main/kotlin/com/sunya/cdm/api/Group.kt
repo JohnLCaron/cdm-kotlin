@@ -20,9 +20,52 @@ class Group(orgName : String,
         groups = groupBuilders.map { it.build(this) }
     }
 
-    // find dimension in this group or a parent
+    fun fullname() : String {
+        return if (parent == null) "" else "${parent.fullname()}/$name"
+    }
+
+    /** find named attribute in this group */
+    fun findAttribute(attName: String) : Attribute? {
+        return attributes.find{it.name == attName}
+    }
+
+    /** find named dimension in this group or a parent */
     fun findDimension(dimName: String) : Dimension? {
         return dimensions.find{it.name == dimName}?: parent?.findDimension(dimName)
+    }
+
+    /** find named Typedef in this group or a parent */
+    fun findTypedef(typedefName: String) : Typedef? {
+        return typedefs.find{it.name == typedefName}?: parent?.findTypedef(typedefName)
+    }
+
+    /** find the first nested group that matches the short name */
+    fun findNestedGroupByShortName(shortName : String) : Group? {
+        var found = groups.find { it.name == shortName }
+        if (found != null) return found
+        groups.forEach {
+            found = it.findNestedGroupByShortName(shortName)
+            if (found != null) return@findNestedGroupByShortName found
+        }
+        return found
+    }
+
+    /** find the first nested variable with a matching string attribute */
+    fun findVariableByAttribute(attName: String, attValue: String): Variable? {
+        for (v in variables) {
+            for (att in v.attributes) {
+                if (attName == att.name && att.values.isNotEmpty() && attValue == att.values[0]) {
+                    return v
+                }
+            }
+        }
+        for (nested in groups) {
+            val v = nested.findVariableByAttribute(attName, attValue)
+            if (v != null) {
+                return v
+            }
+        }
+        return null
     }
 
     fun allVariables() : List<Variable> {
@@ -30,10 +73,6 @@ class Group(orgName : String,
         allVariables.addAll(variables)
         groups.forEach  { allVariables.addAll(it.allVariables()) }
         return allVariables
-    }
-
-    fun fullname() : String {
-        return if (parent == null) "" else "${parent.fullname()}/$name"
     }
 
     override fun equals(other: Any?): Boolean {
@@ -44,7 +83,8 @@ class Group(orgName : String,
         if (typedefs != other.typedefs) return false
         if (dimensions != other.dimensions) return false
         if (attributes != other.attributes) return false
-        if (parent != other.parent) return false
+        // we cant test equality with parent, since we get a loop. Just use the name
+        if (parent?.name != other.parent?.name) return false
         if (variables != other.variables) return false
         if (groups != other.groups) return false
 
@@ -56,7 +96,7 @@ class Group(orgName : String,
         result = 31 * result + typedefs.hashCode()
         result = 31 * result + dimensions.hashCode()
         result = 31 * result + attributes.hashCode()
-        result = 31 * result + (parent?.hashCode() ?: 0)
+        result = 31 * result + (parent?.name.hashCode())
         result = 31 * result + variables.hashCode()
         result = 31 * result + groups.hashCode()
         return result
@@ -169,7 +209,10 @@ class Group(orgName : String,
             return if (parent == null) "" else "${parent!!.fullname()}/$name"
         }
 
+        var built = false
         fun build(parent : Group?) : Group {
+            check(!built) { "Group '${this.name}' was already built"}
+            built = true
             val useName = makeValidCdmObjectName(name)
             return Group(useName, typedefs, dimensions, attributes, variables, groups, parent)
         }
@@ -177,6 +220,5 @@ class Group(orgName : String,
         override fun toString(): String {
             return "Builder(name='$name')"
         }
-
     }
 }
