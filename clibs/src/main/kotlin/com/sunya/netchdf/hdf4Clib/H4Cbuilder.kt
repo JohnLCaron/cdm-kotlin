@@ -434,7 +434,7 @@ class HCheader(val filename: String) {
             val vb = Variable.Builder(sdName)
             vb.datatype = datatype
             vb.spObject = Vinfo4().setSDSindex(sdidx)
-            vb.dimList = dimList
+            vb.dimNames = dimList
 
             // read Variable attributes
             repeat(nattrs) {

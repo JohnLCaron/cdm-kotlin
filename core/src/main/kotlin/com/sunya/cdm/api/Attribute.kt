@@ -4,10 +4,9 @@ import com.sunya.cdm.util.makeValidCdmObjectName
 
 data class Attribute(val orgName : String, val datatype : Datatype, val values : List<*>) {
     val name = makeValidCdmObjectName(orgName)
+    val isString = (datatype == Datatype.STRING)
 
     constructor(name : String, svalue : String) : this(name, Datatype.STRING, List<String>(1) { svalue })
-
-    val isString = (datatype == Datatype.STRING)
 
     class Builder {
         var name : String? = null

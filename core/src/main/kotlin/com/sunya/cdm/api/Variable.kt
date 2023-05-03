@@ -19,6 +19,11 @@ data class Variable(
         return if (group.fullname() == "") name else "${group.fullname()}/$name"
     }
 
+    /** find named attribute in this Variable */
+    fun findAttribute(attName: String) : Attribute? {
+        return attributes.find{it.name == attName}
+    }
+
     /////////////////////////////////////////////////////////////////////////////////////////
 
     override fun equals(other: Any?): Boolean {
@@ -50,7 +55,7 @@ data class Variable(
         val dimensions = mutableListOf<Dimension>()
         val attributes = mutableListOf<Attribute>()
         var spObject: Any? = null
-        var dimList: List<String>? = null
+        var dimNames: List<String>? = null
 
         fun addAttribute(attr : Attribute) : Builder {
             attributes.add(attr)
@@ -69,7 +74,7 @@ data class Variable(
 
         fun setDimensionsAnonymous(shape : LongArray) {
             dimensions.clear()
-            dimList = null
+            dimNames = null
             for (len in shape) {
                 dimensions.add(Dimension("", len, false))
             }
@@ -77,7 +82,7 @@ data class Variable(
 
         fun setDimensionsAnonymous(shape : IntArray) {
             dimensions.clear()
-            dimList = null
+            dimNames = null
             for (len in shape) {
                 dimensions.add(Dimension("", len.toLong(), false))
             }
@@ -89,8 +94,8 @@ data class Variable(
 
         fun build(group : Group) : Variable {
             var useDimensions = dimensions.toList()
-            if (dimList != null) {
-                useDimensions = dimList!!.map { getDimension(it, group) }
+            if (dimNames != null) {
+                useDimensions = dimNames!!.map { getDimension(it, group) }
             }
 
             val useName = makeValidCdmObjectName(name)
@@ -113,7 +118,7 @@ data class Variable(
         }
 
         override fun toString(): String {
-            return "'$name' $datatype, dimensions=$dimensions, dimList=$dimList)"
+            return "'$name' $datatype, dimensions=$dimensions, dimList=$dimNames)"
         }
     }
 }

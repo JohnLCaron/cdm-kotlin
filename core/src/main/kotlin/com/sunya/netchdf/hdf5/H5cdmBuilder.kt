@@ -97,7 +97,7 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     }
 
     if (v5.dimList != null) {
-        builder.dimList = v5.dimList!!.trim().split(" ")
+        builder.dimNames = v5.dimList!!.trim().split(" ")
     } else {
         // LOOK non-shared, integrate with shared ??
         v5.mds.dims.forEach{builder.dimensions.add(Dimension(it))}
