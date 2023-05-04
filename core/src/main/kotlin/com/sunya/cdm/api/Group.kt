@@ -216,9 +216,5 @@ class Group(orgName : String,
             val useName = makeValidCdmObjectName(name)
             return Group(useName, typedefs, dimensions, attributes, variables, groups, parent)
         }
-
-        override fun toString(): String {
-            return "Builder(name='$name')"
-        }
     }
 }

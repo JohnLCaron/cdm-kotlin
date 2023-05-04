@@ -4,7 +4,7 @@ import com.sunya.cdm.util.makeValidCdmObjectName
 
 data class Variable(
     val group : Group,
-    val orgName: String,
+    val orgName: String, // artifact of being a data class
     val datatype: Datatype,
     val dimensions: List<Dimension>,
     val attributes: List<Attribute>,
@@ -21,7 +21,7 @@ data class Variable(
 
     /** find named attribute in this Variable */
     fun findAttribute(attName: String) : Attribute? {
-        return attributes.find{it.name == attName}
+        return attributes.find {it.name == attName}
     }
 
     /////////////////////////////////////////////////////////////////////////////////////////
@@ -72,20 +72,17 @@ data class Variable(
             return this
         }
 
-        fun setDimensionsAnonymous(shape : LongArray) {
+        fun setDimensionsAnonymous(shape : LongArray) : Builder {
             dimensions.clear()
             dimNames = null
             for (len in shape) {
                 dimensions.add(Dimension("", len, false))
             }
+            return this
         }
 
-        fun setDimensionsAnonymous(shape : IntArray) {
-            dimensions.clear()
-            dimNames = null
-            for (len in shape) {
-                dimensions.add(Dimension("", len.toLong(), false))
-            }
+        fun setDimensionsAnonymous(shape : IntArray) : Builder {
+            return setDimensionsAnonymous(shape.toLongArray())
         }
 
         fun fullname(group : Group.Builder) : String {
@@ -103,22 +100,21 @@ data class Variable(
         }
 
         private fun getDimension(dimName : String, group : Group) : Dimension {
-            val name = makeValidCdmObjectName(dimName)
-            var d = group.findDimension(name)
+            val vname = makeValidCdmObjectName(dimName)
+            var d = group.findDimension(vname)
             if (d == null) {
                 d = try {
                     val length = dimName.toLong()
                     Dimension("", length, false)
                 } catch(e : Exception) {
-                    group.findDimension(name)
-                    Dimension("", 1L, false)
+                    throw RuntimeException("unknown dimension '$dimName' in Variable '$name'")
                 }
             }
             return d!!
         }
 
         override fun toString(): String {
-            return "'$name' $datatype, dimensions=$dimensions, dimList=$dimNames)"
+            return "'$name' $datatype, dimensions=$dimensions, dimList=$dimNames"
         }
     }
 }

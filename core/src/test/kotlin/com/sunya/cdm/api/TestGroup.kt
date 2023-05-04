@@ -2,7 +2,6 @@ package com.sunya.cdm.api
 
 import org.junit.jupiter.api.Test
 import kotlin.test.*
-import kotlin.test.assertEquals
 
 /** Test [dev.ucdm.core.api.Group]  */
 class TestGroup {

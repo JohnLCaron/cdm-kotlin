@@ -23,11 +23,21 @@ data class Attribute(val orgName : String, val datatype : Datatype, val values :
             return this
         }
 
+        fun setValues(values : List<*>) : Builder {
+            this.values = values
+            return this
+        }
+
         fun build() : Attribute {
             if (datatype == Datatype.CHAR && values == null) {
                 values = listOf("") // special case to match c library
             }
-            val useType = if (datatype == Datatype.CHAR) Datatype.STRING else datatype
+            var useType = datatype
+            // TODO is this worth it ? make calling routine do this ??
+            // note this only happens on build()
+            if (datatype == Datatype.CHAR && values != null && values!!.isNotEmpty() && values!![0] is String) {
+                useType = Datatype.STRING
+            }
             return Attribute(name!!, useType!!, values ?: emptyList<Any>())
         }
     }
