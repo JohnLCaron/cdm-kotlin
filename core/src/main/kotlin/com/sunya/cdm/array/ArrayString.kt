@@ -24,7 +24,7 @@ class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<Stri
         }
     }
 
-    override fun section(section : SectionL) : ArrayString {
+    override fun section(section : Section) : ArrayString {
         val odo = IndexND(IndexSpace(section), this.shape.toLongArray())
         val sectionList = mutableListOf<String>()
         for (index in odo) {

@@ -2,7 +2,6 @@ package com.sunya.netchdf.hdf5Clib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
-import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.MaxChunker
 import com.sunya.netchdf.hdf5.Datatype5
 import com.sunya.netchdf.hdf5Clib.ffm.hdf5_h
@@ -29,11 +28,11 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         val status = H5Fclose(header.file_id)
     }
 
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
-        return readArrayData(v2, SectionP.fill(section, v2.shape))
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, fillSection: SectionL): ArrayTyped<*> {
+    internal fun readArrayData(v2: Variable, fillSection: Section): ArrayTyped<*> {
         if (v2.spObject is Attribute) {
             val att = v2.spObject as Attribute
             return ArrayString(v2.shape.toIntArray(), att.values as List<String>)
@@ -51,7 +50,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         }
     }
 
-    internal fun readVlenStrings(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : ArrayString {
+    internal fun readVlenStrings(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayString {
         val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
         val nelems = want.totalElements
         val strings_p: MemorySegment = session.allocateArray(ValueLayout.ADDRESS, nelems)
@@ -75,7 +74,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         return ArrayString(want.shape.toIntArray(), slist)
     }
 
-    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : ArrayVlen {
+    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayVlen {
         val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
         val nelems = want.totalElements
         val vlen_p: MemorySegment = hvl_t.allocateArray(nelems.toInt(), session)
@@ -107,13 +106,13 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
         return H5CmaxIterator(v2, section, maxElements ?: 100_000)
     }
 
-    private inner class H5CmaxIterator(val v2: Variable, section : SectionP?, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class H5CmaxIterator(val v2: Variable, section : SectionPartial?, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
-        val filled = SectionP.fill(section, v2.shape)
+        val filled = SectionPartial.fill(section, v2.shape)
         private val maxIterator  = MaxChunker(maxElems,  filled)
 
         override fun computeNext() {

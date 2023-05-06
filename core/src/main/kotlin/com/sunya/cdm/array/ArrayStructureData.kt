@@ -55,7 +55,7 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
         }
     }
 
-    override fun section(section : SectionL) : ArrayStructureData {
+    override fun section(section : Section) : ArrayStructureData {
         return ArrayStructureData(section.shape.toIntArray(), sectionFrom(section), recsize, members)
     }
 

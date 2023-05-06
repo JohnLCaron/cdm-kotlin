@@ -353,7 +353,7 @@ class H5Cbuilder(val filename: String) {
         if (address > 0) datasetMap[address] = Pair(context.group, vb)
 
         if (obj_name.startsWith("StructMetadata")) {
-            val data = readRegularData(context.session, datasetId, h5ctype, SectionL(dims))
+            val data = readRegularData(context.session, datasetId, h5ctype, Section(dims))
             require (data is ArrayString)
             structMetadata.add(data.values.get(0))
         }
@@ -540,7 +540,7 @@ fun checkErr (where : String, ret: Int) {
     }
 }
 
-internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : ArrayTyped<*> {
+internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayTyped<*> {
     // int H5Dread ( long dset_id,  long mem_type_id,  long mem_space_id,  long file_space_id,  long plist_id,  Addressable buf) {
     // herr_t H5Dread(hid_t dset_id, hid_t 	mem_type_id, hid_t 	mem_space_id, hid_t file_space_id, hid_t dxpl_id, void *buf)
     //[in]	dset_id	Dataset identifier Identifier of the dataset to read from
@@ -581,7 +581,7 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     return processDataIntoArray(bb, h5ctype.datatype5, datatype, dims, h5ctype.elemSize)
 }
 
-internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : SectionL) : Pair<Long, Long> {
+internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : Pair<Long, Long> {
     val datatype = h5ctype.datatype()
     val size = want.totalElements * h5ctype.elemSize.toLong()
     println("readRegularData want=$want nelems=${want.totalElements} $datatype size=$size")

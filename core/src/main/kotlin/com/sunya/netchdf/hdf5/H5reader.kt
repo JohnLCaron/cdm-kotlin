@@ -12,14 +12,14 @@ import java.nio.ByteOrder
 private val debugLayout = false
 
 // Handles reading attributes and non-chunked Variables
-internal fun H5builder.readRegularData(dc: DataContainer, section : SectionL?): ArrayTyped<*> {
+internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
     if (dc.mds.type == DataspaceType.Null) {
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = dc.h5type
     val elemSize = h5type.elemSize
 
-    val wantSection = section ?: SectionL(dc.storageDims)
+    val wantSection = section ?: Section(dc.storageDims)
     val layout: Layout = LayoutRegular(dc.dataPos, elemSize, wantSection)
 
     if (h5type.datatype5 == Datatype5.Vlen) {
@@ -155,7 +155,7 @@ internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endi
 }
 
 // this apparently has heapId addresses
-internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantSection : SectionL) : ArrayTyped<*> {
+internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantSection : Section) : ArrayTyped<*> {
     val h5heap = H5heap(this)
     val shape = wantSection.shape.toIntArray()
 

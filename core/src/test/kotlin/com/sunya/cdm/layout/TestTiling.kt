@@ -1,6 +1,6 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.TestSection
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -25,9 +25,9 @@ class TestTiling {
         val chunk = longArrayOf(1, 3, 20)
         val tiling = Tiling(varshape, chunk)
 
-        val indexSection = IndexSpace(SectionL.fromSpec("1:2, 1:2, 0:12"))
+        val indexSection = IndexSpace(TestSection.fromSpec("1:2, 1:2, 0:12"))
         val tiledSection = tiling.section(indexSection)
-        assertEquals(IndexSpace(SectionL.fromSpec("1:2, 0:0, 0:0")), tiledSection)
+        assertEquals(IndexSpace(TestSection.fromSpec("1:2, 0:0, 0:0")), tiledSection)
     }
 
     @Test
@@ -36,9 +36,9 @@ class TestTiling {
         val chunk = longArrayOf(1, 3, 20)
         val tiling = Tiling(varshape, chunk)
 
-        val indexSection = IndexSpace(SectionL.fromSpec("1:3, 2:4, 150:199"))
+        val indexSection = IndexSpace(TestSection.fromSpec("1:3, 2:4, 150:199"))
         val tiledSection = tiling.section(indexSection)
-        assertEquals(IndexSpace(SectionL.fromSpec("1:3, 0:1, 7:9")), tiledSection)
+        assertEquals(IndexSpace(TestSection.fromSpec("1:3, 0:1, 7:9")), tiledSection)
     }
 
     @Test
@@ -47,9 +47,9 @@ class TestTiling {
         val chunk = longArrayOf(1, 3, 11)
         val tiling = Tiling(varshape, chunk)
 
-        val indexSection = IndexSpace(SectionL.fromSpec("1, 4:5, 33:55"))
+        val indexSection = IndexSpace(TestSection.fromSpec("1, 4:5, 33:55"))
         val tiledSection = tiling.section(indexSection)
-        assertEquals(IndexSpace(SectionL.fromSpec("1:1, 1:1, 3:5")), tiledSection)
+        assertEquals(IndexSpace(TestSection.fromSpec("1:1, 1:1, 3:5")), tiledSection)
     }
 
     @Test
@@ -58,9 +58,9 @@ class TestTiling {
         val chunk = longArrayOf(15, 30)
         val tiling = Tiling(varshape, chunk)
 
-        val indexSection = IndexSpace(SectionL.fromSpec("20:39,40:79"))
+        val indexSection = IndexSpace(TestSection.fromSpec("20:39,40:79"))
         val tileSection = tiling.section(indexSection)
-        assertEquals(IndexSpace(SectionL.fromSpec("1:2,1:2")), tileSection)
+        assertEquals(IndexSpace(TestSection.fromSpec("1:2,1:2")), tileSection)
         
         val tileOdometer = IndexND(tileSection, tiling.tileShape) // loop over tiles we want
         for (tile in tileOdometer) {
@@ -76,9 +76,9 @@ class TestTiling {
         val tiling = Tiling(varshape, chunk)
         println("tiling = $tiling")
 
-        val indexSection = IndexSpace(SectionL.fromSpec("0:9, 0:780, 0:384"))
+        val indexSection = IndexSpace(TestSection.fromSpec("0:9, 0:780, 0:384"))
         val tileSection = tiling.section(indexSection)
-        assertEquals(IndexSpace(SectionL.fromSpec("0:9,0:26,0:12")), tileSection)
+        assertEquals(IndexSpace(TestSection.fromSpec("0:9,0:26,0:12")), tileSection)
 
         val tileOdometer = IndexND(tileSection, tiling.tileShape) // loop over tiles we want
         var count = 0

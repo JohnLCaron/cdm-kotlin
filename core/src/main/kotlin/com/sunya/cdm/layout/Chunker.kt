@@ -1,7 +1,7 @@
 package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import java.nio.ByteBuffer
 
 enum class Merge { all, none, notFirst }
@@ -54,7 +54,7 @@ class Chunker(val dataChunk: IndexSpace, val wantSpace: IndexSpace, merge : Merg
         this.incrDigit = if (firstDim == 0) 0 else firstDim - 1
     }
 
-    constructor(section : SectionL, merge : Merge = Merge.all) : this(IndexSpace(section.varShape), IndexSpace(section), merge)
+    constructor(section : Section, merge : Merge = Merge.all) : this(IndexSpace(section.varShape), IndexSpace(section), merge)
 
     private fun countMergeDims(
         intersect: IndexSpace,

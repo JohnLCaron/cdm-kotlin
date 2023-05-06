@@ -26,8 +26,8 @@ class NetchdfTest {
             // return testFilesIn(testData + "devcdm").withRecursion().build()
             // return Stream.of(devcdm).flatMap { i -> i }
             // return N3Files.params()
-            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params()).flatMap { i -> i };
-            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
+            // return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params()).flatMap { i -> i };
+            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(false)).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -67,8 +67,8 @@ class NetchdfTest {
     fun hasMissing() {
         val filename =
             testData + "cdmUnitTest/formats/netcdf4/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
-        readNetchdfData(filename, "CMI", SectionP.fromSpec(":, :"))
-        readNetchdfData(filename, "DQF", SectionP.fromSpec(":, :"))
+        readNetchdfData(filename, "CMI", SectionPartial.fromSpec(":, :"))
+        readNetchdfData(filename, "DQF", SectionPartial.fromSpec(":, :"))
     }
 
     @Test
@@ -135,7 +135,7 @@ fun showNetchdfHeader(filename: String) {
     }
 }
 
-fun readNetchdfData(filename: String, varname: String? = null, section: SectionP? = null, showCdl : Boolean = false) {
+fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
     // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
@@ -150,7 +150,7 @@ fun readNetchdfData(filename: String, varname: String? = null, section: SectionP
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // just read data from myfile
 
-fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionP? = null, showCdl : Boolean = false) {
+fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
@@ -172,9 +172,9 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionP? = nu
 
 const val maxBytes = 100_000_000
 
-fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionP?) {
+fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
 
-    val sectionF = SectionP.fill(section, myvar.shape)
+    val sectionF = SectionPartial.fill(section, myvar.shape)
     val nbytes = sectionF.totalElements * myvar.datatype.size
     val myvarshape = myvar.shape.toIntArray()
 
@@ -210,14 +210,14 @@ fun removeLast(org: IntArray): IntArray {
 }
 
 fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
-    val orgSection = SectionL(shape)
+    val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         if (range == null) throw RuntimeException("Range is null")
         val length = orgSection.shape[idx]
         if (length < 9) range
         else LongProgression.fromClosedRange(range.first + length / 3, range.last - length / 3, range.step)
     }
-    val middleSection = SectionL(middleRanges, myvar.shape)
+    val middleSection = Section(middleRanges, myvar.shape)
     val nbytes = middleSection.totalElements * myvar.datatype.size
     if (nbytes > maxBytes) {
         if (NetchdfTest.showDataRead) println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
@@ -229,7 +229,7 @@ fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
         println()
     }
 
-    val mydata = myfile.readArrayData(myvar, SectionP(middleSection.ranges))
+    val mydata = myfile.readArrayData(myvar, SectionPartial(middleSection.ranges))
     val middleShape = middleSection.shape.toIntArray()
     if (NetchdfTest.showDataRead) println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${mydata.shape.computeSize()} elems")
     if (myvar.datatype == Datatype.CHAR) {
@@ -422,7 +422,7 @@ fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = t
 //////////////////////////////////////////////////////////////////////////////////////
 // compare reading data chunkIterate API with Netch and NC
 
-fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: SectionP? = null) {
+fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, section: SectionPartial? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -446,7 +446,7 @@ fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, sec
     }
 }
 
-fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: SectionP?) {
+fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: SectionPartial?) {
     val sum = AtomicDouble()
     var countChunks = 0
     val time1 = measureNanoTime {

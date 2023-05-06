@@ -1,6 +1,6 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 import com.sunya.cdm.api.toLongArray
 import kotlin.math.max
@@ -16,11 +16,11 @@ data class IndexSpace(val start : LongArray, val shape : LongArray) {
 
     constructor(shape : IntArray) : this( shape.toLongArray()) // starts at 0
     constructor(shape : LongArray) : this( LongArray(shape.size), shape) // starts at 0
-    constructor(section : SectionL) : this(section.ranges.map { it.first() }.toLongArray(), section.shape)
+    constructor(section : Section) : this(section.ranges.map { it.first() }.toLongArray(), section.shape)
     constructor(rank : Int, start : LongArray, shape : LongArray) : this( LongArray(rank) { start[it] }, LongArray(rank) { shape[it] })
 
-    fun section(varShape : LongArray) : SectionL {
-        return SectionL(ranges, varShape)
+    fun section(varShape : LongArray) : Section {
+        return Section(ranges, varShape)
     }
 
     fun contains(pt : LongArray): Boolean {

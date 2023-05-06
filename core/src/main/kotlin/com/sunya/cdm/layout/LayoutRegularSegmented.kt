@@ -1,6 +1,6 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 
 /**
@@ -10,9 +10,9 @@ import com.sunya.cdm.api.computeSize
  * @param startPos starting address of the entire data array.
  * @param elemSize size of an element in bytes.
  * @param recSize size of outer stride in bytes
- * @param wantSpace the wanted section of data
+ * @param wantSection the wanted section of data
 */
-class LayoutRegularSegmented(val startPos: Long, override val elemSize: Int, val recSize: Long, wantSpace: SectionL)
+class LayoutRegularSegmented(val startPos: Long, override val elemSize: Int, val recSize: Long, wantSection: Section)
     : Layout {
 
     override val totalNelems: Long
@@ -25,10 +25,10 @@ class LayoutRegularSegmented(val startPos: Long, override val elemSize: Int, val
         require(startPos > 0)
         require(elemSize > 0)
         require(recSize > 0)
-        require(wantSpace.varShape.size > 0) // no scalars
-        chunker = Chunker(wantSpace, Merge.notFirst) // each record becomes a chunk
+        require(wantSection.varShape.size > 0) // no scalars
+        chunker = Chunker(wantSection, Merge.notFirst) // each record becomes a chunk
         totalNelems = chunker.totalNelems
-        innerNelems = if (wantSpace.varShape[0] == 0L) 0 else wantSpace.varShape.computeSize() / wantSpace.varShape[0]
+        innerNelems = if (wantSection.varShape[0] == 0L) 0 else wantSection.varShape.computeSize() / wantSection.varShape[0]
     }
 
     override fun hasNext(): Boolean {

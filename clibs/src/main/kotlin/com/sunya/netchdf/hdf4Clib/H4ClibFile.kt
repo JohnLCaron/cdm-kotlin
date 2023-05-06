@@ -45,11 +45,11 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 
     // LOOK SDreadchunk ??
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
-        return readArrayData(v2, SectionP.fill(section, v2.shape))
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, filled: SectionL): ArrayTyped<*> {
+    internal fun readArrayData(v2: Variable, filled: Section): ArrayTyped<*> {
         val vinfo = v2.spObject as Vinfo4
 
         val datatype = v2.datatype
@@ -75,12 +75,12 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         throw RuntimeException("cant read ${v2.name}")
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
-        val filled = SectionP.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+        val filled = SectionPartial.fill(section, v2.shape)
         return HCmaxIterator(v2, filled, maxElements ?: 100_000)
     }
 
-    private inner class HCmaxIterator(val v2: Variable, wantSection : SectionL, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class HCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
@@ -103,7 +103,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 }
 
-fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, wantSection: SectionL, nbytes: Long): ArrayTyped<*> {
+fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, wantSection: Section, nbytes: Long): ArrayTyped<*> {
     val rank = wantSection.rank
 
     MemorySession.openConfined().use { session ->
@@ -172,7 +172,7 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum
     }
 }
 
-fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: SectionL, nbytes: Long): ArrayTyped<*> {
+fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: Section, nbytes: Long): ArrayTyped<*> {
 
     MemorySession.openConfined().use { session ->
         // flip the shape

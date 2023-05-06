@@ -1,7 +1,7 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.api.toIntArray
 import com.sunya.cdm.array.*
@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
 internal class H5chunkReader(val h5 : H5builder) {
     private val debugChunking = false
 
-    internal fun readChunkedData(v2: Variable, wantSection : SectionL) : ArrayTyped<*> {
+    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
         val vinfo = v2.spObject as DataContainerVariable
         val h5type = vinfo.h5type
 

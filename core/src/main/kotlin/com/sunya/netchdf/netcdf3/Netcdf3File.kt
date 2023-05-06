@@ -30,11 +30,11 @@ class Netcdf3File(val filename : String) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
         if (v2.nelems == 0L) {
             return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
         }
-        val wantSection : SectionL = SectionP.fill(section, v2.shape)
+        val wantSection : Section = SectionPartial.fill(section, v2.shape)
         val vinfo = v2.spObject as VinfoN3
         val layout = if (!v2.hasUnlimited()) {
             LayoutRegular(vinfo.begin, vinfo.elemSize, wantSection)
@@ -48,15 +48,15 @@ class Netcdf3File(val filename : String) : Netchdf {
         return this.dimensions.find { it == header.unlimitedDimension } != null
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
         if (v2.nelems == 0L) {
             return listOf<ArraySection>().iterator()
         }
-        val wantSection = SectionP.fill(section, v2.shape)
+        val wantSection = SectionPartial.fill(section, v2.shape)
         return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
     }
 
-    private inner class NCmaxIterator(val v2: Variable, wantSection : SectionL, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         val vinfo = v2.spObject as VinfoN3
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
@@ -83,7 +83,7 @@ class Netcdf3File(val filename : String) : Netchdf {
     }
 
     @Throws(IOException::class)
-    private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : SectionL): ArrayTyped<*> {
+    private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
         require(wantSection.totalElements == layout.totalNelems)
         val vinfo = v2.spObject as VinfoN3
         val totalNbytes = (vinfo.elemSize * layout.totalNelems)

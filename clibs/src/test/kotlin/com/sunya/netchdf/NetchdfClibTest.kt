@@ -29,7 +29,7 @@ class NetchdfClibTest {
         @JvmStatic
         fun params(): Stream<Arguments> {
             // return NppFiles.params()
-            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), NetchdfExtraFiles.params(true), H4Files.params()).flatMap { i -> i };
+            return Stream.of( N3Files.params(), N4Files.params(), H5Files.params(), H4Files.params(), NetchdfExtraFiles.params(true)).flatMap { i -> i };
         }
 
         @JvmStatic
@@ -228,7 +228,7 @@ fun showNcHeader(filename: String) {
     }
 }
 
-fun readNetchdfData(filename: String, varname: String? = null, section: SectionP? = null, showCdl : Boolean = false) {
+fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
     // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
@@ -240,7 +240,7 @@ fun readNetchdfData(filename: String, varname: String? = null, section: SectionP
     }
 }
 
-fun readNcData(filename: String, varname: String? = null, section: SectionP? = null, showCdl : Boolean = false) {
+fun readNcData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
     NClibFile(filename).use { ncfile ->
         readMyData(ncfile, varname, section, showCdl)
     }
@@ -274,7 +274,7 @@ fun compareCdlWithClib(filename: String) {
     }
 }
 
-fun compareDataWithClib(filename: String, varname: String? = null, section: SectionP? = null) {
+fun compareDataWithClib(filename: String, varname: String? = null, section: SectionPartial? = null) {
     println("=============================================================")
     openNetchdfFile(filename).use { netchdf ->
         if (netchdf == null) {
@@ -302,7 +302,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
     }
 }
 
-fun compareIterateWithClib(filename: String, varname: String? = null, section: SectionP? = null) {
+fun compareIterateWithClib(filename: String, varname: String? = null, section: SectionPartial? = null) {
     println("=============================================================")
     openNetchdfFile(filename).use { netchdf ->
         if (netchdf == null) {
@@ -333,7 +333,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // just read data from myfile
 
-fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionP? = null, showCdl : Boolean = false) {
+fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
@@ -355,8 +355,8 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionP? = nu
 
 const val maxBytes = 100_000_000
 
-fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionP?) {
-    val sectionF = SectionP.fill(section, myvar.shape)
+fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+    val sectionF = SectionPartial.fill(section, myvar.shape)
     val nbytes = sectionF.totalElements * myvar.datatype.size
     val myvarshape = myvar.shape.toIntArray()
 
@@ -392,13 +392,13 @@ fun removeLast(org: IntArray): IntArray {
 }
 
 fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
-    val orgSection = SectionL(shape)
+    val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         val length = orgSection.shape[idx]
         if (length < 9) range
         else LongProgression.fromClosedRange(range.first + length / 3, range.last - length / 3, range.step)
     }
-    val middleSection = SectionL(middleRanges, myvar.shape)
+    val middleSection = Section(middleRanges, myvar.shape)
     val nbytes = middleSection.totalElements * myvar.datatype.size
     if (nbytes > maxBytes) {
         if (NetchdfClibTest.showDataRead) println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
@@ -406,7 +406,7 @@ fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
         return
     }
 
-    val mydata = myfile.readArrayData(myvar, SectionP(middleSection.ranges))
+    val mydata = myfile.readArrayData(myvar, SectionPartial(middleSection.ranges))
     val middleShape = middleSection.shape.toIntArray()
     if (NetchdfClibTest.showDataRead) println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${mydata.shape.computeSize()} elems")
     if (myvar.datatype == Datatype.CHAR) {
@@ -420,7 +420,7 @@ fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
 //////////////////////////////////////////////////////////////////////////////////////
 // compare data from two Netchdf files
 
-fun compareNetcdfData(myfile: Netchdf, cfile: Netchdf, varname: String?, section: SectionP? = null) {
+fun compareNetcdfData(myfile: Netchdf, cfile: Netchdf, varname: String?, section: SectionPartial? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -450,8 +450,8 @@ fun compareNetcdfData(myfile: Netchdf, cfile: Netchdf, varname: String?, section
     }
 }
 
-fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionP?) {
-    val filledSection = SectionP.fill(section, myvar.shape)
+fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionPartial?) {
+    val filledSection = SectionPartial.fill(section, myvar.shape)
     val nbytes = filledSection.totalElements * myvar.datatype.size
 
     if (nbytes > maxBytes) {
@@ -494,13 +494,13 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netc
 }
 
 fun compareMiddleSection(myfile: Netchdf, myvar: Variable, cfile: Netchdf, cvar: Variable, shape : LongArray) {
-    val orgSection = SectionL(shape)
+    val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         val length = orgSection.shape[idx]
         if (length < 9) range
         else LongProgression.fromClosedRange(range.first + length / 3, range.last - length / 3, range.step)
     }
-    val middleSection = SectionL(middleRanges, myvar.shape)
+    val middleSection = Section(middleRanges, myvar.shape)
     val nbytes = middleSection.totalElements * myvar.datatype.size
     if (nbytes > maxBytes) {
         if (NetchdfClibTest.showDataRead) println("  * ${myvar.fullname()}[${middleSection}] read too big: ${nbytes} > $maxBytes")
@@ -508,9 +508,9 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, cfile: Netchdf, cvar:
         return
     }
 
-    val mydata = myfile.readArrayData(myvar, SectionP(middleSection.ranges))
+    val mydata = myfile.readArrayData(myvar, SectionPartial(middleSection.ranges))
     val ncdata = try {
-        cfile.readArrayData(cvar, SectionP(middleSection.ranges))
+        cfile.readArrayData(cvar, SectionPartial(middleSection.ranges))
     } catch (e: Exception) {
         println(" *** FAIL compareMiddleSection data for variable = ${cvar.datatype} ${cvar.fullname()} ${cvar.dimensions.map { it.name }}")
         throw e
@@ -546,7 +546,7 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
 
 private const val debugIter = false
 
-fun compareIterateNetchdf(myfile: Netchdf, cfile: Netchdf, varname: String?, section: SectionP? = null) {
+fun compareIterateNetchdf(myfile: Netchdf, cfile: Netchdf, varname: String?, section: SectionPartial? = null) {
     if (varname != null) {
         val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
         if (myvar == null) {
@@ -570,7 +570,7 @@ fun compareIterateNetchdf(myfile: Netchdf, cfile: Netchdf, varname: String?, sec
     }
 }
 
-fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionP?) {
+fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionPartial?) {
     val sum = AtomicDouble()
     sum.set(0.0)
     var countChunks = 0
