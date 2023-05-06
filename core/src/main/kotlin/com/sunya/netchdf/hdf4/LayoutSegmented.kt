@@ -1,6 +1,6 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 import com.sunya.cdm.api.toIntArray
 import com.sunya.cdm.layout.Chunker
@@ -18,7 +18,7 @@ import kotlin.math.min
  * @param elemSize size of an element in bytes.
  * @param wantSection the wanted section of data (in elements)
  */
-class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, wantSection: SectionL) : Layout {
+class LayoutSegmented(segPos: LongArray, segSize: IntArray, override val elemSize: Int, wantSection: Section) : Layout {
     val srcShape = wantSection.varShape.toIntArray()
 
     override val totalNelems: Long

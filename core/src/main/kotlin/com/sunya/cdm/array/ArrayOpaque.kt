@@ -1,7 +1,7 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
@@ -26,7 +26,7 @@ class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : A
         return "ArrayOpaque(size=$size, nelems=$nelems, \n values=${showValues()})"
     }
 
-    override fun section(section : SectionL) : ArrayOpaque {
+    override fun section(section : Section) : ArrayOpaque {
         return ArrayOpaque(section.shape.toIntArray(), sectionFrom(section), size)
     }
 

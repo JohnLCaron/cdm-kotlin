@@ -29,11 +29,11 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
         if (v2.nelems == 0L) {
             return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
         }
-        val wantSection = SectionP.fill(section, v2.shape)
+        val wantSection = SectionPartial.fill(section, v2.shape)
 
         // promoted attributes
         if (v2.spObject is DataContainerAttribute) {
@@ -49,7 +49,7 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
             if (vinfo.isChunked) {
                 H5chunkReader(header).readChunkedData(v2, wantSection)
             } else if (vinfo.isCompact) {
-                val alldata = header.readCompactData(vinfo, wantSection.varShape.toIntArray())
+                val alldata = header.readCompactData(vinfo, v2.shape.toIntArray())
                 alldata.section(wantSection)
             } else {
                 header.readRegularData(vinfo, wantSection)
@@ -61,11 +61,11 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     }
 
     @Throws(IOException::class)
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?) : Iterator<ArraySection> {
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?) : Iterator<ArraySection> {
         if (v2.nelems == 0L) {
             return listOf<ArraySection>().iterator()
         }
-        val wantSection = SectionP.fill(section, v2.shape)
+        val wantSection = SectionPartial.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.onlyFillValue) { // fill value only, no data

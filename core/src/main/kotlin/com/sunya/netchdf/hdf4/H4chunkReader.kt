@@ -12,7 +12,7 @@ class H4chunkReader(val h4 : H4builder) {
     private val debugChunking = false
     private val debugMissing = false
 
-    internal fun readChunkedData(v2: Variable, wantSection : SectionL) : ArrayTyped<*> {
+    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
         val vinfo = v2.spObject as Vinfo
         val elemSize = vinfo.elemSize
         val datatype = v2.datatype

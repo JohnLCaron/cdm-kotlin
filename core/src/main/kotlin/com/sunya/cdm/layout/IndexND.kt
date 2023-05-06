@@ -1,6 +1,6 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 
 /**
  * Translate between 1D "element" and nD "index".
@@ -9,7 +9,7 @@ import com.sunya.cdm.api.SectionL
  * @param section : a section of the entire datashape.
  * @param datashape : The datashape. May have an extra dimension, which is ignored.
  */
-class IndexND(val section : IndexSpace, datashape : LongArray) : Iterable<LongArray> {
+class IndexND(val section : IndexSpace, val datashape : LongArray) : Iterable<LongArray> {
     val rank = section.rank
     val current : LongArray = section.start.copyOf()
     val totalElements = section.totalElements
@@ -28,7 +28,7 @@ class IndexND(val section : IndexSpace, datashape : LongArray) : Iterable<LongAr
         }
     }
 
-    constructor(section : SectionL) : this(IndexSpace(section), section.varShape)
+    constructor(section : Section) : this(IndexSpace(section), section.varShape)
 
     fun incr(incrdigit: Int): LongArray = current.incr(incrdigit)
 

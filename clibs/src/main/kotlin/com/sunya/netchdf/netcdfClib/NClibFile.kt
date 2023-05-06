@@ -2,7 +2,6 @@ package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
-import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.MaxChunker
 import com.sunya.netchdf.hdf5Clib.ffm.hdf5_h
 import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
@@ -65,11 +64,11 @@ class NClibFile(val filename: String) : Netchdf {
         // NOOP
     }
 
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
-        return readArrayData(v2, SectionP.fill(section, v2.shape))
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, wantSection: SectionL): ArrayTyped<*> {
+    internal fun readArrayData(v2: Variable, wantSection: Section): ArrayTyped<*> {
         val nelems = wantSection.totalElements
         require(nelems < Int.MAX_VALUE)
 
@@ -312,12 +311,12 @@ class NClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
-        val filled = SectionP.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+        val filled = SectionPartial.fill(section, v2.shape)
         return NCmaxIterator(v2, filled, maxElements ?: 100_000)
     }
 
-    private inner class NCmaxIterator(val v2: Variable, wantSection : SectionL, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
 

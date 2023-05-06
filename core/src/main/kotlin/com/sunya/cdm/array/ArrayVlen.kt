@@ -1,7 +1,7 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.SectionL
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.toIntArray
 import com.sunya.cdm.api.toLongArray
 import com.sunya.cdm.layout.IndexND
@@ -49,7 +49,7 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
         return result
     }
 
-    override fun section(section: SectionL): ArrayVlen {
+    override fun section(section: Section): ArrayVlen {
         val odo = IndexND(IndexSpace(section), this.shape.toLongArray())
         val sectionList = mutableListOf<Array<*>>()
         for (index in odo) {

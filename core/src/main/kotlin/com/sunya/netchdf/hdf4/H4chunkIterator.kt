@@ -7,7 +7,7 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : SectionL) : AbstractIterator<ArraySection>() {
+class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
     private val debugChunking = false
 
     private val vinfo = v2.spObject as Vinfo
@@ -19,7 +19,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
     private val chunkIterator : Iterator<H4CompressedDataChunk>
 
     init {
-        tiledData = H4tiledData(h4, wantSection.varShape, vinfo.chunkLengths, vinfo.chunks!!)
+        tiledData = H4tiledData(h4, v2.shape, vinfo.chunkLengths, vinfo.chunks!!)
         if (debugChunking) println(" ${tiledData.tiling}")
         chunkIterator = tiledData.findDataChunks(wantSpace).iterator()
     }

@@ -37,11 +37,11 @@ class Hdf4File(val filename : String) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: SectionP?): ArrayTyped<*> {
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
         if (v2.nelems == 0L) {
             return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
         }
-        val filledSection = SectionP.fill(section, v2.shape)
+        val filledSection = SectionPartial.fill(section, v2.shape)
         return if (v2.datatype == Datatype.COMPOUND) {
             readStructureDataArray(v2, filledSection)
         } else {
@@ -49,11 +49,11 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionP?, maxElements : Int?): Iterator<ArraySection> {
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
         if (v2.nelems == 0L) {
             return listOf<ArraySection>().iterator()
         }
-        val wantSection = SectionP.fill(section, v2.shape)
+        val wantSection = SectionPartial.fill(section, v2.shape)
         val vinfo = v2.spObject as Vinfo
 
         return if (vinfo.isChunked) {  // LOOK isLinked?
@@ -63,7 +63,7 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    private inner class H4maxIterator(val v2: Variable, wantSection : SectionL, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class H4maxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
@@ -85,7 +85,7 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    private fun readRegularDataArray(v: Variable, section: SectionL): ArrayTyped<*> {
+    private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
         val vinfo = v.spObject as Vinfo
 
         if (vinfo.tagData != null) {
@@ -134,7 +134,7 @@ class Hdf4File(val filename : String) : Netchdf {
     }
 
     // LOOK use fillValue
-    private fun readDataWithFill(reader: ReaderIntoByteArray, layout: Layout, v2: Variable, fillValue: Any?, wantSection: SectionL)
+    private fun readDataWithFill(reader: ReaderIntoByteArray, layout: Layout, v2: Variable, fillValue: Any?, wantSection: Section)
             : ArrayTyped<*> {
         require(wantSection.totalElements == layout.totalNelems)
         val vinfo = v2.spObject as Vinfo
@@ -171,7 +171,7 @@ class Hdf4File(val filename : String) : Netchdf {
     }
 
     @Throws(IOException::class, InvalidRangeException::class)
-    private fun readStructureDataArray(v2: Variable, section: SectionL): ArrayStructureData {
+    private fun readStructureDataArray(v2: Variable, section: Section): ArrayStructureData {
         val vinfo = v2.spObject as Vinfo
 
         if (vinfo.tagData != null) {
@@ -233,7 +233,7 @@ internal fun getLinkedCompressedInputStream(h4: H4builder, vinfo: Vinfo): InputS
 }
 
 // called from special.getDataChunks()
-internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, section: SectionL, members: List<StructureMember>): ArrayStructureData {
+internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, section: Section, members: List<StructureMember>): ArrayStructureData {
     val shape = section.shape.toIntArray()
     val recsize: Int = vinfo.elemSize
 

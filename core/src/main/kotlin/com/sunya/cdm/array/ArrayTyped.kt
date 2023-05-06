@@ -69,14 +69,14 @@ abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val s
 
     // create a section of this Array. LOOK not checking section against array shape.
     // This makes a copy. might do logical sections in the future.
-    abstract fun section(section : SectionL) : ArrayTyped<T>
+    abstract fun section(section : Section) : ArrayTyped<T>
 
-    protected fun sectionFrom(section : SectionL) : ByteBuffer {
-        val sectionSize = section.totalElements.toInt()
-        if (sectionSize == nelems)
+    protected fun sectionFrom(section : Section) : ByteBuffer {
+        val sectionNelems = section.totalElements.toInt()
+        if (sectionNelems == nelems)
             return bb
 
-        val dst = ByteBuffer.allocate(sectionSize * datatype.size)
+        val dst = ByteBuffer.allocate(sectionNelems * datatype.size)
         val chunker = Chunker(IndexSpace(this.shape), IndexSpace(section))
         chunker.transfer(bb, datatype.size, dst)
 
@@ -101,7 +101,7 @@ class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) :
         }
     }
 
-    override fun section(section : SectionL) : ArrayTyped<T> {
+    override fun section(section : Section) : ArrayTyped<T> {
         return ArraySingle(section.shape.toIntArray(), datatype, fillValue)
     }
 }
@@ -109,7 +109,7 @@ class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) :
 // An empty array of any shape that has mo values
 class ArrayEmpty<T>(shape : IntArray, datatype : Datatype) : ArrayTyped<T>(ByteBuffer.allocate(1), datatype, shape) {
     override fun iterator(): Iterator<T> = listOf<T>().iterator()
-    override fun section(section : SectionL) : ArrayTyped<T> {
+    override fun section(section : Section) : ArrayTyped<T> {
         return this
     }
 }

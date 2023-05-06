@@ -7,7 +7,7 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : SectionL) : AbstractIterator<ArraySection>() {
+internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
     private val debugChunking = false
 
     val vinfo : DataContainerVariable

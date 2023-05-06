@@ -48,12 +48,12 @@ class H5dataTiming {
         if (showDetail) println("===============================================")
         if (showDetail) println("chunkedReverse [191, 242, 1, 4]/[191, 242, 589]")
         //  variable eta[191, 242, 589], storageDims = [191, 242, 1, 4]
-        readData(reversed, "eta", SectionP.fromSpec("0:9, 0:9, 0:9"))
-        readData(reversed, "fxx", SectionP.fromSpec("0:99, 0:9, 0:9"))
-        readData(reversed, "fyy", SectionP.fromSpec("0:99, 0:99, 0:9"))
-        readData(reversed, "pxx", SectionP.fromSpec("0:99, 0:99, 0:99"))
-        readData(reversed, "pyy", SectionP.fromSpec("0:99, 0:99, :"))
-        readData(reversed, "eta", SectionP.fromSpec(":, :, 11:20"))
+        readData(reversed, "eta", SectionPartial.fromSpec("0:9, 0:9, 0:9"))
+        readData(reversed, "fxx", SectionPartial.fromSpec("0:99, 0:9, 0:9"))
+        readData(reversed, "fyy", SectionPartial.fromSpec("0:99, 0:99, 0:9"))
+        readData(reversed, "pxx", SectionPartial.fromSpec("0:99, 0:99, 0:99"))
+        readData(reversed, "pyy", SectionPartial.fromSpec("0:99, 0:99, :"))
+        readData(reversed, "eta", SectionPartial.fromSpec(":, :, 11:20"))
     }
 
     @Test
@@ -61,11 +61,11 @@ class H5dataTiming {
         if (showDetail) println("===============================================")
         if (showDetail) println("chunked [1, 1, 91, 144, 4]/[1, 72, 721, 1152]")
         //  variable EPV[1, 72, 721, 1152], Chunked dims=[1, 1, 91, 144, 4]
-        readData(chunked, "EPV", SectionP.fromSpec("0, 0:9, 0:9, 0:9"))
-        readData(chunked, "O3", SectionP.fromSpec("0, 0:9, 0:99, 0:9"))
-        readData(chunked, "H", SectionP.fromSpec("0, 0:9, 0:99, 0:99"))
-        readData(chunked, "RH", SectionP.fromSpec("0, 0:9, 0:99, 0:999"))
-        readData(chunked, "EPV", SectionP.fromSpec(":, :, :, 11:20"))
+        readData(chunked, "EPV", SectionPartial.fromSpec("0, 0:9, 0:9, 0:9"))
+        readData(chunked, "O3", SectionPartial.fromSpec("0, 0:9, 0:99, 0:9"))
+        readData(chunked, "H", SectionPartial.fromSpec("0, 0:9, 0:99, 0:99"))
+        readData(chunked, "RH", SectionPartial.fromSpec("0, 0:9, 0:99, 0:999"))
+        readData(chunked, "EPV", SectionPartial.fromSpec(":, :, :, 11:20"))
     }
 
     @Test
@@ -73,11 +73,11 @@ class H5dataTiming {
         if (showDetail) println("===============================================")
         if (showDetail) println("chunkedFiltered [1, 30, 30, 8]/[8395, 781, 385]")
         //  variable UpperDeschutes_t4p10_swemelt[8395, 781, 385], Chunked dims=[1, 30, 30, 8]
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec("0:9, :, :"))
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec("0:100, 0:30, 0:40"))
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec("0:1000, 0:30, 0:40"))
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec("0:1000, 0:30, :"))
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec(":, 17, 44:55"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec("0:9, :, :"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec("0:100, 0:30, 0:40"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec("0:1000, 0:30, 0:40"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec("0:1000, 0:30, :"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec(":, 17, 44:55"))
     }
 
     @Test
@@ -85,32 +85,32 @@ class H5dataTiming {
         if (showDetail) println("===============================================")
         if (showDetail) println("netcdf3 [5, 40, 56, 75]")
         val filename = testData + "cdmUnitTest/formats/netcdf3/awips.nc"
-        readData(filename, "uw", SectionP.fromSpec("5, 40, 56, 75"))
-        readData(filename, "uw", SectionP.fromSpec("0:4,13:26,18:37,25:49"))
-        readData(filename, "vw", SectionP.fromSpec("5, 40, 56, 75"))
-        readData(filename, "vw", SectionP.fromSpec("0:4,13:26,18:37,25:49"))
-        readData(filename, "uw", SectionP.fromSpec(":,:,:,25"))
+        readData(filename, "uw", SectionPartial.fromSpec("5, 40, 56, 75"))
+        readData(filename, "uw", SectionPartial.fromSpec("0:4,13:26,18:37,25:49"))
+        readData(filename, "vw", SectionPartial.fromSpec("5, 40, 56, 75"))
+        readData(filename, "vw", SectionPartial.fromSpec("0:4,13:26,18:37,25:49"))
+        readData(filename, "uw", SectionPartial.fromSpec(":,:,:,25"))
     }
 
     @Test
     fun problem() {
-        readData(reversed, "fyy", SectionP.fromSpec("0:99, 0:99, 0:9"))
+        readData(reversed, "fyy", SectionPartial.fromSpec("0:99, 0:99, 0:9"))
     }
 
     @Test
     fun problem2() {
         //  variable UpperDeschutes_t4p10_swemelt[8395, 781, 385], Chunked dims=[1, 30, 30, 8]
-        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionP.fromSpec("0:100, 0:30, 0:40"))
+        readData(chunked2, "UpperDeschutes_t4p10_swemelt", SectionPartial.fromSpec("0:100, 0:30, 0:40"))
     }
 
     @Test
     fun hasMissing() {
         val filename = testData + "cdmUnitTest/formats/netcdf4/new/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc"
-        readData(filename, "CMI", SectionP.fromSpec(":, :"))
-        readData(filename, "DQF", SectionP.fromSpec(":, :"))
+        readData(filename, "CMI", SectionPartial.fromSpec(":, :"))
+        readData(filename, "DQF", SectionPartial.fromSpec(":, :"))
     }
 
-    fun readData(filename: String, varname: String, readSection : SectionP) {
+    fun readData(filename: String, varname: String, readSection : SectionPartial) {
         if (showDetail) println("$varname in $filename ")
         val h5old = readNetchData(filename, varname, readSection, true)
         val nclib = readNcdata(filename, varname, readSection)
@@ -122,7 +122,7 @@ class H5dataTiming {
         if (showDetail) println()
     }
 
-    fun readNetchData(filename: String, varname: String, readSection : SectionP, useOld : Boolean): Double {
+    fun readNetchData(filename: String, varname: String, readSection : SectionPartial, useOld : Boolean): Double {
         return openNetchdfFile(filename).use { h5file ->
             // println(h5file.cdl())
             val myvar = h5file!!.rootGroup().variables.find { it.name == varname }
@@ -140,7 +140,7 @@ class H5dataTiming {
         }
     }
 
-    fun readNcdata(filename: String, varname: String, readSection : SectionP) : Double {
+    fun readNcdata(filename: String, varname: String, readSection : SectionPartial) : Double {
         NClibFile(filename).use { h5file ->
             // println(h5file.cdl())
             val myvar = h5file.rootGroup().variables.find { it.name == varname }
