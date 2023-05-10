@@ -67,6 +67,16 @@ class HCcompare {
         compareData(filename, "/L1B_AIRS_Cal_Subset/Data_Fields/radiances")
     }
 
+    // https://github.com/HDFGroup/hdf4/issues/340
+    @Test
+    fun issue340() {
+        val filename = testData + "hdf4/ssec/2006166131201_00702_CS_2B-GEOPROF_GRANULE_P_R03_E00.hdf"
+        readHCheader(filename)
+       // readH4header(filename)
+       // compareH4header(filename)
+    }
+
+
     //////////////////////////////////////////////////////////////////////
 
     @ParameterizedTest

@@ -179,6 +179,7 @@ class TagVersion(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icod
         minor = h4.raf.readInt(state)
         release = h4.raf.readInt(state)
         name = h4.raf.readString(state, length - 12)
+        println("Version= ${value()}")
     }
 
     fun value(): String {
@@ -542,7 +543,7 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
         fld_type = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
         fld_isize = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
         fld_offset = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
-        fld_nelems = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
+        fld_nelems = ShortArray(nfields.toInt()) { h4.raf.readShort(state) } // "Order of the nth field of the Vdata (16-bit integer)"
         for (i in 0 until nfields) {
             val slen = h4.raf.readShort(state).toInt()
             fld_name.add(h4.raf.readString(state, slen))
