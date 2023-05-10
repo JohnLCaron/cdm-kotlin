@@ -87,7 +87,7 @@ class HCheader(val filename: String) {
     // The Vgroup API: group related objects. DFTAG_VG.
     // "vgroups can contain any combination of HDF data objects". so that narrows it down.
 
-    // Iterates over Vgroups (1965)
+    // Iterate over Vgroups (1965)
     private fun VgroupIterate(session: MemorySession, g4: Group4) {
         if (debugVGroup) println("iterateVgroups '${g4.gb.name}'")
 
@@ -102,7 +102,7 @@ class HCheader(val filename: String) {
         }
     }
 
-    // read a VGroup (1965)
+    // read a VGroup message (1965)
     private fun VgroupRead(session: MemorySession, g4: Group4, vgroup_ref: Int) {
         val tagid = tagid(vgroup_ref, TagEnum.VG.code)
         if (completedObjects.contains(tagid)) {
@@ -149,12 +149,12 @@ class HCheader(val filename: String) {
                 } else if (vclass == "Var0.0") { // ??
                     VgroupVar(session, g4, ref_array, tag_array)
                 } else if (vclass == "CDF0.0") {
-                    // LOOK ignoring the contents of the VGroup, and looking at the attributes on the group
+                    // only looking at the attributes on the group
                     VgroupCDF(session, g4, vgroup_id)
                 }
             }
 
-            /*
+            /* LOOK ignoring the attributes
             val nattrs = Vnattrs(vgroup_id)
             repeat(nattrs) { idx ->
                 val aname_p: MemorySegment = session.allocate(MAX_NAME)
@@ -176,6 +176,7 @@ class HCheader(val filename: String) {
         }
     }
 
+    // Vgroup contains a nested Vgroup
     private fun VgroupGroup(
         session: MemorySession,
         g4: Group4,
@@ -189,17 +190,24 @@ class HCheader(val filename: String) {
             val tag = tag_array[objIdx]
             val ref = ref_array[objIdx]
             val tage = TagEnum.byCode(tag)
-            if (tage == TagEnum.VG) {
-                VgroupRead(session, nested, ref)
-            } else if (tage == TagEnum.NDG) {
-                val sds_index = SDreftoindex(sdsStartId, ref)
-                SDread(session, nested, sds_index)
-            } else if (tage == TagEnum.VH) {
-                VStructureRead(session, nested, ref, true)
+            when (tage) {
+                TagEnum.VG -> {
+                    VgroupRead(session, nested, ref)
+                }
+                TagEnum.NDG -> {
+                    val sds_index = SDreftoindex(sdsStartId, ref)
+                    SDread(session, nested, sds_index)
+                }
+                TagEnum.VH -> {
+                    VStructureRead(session, nested, ref, true)
+                }
+
+                else -> throw RuntimeException("Unsupported tag '$tage' in VgroupGroup")
             }
         }
     }
 
+    // Vgroup contains a object identified as a Dimension. LOOK not actually using this
     private fun VgroupDim(ref_array: IntArray, tag_array: IntArray) {
         repeat(ref_array.size) { objIdx ->
             val tag = tag_array[objIdx]
@@ -212,6 +220,7 @@ class HCheader(val filename: String) {
         }
     }
 
+    // Vgroup contains an object identified as a Variable using the NDG tag.
     private fun VgroupVar(session: MemorySession, g4: Group4, ref_array: IntArray, tag_array: IntArray) {
         repeat(ref_array.size) { objIdx ->
             val tag = tag_array[objIdx]
@@ -225,12 +234,12 @@ class HCheader(val filename: String) {
         }
     }
 
+    // Vgroup contains an object of CDF class, assume to be container of attributes.
     private fun VgroupCDF(session: MemorySession, g4: Group4, vgroup_id: Int) {
         val nattrs2 = Vnattrs2(vgroup_id)
         repeat(nattrs2) { idx ->
             // val attr = VgroupReadAttribute(session, vgroup_id, idx)
-            // val attr2 = VgroupReadAttribute2(session, vgroup_id, idx)
-            val attr3 = VgroupReadAttribute3(session, vgroup_id, idx)
+            val attr3 = VgroupReadAttribute2(session, vgroup_id, idx)
             if (attr3 == null) {
                 return
             }
@@ -249,6 +258,7 @@ class HCheader(val filename: String) {
         }
     }
 
+    // read attributes with Vgetattr() - not used
     fun VgroupReadAttribute(session: MemorySession, vgroup_id: Int, idx: Int): Attribute {
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val datatype_p = session.allocate(C_INT, 0)
@@ -282,10 +292,11 @@ class HCheader(val filename: String) {
         return processAttribute(aname, nelems, datatype, bb)
     }
 
-    // we can guess that theres only one field in an attribute. so nvalues should be vh.nelems * fld[0].nelems
-    // looks like a bug where they are just using nvalues = fld[0].nelems
-    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute {
-        // return Attribute("fake", "dog")
+    // read attributes with Vgetattr2()
+    // LOOK a bug where C API has nvalues = fld[0].nelems, instead of vh.count * fld[0].nelems
+    // LOOK sometimes a bug where size returns nelems instead
+    // workaround by not calling Vgetattr2, but use refno to call VSinquire(). See VStructureReadAsAttribute(), vattr.c in HClib.
+    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute? {
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val datatype_p = session.allocate(C_INT, 0)
         val count_p = session.allocate(C_INT, 0)
@@ -299,35 +310,20 @@ class HCheader(val filename: String) {
         require(aname.length < MAX_NAME)
         val datatype4 = datatype_p[C_INT, 0] // Data type of the attribute
         val datatype = H4type.getDataType(datatype4)
-        val nvalues = count_p[C_INT, 0]    // Number of values in the attribute // LOOK a bug where nvalues returns fld[0].nelems instead of vh.nelems * fld[0].nelems
+        val count = count_p[C_INT, 0]    // Number of values in the attribute ? // LOOK a bug where nvalues returns fld[0].nelems instead of vh.count * fld[0].nelems
         val sizeInBytes = size_p[C_INT, 0] // Size, in bytes, of the attribute values // LOOK sometimes a bug where size returns nelems instead
         val nflds = flds_p[C_INT, 0] // Number of fields in the attribute vdata
-        val refnum = refnum_p[C_SHORT, 0] // Reference number of the attribute vdata
-        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
+        val refnum = refnum_p[C_SHORT, 0].toUShort().toInt() // Reference number of the attribute vdata
+        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes count = $count datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
 
-        println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
-        println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
-        if (datatype.size != sizeInBytes)
+        // println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
+        // println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
+
+        if (aname == "start_latlon")
             println()
-        if (nflds != 1)
-            println()
-        return Attribute("fake", "dog")
 
-        /*
-
-        // DFTAG_VS on page 143: bytes needed = vh.nelems * SUM( fld_size * fld_order )
-        val data_p: MemorySegment = session.allocate(nvalues * datatype.size.toLong())
-        // val data_p: MemorySegment = session.allocate(nvalues * sizeInBytes.toLong())
-        // intn Vgetattr2(int32 vgroup_id, intn attr_index, VOIDP attr_values)
-        checkErr("Vgetattr2", Vgetattr2(vgroup_id, attr_idx, data_p)) // LOOK malloc(): corrupted top size
-        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-        val bb = ByteBuffer.wrap(raw)
-        bb.order(ByteOrder.LITTLE_ENDIAN) // ??
-        bb.position(0)
-        bb.limit(bb.capacity())
-
-        return processAttribute(aname, nvalues, datatype, bb)
-         */
+        // only use the VS refno to read the VS "directly"
+        return VStructureReadAsAttribute(session, refnum)
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -343,7 +339,7 @@ class HCheader(val filename: String) {
 
         repeat(nvars) { SDread(session, g4, it) }
 
-        /*
+        /* LOOK not using readSDattribute()
         repeat(nattrs) {
             val attr = readSDattribute(session, sd_id, it)
             if (!EOSmetadata.contains(attr.name)) {
@@ -661,7 +657,7 @@ class HCheader(val filename: String) {
             vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames, interlace)
             vb.spObject = vinfo
 
-            /* LOOK no attributes
+            /* LOOK not using attributes
         val nattrs = VSnattrs(vdata_id)
         repeat(nattrs) {
             val attr = VStructureReadAttribute(session, vdata_id, -1, it)
@@ -736,37 +732,8 @@ class HCheader(val filename: String) {
         return processAttribute(aname, nelems, datatype, bb)
     }
 
-    // its possible we can workaround by not calling Vgetattr2, but calling VSread. See vattr.c in HClib.
-    fun VgroupReadAttribute3(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute? {
-        // return Attribute("fake", "dog")
-        val name_p: MemorySegment = session.allocate(MAX_NAME)
-        val datatype_p = session.allocate(C_INT, 0)
-        val count_p = session.allocate(C_INT, 0)
-        val size_p = session.allocate(C_INT, 0)
-        val flds_p = session.allocate(C_INT, 0)
-        val refnum_p = session.allocate(C_SHORT, 0)
-
-        // intn Vattrinfo2(int32 vgroup_id, intn attr_index, char *attr_name, int32 *data_type, int32 *count, int32 *size, int32 *nfields, uint16 *refnum)
-        checkErr("Vattrinfo2", Vattrinfo2(vgroup_id, attr_idx, name_p, datatype_p, count_p, size_p, flds_p, refnum_p))
-        val aname: String = name_p.getUtf8String(0) // Name of the attribute
-        require(aname.length < MAX_NAME)
-        val datatype4 = datatype_p[C_INT, 0] // Data type of the attribute
-        val datatype = H4type.getDataType(datatype4)
-        val nvalues = count_p[C_INT, 0]    // Number of values in the attribute // LOOK a bug where nvalues returns fld[0].nelems instead of vh.nelems * fld[0].nelems
-        val sizeInBytes = size_p[C_INT, 0] // Size, in bytes, of the attribute values // LOOK sometimes a bug where size returns nelems instead
-        val nflds = flds_p[C_INT, 0] // Number of fields in the attribute vdata
-        val refnum = refnum_p[C_SHORT, 0].toUShort().toInt() // Reference number of the attribute vdata
-        if (debugAttributeBug) println("VgroupReadAttribute3 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
-
-        // println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
-        // println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
-
-        if (aname == "ArchiveMetadata.0")
-            println()
-
-        return VStructureReadAsAttribute(session, refnum)
-    }
-
+    // use VSinquire() to get info for an attribute
+    // then use VSfindex() and VFfieldtype() to read rest of info
     private fun VStructureReadAsAttribute(session: MemorySession, vs_ref: Int) : Attribute? {
         val tagid = tagid(vs_ref, TagEnum.VG.code)
         if (completedObjects.contains(tagid)) {
@@ -776,8 +743,6 @@ class HCheader(val filename: String) {
         completedObjects.add(tagid)
 
         val vdata_id = VSattach(fileOpenId, vs_ref, read_access_mode)
-        if (vdata_id < 1)
-            println()
         try {
             val vclass_p: MemorySegment = session.allocate(MAX_NAME)
             checkErr("VSgetclass", VSgetclass(vdata_id, vclass_p))
@@ -796,7 +761,7 @@ class HCheader(val filename: String) {
             val interlace = interlace_p[C_INT, 0]
             val fieldnames = fieldnames_p.getUtf8String(0)
             require(fieldnames.length < MAX_FIELDS_NAME)
-            val recsize = recsize_p[C_INT, 0]
+            val recsize = recsize_p[C_INT, 0] // this is correct, bypassing the Vattrinfo2 bug
             val vsname = vsname_p.getUtf8String(0)
             require(fieldnames.length < MAX_NAME)
 
@@ -804,6 +769,7 @@ class HCheader(val filename: String) {
                 println("  VStructureReadAsAttribute '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
             }
 
+            // now we use the fieldnames to get the field index, which lets us call the VF*() methods.
             val index_p = session.allocate(C_INT, 0)
             val names = fieldnames.split(",").map { it.trim() }
             val members = mutableListOf<StructureMember>()
@@ -815,7 +781,7 @@ class HCheader(val filename: String) {
                 val fdatatype = H4type.getDataType(type)
                 val esize = VFfieldesize(vdata_id, idx)
                 val isize = VFfieldisize(vdata_id, idx) // native machine size of the field.
-                val nelems = VFfieldorder(vdata_id, idx) // field "order" ??
+                val nelems = VFfieldorder(vdata_id, idx) // misnamed field "order" ??
                 if (debugVSdetails) println("    VSfield name='$name' fdatatype=$fdatatype offset='$offset' nelems=$nelems esize =$esize isize = $isize")
                 val m = StructureMember(name, fdatatype, offset, intArrayOf(nelems))
                 members.add(m)
@@ -838,8 +804,9 @@ class HCheader(val filename: String) {
             checkErr("VSdetach", VSdetach(vdata_id))
         }
     }
-
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
 
 private fun processAttribute(name : String, nelems : Int, datatype : Datatype, bb : ByteBuffer) : Attribute {
     val shape = intArrayOf(nelems)
@@ -894,6 +861,7 @@ data class Group4(val name : String, val parent: Group4?) {
     }
 }
 
+// info needed to read data with VSread()
 data class VSInfo(val vs_ref : Int, val nrecords : Int, val recsize : Int, val fldNames : String, val interlace : Int)
 
 class Vinfo4() {
