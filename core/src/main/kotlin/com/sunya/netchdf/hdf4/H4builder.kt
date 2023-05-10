@@ -501,7 +501,11 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         val datatype = H4type.getDataType(type)
         val size: Int = vh.fld_isize[0]
         val fld_nelems = vh.fld_nelems[0]
-        val nelems = if (datatype == Datatype.CHAR) vh.nelems else  vh.nelems * fld_nelems
+        // LOOK the C lib probably just uses  nelems = fld_nelems
+        val nelems = if (datatype == Datatype.CHAR) vh.nelems else vh.nelems * fld_nelems
+
+        if (name == "start_latlon")
+            println()
 
         vh.isUsed = true
         data.isUsed = true
@@ -697,7 +701,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return false
         }
 
-        private var debugTagSummary = false // show tags after everything is done.
+        private var debugTagSummary = true // show tags after everything is done.
         private var debugTag = false // show tags when reading in first time
         private var debugTagDetail = false // when showing tags, show detail or not
 
