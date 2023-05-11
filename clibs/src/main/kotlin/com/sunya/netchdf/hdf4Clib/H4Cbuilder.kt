@@ -576,7 +576,7 @@ class HCheader(val filename: String) {
     }
 
     private fun GRread(session: MemorySession, g4: Group4, gridx: Int) {
-        val grId = GRselect(grStartId, gridx)
+        val grId = GRselect(grStartId, gridx) // Raster image identifier
         try {
             val name_p: MemorySegment = session.allocate(MAX_NAME)
             val n_comps_p = session.allocate(C_INT, 0) // Number of pixel components in the pixel

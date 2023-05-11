@@ -4,6 +4,7 @@ import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.openNetchdfFile
 import com.sunya.testdata.H4Files
+import com.sunya.testdata.testData
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Disabled
@@ -43,12 +44,12 @@ class H4readTest {
     @Test
     @Disabled
     fun HCcoredump() { // HC coredump
-        readH4header("/home/all/testdata/hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
+        readH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
     }
 
     @Test
     fun problem() {
-        readNetchIterate("/home/all/testdata/hdf4/96108_08.hdf")
+        readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD29.A2009152.0000.005.2009153124331.hdf")
     }
 
     //////////////////////////////////////////////////////////////////////
