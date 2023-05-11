@@ -170,7 +170,7 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial
     }
 }
 
-const val maxBytes = 100_000_000
+const val maxBytes = 10_000_000
 
 fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
 

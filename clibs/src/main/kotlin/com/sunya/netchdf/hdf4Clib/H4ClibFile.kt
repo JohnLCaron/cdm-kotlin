@@ -186,13 +186,14 @@ fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: Sect
         for (idx in 0 until rank) {
             val range = wantSection.ranges[idx]
             origin_p.setAtIndex(C_INT, idx.toLong(), range.first.toInt())
-            shape_p.setAtIndex(C_INT, idx.toLong(), wantSection.shape[idx].toInt())
+            shape_p.setAtIndex(C_INT, idx.toLong(), flipShape[idx])
             stride_p.setAtIndex(C_INT, idx.toLong(), range.step.toInt())
         }
         val data_p = session.allocate(nbytes)
 
         val grId = GRselect(grStartId, grIdx)
         try {
+            // intn GRreadimage(int32 ri_id, int32 start[2], int32 stride[2], int32 edge[2], VOIDP data)
             checkErr("GRreadimage", GRreadimage(grId, origin_p, stride_p, shape_p, data_p))
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
