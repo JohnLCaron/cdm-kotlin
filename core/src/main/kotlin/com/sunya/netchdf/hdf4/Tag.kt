@@ -69,6 +69,10 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
                 " length=$length"
     }
 
+    fun tagid(): Int {
+        return tagid(refno, code)
+    }
+
     fun tagEnum(): TagEnum {
         return TagEnum.byCode(this.code)
     }
@@ -179,7 +183,6 @@ class TagVersion(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icod
         minor = h4.raf.readInt(state)
         release = h4.raf.readInt(state)
         name = h4.raf.readString(state, length - 12)
-        println("Version= ${value()}")
     }
 
     fun value(): String {
@@ -197,7 +200,7 @@ class TagText(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, 
 
     override fun readTag(h4 : H4builder) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
-        text = h4.raf.readString(state, length, h4.valueCharset)
+        text = h4.raf.readString(state, length, h4.valueCharset).trim()
     }
 
     override fun detail(): String {

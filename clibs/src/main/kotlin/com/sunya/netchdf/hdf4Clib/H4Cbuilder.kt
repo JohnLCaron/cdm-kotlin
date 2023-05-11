@@ -74,6 +74,9 @@ class HCheader(val filename: String) {
             val sm = structMetadata.joinToString("")
             ODLparser(rootGroup4.gb, false).applyStructMetadata(sm)
         }
+
+        addFileVersionAttribute(session, rootGroup4)
+        addAnnotations(session, rootGroup4)
     }
 
     fun close() {
@@ -81,6 +84,90 @@ class HCheader(val filename: String) {
         GRend(this.grStartId)
         Vfinish(this.fileOpenId)
         Hclose(this.fileOpenId)
+    }
+
+    fun addFileVersionAttribute(session: MemorySession, g4: Group4) {
+        val major_p = session.allocate(C_INT, 0)
+        val minor_p = session.allocate(C_INT, 0)
+        val release_p = session.allocate(C_INT, 0)
+        val info_p: MemorySegment = session.allocate(MAX_NAME)
+
+        // status = Hgetfileversion(file_id, &major_v, &minor_v, &release, string);
+        checkErr("Hgetfileversion", Hgetfileversion(this.fileOpenId, major_p, minor_p, release_p, info_p))
+
+        val major = major_p[C_INT, 0]
+        val minor = minor_p[C_INT, 0]
+        val release = release_p[C_INT, 0]
+        val info = info_p.getUtf8String(0)
+
+        g4.gb.addAttribute(Attribute("HDF4FileVersion", "$major.$minor.$release ($info)"))
+    }
+
+    fun addAnnotations(session: MemorySession, g4: Group4) {
+        val an_id = ANstart(this.fileOpenId)
+
+        val n_file_labels_p = session.allocate(C_INT, 0)
+        val n_file_descs_p = session.allocate(C_INT, 0)
+        val n_data_labels_p = session.allocate(C_INT, 0)
+        val n_data_descs_p = session.allocate(C_INT, 0)
+
+        // ANfileinfo (an_id, &n_file_labels, &n_file_descs, &n_data_labels, &n_data_descs)
+        checkErr("ANfileinfo", ANfileinfo(an_id, n_file_labels_p, n_file_descs_p, n_data_labels_p, n_data_descs_p))
+
+        val n_file_labels = n_file_labels_p[C_INT, 0]
+        val n_file_descs = n_file_descs_p[C_INT, 0]
+        val n_data_labels = n_data_labels_p[C_INT, 0]
+        val n_data_descs = n_data_descs_p[C_INT, 0]
+
+        repeat(n_data_labels) {index ->
+            val ann_id = ANselect (an_id, index, AN_DATA_LABEL())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            g4.gb.addAttribute(Attribute("DataLabel.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_data_descs) {index ->
+            val ann_id = ANselect (an_id, index, AN_DATA_DESC())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            g4.gb.addAttribute(Attribute("DataDesc.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_file_labels) {index ->
+            val ann_id = ANselect (an_id, index, AN_FILE_LABEL())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            g4.gb.addAttribute(Attribute("FileLabel.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_file_descs) {index ->
+            val ann_id = ANselect (an_id, index, AN_FILE_DESC())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            g4.gb.addAttribute(Attribute("FileDesc.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        checkErr( "ANend", ANend(an_id))
     }
 
     ///////////////////////////////////////////////////////////////////////////////

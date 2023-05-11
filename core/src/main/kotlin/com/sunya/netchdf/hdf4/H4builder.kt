@@ -17,7 +17,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     val metadata = mutableListOf<Attribute>()
     val structMetadata = mutableListOf<String>()
 
-    private val alltags : List<Tag>
+    private val alltags = mutableListOf<Tag>() // in order as they appear in the file
     private val completedObjects = mutableSetOf<Int>()
 
     internal val tagidMap = mutableMapOf<Int, Tag>()
@@ -37,7 +37,6 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
 
         // read the DDH and DD records, and populate the tag list
-        val mtags = mutableListOf<Tag>()
         var link = state.pos
         while (link > 0) {
             state.pos = link
@@ -48,10 +47,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                 val tag: Tag = readTag(raf, state)
                 pos += 12
                 state.pos = pos // tag usually changed the file pointer
-                if (tag.code > 1) mtags.add(tag) // ignore NONE, NULL
+                if (tag.code > 1) alltags.add(tag) // ignore NONE, NULL
             }
         }
-        alltags = mtags.sortedBy { it.refno }
 
         // now read the individual tags' data
         for (tag: Tag in alltags) {
@@ -77,12 +75,27 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     //////////////////////////////////////////////////////////////////////////////////
-    val sdAliasMap = mutableMapOf<Int, TagVGroup>() // refno, sd name
-    val vhAliasMap = mutableMapOf<Int, String>() // refno, sd name
+    private val unparentedGroups = mutableMapOf<Int, Group4>() // vg refno, vg group4
+    private val parentedGroups = mutableMapOf<Int, TagVGroup>() // vg refno, vg
+    private val sdGroups = mutableMapOf<Int, TagVGroup>() // sd refno, sd parent group
+    private val vhGroups = mutableMapOf<Int, TagVGroup>() // vh refno, vh parent group
+
+    val sdAliasMap = mutableMapOf<Int, TagVGroup>() // sd refno, sd parent group
+    val vhAliasMap = mutableMapOf<Int, TagVGroup>()    // vh refno, vh group
 
     fun make() {
-        VgroupIterate() { t : Tag -> VgroupFindAliases(t as TagVGroup, Indent(2)) }
-        VgroupIterate() { t : Tag -> VgroupRead(t as TagVGroup, rootBuilder) }
+        VgroupIterate("VgroupNesting") { t : Tag -> VgroupNesting(t as TagVGroup, null, Indent(2)) }
+        VgroupIterate("VgroupFindParents") { t : Tag -> VgroupFindParents(t as TagVGroup, Indent(2)) }
+
+        unparentedGroups.values.forEach {
+            val vgroup = it.vgroup
+            val group = Group.Builder(vgroup.name)
+            rootBuilder.addGroup(group)
+            Vgroup4Read(it, group)
+        }
+        // now add all the orphans to the rootGroup
+        VgroupIterate("VgroupRead") { t : Tag -> VgroupRead(t as TagVGroup, rootBuilder) }
+
         SDiterate(rootBuilder)
         GRiterate(rootBuilder)
         VStructureIterate(rootBuilder)
@@ -92,6 +105,21 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         if (structMetadata.isNotEmpty()) {
             val sm = structMetadata.joinToString("")
             ODLparser(rootBuilder, false).applyStructMetadata(sm)
+        }
+
+        // it appears that these are in reverse order in the C library
+        var dataLabel = 0
+        var dataDesc = 0
+        var fileLabel = 0
+        var fileDesc = 0
+        alltags.reversed().forEach {
+            when (it.code) {
+                TagEnum.VERSION.code -> rootBuilder.addAttribute(Attribute("HDF4FileVersion", (it as TagVersion).value()))
+                TagEnum.DIL.code -> rootBuilder.addAttribute(Attribute("DataLabel.${dataLabel++}", (it as TagAnnotate).text))
+                TagEnum.DIA.code -> rootBuilder.addAttribute(Attribute("DataDesc.${dataDesc++}", (it as TagAnnotate).text))
+                TagEnum.FID.code -> rootBuilder.addAttribute(Attribute("FileLabel.${fileLabel++}", (it as TagText).text))
+                TagEnum.FD.code -> rootBuilder.addAttribute(Attribute("FileDesc.${fileDesc++}", (it as TagText).text))
+            }
         }
     }
 
@@ -104,8 +132,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         return result
     }
 
-    private fun VgroupIterate(lamda : (t : Tag) -> Unit) {
-        if (debugConstruct) println("--VgroupIterate")
+    private fun VgroupIterate(name : String, lamda : (t : Tag) -> Unit) {
+        if (debugConstruct) println("--VgroupIterate $name")
         for (t: Tag in alltags) {
             if (t.tagEnum() == TagEnum.VG) {
                 lamda.invoke(t)
@@ -113,8 +141,58 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    private fun VgroupFindAliases(vgroup: TagVGroup, indent:Indent) {
-        if (debugVGroupDetails) println("$indent  Vgroup ${vgroup.refno} ${vgroup.className} ${vgroup.name} ")
+    // create a group heirarchy, allowing groups to be in any order in the file
+    private fun VgroupNesting(vgroup: TagVGroup, parent : Group4?, indent:Indent) {
+        // TODO too lame. perhaps its a group if it has nested groups ??
+        if (!isNestedGroup(vgroup.className)) {
+            return
+        }
+        if (debugVGroup) println("$indent VgroupNesting ${vgroup.refno} '${vgroup.name}' ${vgroup.className} ")
+        if (parentedGroups[vgroup.tagid()] != null) {
+            if (debugVGroup) println("$indent   already parented ${vgroup.name}")
+            return
+        }
+        val already = unparentedGroups[vgroup.tagid()]
+        if (already != null && parent != null) {
+            parent.subgroups.add(already)
+            unparentedGroups.remove(vgroup.tagid())
+            parentedGroups[vgroup.tagid()] = vgroup
+            if (debugVGroup) println("$indent   add ${vgroup.name} to ${parent.vgroup.name}")
+            return
+        }
+        val group4 = Group4(vgroup)
+        if (parent == null) {
+            unparentedGroups[vgroup.tagid()] = group4
+            if (debugVGroup) println("$indent   unparented ${vgroup.name}")
+        } else {
+            parentedGroups[vgroup.tagid()] = vgroup
+            parent.subgroups.add(group4)
+            if (debugVGroup) println("$indent   add ${vgroup.name} to ${parent.vgroup.name}")
+        }
+
+        repeat(vgroup.nelems) {
+            val tagRef = vgroup.elem_ref[it]
+            val tagCode = vgroup.elem_tag[it]
+            val tage = TagEnum.byCode(tagCode)
+            val tagid = tagid(tagRef, tagCode)
+            val tag = tagidMap[tagid]
+            if (tag == null) {
+                println("*** Dont have tag (refno=${tagRef}, code=${TagEnum.byCode(tagCode)}) referenced in vgroup '${vgroup.name}'")
+            } else if (tage == TagEnum.VG) {
+                VgroupNesting(tag as TagVGroup, group4, indent.incr())
+            } else if (tage == TagEnum.NDG) {
+                sdGroups[tagRef] = vgroup // why needed we already know the group
+                if (debugVGroup) println("$indent   sdGroups add ${tag}")
+            } else if (tage == TagEnum.VH) {
+                vhGroups[tagRef] = vgroup // why needed we already know the group
+                if (debugVGroup) println("$indent   vhGroups add ${tag}")
+            }
+        }
+    }
+
+    // find sd, vh group parents
+    private fun VgroupFindParents(vgroup: TagVGroup, indent:Indent) {
+        if (debugVGroupDetails) println("$indent  VgroupFindParents ${vgroup.refno} ${vgroup.className} ${vgroup.name} ")
         repeat(vgroup.nelems) {
             val tagRef = vgroup.elem_ref[it]
             val tagCode = vgroup.elem_tag[it]
@@ -125,35 +203,91 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (tag == null) {
                 println("*** Dont have tag (refno=${tagRef}, code=${TagEnum.byCode(tagCode)}) referenced in vgroup '${vgroup.name}'")
             } else if (tage == TagEnum.VG) {
-                VgroupFindAliases(tag as TagVGroup, indent.incr())
+                VgroupFindParents(tag as TagVGroup, indent.incr())
             } else if (tage == TagEnum.NDG) {
                 sdAliasMap[tagRef] = vgroup
+                if (debugVGroup) println("$indent   sdAliasMap add ${tag}")
             } else if (tage == TagEnum.VH) {
-                vhAliasMap[tagRef] = vgroup.name
+                vhAliasMap[tagRef] = vgroup
+                if (debugVGroup) println("$indent   vhAliasMap add ${tag}")
             }
         }
     }
 
-    // read a VGroup (1965)
-    private fun VgroupRead(tagVG : TagVGroup, parent : Group.Builder) {
-        val tagid = tagid(tagVG.refno, tagVG.code)
-        if (completedObjects.contains(tagid)) {
-            if (debugConstruct) println("VgroupRead skip  ${tagVG.refno} '${tagVG.name}'")
+    // read a VGroup (1965). we may not know the parent yet
+    private fun VgroupRead(vgroup : TagVGroup, parent : Group.Builder) {
+        if (completedObjects.contains(vgroup.tagid())) {
+            if (debugConstruct) println("VgroupRead skip ${vgroup.refno} '${vgroup.name}'")
             return
         }
-        completedObjects.add(tagid)
+        completedObjects.add(vgroup.tagid())
+        if (vgroup.nelems == 0) {
+            if (debugConstruct) println("  VgroupRead empty group '${vgroup.name}' ref=${vgroup.refno}")
+            return
+        }
 
-        if (tagVG.nelems > 0) {
-            if (isNestedGroup(tagVG.className)) {
-                VgroupGroup(tagVG, parent)
-            } else if (isDimClass(tagVG.className)) {
-                VgroupDim(tagVG, parent)
-            } else if (tagVG.className == "Var0.0") { // ??
-                VgroupVar(tagVG, parent)
-            } else if (tagVG.className == "CDF0.0") {
+        if (vgroup.nelems > 0) {
+            //if (isNestedGroup(vgroup.className)) {
+            //    VgroupGroup(vgroup, parent)
+            //} else
+            if (isDimClass(vgroup.className)) {
+                VgroupDim(vgroup, parent)
+            } else if (vgroup.className == "Var0.0") { // ??
+                VgroupVar(vgroup, parent)
+            } else if (vgroup.className == "CDF0.0") {
                 // LOOK ignoring the contents of the VGroup, and looking at the attributes on the group
-                VgroupCDF(tagVG, parent)
+                VgroupCDF(vgroup, parent)
             }
+        }
+    }
+
+    // read a VGroup. we know the parent group and nested groups
+    private fun Vgroup4Read(group4 : Group4, group : Group.Builder) {
+        val vgroup = group4.vgroup
+        if (completedObjects.contains(vgroup.tagid())) {
+            if (debugConstruct) println("VgroupRead skip ${vgroup.refno} '${vgroup.name}'")
+            return
+        }
+        completedObjects.add(vgroup.tagid())
+        if (debugConstruct) println("--Vgroup4Read '${vgroup.name}' ref=${vgroup.refno}")
+
+        if (vgroup.nelems > 0) {
+            if (isDimClass(vgroup.className)) {
+                VgroupDim(vgroup, group)
+            } else if (vgroup.className == "Var0.0") { // ??
+                VgroupVar(vgroup, group)
+            } else if (vgroup.className == "CDF0.0") {
+                // LOOK ignoring the contents of the VGroup, and looking at the attributes on the group
+                VgroupCDF(vgroup, group)
+            } else {
+                repeat(vgroup.nelems) { objIdx ->
+                    val tagRef = vgroup.elem_ref[objIdx]
+                    val tagCode = vgroup.elem_tag[objIdx]
+                    val tage = TagEnum.byCode(tagCode)
+                    val tagid = tagid(tagRef, tagCode)
+                    val tag = tagidMap[tagid] ?: throw RuntimeException("Dont have tag (${tagRef}, ${TagEnum.byCode(tagCode)})")
+
+                    if (tage == TagEnum.NDG) {
+                        if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)}")
+                        val alias = sdAliasMap[tagRef]
+                        if (alias != null)
+                            VgroupVar(alias, group)
+                        else {
+                            SDread(tag as TagDataGroup, null, group, emptyList())
+                        }
+                    } else if (tage == TagEnum.VH) {
+                        val vtag = tag as TagVH
+                        if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)} '${vtag.className}' '${vtag.name}'")
+                        VStructureRead(vtag, vhAliasMap[tagRef]?.name, group, true)
+                    }
+                }
+            }
+        }
+
+        group4.subgroups.filter{ it.vgroup.nelems > 0 }.forEach {
+            val nested = Group.Builder(it.vgroup.name)
+            group.addGroup(nested)
+            Vgroup4Read(it, nested)
         }
     }
 
@@ -184,7 +318,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             } else if (tage == TagEnum.VH) {
                 val vtag = tag as TagVH
                 if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)} '${vtag.className}' '${vtag.name}'")
-                VStructureRead(vtag, vhAliasMap[tagRef], nested, true)
+                VStructureRead(vtag, vhAliasMap[tagRef]?.name, nested, true)
             }
         }
     }
@@ -484,7 +618,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
 
         if (debugConstruct) {
-            println("added variable ${vb.name} from VH $tagVH")
+            println("added variable ${vb.name} from VH $tagVH group $groupName")
         }
 
         parent.addVariable(vb)
@@ -701,7 +835,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return false
         }
 
-        private var debugTagSummary = true // show tags after everything is done.
+        private var debugTagSummary = false // show tags after everything is done.
         private var debugTag = false // show tags when reading in first time
         private var debugTagDetail = false // when showing tags, show detail or not
 
@@ -732,6 +866,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return "ref=$refno code=${code}"
         }
     }
+}
+
+private class Group4(val vgroup : TagVGroup) {
+    val subgroups = mutableListOf<Group4>()
 }
 
 // seriously fucked up to rely on these conventions

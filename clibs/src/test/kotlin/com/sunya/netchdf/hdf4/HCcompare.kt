@@ -76,6 +76,22 @@ class HCcompare {
        // compareH4header(filename)
     }
 
+    // hdf4      /home/all/testdata/devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF 0.21 Mbytes
+    // *** FAIL cfile.readArrayData for variable = char Raster_Image_#0 [, ]
+    @Test
+    fun problemRasterData() {
+        val filename = testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF"
+        compareH4header(filename)
+        compareData(filename)
+    }
+
+    @Test
+    fun problem() {
+        val filename = testData + "hdf4/nsidc/AMSR_E_L2_Land_T06_200801012345_A.hdf"
+        //readH4header(filename)
+        compareH4header(filename)
+        //compareData(filename)
+    }
 
     //////////////////////////////////////////////////////////////////////
 
@@ -120,10 +136,10 @@ class HCcompare {
         println(filename)
         Hdf4File(filename).use { myfile ->
             println("Hdf4File = \n${myfile.cdl()}")
-            Hdf4ClibFile(filename).use { ncfile ->
+            Hdf4ClibFile(filename).use { hcfile ->
                 //println("actual = $root")
                 //println("expect = $expect")
-                assertEquals(ncfile.cdl(), myfile.cdl())
+                assertEquals(hcfile.cdl(), myfile.cdl())
                 // println(myfile.cdl())
             }
         }
