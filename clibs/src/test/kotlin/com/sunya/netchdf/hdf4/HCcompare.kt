@@ -87,7 +87,7 @@ class HCcompare {
 
     @Test
     fun problem() {
-        val filename = testData + "hdf4/nsidc/AMSR_E_L2_Land_T06_200801012345_A.hdf"
+        val filename = testData + "hdf4/jeffmc/swath.hdf"
         //readH4header(filename)
         compareH4header(filename)
         //compareData(filename)
