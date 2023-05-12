@@ -1,6 +1,7 @@
 package com.sunya.cdm.array
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.util.makeValidCdmObjectName
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.nio.charset.Charset
@@ -140,7 +141,8 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
 }
 
 // dim lengths here are ints; Hdf4,5 only supports ints.
-open class StructureMember(val name: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
+open class StructureMember(val orgName: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
+    val name = makeValidCdmObjectName(orgName)
     val nelems = dims.computeSize()
 
     // LOOK clumsy Any
