@@ -38,7 +38,12 @@ class HCcompare {
     @Test
     @Disabled
     fun coreDump() { // fakeDims, HC coredump "double free or corruption (out)"
-        compareH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
+        try {
+            // tried to add duplicate variable 'RIATTR0.0N'
+            compareH4header(testData + "hdf4/eisalt/VHRR-KALPANA_20081216_070002.hdf")
+        } catch (t : Throwable) {
+            print(t.stackTrace)
+        }
     }
 
     @Test
