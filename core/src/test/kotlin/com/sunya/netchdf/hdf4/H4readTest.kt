@@ -43,7 +43,7 @@ class H4readTest {
 
     @Test
     fun problem() {
-        readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD29.A2009152.0000.005.2009153124331.hdf")
+        readH4header(testData + "devcdm/hdfeos2/MISR_AM1_GP_GMP_P040_O003734_05.eos")
     }
 
     //////////////////////////////////////////////////////////////////////

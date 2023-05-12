@@ -589,10 +589,7 @@ class HCheader(val filename: String) {
             val dim_sizes_p: MemorySegment = session.allocateArray(C_INT as MemoryLayout, 2)
             val n_attrs_p = session.allocate(C_INT, 0)
 
-            checkErr(
-                "GRgetiminfo",
-                GRgetiminfo(grId, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p)
-            )
+            checkErr("GRgetiminfo", GRgetiminfo(grId, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p))
 
             val name = name_p.getUtf8String(0)
             require(name.length < MAX_NAME)
@@ -612,7 +609,7 @@ class HCheader(val filename: String) {
             vb.setDimensionsAnonymous(rdims)
 
             // read Variable attributes // look probably need GRattrinfo
-            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. For
+            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order.
             repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, grId, it)) }
             g4.gb.addVariable(vb)
 
@@ -681,6 +678,9 @@ class HCheader(val filename: String) {
             checkErr("VSgetclass", VSgetclass(vdata_id, vclass_p))
             val vclass = vclass_p.getUtf8String(0)
             require(vclass.length < MAX_NAME)
+            if (vclass.startsWith("RIATTR0")) { // VHRR
+                return
+            }
 
             val n_records_p = session.allocate(C_INT, 0)
             val interlace_p = session.allocate(C_INT, 0)
@@ -702,6 +702,11 @@ class HCheader(val filename: String) {
 
             if (debugVSdata) {
                 println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' (${fieldnames.length}) recsize=$recsize")
+            }
+
+            // bail out if no data
+            if (nrecords == 0) {
+                return
             }
 
             val vhname = if (vsname.equals("Ancillary_Data")) vclass else vsname // Lame

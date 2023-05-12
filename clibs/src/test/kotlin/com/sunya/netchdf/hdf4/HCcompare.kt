@@ -5,7 +5,6 @@ import com.sunya.netchdf.*
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
 import com.sunya.testdata.H4Files
 import org.junit.jupiter.api.AfterAll
-import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -33,17 +32,6 @@ class HCcompare {
         }
 
         private val versions = mutableMapOf<String, MutableList<String>>()
-    }
-
-    @Test
-    @Disabled
-    fun coreDump() { // fakeDims, HC coredump "double free or corruption (out)"
-        try {
-            // tried to add duplicate variable 'RIATTR0.0N'
-            compareH4header(testData + "hdf4/eisalt/VHRR-KALPANA_20081216_070002.hdf")
-        } catch (t : Throwable) {
-            print(t.stackTrace)
-        }
     }
 
     @Test
@@ -90,12 +78,21 @@ class HCcompare {
         compareData(filename)
     }
 
+    // Using Raster Images in a VGroup. VHRR
     @Test
-    fun problem() {
-        val filename = testData + "hdf4/jeffmc/swath.hdf"
-        //readH4header(filename)
+    fun testRasterImageGroup() {
+        val filename = testData + "hdf4/eisalt/VHRR-KALPANA_20081216_070002.hdf"
+        // readH4header(filename)
+        // readHCheader(filename)
         compareH4header(filename)
         //compareData(filename)
+    }
+
+
+    @Test
+    fun problem2() {
+        compareH4header(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
+        compareData(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
     }
 
     //////////////////////////////////////////////////////////////////////
@@ -160,7 +157,7 @@ class HCcompare {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readH4Data(filename: String) {
+    fun readH4data(filename: String) {
         readNetchdfData(filename, null, null, true)
         println()
     }
