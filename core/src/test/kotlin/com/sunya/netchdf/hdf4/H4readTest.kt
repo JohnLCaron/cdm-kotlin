@@ -42,12 +42,6 @@ class H4readTest {
     }
 
     @Test
-    @Disabled
-    fun HCcoredump() { // HC coredump
-        readH4header(testData + "hdf4/nsidc/LAADS/MOD/MOD01.A2007303.0325.005.2007306182401.hdf")
-    }
-
-    @Test
     fun problem() {
         readNetchdfData(testData + "hdf4/nsidc/LAADS/MYD/MYD29.A2009152.0000.005.2009153124331.hdf")
     }

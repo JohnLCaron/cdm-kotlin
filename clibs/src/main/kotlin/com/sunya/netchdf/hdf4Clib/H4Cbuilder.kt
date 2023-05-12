@@ -26,7 +26,8 @@ private val debugAttributeBug = false
 private val debugDims = false
 
 private val MAX_NAME = 255L
-private val MAX_FIELDS_NAME = 1000L
+// The combined width of the fields in a vdata is less than MAX_FIELD_SIZE (or 65535.)
+private val MAX_FIELDS_SIZE = MAX_FIELD_SIZE().toLong()
 
 class HCheader(val filename: String) {
     internal val rootGroup4 = Group4("", null)
@@ -99,6 +100,7 @@ class HCheader(val filename: String) {
         val minor = minor_p[C_INT, 0]
         val release = release_p[C_INT, 0]
         val info = info_p.getUtf8String(0)
+        require(info.length < MAX_NAME)
 
         g4.gb.addAttribute(Attribute("HDF4FileVersion", "$major.$minor.$release ($info)"))
     }
@@ -126,6 +128,7 @@ class HCheader(val filename: String) {
             val info_p: MemorySegment = session.allocate(ann_length + 1L)
             checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
             val info = info_p.getUtf8String(0)
+            require(info.length < MAX_NAME)
             g4.gb.addAttribute(Attribute("DataLabel.$index", info.trim()))
 
             checkErr("ANendaccess", ANendaccess (ann_id))
@@ -150,6 +153,7 @@ class HCheader(val filename: String) {
             val info_p: MemorySegment = session.allocate(ann_length + 1L)
             checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
             val info = info_p.getUtf8String(0)
+            require(info.length < MAX_NAME)
             g4.gb.addAttribute(Attribute("FileLabel.$index", info.trim()))
 
             checkErr("ANendaccess", ANendaccess (ann_id))
@@ -176,7 +180,7 @@ class HCheader(val filename: String) {
 
     // Iterate over Vgroups (1965)
     private fun VgroupIterate(session: MemorySession, g4: Group4) {
-        if (debugVGroup) println("iterateVgroups '${g4.gb.name}'")
+        if (debugVGroup) println("VgroupIterate '${g4.gb.name}'")
 
         var last_ref = -1
         while (true) {
@@ -650,7 +654,7 @@ class HCheader(val filename: String) {
 
     // sequentially iterates through an HDF file to obtain the vdata
     private fun VStructureIterate(session: MemorySession, g4: Group4) {
-        if (debugVSdata) println("iterateVSdata '${g4.gb.name}'")
+        if (debugVSdata) println("VStructureIterate group='${g4.gb.name}'")
         var last_ref = -1
         while (true) {
             val vdata_ref = VSgetid(fileOpenId, last_ref)
@@ -660,6 +664,7 @@ class HCheader(val filename: String) {
             VStructureRead(session, g4, vdata_ref, false)
             last_ref = vdata_ref
         }
+        if (debugVSdata) println("VStructureIterate DONE")
     }
 
     private fun VStructureRead(session: MemorySession, g4: Group4, vs_ref: Int, addAttributesToGroup: Boolean) {
@@ -679,35 +684,35 @@ class HCheader(val filename: String) {
 
             val n_records_p = session.allocate(C_INT, 0)
             val interlace_p = session.allocate(C_INT, 0)
-            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_NAME)
+            val fieldnames_p = session.allocate(MAX_FIELDS_SIZE)
             val recsize_p = session.allocate(C_INT, 0) // size, in bytes, of the vdata record
             val vsname_p: MemorySegment = session.allocate(MAX_NAME)
 
-            // VSinquire(vdata_id, &n_records, &interlace_mode, fieldname_list, &vdata_size, vdata_name)
+            // intn VSinquire(int32 vdata_id, int32 *n_records, int32 *interlace_mode, char *field_name_list,
+            // int32 *vdata_size, char *vdata_name)
             checkErr("VSinquire", VSinquire(vdata_id, n_records_p, interlace_p, fieldnames_p, recsize_p, vsname_p))
             val nrecords = n_records_p[C_INT, 0]
             val interlace = interlace_p[C_INT, 0]
             val fieldnames = fieldnames_p.getUtf8String(0)
-            require(fieldnames.length < MAX_FIELDS_NAME)
+            require(fieldnames.length < MAX_FIELDS_SIZE)
+
             val recsize = recsize_p[C_INT, 0]
             val vsname = vsname_p.getUtf8String(0)
             require(vsname.length < MAX_NAME)
 
             if (debugVSdata) {
-                println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
+                println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' (${fieldnames.length}) recsize=$recsize")
             }
 
             val vhname = if (vsname.equals("Ancillary_Data")) vclass else vsname // Lame
             val vb = Variable.Builder(vhname)
-
-            if (vs_ref == 7)
-                println()
 
             val index_p = session.allocate(C_INT, 0)
             val names = fieldnames.split(",").map { it.trim() }
             val members = mutableListOf<StructureMember>()
             var offset = 0
             for (name in names) {
+                // intn VSfindex(int32 vdata_id, char *fieldname, int32 *field_index)
                 checkErr("VSfindex", VSfindex(vdata_id, session.allocateUtf8String(name), index_p))
                 val idx = index_p[C_INT, 0]
                 val type = VFfieldtype(vdata_id, idx)
@@ -743,16 +748,6 @@ class HCheader(val filename: String) {
             val vinfo = Vinfo4()
             vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames, interlace)
             vb.spObject = vinfo
-
-            /* LOOK not using attributes
-        val nattrs = VSnattrs(vdata_id)
-        repeat(nattrs) {
-            val attr = VStructureReadAttribute(session, vdata_id, -1, it)
-            // println("VStructureReadAttribute ${attr.name}")
-            // vb.addAttribute( attr)
-        }
-
-         */
 
             if (vclass.startsWith("Attr")) {
                 if (EOS.isMetadata(vsname)) {
@@ -838,7 +833,7 @@ class HCheader(val filename: String) {
 
             val n_records_p = session.allocate(C_INT, 0)
             val interlace_p = session.allocateArray(C_INT as MemoryLayout, 100)
-            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_NAME)
+            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_SIZE)
             val recsize_p = session.allocate(C_INT, 0) // size, in bytes, of the vdata record
             val vsname_p: MemorySegment = session.allocate(MAX_NAME)
 
@@ -847,10 +842,10 @@ class HCheader(val filename: String) {
             val nrecords = n_records_p[C_INT, 0]
             val interlace = interlace_p[C_INT, 0]
             val fieldnames = fieldnames_p.getUtf8String(0)
-            require(fieldnames.length < MAX_FIELDS_NAME)
+            require(fieldnames.length < MAX_FIELDS_SIZE)
             val recsize = recsize_p[C_INT, 0] // this is correct, bypassing the Vattrinfo2 bug
             val vsname = vsname_p.getUtf8String(0)
-            require(fieldnames.length < MAX_NAME)
+            require(vsname.length < MAX_NAME)
 
             if (debugVSdata) {
                 println("  VStructureReadAsAttribute '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
