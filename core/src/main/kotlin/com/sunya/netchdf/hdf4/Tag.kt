@@ -525,11 +525,11 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     var interlace: Short = 0 // Constant indicating interlace scheme used
     var nelems = 0 // number of entries in Vdata
     var ivsize = 0 // Size of one Vdata record
-    var nfields: Short = 0 // Number of fields per entry in the Vdata: so one dimensional Structure(nelems)
+    var nfields = 0 // Number of fields per entry in the Vdata: so one dimensional Structure(nelems)
     var fld_type = ShortArray(0) // Constant indicating the data type of the nth field of the Vdata
     var fld_isize = IntArray(0) // Size in bytes of the nth field of the Vdata
     var fld_offset = IntArray(0) // Offset of the nth field within the Vdata
-    var fld_nelems = ShortArray(0) // Order of the nth field of the Vdata: so, a one dimensional fld(fld_nelems)
+    var fld_nelems = IntArray(0) // aka order:  number of elements in the field
     var fld_name = mutableListOf<String>()
     var name: String = "null"
     var className: String = "null"
@@ -542,11 +542,11 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
         interlace = h4.raf.readShort(state)
         nelems = h4.raf.readInt(state)
         ivsize = h4.raf.readShort(state).toUShort().toInt()
-        nfields = h4.raf.readShort(state)
-        fld_type = ShortArray(nfields.toInt()) { h4.raf.readShort(state) }
-        fld_isize = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
-        fld_offset = IntArray(nfields.toInt()) { h4.raf.readShort(state).toUShort().toInt() }
-        fld_nelems = ShortArray(nfields.toInt()) { h4.raf.readShort(state) } // "Order of the nth field of the Vdata (16-bit integer)"
+        nfields = h4.raf.readShort(state).toUShort().toInt()
+        fld_type = ShortArray(nfields) { h4.raf.readShort(state) }
+        fld_isize = IntArray(nfields) { h4.raf.readShort(state).toUShort().toInt() }
+        fld_offset = IntArray(nfields) { h4.raf.readShort(state).toUShort().toInt() }
+        fld_nelems = IntArray(nfields) { h4.raf.readShort(state).toUShort().toInt() } // "Order of the nth field of the Vdata (16-bit integer)"
         for (i in 0 until nfields) {
             val slen = h4.raf.readShort(state).toInt()
             fld_name.add(h4.raf.readString(state, slen))
