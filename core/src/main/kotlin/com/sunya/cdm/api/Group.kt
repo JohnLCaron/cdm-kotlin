@@ -144,6 +144,14 @@ class Group(orgName : String,
             return this
         }
 
+        fun addAttributeIfNotExists(att: Attribute) : Boolean {
+            if (attributes.find {it.name == att.name } != null) {
+                return false
+            }
+            attributes.add(att)
+            return true
+        }
+
         // add if vb name not already added
         fun addVariable(vb: Variable.Builder) : Builder {
             if (variables.find {it.name == vb.name } == null) {

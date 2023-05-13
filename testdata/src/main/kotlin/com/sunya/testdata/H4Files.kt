@@ -23,7 +23,7 @@ class H4Files {
                 testFilesIn(testData + "hdf4")
                     .withRecursion()
                     //    .withPathFilter { p -> !(p.toString().contains("/eos/"))}
-                    .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
+                    // .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
                     .build()
 
             return Stream.of(devcdm, hdfeos2, hdf4NoCore).flatMap { i -> i }

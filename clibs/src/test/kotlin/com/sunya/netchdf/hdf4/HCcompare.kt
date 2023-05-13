@@ -90,10 +90,15 @@ class HCcompare {
 
 
     @Test
-    fun problem2() {
-        compareH4header(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
-        compareData(testData + "hdf4/nsidc/LAADS/MYD/MYD01.A2007001.0440.005.2007311085701.hdf")
+    fun problem() {
+        compareH4header(testData + "hdf4/eos/modis/MOD35_L2.A2000243.1850.003.hdf")
     }
+
+    @Test
+    fun problem2() {
+        readHCheader(testData + "hdf4/nsidc/LP_DAAC/MYD/MYD09A1.A2007273.h03v07.005.2007285103507.hdf")
+    }
+
 
     //////////////////////////////////////////////////////////////////////
 
