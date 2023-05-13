@@ -52,8 +52,8 @@ fun readTag(raf : OpenFile, state: OpenFileState): Tag {
 open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) {
     val isExtended: Boolean = (xtag and 0x4000) != 0
     val code = (xtag and 0x3FFF) // basic tag
-    // var t: TagEnum = TagEnum.byCode(this.code)
-    var isUsed = false
+
+    internal var isUsed = false
     internal var vinfo: Vinfo? = null
 
     // read the offset/length part of the tag. overridden by subclasses

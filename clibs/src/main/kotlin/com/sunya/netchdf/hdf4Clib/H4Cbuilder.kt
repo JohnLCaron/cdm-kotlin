@@ -40,6 +40,7 @@ class HCheader(val filename: String) {
 
     private val completedObjects = mutableSetOf<Int>()
     private val metadata = mutableListOf<Attribute>()
+    private val promotedAttributes = mutableListOf<Attribute>()
     private val structMetadata = mutableListOf<String>()
 
     init {
@@ -47,9 +48,7 @@ class HCheader(val filename: String) {
             this.read_access_mode = session.allocateUtf8String("r")
             build(session)
             this.rootGroup = rootGroup4.gb.build(null)
-            // println("last seen")
         }
-        // println("doesnt get here")
     }
 
     @Throws(IOException::class)
@@ -69,7 +68,12 @@ class HCheader(val filename: String) {
         GRiterate(session, rootGroup4)
         VStructureIterate(session, rootGroup4)
 
-        metadata.forEach { makeVariableFromStringAttribute(rootGroup4, it) }
+        if (metadata.isNotEmpty()) {
+            val eos = Group.Builder("EosMetadata")
+            rootGroup4.gb.addGroup(eos)
+            metadata.forEach { makeVariableFromStringAttribute(eos, it) }
+        }
+        promotedAttributes.forEach { makeVariableFromStringAttribute(rootGroup4.gb, it) }
 
         if (structMetadata.isNotEmpty()) {
             val sm = structMetadata.joinToString("")
@@ -336,16 +340,7 @@ class HCheader(val filename: String) {
             }
 
             if (debugVGroupDetails) println("     read attribute ${attr3.name}")
-            val promoted = attr3.isString && attr3.values.size == 1 && (attr3.values[0] as String).length > 4000
-            if (EOS.isMetadata(attr3.name) || promoted) {
-                metadata.add(attr3)
-                if (attr3.name.startsWith("StructMetadata")) {
-                    this.structMetadata.add(attr3.values[0] as String)
-                }
-            } else {
-                if (debugAttributes) println("     add attribute ${attr3}")
-                g4.gb.addAttribute(attr3)
-            }
+            checkEosOrPromote(attr3, g4.gb, true)
         }
     }
 
@@ -426,24 +421,38 @@ class HCheader(val filename: String) {
         val nattrs_p = session.allocate(C_INT, 0)
         checkErr("SDfileinfo", SDfileinfo(sdsStartId, nvars_p, nattrs_p))
         val nvars = nvars_p[C_INT, 0]
-        val nattrs = nattrs_p[C_INT, 0]
+        val nattrs = nattrs_p[C_INT, 0] // Number of global attributes in the file
 
         repeat(nvars) { SDread(session, g4, it) }
 
-        /* LOOK not using readSDattribute()
         repeat(nattrs) {
-            val attr = readSDattribute(session, sd_id, it)
-            if (!EOSmetadata.contains(attr.name)) {
-                g4.gb.addAttribute(attr)
-            } else {
-                this.metadata.add(attr)
-                if (attr.name == "StructMetadata.0") {
-                    this.structMetadata = attr.values[0] as String
-                }
-            }
-        } */
+            val attr = SDreadAttribute(session, sdsStartId, it)
+            checkEosOrPromote(attr, g4.gb, true)
+        }
 
         return nvars
+    }
+
+    fun checkEosOrPromote(attr : Attribute, gb : Group.Builder, addAttributesToGroup: Boolean) {
+        if (EOS.isMetadata(attr.name)) {
+            if (metadata.find { it.name == attr.name } == null) {
+                metadata.add(attr)
+                if (attr.name.startsWith("StructMetadata")) { // LOOK assume its in order
+                    this.structMetadata.add(attr.values[0] as String)
+                }
+            }
+            return
+        }
+        if (!addAttributesToGroup) {
+            return
+        }
+        if (attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMaxPromote) {
+            if (promotedAttributes.find { it.name == attr.name } == null) {
+                promotedAttributes.add(attr)
+            }
+        } else {
+            gb.addAttributeIfNotExists(attr)
+        }
     }
 
     // LOOK The integration with netCDF has required that a dimension (or coordinate
@@ -755,14 +764,8 @@ class HCheader(val filename: String) {
             vb.spObject = vinfo
 
             if (vclass.startsWith("Attr")) {
-                if (EOS.isMetadata(vsname)) {
-                    //val attr = convertToAttribute(vb)
-                    //metadata.add(attr)
-                }
-                if (addAttributesToGroup) {
-                    val attr = VStructureMakeAttribute(session, vb.name, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
-                    g4.gb.addAttribute(attr)
-                }
+                val attr = VStructureMakeAttribute(session, vb.name, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
+                checkEosOrPromote(attr, g4.gb, addAttributesToGroup)
             } else if (vclass.startsWith("DimVal") || vclass.startsWith("_HDF_CHK_TBL")) {
                 // noop
             } else {
@@ -824,7 +827,7 @@ class HCheader(val filename: String) {
     private fun VStructureReadAsAttribute(session: MemorySession, vs_ref: Int) : Attribute? {
         val tagid = tagid(vs_ref, TagEnum.VG.code)
         if (completedObjects.contains(tagid)) {
-            if (debugVSdata) println(" VStructureRead skip $vs_ref")
+            if (debugVSdata) println(" VStructureReadAsAttribute skip $vs_ref")
             return null
         }
         completedObjects.add(tagid)
@@ -919,14 +922,14 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype, b
     return Attribute(name, datatype, values.toList())
 }
 
-private fun makeVariableFromStringAttribute(g4 : Group4, att : Attribute) {
+private fun makeVariableFromStringAttribute(group : Group.Builder, att : Attribute) {
     require(att.isString)
     val svalue = att.values[0] as String
     // create the Variable
     val vb = Variable.Builder(att.name)
     vb.datatype = Datatype.STRING
     vb.spObject = Vinfo4().setSValue(svalue)
-    g4.gb.addVariable(vb)
+    group.addVariable(vb)
 }
 
 fun checkErr (where : String, ret: Int) {
