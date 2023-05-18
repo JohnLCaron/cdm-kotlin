@@ -10,8 +10,6 @@ import com.sunya.netchdf.hdf4.TagEnum.Companion.obsolete
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 
-////////////////////////////////////////////////////////////////////////////////
-// Tags
 fun readTag(raf : OpenFile, state: OpenFileState): Tag {
     // read just the DD part of the tag. see p 11
     val xtag = raf.readShort(state).toUShort().toInt()
@@ -54,6 +52,7 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
     val code = (xtag and 0x3FFF) // basic tag
 
     internal var isUsed = false
+    internal var usedBy : Tag? = null
     internal var vinfo: Vinfo? = null
 
     // read the offset/length part of the tag. overridden by subclasses
@@ -65,8 +64,13 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
     }
 
     override fun toString(): String {
-        return "${if (isUsed) " " else "*"} tag=${tagEnum()}  vclass='${vClass()}' refno=$refno ${if (isExtended) " EXTENDED" else ""} offset=$offset" +
-                " length=$length"
+        return buildString {
+            append(if (isUsed) " " else "*")
+            append(" ${"%-17s".format("${refCode()} ${vClass()}")}")
+            append(" usedBy=${usedBy?.refCode()?:isUsed}")
+            append(" pos=$offset/$length")
+            append(if (isExtended) " isExtended" else "")
+        }
     }
 
     fun tagid(): Int {
@@ -77,8 +81,8 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
         return TagEnum.byCode(this.code)
     }
 
-    fun tagRefAndCode(): String {
-        return "$refno/$code"
+    fun refCode(): String {
+        return refCode(code, refno)
     }
 
     private fun vClass() : String {
@@ -86,6 +90,12 @@ open class Tag(xtag: Int, val refno : Int, val offset : Long, val length : Int) 
             is TagVGroup -> this.className
             is TagVH -> this.className
             else -> ""
+        }
+    }
+
+    companion object {
+        fun refCode(code : Int, refno : Int): String {
+            return "%-7s".format("${TagEnum.byCode(code).name}/$refno")
         }
     }
 }
@@ -104,9 +114,9 @@ class TagData(icode: Int, refno : Int, offset : Long, length : Int) : Tag(icode,
             val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
             extendedTag = h4.raf.readShort(state).toInt()
             when (extendedTag) {
-                TagEnum.SPECIAL_COMP -> compress = SpecialComp(h4.raf, state) // TagEnum.COMPRESSED
-                TagEnum.SPECIAL_CHUNKED -> chunked = SpecialChunked(h4.raf, state) // TagEnum.CHUNK
-                TagEnum.SPECIAL_LINKED -> linked = SpecialLinked(h4.raf, state) // TagEnum.VS
+                TagEnum.SPECIAL_LINKED -> linked = SpecialLinked(h4.raf, state, this) // TagEnum.VS
+                TagEnum.SPECIAL_COMP -> compress = SpecialComp(h4.raf, state, this) // TagEnum.COMPRESSED
+                TagEnum.SPECIAL_CHUNKED -> chunked = SpecialChunked(h4.raf, state, this) // TagEnum.CHUNK
             }
             tag_len = (state.pos - offset).toInt()
         }
@@ -114,21 +124,18 @@ class TagData(icode: Int, refno : Int, offset : Long, length : Int) : Tag(icode,
 
     override fun detail(): String {
         return if (linked != null) {
-            super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + linked!!.detail()
+            super.detail() + linked!!.detail()
         } else if (compress != null) {
-            super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + compress!!.detail()
+            super.detail() + compress!!.detail()
         } else if (chunked != null) {
-            super.detail() + " ext_tag= " + extendedTag + " tag_len= " + tag_len + " " + chunked!!.detail()
+            super.detail() + chunked!!.detail()
         } else super.detail()
     }
 
-    override fun toString(): String {
-        return buildString {
-            append (super.toString())
-            if (extendedTag != 0) {
-                append(" linked=$linked, compress=$compress, chunked=$chunked, tag_len=$tag_len)")
-            }
-        }
+    fun markDataTags(h4: H4builder) {
+        linked?.getLinkedDataBlocks(h4)
+        compress?.getDataTag(h4)
+        chunked?.getDataChunks(h4, false)
     }
 }
 
@@ -138,7 +145,7 @@ class TagLinkedBlock(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
     var block_ref = IntArray(0)
     var n = 0
 
-    fun read2(h4 : H4builder, nb: Int, dataBlocks: MutableList<TagLinkedBlock>) {
+    fun read2(h4 : H4builder, nb: Int, dataBlocks: MutableList<TagLinkedBlock>, owner : Tag? = null) {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         next_ref = h4.raf.readShort(state).toUShort().toInt()
         block_ref = IntArray(nb)
@@ -152,6 +159,7 @@ class TagLinkedBlock(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
             val tag = h4.tagidMap[tagid] as TagLinkedBlock?
             if (tag != null) {
                 tag.isUsed = true
+                tag.usedBy = owner
                 dataBlocks.add(tag)
             }
         }
@@ -321,14 +329,17 @@ class TagDataGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ic
     override fun detail(): String {
         return buildString {
             append(super.detail())
-            append("\n")
-            append("   tag ref\n   ")
+            append(" nelems= $nelems")
+            append(" elems=")
             for (i in 0 until nelems) {
-                append(elem_tag[i]).append(" ")
-                append(elem_ref[i]).append(" ")
-                append("\n   ")
+                append(refCode(elem_tag[i], elem_ref[i]))
+                append(",")
             }
         }
+    }
+
+    fun tagids() : List<Int> {
+        return elem_tag.mapIndexed{idx, tag -> tagid(tag, elem_ref[idx])}
     }
 }
 
@@ -498,25 +509,24 @@ class TagVGroup(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode
 
     override fun detail(): String {
         return buildString {
-            append(if (isUsed) " " else "*").append("refno=").append(refno).append(" tag= ")
-                .append(tagEnum())
-                .append(if (isExtended) " EXTENDED" else "").append(" offset=").append(offset).append(" length=")
-                .append(length)
-                .append(" VV= ${vinfo?.vb?.name ?: ""}")
-            append(" class= ").append(className)
-            append(" extag= ").append(extag.toInt())
-            append(" exref= ").append(exref.toInt())
-            append(" version= ").append(version.toInt())
-            append("\n")
-            append(" name= ").append(name)
-            append("\n")
-            append("   tag ref\n   ")
+            append(super.detail())
+            append(" var='${vinfo?.vb?.name}'")
+            append(" class='$className'")
+            append(" extag=$extag")
+            append(" exref=$exref")
+            append(" version=$version")
+            append(" name='$name'")
+            append(" nelems=$nelems")
+            append(" elems=")
             for (i in 0 until nelems) {
-                append(elem_tag[i]).append(" ")
-                append(elem_ref[i]).append(" ")
-                append("\n   ")
+                append(refCode(elem_tag[i], elem_ref[i]))
+                append(",")
             }
         }
+    }
+
+    fun tagids() : List<Int> {
+        return elem_tag.mapIndexed{idx, tag -> tagid(tag, elem_ref[idx])}
     }
 }
 
@@ -567,24 +577,24 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     override fun detail(): String {
         return buildString {
             append(super.detail())
-            append(" class= ").append(className)
             append(" interlace= ").append(interlace.toInt())
             append(" nvert= ").append(nelems)
             append(" ivsize= ").append(ivsize)
             append(" extag= ").append(extag.toInt())
             append(" exref= ").append(exref.toInt())
             append(" version= ").append(version.toInt())
-            append("\n")
-            append(" name= ").append(name)
-            append("\n")
-            append("   name    type  isize  offset  order\n   ")
-            for (i in 0 until nfields) {
-                append(fld_name[i]).append(" ")
-                append(fld_type[i].toInt()).append(" ")
-                append(fld_isize[i]).append(" ")
-                append(fld_offset[i]).append(" ")
-                append(fld_nelems[i].toInt()).append(" ")
-                append("\n   ")
+            if (nfields == 1) {
+                append(" field='${fld_name[0]}' type=${fld_type[0]}  isize=${fld_isize[0]}  offset=${fld_offset[0]}  nelems=${fld_nelems[0]}")
+            } else {
+                append("\n   field     type  isize  offset  nelems\n   ")
+                for (i in 0 until nfields) {
+                    append(fld_name[i]).append(" ")
+                    append(fld_type[i]).append(" ")
+                    append(fld_isize[i]).append(" ")
+                    append(fld_offset[i]).append(" ")
+                    append(fld_nelems[i]).append(" ")
+                    append("\n")
+                }
             }
         }
     }

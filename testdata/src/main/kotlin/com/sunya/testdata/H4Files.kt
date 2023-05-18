@@ -26,6 +26,7 @@ class H4Files {
                     // .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
                     .build()
 
+            // return Stream.of(devcdm, hdfeos2).flatMap { i -> i }
             return Stream.of(devcdm, hdfeos2, hdf4NoCore).flatMap { i -> i }
         }
 

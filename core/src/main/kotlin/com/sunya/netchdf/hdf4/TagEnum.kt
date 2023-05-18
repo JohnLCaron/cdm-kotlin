@@ -53,8 +53,8 @@ enum class TagEnum(val desc: String, val code: Int) {
     MTO("Machine-type override", 501),
     T14("TEK 4014 data", 602),
     T105("TEK 4105 data", 603),
-    SDG("Scientific Data Group", 700), // obsolete
-    SDD("Scientific Data DimRec", 701),
+    SDG("SD Group", 700), // obsolete
+    SDD("SD DimRec", 701),
     SD("Scientific Data", 702),
     SDS("Scales", 703),
     SDL("Labels", 704),
@@ -64,7 +64,7 @@ enum class TagEnum(val desc: String, val code: Int) {
     SDC("Coord sys", 708),
     SDT("Transpose", 709), // obsolete
     SDLNK("Links related to the dataset", 710), // links SDG and NDG
-    NDG("Numeric Data Group", 720),
+    NDG("Numeric Group", 720),
     /* Objects of tag 721 are never actually written to the file.  The tag is needed to make things easier mixing
        DFSD and SD style objects in the same file */
     CAL("Calibration information", 731),
