@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.SectionPartial
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.openNetchdfFile
@@ -46,6 +47,11 @@ class H4readTest {
         readH4header(testData + "devcdm/hdfeos2/MISR_AM1_GP_GMP_P040_O003734_05.eos")
     }
 
+    @Test
+    fun testUsed() {
+        readH4header(testData + "devcdm/hdf4/balloon_sonde.o3_knmi000_de.bilt_s2_20060905t112100z_002.hdf")
+    }
+
     //////////////////////////////////////////////////////////////////////
     @ParameterizedTest
     @MethodSource("params")
@@ -76,6 +82,17 @@ class H4readTest {
     fun readData(filename: String) {
         readNetchdfData(filename, null, null, true)
         println()
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readH4DataCheckUnused(filename: String) {
+        // println("=============================================================")
+        Hdf4File(filename).use { h4file ->
+            println("--- ${h4file.type()} $filename ")
+            readMyData(h4file, null, null)
+            h4file.header.showTags(true, true)
+        }
     }
 
     @ParameterizedTest

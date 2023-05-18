@@ -50,7 +50,7 @@ class NetchdfClibTest {
         private val versions = mutableMapOf<String, MutableList<String>>()
 
         var compareMiddleSection = true
-        var showDataRead = false
+        var showDataRead = true
         var showData = false
         var showFailedData = false
         var showCdl = false
@@ -538,6 +538,35 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
         println("   *** FAIL comparing char variable = ${name}")
         print("   ncdata = $ncdata")
         print("   mydata = $mydata")
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+// just read data from myfile with iterator
+
+fun readDataIterate(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
+
+    if (showCdl) {
+        println(myfile.cdl())
+    }
+    if (varname != null) {
+        val myvar = myfile.rootGroup().allVariables().find { it.fullname() == varname }
+        if (myvar == null) {
+            println("cant find $varname")
+            return
+        }
+        readOneVarIterate(myvar, myfile, section)
+    } else {
+        myfile.rootGroup().allVariables().forEach { it ->
+            readOneVarIterate(it, myfile, null)
+        }
+    }
+}
+
+fun readOneVarIterate(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+    val chunkIter = myfile.chunkIterator(myvar, section, maxBytes)
+    for (pair in chunkIter) {
+        sumValues(pair.array)
     }
 }
 

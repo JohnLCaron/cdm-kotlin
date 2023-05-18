@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.netchdf.compareDataWithClib
 import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.*
 import org.junit.jupiter.api.Test
@@ -13,7 +14,7 @@ import kotlin.test.assertTrue
 
 // Compare header with Hdf5File and NetcdfClibFile
 // sometime fail when they are not netcdf4 files, so nc4lib sees them as empty
-class Hdf5headerCompare {
+class Hdf5Compare {
 
     companion object {
         @JvmStatic
@@ -32,6 +33,30 @@ class Hdf5headerCompare {
     @Test
     fun testEos() {
         compareH5andNclib(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
+    }
+
+    @Test
+    fun problemReferenceToPallette() {
+        compareH5andNclib(testData + "netchdf/esben/level2_MSG2_8bit_VISIR_STD_20091005_0700.H5")
+        compareDataWithClib(testData + "netchdf/esben/level2_MSG2_8bit_VISIR_STD_20091005_0700.H5")
+    }
+
+    @Test
+    fun problem2() {
+        compareH5andNclib(testData + "netchdf/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
+        compareDataWithClib(testData + "netchdf/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
+    }
+
+    @Test
+    fun problem3() {
+        compareH5andNclib(testData + "netchdf/austin/H12007_1m_MLLW_1of6.bag")
+        compareDataWithClib(testData + "netchdf/austin/H12007_1m_MLLW_1of6.bag")
+    }
+
+    @Test
+    fun ok() {
+        compareH5andNclib(testData + "netchdf/tomas/S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4")
+        compareDataWithClib(testData + "netchdf/tomas/S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4")
     }
 
     @ParameterizedTest

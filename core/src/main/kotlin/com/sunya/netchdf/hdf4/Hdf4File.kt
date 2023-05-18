@@ -15,14 +15,13 @@ import java.util.zip.InflaterInputStream
 
 class Hdf4File(val filename : String) : Netchdf {
     private val raf: OpenFile = OpenFile(filename)
-    internal val header: H4builder
+    val header: H4builder
     private val rootGroup: Group
 
     var valueCharset: Charset = StandardCharsets.UTF_8
 
     init {
         header = H4builder(raf, valueCharset)
-        header.make()
         rootGroup = header.rootBuilder.build(null)
     }
 
@@ -86,10 +85,11 @@ class Hdf4File(val filename : String) : Netchdf {
     }
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
+        requireNotNull(v.spObject) { "Variable ${v.name}"}
         val vinfo = v.spObject as Vinfo
 
         if (vinfo.tagData != null) {
-            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+            vinfo.setLayoutInfo(header) // make sure needed info is present LOOK why wait until now ??
         }
 
         if (vinfo.hasNoData) {
@@ -175,11 +175,10 @@ class Hdf4File(val filename : String) : Netchdf {
         val vinfo = v2.spObject as Vinfo
 
         if (vinfo.tagData != null) {
-            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+            vinfo.setLayoutInfo(header) // make sure needed info is present LOOK why wait until now ??
         } else {
             vinfo.hasNoData = true
         }
-        println("readStructureDataArray refno=${vinfo.refno}")
 
         requireNotNull(v2.datatype.typedef)
         require(v2.datatype.typedef is CompoundTypedef)

@@ -75,20 +75,20 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 
     // make sure needed info is present : call this when variable needs to be read
     // this allows us to defer getting layout info until then
-    fun setLayoutInfo(h4file: Hdf4File) {
+    fun setLayoutInfo(header: H4builder) {
         if (tagData == null) return
         val useData = tagData!!
         if (null != useData.linked) {
             isLinked = true
-            setDataBlocks(useData.linked!!.getLinkedDataBlocks(h4file.header))
+            setDataBlocks(useData.linked!!.getLinkedDataBlocks(header))
 
         } else if (null != useData.compress) {
             isCompressed = true
-            val compData: TagData = useData.compress!!.getDataTag(h4file.header)
+            val compData: TagData = useData.compress!!.getDataTag(header)
             tags.add(compData)
             isLinked = (compData.linked != null)
             if (isLinked) {
-                setDataBlocks(compData.linked!!.getLinkedDataBlocks(h4file.header))
+                setDataBlocks(compData.linked!!.getLinkedDataBlocks(header))
             } else {
                 start = compData.offset
                 length = compData.length
@@ -96,7 +96,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
             }
         } else if (null != useData.chunked) {
             isChunked = true
-            chunks = useData.chunked!!.getDataChunks(h4file)
+            chunks = useData.chunked!!.getDataChunks(header)
             chunkLengths = useData.chunked!!.chunkLength
             isCompressed = useData.chunked!!.isCompressed
         } else {
