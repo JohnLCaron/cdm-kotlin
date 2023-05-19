@@ -521,7 +521,7 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, cfile: Netchdf, cvar:
         compareCharData(myvar.fullname(), mydata, ncdata)
     } else {
         if (!ncdata.equals(mydata)) {
-            println(" *** FAIL comparing middle section variable = ${cvar}")
+            println(" *** FAIL comparing middle section variable = ${cvar.nameAndShape()}")
             if (NetchdfClibTest.showFailedData) {
                 println(" mydata = $mydata")
                 println(" cdata = $ncdata")
