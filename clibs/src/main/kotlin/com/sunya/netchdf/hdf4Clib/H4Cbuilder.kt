@@ -10,6 +10,7 @@ import com.sunya.netchdf.hdf4.H4builder.Companion.tagidNameR
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
+import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -21,7 +22,7 @@ private val debugVSdetails = false
 private val debugSD = false
 private val debugSDdetails = false
 private val debugGR = false
-private val debugNestedGroup = true
+private val debugNestedGroup = false
 private val debugAttributeBug = false
 private val debugDims = false
 
@@ -632,28 +633,73 @@ class HCheader(val filename: String) {
             val name = name_p.getUtf8String(0)
             require(name.length < MAX_NAME)
             val n_comps = n_comps_p[C_INT, 0]
-            val datatype = data_type_p[C_INT, 0]
+            val orgDataType = H4type.getDataType(data_type_p[C_INT, 0])
             val interlace = interlace_p[C_INT, 0]
             val dims = IntArray(2) { dim_sizes_p.getAtIndex(C_INT, it.toLong()) }
             val nattrs = n_attrs_p[C_INT, 0]
 
             // create the Variable
             val vb = Variable.Builder(name)
-            vb.datatype = H4type.getDataType(datatype)
+            val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
+            vb.datatype = datatype
             vb.spObject = Vinfo4().setGRindex(gridx)
 
-            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. p 321
+            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. p 321 TODO
             val rdims = IntArray(2) { if (it == 0) dims[1] else dims[0] }
             vb.setDimensionsAnonymous(rdims)
+            gb.addVariable(vb)
 
             // read Variable attributes // look probably need GRattrinfo
             // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order.
             repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, grId, it)) }
-            gb.addVariable(vb)
+            if (debugGR) println("  GRgetiminfo '$name', n_comps=$n_comps, type=${vb.datatype}, interlace=$interlace, dims=${dims.contentToString()}, attrs=$nattrs")
 
-            // LOOK may need GRgetlutinfo(), GRgetnluts ??
+            // get the pallette if it exists
+            // intn GRgetnluts(int32 ri_id)
+            val npalettes = GRgetnluts(grId) // Gets the identifier of a palette given its index.
 
-            if (debugGR) println("  GRgetiminfo '$name', n_comps=$n_comps, type=${vb.datatype}, interlace=$interlace, dims${dims.contentToString()}, attrs=$nattrs")
+            if (npalettes == 1) {
+                // int32 GRgetlutid(int32 ri_id, int32 pal_index)
+                val palId = GRgetlutid(grId, 0) // Gets the identifier of a palette given its index.
+
+                // intn GRgetlutinfo(int32 pal_id, int32 *ncomp, int32 *data_type, int32 *interlace_mode, int32 *num_entries)
+                val nt_p = session.allocate(C_INT, 0) // Number type of the palette
+                val nentries_p = session.allocate(C_INT, 0) // Number of color lookup table entries in the palette
+                checkErr("GRgetlutinfo", GRgetlutinfo(palId, n_comps_p, nt_p, interlace_p, nentries_p))
+
+                val ncomps = n_comps_p[C_INT, 0]
+                val nt = nt_p[C_INT, 0]
+                val porgDatatype = H4type.getDataType(nt)
+                val pdatatype = if (porgDatatype == Datatype.CHAR) Datatype.UBYTE else porgDatatype
+
+                val interlace = interlace_p[C_INT, 0]
+                val nentries = nentries_p[C_INT, 0]
+                if (debugGR) println("  GRgetlutinfo '$name', ncomps=$ncomps, type=$nt, datatype = $pdatatype interlace=$interlace, nentries=$nentries")
+
+                // intn GRreadlut(int32 pal_id, VOIDP pal_data)
+                val pal_data_p = session.allocate((pdatatype.size * ncomps * nentries).toLong())
+                checkErr("GRreadlut", GRreadlut(palId, pal_data_p))
+                val palData : ByteBuffer = ByteBuffer.wrap(pal_data_p.toArray(JAVA_BYTE))
+                val shape = intArrayOf(nentries, ncomps)
+                val lutData = when (pdatatype) {
+                    Datatype.BYTE -> ArrayByte(shape, palData)
+                    Datatype.UBYTE -> ArrayUByte(shape, palData)
+                    Datatype.SHORT -> ArrayShort(shape, palData)
+                    Datatype.USHORT -> ArrayUShort(shape, palData)
+                    Datatype.INT -> ArrayInt(shape, palData)
+                    Datatype.UINT -> ArrayUInt(shape, palData)
+                    else -> throw RuntimeException("not supporting $datatype for GR lookup table")
+                }
+                if (debugGR) println("  lutData=${lutData}")
+
+                val lutv_name = "${name}_lookup"
+                val lutvb = Variable.Builder(lutv_name)
+                lutvb.datatype = pdatatype
+                lutvb.setDimensionsAnonymous(shape)
+                lutvb.spObject = Vinfo4().setValue(lutData)
+                gb.addVariable(lutvb)
+            }
+
         } finally {
             GRendaccess(grId)
         }
@@ -878,7 +924,7 @@ class HCheader(val filename: String) {
             require(vclass.length < MAX_NAME)
 
             val n_records_p = session.allocate(C_INT, 0)
-            val interlace_p = session.allocateArray(C_INT as MemoryLayout, 100)
+            val interlace_p = session.allocateArray(C_INT as MemoryLayout, 100) // LOOK 100 ??
             val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_SIZE)
             val recsize_p = session.allocate(C_INT, 0) // size, in bytes, of the vdata record
             val vsname_p: MemorySegment = session.allocate(MAX_NAME)
@@ -1035,7 +1081,7 @@ data class Group4(val name : String, val parent: Group4?) {
 data class VSInfo(val vs_ref : Int, val nrecords : Int, val recsize : Int, val fldNames : String, val interlace : Int)
 
 class Vinfo4() {
-    var svalue : String? = null
+    var value : ArrayTyped<*>? = null
     var sdsIndex : Int? = null
     var grIndex : Int? = null
     var vsInfo : VSInfo? = null
@@ -1051,7 +1097,12 @@ class Vinfo4() {
     }
 
     fun setSValue(svalue : String) : Vinfo4 {
-        this.svalue = svalue
+        this.value = ArrayString(intArrayOf(), listOf(svalue))
+        return this
+    }
+
+    fun setValue(value : ArrayTyped<*>) : Vinfo4 {
+        this.value = value
         return this
     }
 }

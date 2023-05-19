@@ -58,7 +58,11 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
             return ArraySingle(filled.shape.toIntArray(), v2.datatype, 0)
         }
 
-        if (vinfo.sdsIndex != null) {
+        if (vinfo.value != null) {
+            // TODO subset
+            return vinfo.value!!
+
+        } else if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)
 
         } else if (vinfo.vsInfo != null) {
@@ -68,10 +72,8 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
 
         } else if (vinfo.grIndex != null) {
             return readGRdata(header.grStartId, vinfo.grIndex!!, datatype, filled, nbytes)
-
-        }  else if (vinfo.svalue != null) {
-            return ArrayString(intArrayOf(), listOf(vinfo.svalue!!))
         }
+
         throw RuntimeException("cant read ${v2.name}")
     }
 
@@ -198,6 +200,7 @@ fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: Sect
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
             values.order(ByteOrder.nativeOrder())
+            // TODO flip the data back
             return shapeData(datatype, values, wantSection.shape.toIntArray())
         } finally {
             GRendaccess(grId)
