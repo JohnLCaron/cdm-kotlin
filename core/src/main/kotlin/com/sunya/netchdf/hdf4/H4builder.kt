@@ -17,7 +17,7 @@ const val attLengthMaxPromote = 4000
 
  */
 
-class H4builder(val raf : OpenFile, val valueCharset : Charset) {
+class H4builder(val raf: OpenFile, val valueCharset: Charset) {
     private val alltags = mutableListOf<Tag>() // in order as they appear in the file
 
     var rootBuilder: Group.Builder = Group.Builder("")
@@ -36,8 +36,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     internal val tagidMap = mutableMapOf<Int, Tag>()
     private var imageCount = 0
 
-    fun type() : String {
-        return if ( structMetadata.isEmpty()) "hdf4     " else "hdf-eos2 "
+    fun type(): String {
+        return if (structMetadata.isEmpty()) "hdf4     " else "hdf-eos2 "
     }
 
     init {
@@ -78,11 +78,11 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     private fun build() {
-        alltags.forEach{ findRasterInfo(it)}
-        if (debugGR) checkRasterInfo()
+        // alltags.forEach { findRasterInfo(it) }
+        // if (debugGR) checkRasterInfo()
 
-        VgroupIterate("VgroupNesting") { t : Tag -> constructNestedGroups(t as TagVGroup, null, Indent(2)) }
-        VgroupIterate("VgroupAliases") { t : Tag -> VgroupAliases(t as TagVGroup, Indent(2)) }
+        VgroupIterate("VgroupNesting") { t: Tag -> constructNestedGroups(t as TagVGroup, null, Indent(2)) }
+        VgroupIterate("VgroupAliases") { t: Tag -> VgroupAliases(t as TagVGroup, Indent(2)) }
         unparentedGroups.values.forEach {
             val vgroup = it.vgroup
             val group = Group.Builder(vgroup.name)
@@ -91,7 +91,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
 
         // now add all the orphans to the rootGroup
-        VgroupIterate("VgroupRead") { t : Tag -> VgroupRead(t as TagVGroup, rootBuilder) }
+        VgroupIterate("VgroupRead") { t: Tag -> VgroupRead(t as TagVGroup, rootBuilder) }
         SDiterate(rootBuilder)
         GRiterate(rootBuilder)
         VStructureIterate(rootBuilder)
@@ -119,27 +119,32 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     rootBuilder.addAttribute(Attribute("HDF4FileVersion", (it as TagVersion).value()))
                     it.isUsed = true
                 }
+
                 TagEnum.DIL.code -> {
                     rootBuilder.addAttribute(Attribute("DataLabel.${dataLabel++}", (it as TagAnnotate).text))
                     it.isUsed = true
                 }
+
                 TagEnum.DIA.code -> {
                     rootBuilder.addAttribute(Attribute("DataDesc.${dataDesc++}", (it as TagAnnotate).text))
                     it.isUsed = true
                 }
+
                 TagEnum.FID.code -> {
                     rootBuilder.addAttribute(Attribute("FileLabel.${fileLabel++}", (it as TagText).text))
                     it.isUsed = true
                 }
+
                 TagEnum.FD.code -> {
                     rootBuilder.addAttribute(Attribute("FileDesc.${fileDesc++}", (it as TagText).text))
                     it.isUsed = true
                 }
             }
         }
+        rootBuilder.removeEmptyGroups()
     }
 
-    fun showTags(showSummary : Boolean, showUnused : Boolean, showAll : Boolean = false) : Int {
+    fun showTags(showSummary: Boolean, showUnused: Boolean, showAll: Boolean = false): Int {
         if (showSummary) {
             val summ = mutableMapOf<Int, MutableList<Int>>()
             alltags.forEach {
@@ -155,56 +160,62 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
 
         if (showUnused) {
-            alltags.filter{ it is TagData }.forEach {
+            alltags.filter { it is TagData }.forEach {
                 val data = (it as TagData)
                 data.markDataTags(this)
             }
         }
 
-        val unused = alltags.filter{ !it.isUsed }.count()
+        val unused = alltags.filter { !it.isUsed }.count()
         if (showUnused) {
             println("unused tags $unused")
-            alltags.filter{ !it.isUsed }.forEach {
+            alltags.filter { !it.isUsed }.forEach {
                 println(it.detail())
             }
         }
 
         if (showAll) {
-            println("all tags ${alltags.size}")
-            alltags.forEach {
+            println("all tags ${alltags.size} sort by refno/code")
+            alltags.sortedWith { t1, t2 ->
+                when {
+                    t1.refno > t2.refno -> 1
+                    t1.refno < t2.refno -> -1
+                    else -> t1.refno - t2.refno
+                }
+            }.forEach {
                 println(it.detail())
             }
         }
         return unused
     }
 
-    fun TagVGroup.nestedTags() : List<Tag> {
+    fun TagVGroup.nestedTags(): List<Tag> {
         val result = mutableListOf<Tag>()
         elem_code.forEachIndexed { idx, code ->
             val tag = tagidMap[tagid(elem_ref[idx], code)]
             if (tag != null) {
                 result.add(tag)
-            } else {
+            } else if (code != TagEnum.IGNORE.code) {
                 println("vGroup ${refCode()} missing tag ${Tag.refCode(elem_ref[idx], code)} ")
             }
         }
         return result
     }
 
-    fun TagDataGroup.nestedTags() : List<Tag> {
+    fun TagDataGroup.nestedTags(): List<Tag> {
         val result = mutableListOf<Tag>()
         elem_code.forEachIndexed { idx, code ->
             val tag = tagidMap[tagid(elem_ref[idx], code)]
             if (tag != null) {
                 result.add(tag)
-            } else {
+            } else if (code != TagEnum.IGNORE.code) {
                 println("dataGroup ${refCode()} missing tag ${Tag.refCode(elem_ref[idx], code)} ")
             }
         }
         return result
     }
 
-    private fun VgroupIterate(name : String, lamda : (t : Tag) -> Unit) {
+    private fun VgroupIterate(name: String, lamda: (t: Tag) -> Unit) {
         if (debugConstruct) println("--VgroupIterate $name")
         for (t: Tag in alltags) {
             if (t.tagEnum() == TagEnum.VG) {
@@ -214,7 +225,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     // create a Group4 hierarchy, with deferred assignment of parent, allowing groups to be in any order in the file
-    private fun constructNestedGroups(vgroup: TagVGroup, parent : Group4?, indent:Indent) {
+    private fun constructNestedGroups(vgroup: TagVGroup, parent: Group4?, indent: Indent) {
         if (!isNestedGroup(vgroup)) {
             return
         }
@@ -241,15 +252,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (debugVGroup) println("$indent   add ${vgroup.name} to ${parent.vgroup.name}")
         }
 
-        repeat(vgroup.nelems) {
-            val tagRef = vgroup.elem_ref[it]
-            val tagCode = vgroup.elem_code[it]
-            val tage = TagEnum.byCode(tagCode)
-            val tagid = tagid(tagRef, tagCode)
-            val tag = tagidMap[tagid]
-            if (tag == null) {
-                println("*** Dont have tag (refno=${tagRef}, code=${TagEnum.byCode(tagCode)}) referenced in vgroup '${vgroup.name}'")
-            } else if (tage == TagEnum.VG) {
+        vgroup.nestedTags().forEach { tag ->
+            if (tag.tagEnum() == TagEnum.VG) {
                 constructNestedGroups(tag as TagVGroup, group4, indent.incr())
             }
         }
@@ -259,38 +263,32 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     private fun findRasterInfo(tag: Tag) {
         if (tag.code == TagEnum.VG.code) {
             val vgroup = tag as TagVGroup
-            repeat(vgroup.nelems) {
-                val ntagCode = vgroup.elem_code[it]
-                val ntagRef = vgroup.elem_ref[it]
-
-                if (ntagCode == TagEnum.RI.code) {
-                    grVGaliasMap[ntagRef] = vgroup
+            vgroup.nestedTags().forEach { tag ->
+                if (tag.tagEnum() == TagEnum.RI) {
+                    grVGaliasMap[tag.refno] = vgroup
                 }
             }
         }
 
         if (tag.code == TagEnum.RIG.code) {
             val dgroup = tag as TagDataGroup
-            repeat(dgroup.nelems) {
-                val ntagCode = dgroup.elem_code[it]
-                val ntagRef = dgroup.elem_ref[it]
-
-                if (ntagCode == TagEnum.RI.code) {
-                    grRIGaliasMap[ntagRef] = dgroup
+            dgroup.nestedTags().forEach { tag ->
+                if (tag.tagEnum() == TagEnum.RI) {
+                    grRIGaliasMap[tag.refno] = dgroup
                 }
             }
         }
     }
 
     fun checkRasterInfo() {
-        grVGaliasMap.forEach{ ri, vg ->
+        grVGaliasMap.forEach { ri, vg ->
             println("RI=$ri VG=${vg.refno} elems=${vg.elem_code.contentToString()} ${vg.elem_ref.contentToString()} ")
             val rig = grRIGaliasMap[ri]
             if (rig != null) {
                 println("   RIG=${rig.refno} elems=${rig.elem_code.contentToString()} ${rig.elem_ref.contentToString()} ")
             }
         }
-        grRIGaliasMap.forEach{ ri, rig ->
+        grRIGaliasMap.forEach { ri, rig ->
             val vg = grVGaliasMap[ri]
             if (vg == null) {
                 println("RI=$ri  RIG=${rig.refno} elems=${rig.elem_code.contentToString()} ${rig.elem_ref.contentToString()} ")
@@ -299,27 +297,20 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     // looking for Var0.0 aliases for sd and vh TODO dont need I think?
-    private fun VgroupAliases(vgroup: TagVGroup, indent:Indent) {
+    private fun VgroupAliases(vgroup: TagVGroup, indent: Indent) {
         if (debugVGroupDetails) print("VgroupAliases ${vgroup.className}")
         if (!vgroup.className.startsWith("Var0.0") && !vgroup.className.startsWith("RI0.0")) {
             return
         }
         if (debugVGroupDetails) println("$indent  VgroupFindParents ${vgroup.refno} ${vgroup.className} ${vgroup.name} ")
-        repeat(vgroup.nelems) {
-            val tagRef = vgroup.elem_ref[it]
-            val tagCode = vgroup.elem_code[it]
-            val tage = TagEnum.byCode(tagCode)
-            val tagid = tagid(tagRef, tagCode)
-            if (debugVGroupDetails) println("$indent    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)}")
-            val tag = tagidMap[tagid]
-            if (tag == null) {
-                println("*** Dont have tag (refno=${tagRef}, code=${TagEnum.byCode(tagCode)}) referenced in vgroup '${vgroup.name}'")
-            } else if (tage == TagEnum.NDG) {
-                sdAliasMap[tagRef] = vgroup
+        vgroup.nestedTags().forEach { tag ->
+            if (debugVGroupDetails) println("$indent    ${tag.refCode()}")
+            if (tag.tagEnum() == TagEnum.NDG) {
+                sdAliasMap[tag.refno] = vgroup
                 tag.usedBy = vgroup
                 if (debugVGroup) println("$indent   sdAliasMap add ${tag} to ${vgroup.name}")
-            } else if (tage == TagEnum.VH) {
-                vhAliasMap[tagRef] = vgroup
+            } else if (tag.tagEnum() == TagEnum.VH) {
+                vhAliasMap[tag.refno] = vgroup
                 tag.usedBy = vgroup
                 if (debugVGroup) println("$indent   vhAliasMap add ${tag}  to ${vgroup.name}")
             }
@@ -327,19 +318,21 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     // read a VGroup wrapped in a Group4, and recurse
-    private fun Vgroup4Read(group4 : Group4, group : Group.Builder, parent : TagVGroup? = null) {
+    private fun Vgroup4Read(group4: Group4, group: Group.Builder, parent: TagVGroup? = null) {
         VgroupRead(group4.vgroup, group)
         group4.vgroup.isUsed = true
         group4.vgroup.usedBy = parent
 
-        group4.subgroups.filter{ it.vgroup.nelems > 0 }.forEach {
+        group4.subgroups.filter { it.vgroup.nelems > 0 }.forEach {
             val nested = Group.Builder(it.vgroup.name)
             group.addGroup(nested)
             Vgroup4Read(it, nested, group4.vgroup)
         }
     }
 
-    private fun VgroupRead(vgroup : TagVGroup, group : Group.Builder) {
+    private fun VgroupRead(vgroup: TagVGroup, group: Group.Builder) {
+        if (vgroup.name.contains("Parameters file"))
+            println()
         /*if (vgroup.isUsed) {
             if (debugConstruct) println("VgroupRead skip ${vgroup.refno} '${vgroup.name}'")
             return
@@ -355,21 +348,14 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             VgroupDim(vgroup)
         } else if (vgroup.className == "Var0.0") { // LOOK undocumented convention
             VgroupVarSD(vgroup, group)
-        } else if (vgroup.className == "RI0.0") { // LOOK undocumented convention
+        } else if ((vgroup.className == "RI0.0") || (vgroup.className == "image")) { // LOOK undocumented convention
             GRVariableFromVGroup(vgroup, group)
         } else if (vgroup.className == "CDF0.0") { // LOOK undocumented convention
             VgroupCDF(vgroup, group)
         } else {
-            repeat(vgroup.nelems) { objIdx ->
-                val tagRef = vgroup.elem_ref[objIdx]
-                val tagCode = vgroup.elem_code[objIdx]
-                val tage = TagEnum.byCode(tagCode)
-                val tagid = tagid(tagRef, tagCode)
-                val tag = tagidMap[tagid]
-                if (tag == null) {
-                    log.warn("VgroupRead2 missing tag (${tagRef}, ${TagEnum.byCode(tagCode)})")
-                } else if (tage == TagEnum.NDG) {
-                    val sdAlias = sdAliasMap[tagRef] // needed? we know the group
+            vgroup.nestedTags().forEach { tag ->
+                if (tag.tagEnum() == TagEnum.NDG) {
+                    val sdAlias = sdAliasMap[tag.refno] // needed? we know the group
                     if (sdAlias != null) {
                         VgroupVarSD(sdAlias, group)
                     } else {
@@ -377,10 +363,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     }
                     //tag.isUsed = true
                     //tag.usedBy = vgroup
-                } else if (tage == TagEnum.VH) {
+                } else if (tag.tagEnum() == TagEnum.VH) {
                     val vtag = tag as TagVH
-                    if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)} '${vtag.className}' '${vtag.name}'")
-                    val vhAlias = vhAliasMap[tagRef]
+                    if (debugVGroup) println("    ${vtag.refCode()} '${vtag.className}' '${vtag.name}'")
+                    val vhAlias = vhAliasMap[tag.refno]
                     VStructureRead(vtag, vhAlias?.name, group, true)
                     //tag.isUsed = true
                     //tag.usedBy = vgroup
@@ -399,16 +385,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 
         val dims = mutableListOf<String>()
         val tagVHs = mutableListOf<TagVH>()
-        var tagNDG : TagDataGroup? = null
+        var tagNDG: TagDataGroup? = null
 
-        repeat(vgroup.nelems) { objIdx ->
-            val tagRef = vgroup.elem_ref[objIdx]
-            val tagCode = vgroup.elem_code[objIdx]
-            val tage = TagEnum.byCode(tagCode)
-            val tagid = tagid(tagRef, tagCode)
-            val tag = tagidMap[tagid] ?: throw RuntimeException("Dont have tag (${tagRef}, ${TagEnum.byCode(tagCode)})")
-
-            if (tage == TagEnum.VG) {
+        vgroup.nestedTags().forEach { tag ->
+            if (tag.tagEnum() == TagEnum.VG) {
                 val tagV = tag as TagVGroup
                 if (isDimClass(tagV.className)) {
                     val dim = VgroupDim(tagV)
@@ -417,16 +397,16 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     tag.usedBy = vgroup
                 }
             }
-            if (tage == TagEnum.VH) {
+            if (tag.tagEnum() == TagEnum.VH) {
                 val tagVH = tag as TagVH
-                if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)} ${tagVH.className} ${tagVH.name}")
+                if (debugVGroup) println("    ${tag.refCode()} ${tagVH.className} ${tagVH.name}")
                 if (tagVH.className.startsWith("Att")) {
                     tagVHs.add(tagVH)
                 }
                 tag.isUsed = true
                 tag.usedBy = vgroup
             }
-            if (tage == TagEnum.NDG) {
+            if (tag.tagEnum() == TagEnum.NDG) {
                 tagNDG = tag as TagDataGroup
                 tag.usedBy = vgroup
             }
@@ -458,7 +438,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 
     // These are coordinate variables, I think. Always has an associated VS for the data.
     // Unfortunately, they are not always correct.
-    private fun VgroupDim(vgroup : TagVGroup) : Dimension? {
+    private fun VgroupDim(vgroup: TagVGroup): Dimension? {
         /* if (vgroup.isUsed) { LOOK
             return null
         } */
@@ -466,16 +446,10 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 
         if (debugConstruct) println("  VgroupDimOld '${vgroup.name}' ref=${vgroup.refno}")
         val isFake = vgroup.name.startsWith("fakeDim")
-        repeat(vgroup.nelems) {objIdx ->
-            val tagRef = vgroup.elem_ref[objIdx]
-            val tagCode = vgroup.elem_code[objIdx]
-            val tage = TagEnum.byCode(tagCode)
-            val tagid = tagid(tagRef, tagCode)
-            if (debugVGroup) println("    ${tagidName(tagid)} ${TagEnum.byCode(tagCode)}")
-            val tag = tagidMap[tagid] ?: throw RuntimeException("Dont have tag (${tagRef}, ${TagEnum.byCode(tagCode)})")
+        vgroup.nestedTags().forEach { tag ->
             tag.isUsed = true
 
-            if (tage == TagEnum.VH) {
+            if (tag.tagEnum() == TagEnum.VH) {
                 val tagVH = tag as TagVH
                 val length = tagVH.nelems * tagVH.fld_nelems[0]
                 if (debugDims) println("     read dimension ${vgroup.name} length='${length}'")
@@ -496,14 +470,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
         vgroup.isUsed = true
 
-        repeat(vgroup.nelems) { objIdx ->
-            val tagRef = vgroup.elem_ref[objIdx]
-            val tagCode = vgroup.elem_code[objIdx]
-            val tage = TagEnum.byCode(tagCode)
-            val tagid = tagid(tagRef, tagCode)
-            val tag = tagidMap[tagid] ?: throw RuntimeException("Dont have tag (${tagidName(tagid)})")
+        vgroup.nestedTags().forEach { tag ->
 
-            if (tage == TagEnum.VH) {
+            if (tag.tagEnum() == TagEnum.VH) {
                 val tagVH = tag as TagVH
                 if (tagVH.className == "Attr0.0") {
                     val attr = VStructureReadAttribute(tagVH)
@@ -517,7 +486,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    fun checkEosOrPromote(attr : Attribute, gb : Group.Builder, addAttributesToGroup: Boolean) {
+    fun checkEosOrPromote(attr: Attribute, gb: Group.Builder, addAttributesToGroup: Boolean) {
         if (EOS.isMetadata(attr.name)) {
             if (metadata.find { it.name == attr.name } == null) {
                 metadata.add(attr)
@@ -539,7 +508,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    private fun SDiterate(rootBuilder : Group.Builder) {
+    private fun SDiterate(rootBuilder: Group.Builder) {
         if (debugConstruct) println("--SDiterate")
         for (t: Tag in alltags) {
             if (t.tagEnum() == TagEnum.NDG) {
@@ -548,7 +517,12 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    private fun SDread(dataGroup: TagDataGroup, groupName : String?, parent : Group.Builder, dimNames : List<String>): Variable.Builder? {
+    private fun SDread(
+        dataGroup: TagDataGroup,
+        groupName: String?,
+        parent: Group.Builder,
+        dimNames: List<String>
+    ): Variable.Builder? {
         if (dataGroup.isUsed) {
             if (debugConstruct) println("SDread skip  ${dataGroup.refCode()} $groupName")
             return null
@@ -573,8 +547,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (tag.tagEnum() == TagEnum.SD) data = tag as TagData
         }
         // see if there are obsolete tags, set used
-        tagidMap[tagid(dataGroup.refno, TagEnum.SDG.code)] ?.isUsed = true
-        tagidMap[tagid(dataGroup.refno, TagEnum.SDLNK.code)] ?.isUsed = true
+        tagidMap[tagid(dataGroup.refno, TagEnum.SDG.code)]?.isUsed = true
+        tagidMap[tagid(dataGroup.refno, TagEnum.SDLNK.code)]?.isUsed = true
 
         if (dimSDDout == null) {
             println("   **** NO dimensions found for SD ${dataGroup.refCode()}")
@@ -598,8 +572,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             vb.addDimension(dim)
         }
 
-        val nt: TagNT = tagidMap[tagid(dimSDD.data_nt_ref, TagEnum.NT.code)] as TagNT? ?:
-            throw IllegalStateException("   **** NO nt tag found for SD ${dataGroup.refCode()}")
+        val nt: TagNT = tagidMap[tagid(dimSDD.data_nt_ref, TagEnum.NT.code)] as TagNT?
+            ?: throw IllegalStateException("   **** NO nt tag found for SD ${dataGroup.refCode()}")
         nt.isUsed = true
         nt.usedBy = dataGroup
         val dataType = H4type.getDataType(nt.numberType)
@@ -653,7 +627,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         return vb
     }
 
-    private fun VStructureIterate(rootBuilder : Group.Builder) {
+    private fun VStructureIterate(rootBuilder: Group.Builder) {
         if (debugConstruct) println("--VStructureIterate")
         alltags.forEachIndexed { idx, t ->
             if (t.tagEnum() == TagEnum.VH) {
@@ -662,8 +636,13 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    private fun VStructureRead(vh: TagVH, groupName : String?, parent : Group.Builder, addAttsToGroup : Boolean) : Variable.Builder? {
-          if (vh.isUsed) {
+    private fun VStructureRead(
+        vh: TagVH,
+        groupName: String?,
+        parent: Group.Builder,
+        addAttsToGroup: Boolean
+    ): Variable.Builder? {
+        if (vh.isUsed) {
             return null
         }
         vh.isUsed = true
@@ -720,7 +699,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             val totalNelems = nrecords * member.nelems
             if (totalNelems > 1) {
                 if (nrecords != 1 && member.nelems != 1)
-                    vb.setDimensionsAnonymous(intArrayOf(nrecords,  member.nelems))
+                    vb.setDimensionsAnonymous(intArrayOf(nrecords, member.nelems))
                 else
                     vb.setDimensionsAnonymous(intArrayOf(totalNelems))
             }
@@ -744,7 +723,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
 
     private fun VStructureReadAttribute(vh: TagVH): Attribute? {
         // LOOK assume always only one field. Maybe multiple fields are allowed to make a compound-typed attribute?
-        require (vh.nfields == 1)
+        require(vh.nfields == 1)
 
         var name = vh.name
         if (name.startsWith("RIATTR0")) { // VHRR
@@ -772,59 +751,70 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
                     nchars = vh.nelems
                 }
                 val vals = mutableListOf<String>()
-                repeat (nelems) { vals.add(raf.readString(state, nchars, valueCharset)) }
+                repeat(nelems) { vals.add(raf.readString(state, nchars, valueCharset)) }
                 Attribute(name, Datatype.STRING, vals)
             }
+
             5 -> {
                 val vals = mutableListOf<Float>()
-                repeat (nelems) { vals.add(raf.readFloat(state)) }
+                repeat(nelems) { vals.add(raf.readFloat(state)) }
                 Attribute(name, Datatype.FLOAT, vals)
             }
-            6 ->  {
+
+            6 -> {
                 val vals = mutableListOf<Double>()
-                repeat (nelems) { vals.add(raf.readDouble(state)) }
+                repeat(nelems) { vals.add(raf.readDouble(state)) }
                 Attribute(name, Datatype.DOUBLE, vals)
             }
+
             20 -> {
                 val vals = mutableListOf<Byte>()
-                repeat (nelems) { vals.add(raf.readByte(state)) }
+                repeat(nelems) { vals.add(raf.readByte(state)) }
                 Attribute(name, Datatype.BYTE, vals)
             }
+
             21 -> {
                 val vals = mutableListOf<UByte>()
-                repeat (nelems) { vals.add(raf.readByte(state).toUByte()) }
+                repeat(nelems) { vals.add(raf.readByte(state).toUByte()) }
                 Attribute(name, Datatype.UBYTE, vals)
             }
+
             22 -> {
                 val vals = mutableListOf<Short>()
-                repeat (nelems) { vals.add(raf.readShort(state)) }
+                repeat(nelems) { vals.add(raf.readShort(state)) }
                 Attribute(name, Datatype.SHORT, vals)
             }
+
             23 -> {
                 val vals = mutableListOf<UShort>()
-                repeat (nelems) { vals.add(raf.readShort(state).toUShort()) }
+                repeat(nelems) { vals.add(raf.readShort(state).toUShort()) }
                 Attribute(name, Datatype.USHORT, vals)
             }
+
             24 -> {
                 val vals = mutableListOf<Int>()
-                repeat (nelems) { vals.add(raf.readInt(state)) }
+                repeat(nelems) { vals.add(raf.readInt(state)) }
                 Attribute(name, Datatype.INT, vals)
             }
+
             25 -> {
                 val vals = mutableListOf<UInt>()
-                repeat (nelems) { vals.add(raf.readInt(state).toUInt()) }
+                repeat(nelems) { vals.add(raf.readInt(state).toUInt()) }
                 Attribute(name, Datatype.UINT, vals)
             }
+
             26 -> {
                 val vals = mutableListOf<Long>()
-                repeat (nelems) { vals.add(raf.readLong(state)) }
+                repeat(nelems) { vals.add(raf.readLong(state)) }
                 Attribute(name, Datatype.LONG, vals)
             }
+
             27 -> {
                 val vals = mutableListOf<ULong>()
-                repeat (nelems) { vals.add(raf.readLong(state).toULong()) }
+                repeat(nelems) { vals.add(raf.readLong(state).toULong()) }
                 Attribute(name, Datatype.ULONG, vals)
             }
+
             else -> null
         }
         if (debugAtt) println("      att = '${att?.name}' (class=${vh.className})")
@@ -838,7 +828,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////
 
     // look for RIG messages with an RI message not already found in a VGroup
-    private fun GRiterate(rootBuilder : Group.Builder) {
+    private fun GRiterate(rootBuilder: Group.Builder) {
         if (debugConstruct) println("--GRiterate")
         for (t: Tag in alltags) {
             if (t.tagEnum() == TagEnum.RIG) {
@@ -850,17 +840,17 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     //// sometimes theres a TagDataGroup, sometimes a VGroup with the same RI in it. The VGroup takes precedence.
     //// sometimes only diff is that the VGroup has attributes
 
-    private fun GRVariableFromDataGroup(dataGroup: TagDataGroup, group : Group.Builder): Variable.Builder? {
+    private fun GRVariableFromDataGroup(dataGroup: TagDataGroup, group: Group.Builder): Variable.Builder? {
         val name = "Raster_Image_#" + imageCount
         imageCount++
         return GRVariable(dataGroup, name, dataGroup.nestedTags(), group)
     }
 
-    private fun GRVariableFromVGroup(vgroup: TagVGroup, group : Group.Builder): Variable.Builder? {
+    private fun GRVariableFromVGroup(vgroup: TagVGroup, group: Group.Builder): Variable.Builder? {
         return GRVariable(vgroup, vgroup.name, vgroup.nestedTags(), group)
     }
 
-    private fun GRVariable(owner : Tag, name : String, nested : List<Tag>, group : Group.Builder): Variable.Builder? {
+    private fun GRVariable(owner: Tag, name: String, nested: List<Tag>, group: Group.Builder): Variable.Builder? {
         if (owner.isUsed) {
             return null
         }
@@ -884,31 +874,21 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             if (tage == TagEnum.ID) {
                 dimTag = tag as TagImageDim
                 // see if theres an ID8, set used
-                tagidMap[tagid(tag.refno, TagEnum.ID8.code)] ?.isUsed = true
-            }
-            else if (tage == TagEnum.RI) {
+                tagidMap[tagid(tag.refno, TagEnum.ID8.code)]?.isUsed = true
+            } else if (tage == TagEnum.RI) {
                 rasterImageTag = tag as TagRasterImage
                 if (rasterImageTag!!.isUsed) {
                     return null
                 }
                 // see if theres an RI8, set used
-                tagidMap[tagid(tag.refno, TagEnum.RI8.code)] ?.isUsed = true
-            }
-            else if (tage == TagEnum.LUT) {
+                tagidMap[tagid(tag.refno, TagEnum.RI8.code)]?.isUsed = true
+            } else if (tage == TagEnum.LUT) {
                 lutTag = tag as TagLookupTable
                 ludTag = tagidMap[tagid(tag.refno, TagEnum.LD.code)] as TagImageDim?
                 if (ip8Tag != null) ip8Tag!!.isUsed = true
                 ip8Tag = tagidMap[tagid(tag.refno, TagEnum.IP8.code)] as TagIP8?
                 if (ip8Tag != null) ip8Tag!!.isUsed = true
-            }
-            else if (tage == TagEnum.RIG) { // LOOK does this happen ??
-                val rig = tag as TagDataGroup
-                repeat (rig.nelems) {
-                    val ntagid = tagid(rig.elem_ref[it], rig.elem_code[it])
-                    if (debugGR) println("     GRVariable has nested tag ${tagidName(ntagid)} ")
-                }
-            }
-            else if (tage == TagEnum.VH) {
+            } else if (tage == TagEnum.VH) {
                 val tagVH = tag as TagVH
                 tagVHs.add(tagVH)
             }
@@ -964,6 +944,8 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             val lutVinfo = Vinfo(owner.refno)
 
             val lutnt = tagidMap[tagid(ludTag!!.nt_ref, TagEnum.NT.code)] as TagNT
+            lutnt.isUsed = true
+            lutnt.usedBy = ludTag
             val lutType = H4type.getDataType(lutnt.numberType)
             lutvb.datatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
             lutvb.setDimensionsAnonymous(intArrayOf( /* ludTag!!.ydim, */ ludTag!!.xdim, ludTag!!.nelems))
@@ -987,9 +969,9 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         return vb
     }
 
-    //////////////////////////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun makeVariableFromStringAttribute(group : Group.Builder, att : Attribute) {
+    private fun makeVariableFromStringAttribute(group: Group.Builder, att: Attribute) {
         require(att.isString)
         val svalue = att.values[0] as String
         val vb = Variable.Builder(att.name)
@@ -999,12 +981,11 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 
     // look for tagVHs on the TagDataGroup (NDG); might be attributes
-    private fun addVariableAttributes(ndg: TagDataGroup, vb : Variable.Builder, vinfo: Vinfo) {
-        repeat(ndg.nelems) {
-            val tag = tagidMap.get(tagid(ndg.elem_ref[it], ndg.elem_code[it]))
-            tag?.usedBy = ndg
+    private fun addVariableAttributes(ndg: TagDataGroup, vb: Variable.Builder, vinfo: Vinfo) {
+        ndg.nestedTags().forEach { tag ->
+            tag.usedBy = ndg
             // look for attributes
-            if (tag != null && tag.code == 1962) { // VH
+            if (tag.code == 1962) { // VH
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
                     val att: Attribute? = VStructureReadAttribute(vh)
@@ -1017,7 +998,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         }
     }
 
-    //////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////////////
 
     companion object {
         val log = KotlinLogging.logger("H4builder")
@@ -1025,7 +1006,7 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
         private val H4HEAD_STRING = String(H4HEAD, StandardCharsets.UTF_8)
         private val maxHeaderPos: Long = 500000 // header's gotta be within this
 
-        fun isValidFile(raf: OpenFile, state : OpenFileState): Boolean {
+        fun isValidFile(raf: OpenFile, state: OpenFileState): Boolean {
             val size: Long = raf.size
 
             // search forward for the header
@@ -1059,36 +1040,35 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
             return result + result2
         }
 
-        fun tagidName(tagid : Int): String {
+        fun tagidName(tagid: Int): String {
             val code = (tagid shr 16) and 0x3FFF
             val refno = (tagid and 0xffff)
             return "ref=$refno code=${code}"
         }
 
-        fun tagidNameR(tagid : Int): String {
+        fun tagidNameR(tagid: Int): String {
             val refno = (tagid shr 16) and 0xFFFF
             val code = (tagid and 0x3fff)
             return "ref=$refno code=${code}"
         }
     }
 
-    fun isNestedGroup(vgroup : TagVGroup) : Boolean {
-        if (vgroup.name.contains("RIG0"))
+    fun isNestedGroup(vgroup: TagVGroup): Boolean {
+        if (vgroup.name.contains("RIG0")) { // ignoring to agree with the C library
+            vgroup.isUsed = true
             return false
+        }
         val className = vgroup.className
         if (className.startsWith("Var0") || className.startsWith("Att0") || className.startsWith("CDF0")
             || className.startsWith("RI0")
-            || className.startsWith("Dim0") || className.startsWith("DimVal0") || className.startsWith("UDim0")) {
+            || className.startsWith("Dim0") || className.startsWith("DimVal0") || className.startsWith("UDim0")
+        ) {
             return false
         }
 
         var isGroup = false
-        repeat(vgroup.nelems) {
-            val tagRef = vgroup.elem_ref[it]
-            val tagCode = vgroup.elem_code[it]
-            val tagid = tagid(tagRef, tagCode)
-            val tag = tagidMap[tagid]
-            if (tag != null && (tagCode == TagEnum.VG.code || tagCode == TagEnum.VH.code || tagCode == TagEnum.NDG.code)) {
+        vgroup.nestedTags().forEach { tag ->
+            if (tag.code == TagEnum.VG.code || tag.code == TagEnum.VH.code || tag.code == TagEnum.NDG.code) {
                 isGroup = true
             }
         }
@@ -1096,13 +1076,13 @@ class H4builder(val raf : OpenFile, val valueCharset : Charset) {
     }
 }
 
-private class Group4(val vgroup : TagVGroup) {
+private class Group4(val vgroup: TagVGroup) {
     val subgroups = mutableListOf<Group4>()
     override fun toString(): String {
         return "${vgroup.name}/${vgroup.className}"
     }
 }
 
-fun isDimClass(className : String) : Boolean {
+fun isDimClass(className: String): Boolean {
     return (className == "Dim0.0") or (className == "UDim0.0")
 }
