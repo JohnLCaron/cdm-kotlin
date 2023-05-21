@@ -94,6 +94,7 @@ class HCheader(val filename: String) {
         addFileVersionAttribute(session, rootBuilder)
         addAnnotations(session, rootBuilder)
 
+        rootBuilder.removeEmptyGroups()
         return rootBuilder
     }
 
@@ -330,7 +331,7 @@ class HCheader(val filename: String) {
                 VgroupDim(ref_array, tag_array)
             } else if (vclass == "Var0.0") {
                 VgroupVar(session, gb, ref_array, tag_array)
-          } else if (vclass == "CDF0.0") {
+            } else if (vclass == "CDF0.0") {
                 // only looking at the attributes on the group
                 VgroupCDF(session, gb, vgroup_id)
             } else {

@@ -65,6 +65,7 @@ enum class TagEnum(val desc: String, val code: Int) {
     SDT("Transpose", 709), // obsolete
     SDLNK("Links related to the dataset", 710), // links SDG and NDG
     NDG("Numeric Group", 720),
+    IGNORE("Ignore", 721),
     /* Objects of tag 721 are never actually written to the file.  The tag is needed to make things easier mixing
        DFSD and SD style objects in the same file */
     CAL("Calibration information", 731),
@@ -105,7 +106,7 @@ enum class TagEnum(val desc: String, val code: Int) {
             return te?: NONE
         }
 
-        val obsolete = setOf(ID8, IP8, RI8, CI8, II8, SDG, SDLNK) // LOOK
+        val obsolete = setOf(ID8, RI8, CI8, II8, SDG, SDLNK, IGNORE) // LOOK
     }
 
     override fun toString(): String {

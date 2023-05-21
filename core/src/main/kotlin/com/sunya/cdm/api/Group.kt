@@ -181,6 +181,12 @@ class Group(orgName : String,
             return if (egroup == null) false else groups.remove(egroup)
         }
 
+        fun removeEmptyGroups() : Boolean {
+            this.groups.removeAll { subgroup -> subgroup.removeEmptyGroups() }
+            return (this.groups.isEmpty() && this.variables.isEmpty() && this.attributes.isEmpty()
+                    && this.typedefs.isEmpty() && this.dimensions.isEmpty())
+        }
+
         // find the first nested group that matches the short name
         fun findNestedGroupByShortName(shortName : String) : Builder? {
             var found : Builder? = groups.find { it.name == shortName }

@@ -592,8 +592,11 @@ fun compareIterateNetchdf(myfile: Netchdf, cfile: Netchdf, varname: String?, sec
             val cvar = cfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
             if (cvar == null) {
                 println(" *** cant find ${myvar.fullname()} in cfile")
-            } else {
+            } else try {
                 compareOneVarIterate(myvar, myfile, cvar, cfile, null)
+            } catch (e :Throwable) {
+                println(" *** FAILED ${myvar.fullname()} ${e.message}")
+                throw e
             }
         }
     }
