@@ -50,8 +50,11 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 
     internal fun readArrayData(v2: Variable, filled: Section): ArrayTyped<*> {
-        val vinfo = v2.spObject as Vinfo4
+        if (v2.nelems == 0L) {
+            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+        }
 
+        val vinfo = v2.spObject as Vinfo4
         val datatype = v2.datatype
         val nbytes = filled.totalElements * datatype.size
         if (nbytes == 0L) {
@@ -78,6 +81,10 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 
     override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
+
         val filled = SectionPartial.fill(section, v2.shape)
         return HCmaxIterator(v2, filled, maxElements ?: 100_000)
     }

@@ -935,6 +935,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             lutvb.datatype = Datatype.UBYTE
             lutvb.setDimensionsAnonymous(intArrayOf(256, 3))
             lutVinfo.start = ip8Tag!!.offset
+            lutVinfo.elemSize = 1
             lutvb.spObject = lutVinfo
             group.addVariable(lutvb)
 
@@ -950,6 +951,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             lutvb.datatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
             lutvb.setDimensionsAnonymous(intArrayOf( /* ludTag!!.ydim, */ ludTag!!.xdim, ludTag!!.nelems))
             lutVinfo.start = lutTag!!.offset
+            lutVinfo.elemSize = lutvb.datatype!!.size
             lutvb.spObject = lutVinfo
             group.addVariable(lutvb)
         }
