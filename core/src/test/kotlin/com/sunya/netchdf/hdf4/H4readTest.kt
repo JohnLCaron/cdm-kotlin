@@ -1,6 +1,5 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.SectionPartial
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.openNetchdfFile
@@ -15,6 +14,7 @@ import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import java.util.*
 import java.util.stream.Stream
+import kotlin.test.assertTrue
 
 class H4readTest {
 
@@ -77,7 +77,9 @@ class H4readTest {
         }
     }
 
-    @ParameterizedTest
+    // not needed - done in netchdfTest
+    // 2 hours with, 1 hour 12 min without (luckily get to divide by 24 for wall clock)
+    // @ParameterizedTest
     @MethodSource("params")
     fun readData(filename: String) {
         readNetchdfData(filename, null, null, true)
@@ -86,19 +88,18 @@ class H4readTest {
 
     @ParameterizedTest
     @MethodSource("params")
-    fun readH4DataCheckUnused(filename: String) {
-        // println("=============================================================")
+    fun readH4CheckUnused(filename: String) {
         Hdf4File(filename).use { h4file ->
             println("--- ${h4file.type()} $filename ")
-            readMyData(h4file, null, null)
-            h4file.header.showTags(true, true)
+            assertTrue( 0 == h4file.header.showTags(true, true, false))
         }
     }
 
-    @ParameterizedTest
+    // takes too long : 47 hours with, 2 hours without (luckily get to divide by 24 for wall clock)
+    // @ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
-        readNetchIterate(filename)
+        compareNetchIterate(filename)
     }
 
 }
