@@ -157,8 +157,9 @@ class HCcompare {
 
     @Test
     fun problemReadData() {
-        readH4header(testData + "hdf4/nsidc/LP_DAAC/MOD/MOD14.A2007101.0345.005.2007101114133.hdf")
-        testIterateWithClib(testData + "hdf4/nsidc/LP_DAAC/MOD/MOD14.A2007101.0345.005.2007101114133.hdf")
+        val filename = testData + "hdf4/nsidc/GESC/AIRS/AIRS.2006.08.28.A.L1B.Browse_AMSU.v4.0.9.0.G06241184547.hdf"
+        readH4header(filename)
+        testIterateWithClib(filename)
     }
 
     //////////////////////////////////////////////////////////////////////

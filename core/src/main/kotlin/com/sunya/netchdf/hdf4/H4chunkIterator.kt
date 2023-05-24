@@ -72,7 +72,6 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
             Datatype.DOUBLE -> ArrayDouble(shape, bb)
             Datatype.LONG -> ArrayLong(shape, bb)
             Datatype.ULONG -> ArrayULong(shape, bb)
-            Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
 

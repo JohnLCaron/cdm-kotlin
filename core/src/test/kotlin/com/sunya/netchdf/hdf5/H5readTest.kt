@@ -6,7 +6,7 @@ import com.sunya.cdm.api.Variable
 import com.sunya.cdm.api.chunkConcurrent
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.util.Stats
-import com.sunya.netchdf.readNetchIterate
+import com.sunya.netchdf.compareNetchIterate
 import com.sunya.netchdf.readNetchdfData
 import com.sunya.testdata.H5Files
 import com.sunya.testdata.testData
@@ -74,7 +74,7 @@ class H5readTest {
 
     @Test
     fun timeIterateProblem() {
-        readNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
+        compareNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
     }
 
     @Test
@@ -106,7 +106,7 @@ class H5readTest {
     //@ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
-        readNetchIterate(filename, null)
+        compareNetchIterate(filename, null)
     }
 
     //@ParameterizedTest

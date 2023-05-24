@@ -24,7 +24,9 @@ data class IndexSpace(val start : LongArray, val shape : LongArray) {
     }
 
     fun contains(pt : LongArray): Boolean {
-        require(rank == pt.size)
+        if (rank != pt.size) {
+            return false
+        }
         ranges.forEachIndexed { idx, range ->
             if (!range.contains(pt[idx])) {
                 return false
@@ -34,7 +36,9 @@ data class IndexSpace(val start : LongArray, val shape : LongArray) {
     }
 
     fun contains(other : IndexSpace): Boolean {
-        require(rank == other.rank)
+        if (rank != other.rank) {
+            return false
+        }
         ranges.forEachIndexed { idx, range : LongProgression ->
             val o : LongProgression = other.ranges[idx]
             if (!range.contains(o)) {

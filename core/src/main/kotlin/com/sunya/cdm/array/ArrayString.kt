@@ -6,21 +6,23 @@ import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
+// fake ByteBuffer
 class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(ByteBuffer.allocate(1), Datatype.STRING, shape) {
 
     constructor(shape : IntArray, valueArray : Array<String>) : this (shape, valueArray.toList())
 
-    override fun iterator(): Iterator<String> = BufferIterator()
-    private inner class BufferIterator : AbstractIterator<String>() {
+    override fun iterator(): Iterator<String> = StringIterator()
+    private inner class StringIterator : AbstractIterator<String>() {
         private var idx = 0
         override fun computeNext() = if (idx >= values.size) done() else setNext(values[idx++])
     }
 
-    override fun toString(): String {
+    override fun showValues(): String {
         return buildString {
-            append("shape=${shape.contentToString()} data= ")
-            for (i in 0 until values.size) { append("'${values[i]}',")}
-            append("\n")
+            val iter = this@ArrayString.iterator()
+            for (value in iter) {
+                append("'$value',")
+            }
         }
     }
 

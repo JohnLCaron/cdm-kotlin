@@ -15,6 +15,12 @@ dependencies {
     implementation(libs.guava)
     implementation(kotlin("test"))
     implementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
+
+    // runTest() for running suspend functions in tests
+    implementation(libs.kotlinx.coroutines.test)
+
+    // Fancy property-based testing
+    implementation(libs.kotest.property)
 }
 
 tasks {

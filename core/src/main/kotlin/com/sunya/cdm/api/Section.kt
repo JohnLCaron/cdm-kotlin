@@ -17,6 +17,10 @@ data class Section(val ranges : List<LongProgression>, val varShape : LongArray)
 
     constructor(varShape: LongArray) : this( varShape.map {
         LongProgression.fromClosedRange(0L, it - 1L, 1L) }, varShape)
+
+    constructor(start : IntArray, len : IntArray, varShape : LongArray) : this(
+        start.mapIndexed { idx, first -> LongProgression.fromClosedRange(first.toLong(), (first + len[idx] - 1).toLong(), 1L) },
+        varShape)
 }
 
 /** A partially filled section of multidimensional array indices. */

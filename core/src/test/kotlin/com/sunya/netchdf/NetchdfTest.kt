@@ -73,7 +73,7 @@ class NetchdfTest {
 
     @Test
     fun testNetchIterate() { // cant readArrayData too many bytes= 2_524_250_575
-        readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
+        compareNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
         // readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc", "/xma/dialoop_back")
     }
 
@@ -115,10 +115,11 @@ class NetchdfTest {
         readNetchdfData(filename)
     }
 
+    // TODO too slow
     // @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchIterate(filename: String) {
-        readNetchIterate(filename)
+        compareNetchIterate(filename)
     }
 }
 
@@ -243,7 +244,7 @@ fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
 //////////////////////////////////////////////////////////////////////////////////////
 // compare reading data regular and through the chunkIterate API
 
-fun readNetchIterate(filename: String, varname : String? = null, compare : Boolean = true) {
+fun compareNetchIterate(filename: String, varname : String? = null, compare : Boolean = true) {
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
             println("*** not a netchdf file = $filename")
@@ -265,6 +266,7 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
     }
 }
 
+// compare readArrayData with chunkIterator
 fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
     val varBytes = myvar.nelems

@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 4/10/2023_
+_last updated: 5/21/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -8,7 +8,7 @@ netcdf3, netcdf4, hdf4, hdf5, hdf-eos2 and hdf-eos5 data files.
 
 Please contact me if you'd like to help out. Especially needed are test datasets from all the important data archives!!
 
-#### Why this library? 
+### Why this library? 
 
 There is so much important scientific data stored in the NetCDF and HDF file formats, that those formats will 
 never go away. It is important that there be maintainable, independent libraries to read these files forever.
@@ -20,7 +20,7 @@ By focusing on read-only access to just these formats, the API and the code are 
 In short, a library that focuses on simplicity and clarity is a safeguard for the huge investment in these
 scientific datasets.
 
-#### Why do we need an alternative library from the standard reference libraries?
+### Why do we need an alternative library from the standard reference libraries?
 
 The reference libraries are well maintained but complex. They are coded in C, which is a difficult language to master
 and keep bug free, with implication for memory safety and security. The libraries require various machine and OS dependent
@@ -47,7 +47,7 @@ but does not support concurrent reading. These are serious limitations for high 
 Our library tries to ameliorate these problems for scientists and the interested public to access the data without
 having to become specialists in the file formats.
 
-#### Why kotlin?
+### Why kotlin?
 
 Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects. 
 It has many new features for safer (like null-safety) and more concise (like functional idioms) code, and is an important 
@@ -68,26 +68,35 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
 With these tools we can be confident that our library gives the same results as the reference libraries.
 
-Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC for the code classes.
+Currently (5/21/23) we have this coverage from core/test:
+
+````
+ cdm      81% (1318/1616) LOC
+ hdf4     81% (1703/2081) LOC
+ hdf5     81% (2268/2787) LOC
+ netcdf3  77% (229/297) LOC
+ ````
+
+Core library has ~6500 LOC.
 
 We have ~1500 test files:
 
 ````
- hdf4      = 201 files
+ hdf4      = 205 files
  hdf-eos2  = 267 files
- hdf5      = 144 files
- hdf-eos5  =  19 files
- netcdf3   = 663 files
- netcdf3.2 =  84 files
+ hdf5      = 113 files
+ hdf-eos5  =  18 files
+ netcdf3   = 664 files
+ netcdf3.2 =  81 files
  netcdf3.5 =   1 files
- netcdf4   =  99 files
+ netcdf4   = 121 files
  ````
 
 We need to get representative samples of recent files for improved testing and code coverage.
 
 ### Scope
 
-We have the goal to give read access to all the content in Netcdf, HDF5, HDF4 and HDF-EOS files. 
+We have the goal to give read access to all the content in NetCDF, HDF5, HDF4 and HDF-EOS files. 
 
 The library will be thread-safe for reading multiple files concurrently.
 
@@ -111,3 +120,25 @@ We do not plan to provide write capabilities.
 * Opaque: hdf5 makes arrays of Opaque all the same size, which gives up some of its usefulness. If theres a need,
   we will allow Opaque(*) indicating that the sizes can vary.
 * Attributes can be of type REFERENCE, with value the full path name of the referenced dataset.
+
+
+##
+An independent implementation of HDF4 in kotlin.
+
+I am working on an independent library implementation of HDF4/HDF5/HDF-EOS in kotlin here. 
+This will be complementary to the important work of maintaining the primary HDF libraries.
+The goal is to give read access to all the content in NetCDF, HDF5, HDF4 and HDF-EOS files.
+
+The core library is pure Kotlin. 
+Kotlin currently runs on JVM's as far back as Java 8. However, I am targeting the latest LTS
+(long term support) Java version, and will not be explicitly supporting older versions.
+
+A separate library tests the core against the C libraries.
+The key to this will be if members of the HDF community contribute test files to make sure
+the libraries agree. I have a large cache of test files from my work on netcdf-java, but these
+are mostly 10-20 years old.
+
+Currently the code is in alpha, and you must build it yourself with gradle. 
+When it hits beta, I will start releasing compiled versions to Maven Central.
+
+I welcome any feedback, questions and concerns. Thanks!

@@ -62,8 +62,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         }
 
         if (vinfo.value != null) {
-            // TODO subset
-            return vinfo.value!!
+            return vinfo.value!!.section(filled)
 
         } else if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)

@@ -532,7 +532,6 @@ class TagFV(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
             Datatype.DOUBLE -> fillValueBB.getDouble()
             Datatype.LONG -> fillValueBB.getLong()
             Datatype.ULONG -> fillValueBB.getLong().toULong()
-            Datatype.OPAQUE -> fillValueBB
             else -> null
         }
         return fillValue

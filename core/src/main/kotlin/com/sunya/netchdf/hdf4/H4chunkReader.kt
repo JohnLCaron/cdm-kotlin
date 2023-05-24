@@ -60,7 +60,6 @@ class H4chunkReader(val h4 : H4builder) {
             Datatype.DOUBLE -> ArrayDouble(shape, bb)
             Datatype.LONG -> ArrayLong(shape, bb)
             Datatype.ULONG -> ArrayULong(shape, bb)
-            Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
         return result
