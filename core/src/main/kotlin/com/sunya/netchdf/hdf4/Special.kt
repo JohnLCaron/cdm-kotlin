@@ -1,11 +1,12 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.array.ArrayInt
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 
 // p 152: chunked element description record
-class SpecialChunked(raf : OpenFile, state : OpenFileState) {
+class SpecialChunked(raf : OpenFile, state : OpenFileState, val owner : TagData) {
     val sp_tag_head_len : Int
     val version: Byte
     val specialnessFlag: Byte
@@ -54,18 +55,18 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
         sp_tag_header = raf.readBytes(state, sp_header_len)
     }
 
-    internal fun getDataChunks(h4file: Hdf4File): List<SpecialDataChunk> {
+    internal fun getDataChunks(header: H4builder, readData : Boolean = true): List<SpecialDataChunk> {
         if (dataChunks == null) {
-            val chunkTableTag = h4file.header.tagidMap[H4builder.tagid(chunk_tbl_ref, chunk_tbl_tag)] as TagVH
-            val vinfo = Vinfo(chunkTableTag.refno) // so we dont have to create a phone variable
-            vinfo.tagData = h4file.header.tagidMap[H4builder.tagid(chunkTableTag.refno, TagEnum.VS.code)] as TagData
+            val chunkTableTag = header.tagidMap[H4builder.tagid(chunk_tbl_ref, chunk_tbl_tag)] as TagVH
+            val vinfo = Vinfo(chunkTableTag.refno) // so we dont have to create a phony variable
+            vinfo.tagData = header.tagidMap[H4builder.tagid(chunkTableTag.refno, TagEnum.VS.code)] as TagData
             vinfo.elemSize = chunkTableTag.ivsize
-            vinfo.setLayoutInfo(h4file)
-            val shape = intArrayOf (chunkTableTag.nelems)
+            vinfo.setLayoutInfo(header)
+            val shape = longArrayOf (chunkTableTag.nelems.toLong())
+            val section = Section(shape)
 
             val members = chunkTableTag.readStructureMembers()
-            val sdataArray = readStructureDataArray(h4file.header, vinfo, shape, members)
-            // println(sdataArray)
+            val sdataArray = readStructureDataArray(header, vinfo, section, members)
 
             // reading in the entire chunkList
             val originM = members.find{ it.name == "origin" }!!
@@ -85,17 +86,18 @@ class SpecialChunked(raf : OpenFile, state : OpenFileState) {
 
                 val tag = tagM.value(sdata) as UShort
                 val ref = refM.value(sdata) as UShort
-                val data  = h4file.header.tagidMap[H4builder.tagid(ref.toInt(), tag.toInt())]
+                val data  = header.tagidMap[H4builder.tagid(ref.toInt(), tag.toInt())]
                 if (data != null) { // missing?
                     val dataAs = data as TagData
                     isCompressed = (dataAs.compress != null) // dont know if its compressed or not until you read the data. barf.
-                    chunkList.add(SpecialDataChunk(origin, chunkLength, dataAs))
+                    if (readData) chunkList.add(SpecialDataChunk(origin, chunkLength, dataAs))
                     data.isUsed = true
+                    data.usedBy = owner
                 }
             }
-            dataChunks = chunkList
+            if (readData) dataChunks = chunkList
         }
-        return dataChunks!!
+        return if (readData) dataChunks!! else emptyList()
     }
 
     fun detail(): String {
@@ -144,7 +146,7 @@ internal class SpecialDataChunk(
 private const val warn = false
 
 // p 151
-internal class SpecialComp(raf : OpenFile, state : OpenFileState) {
+internal class SpecialComp(raf : OpenFile, state : OpenFileState, val owner : TagData) {
     val version: Short
     val model_type: Short
     val compress_type: Int
@@ -201,6 +203,7 @@ internal class SpecialComp(raf : OpenFile, state : OpenFileState) {
             dataTag = h4.tagidMap[H4builder.tagid(data_ref, TagEnum.COMPRESSED.code)] as TagData
             if (dataTag == null) throw IllegalStateException("TagCompress not found for " + detail())
             dataTag!!.isUsed = true
+            dataTag!!.usedBy = owner
         }
         return dataTag!!
     }
@@ -227,7 +230,7 @@ internal class SpecialComp(raf : OpenFile, state : OpenFileState) {
 }
 
 // p 145
-internal class SpecialLinked(raf : OpenFile, state : OpenFileState) {
+internal class SpecialLinked(raf : OpenFile, state : OpenFileState, val owner : TagData) {
     val length : Int
     val first_len : Int
     val blk_len: Short
@@ -252,7 +255,8 @@ internal class SpecialLinked(raf : OpenFile, state : OpenFileState) {
                     h4.tagidMap.get(H4builder.tagid(next, TagEnum.LINKED.code)) as TagLinkedBlock?
                         ?: throw IllegalStateException("TagLinkedBlock not found for " + detail())
                 tag.isUsed = true
-                tag.read2(h4, num_blk.toInt(), dataBlocks)
+                tag.usedBy = owner
+                tag.read2(h4, num_blk.toInt(), dataBlocks, owner)
                 next = tag.next_ref // (short) (tag.next_ref & 0x3FFF);
             }
             linkedDataBlocks = dataBlocks
@@ -265,6 +269,6 @@ internal class SpecialLinked(raf : OpenFile, state : OpenFileState) {
     }
 
     fun detail(): String {
-        return ("SpecialLinked length=$length first_len=$first_len blk_len=$blk_len num_blk=$num_blk link_ref=$link_ref")
+        return (" SpecialLinked length=$length first_len=$first_len blk_len=$blk_len num_blk=$num_blk link_ref=$link_ref")
     }
 }

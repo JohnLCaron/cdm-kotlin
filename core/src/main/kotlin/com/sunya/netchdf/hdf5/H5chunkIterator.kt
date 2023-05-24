@@ -1,9 +1,6 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.ArraySection
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
@@ -28,7 +25,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         vinfo = v2.spObject as DataContainerVariable
 
         h5type = vinfo.h5type
-        elemSize = vinfo.storageDims[vinfo.storageDims.size - 1] // last one is always the elements size
+        elemSize = vinfo.storageDims[vinfo.storageDims.size - 1].toInt() // last one is always the elements size
         datatype = h5type.datatype()
 
         val btreeNew = BTree1(h5, vinfo.dataPos, 1, v2.shape, vinfo.storageDims)
@@ -83,12 +80,12 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         bb.order(h5type.endian)
 
         val array = if (h5type.datatype5 == Datatype5.Vlen) {
-            h5.processVlenIntoArray(h5type, intersectSpace.shape, bb, intersectSpace.totalElements.toInt(), elemSize)
+            h5.processVlenIntoArray(h5type, intersectSpace.shape.toIntArray(), bb, intersectSpace.totalElements.toInt(), elemSize)
         } else {
-            h5.processDataIntoArray(bb, datatype, intersectSpace.shape, h5type, elemSize)
+            h5.processDataIntoArray(bb, datatype, intersectSpace.shape.toIntArray(), h5type, elemSize)
         }
 
 
-        return ArraySection(array, intersectSpace.section()) // LOOK use space instead of Section ??
+        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 }

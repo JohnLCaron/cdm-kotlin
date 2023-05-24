@@ -5,6 +5,7 @@ package com.sunya.cdm.api
  * @param cdlName name in CDL
  * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
+ * @param isVlen TODO HDF5 needs to track if this in Vlen or regular String.
  */
 data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
 
@@ -25,10 +26,11 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
         val ENUM2 = Datatype("ushort enum", 2)
         val ENUM4 = Datatype("uint enum", 4)
 
-        //// object types are variable length; inside a structure, they have 32 bit index onto a heap
+        //// object types have variable length storage; inside StructureData, they have 32 bit index onto a heap
         val STRING = Datatype("string", 4)
-        val COMPOUND = Datatype("compound", 4)
         val OPAQUE = Datatype("opaque", 4)
+        // unlike netcdf-java, we follow the netcdf4/hdf5 convention, making Vlen and Compound into separate types
+        val COMPOUND = Datatype("compound", 4)
         val VLEN = Datatype("vlen", 4)
         val REFERENCE = Datatype("reference", 4) // string = full path to referenced dataset
     }
@@ -38,18 +40,18 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
     }
 
     val isVlenString : Boolean
-        get() = this.cdlName == "string" && (isVlen != null) && isVlen
+        get() = (this == STRING) && (isVlen != null) && isVlen
 
     val isNumeric: Boolean
-        get() = (this == FLOAT) || (this == DOUBLE) || isIntegral
+        get() = isFloatingPoint || isIntegral
 
+    // subclass of Number
     val isNumber: Boolean
         get() = (this == FLOAT) || (this == DOUBLE) || (this == BYTE) || (this == INT) || (this == SHORT) ||
                 (this == LONG)
 
-
     val isUnsigned: Boolean
-        get() = (this == UBYTE) || (this == USHORT) || (this == UINT) || (this == ULONG)
+        get() = (this == UBYTE) || (this == USHORT) || (this == UINT) || (this == ULONG) || isEnum
 
     val isIntegral: Boolean
         get() = ((this == BYTE) || (this == INT) || (this == SHORT) || (this == LONG)
@@ -83,6 +85,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
 
     fun withVlen(isVlen : Boolean) : Datatype = this.copy(isVlen = isVlen)
 
+    // like enum, equals just compares the type, ignoring the "with" properties.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false

@@ -92,7 +92,7 @@ fun H5builder.readDataLayoutMessage(state : OpenFileState) : DataLayoutMessage {
             2 -> DataLayoutChunked(version, rawdata.getIntArray("dims"), rawdata.getLong("btreeAddress"), rawdata.getInt("chunkedElementSize"))
             else -> throw RuntimeException()
         }
-    } else throw RuntimeException()
+    } else throw RuntimeException() // TODO version 4 not supported
 
 }
 
@@ -120,8 +120,8 @@ data class DataLayoutCompact(val dims : IntArray, val compactData: ByteBuffer) :
 data class DataLayoutContiguous(val dims : IntArray, val dataAddress: Long) : DataLayoutMessage(1) {
     override fun show() : String = "class=$layoutClass dims=${dims.contentToString()} dataAddress=$dataAddress"
 }
-data class DataLayoutChunked(val version : Int, val dims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2) {
-    override fun show(): String = "class=$layoutClass dims=${dims.contentToString()} btreeAddress=$btreeAddress chunkedElementSize=$chunkedElementSize"
+data class DataLayoutChunked(val version : Int, val chunkDims : IntArray, val btreeAddress: Long, val chunkedElementSize : Int) : DataLayoutMessage(2) {
+    override fun show(): String = "class=$layoutClass dims=${chunkDims.contentToString()} btreeAddress=$btreeAddress chunkedElementSize=$chunkedElementSize"
 }
 
 data class DataLayoutCompact3(val compactData: ByteBuffer) : DataLayoutMessage(0)

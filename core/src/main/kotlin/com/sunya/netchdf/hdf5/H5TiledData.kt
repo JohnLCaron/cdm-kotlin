@@ -48,7 +48,7 @@ internal class H5TiledData(val btree1 : BTree1) {
     }
 
     // optimize later
-    private fun findEntryContainingKey(parent : BTree1.Node, key : IntArray) : BTree1.DataChunkEntry? {
+    private fun findEntryContainingKey(parent : BTree1.Node, key : LongArray) : BTree1.DataChunkEntry? {
         var foundEntry : BTree1.DataChunkEntry? = null
         for (idx in 0 until parent.nentries) {
             foundEntry = parent.dataChunkEntries[idx]
@@ -67,7 +67,7 @@ internal class H5TiledData(val btree1 : BTree1) {
             throw RuntimeException("TiledH5Data findEntryContainingKey cant find key ${key.contentToString()}")
         }
         if (parent.level == 0) {
-            return if (tiling.compare(key, foundEntry.key.offsets) == 0) foundEntry else null
+            return if (tiling.compare(key, foundEntry.key.offsets) == 0L) foundEntry else null
         }
         val node= readNode(foundEntry.childAddress, parent)
         return findEntryContainingKey(node, key)
@@ -76,7 +76,7 @@ internal class H5TiledData(val btree1 : BTree1) {
     fun dataChunks(wantSpace : IndexSpace) = Iterable { DataChunkIterator(wantSpace) }
 
     private inner class DataChunkIterator(wantSpace : IndexSpace) : AbstractIterator<BTree1.DataChunkEntry>() {
-        val tileIterator : Iterator<IntArray>
+        val tileIterator : Iterator<LongArray>
 
         init {
             val tileSection = tiling.section(wantSpace) // section in tiles that we want

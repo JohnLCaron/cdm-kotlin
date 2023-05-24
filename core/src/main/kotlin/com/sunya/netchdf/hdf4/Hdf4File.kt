@@ -15,14 +15,13 @@ import java.util.zip.InflaterInputStream
 
 class Hdf4File(val filename : String) : Netchdf {
     private val raf: OpenFile = OpenFile(filename)
-    internal val header: H4builder
+    val header: H4builder
     private val rootGroup: Group
 
     var valueCharset: Charset = StandardCharsets.UTF_8
 
     init {
         header = H4builder(raf, valueCharset)
-        header.make()
         rootGroup = header.rootBuilder.build(null)
     }
 
@@ -37,8 +36,11 @@ class Hdf4File(val filename : String) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val filledSection = Section.fill(section, v2.shape)
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        if (v2.nelems == 0L) {
+            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+        }
+        val filledSection = SectionPartial.fill(section, v2.shape)
         return if (v2.datatype == Datatype.COMPOUND) {
             readStructureDataArray(v2, filledSection)
         } else {
@@ -46,8 +48,11 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
-        val wantSection = Section.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
+        val wantSection = SectionPartial.fill(section, v2.shape)
         val vinfo = v2.spObject as Vinfo
 
         return if (vinfo.isChunked) {  // LOOK isLinked?
@@ -57,16 +62,16 @@ class Hdf4File(val filename : String) : Netchdf {
         }
     }
 
-    private inner class H4maxIterator(val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class H4maxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
-        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+        private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
         override fun computeNext() {
             if (maxIterator.hasNext()) {
                 val indexSection = maxIterator.next()
                 if (debugChunking) println("  chunk=${indexSection}")
 
-                val section = indexSection.section()
+                val section = indexSection.section(v2.shape)
                 val array = if (v2.datatype == Datatype.COMPOUND) {
                     readStructureDataArray(v2, section)
                 } else {
@@ -80,14 +85,15 @@ class Hdf4File(val filename : String) : Netchdf {
     }
 
     private fun readRegularDataArray(v: Variable, section: Section): ArrayTyped<*> {
+        requireNotNull(v.spObject) { "Variable ${v.name}"}
         val vinfo = v.spObject as Vinfo
 
         if (vinfo.tagData != null) {
-            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+            vinfo.setLayoutInfo(header) // make sure needed info is present LOOK why wait until now ??
         }
 
         if (vinfo.hasNoData) {
-            return ArraySingle(section.shape, v.datatype, vinfo.fillValue)
+            return ArraySingle(section.shape.toIntArray(), v.datatype, vinfo.fillValue)
         }
 
         if (vinfo.svalue != null) {
@@ -96,12 +102,12 @@ class Hdf4File(val filename : String) : Netchdf {
 
         if (!vinfo.isCompressed) {
             if (!vinfo.isLinked && !vinfo.isChunked) {
-                val layout = LayoutRegular(vinfo.start, vinfo.elemSize, v.shape, IndexSpace(section))
+                val layout = LayoutRegular(vinfo.start, vinfo.elemSize, section)
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isLinked) {
                 // val layout = LayoutSegmentedOld(vinfo.segPos, vinfo.segSize, vinfo.elemSize, v.shape, section)
-                val layout = LayoutSegmented(vinfo.segPos, vinfo.segSize, vinfo.elemSize, v.shape, IndexSpace(section))
+                val layout = LayoutSegmented(vinfo.segPos, vinfo.segSize, vinfo.elemSize, section)
                 return readDataWithFill(raf, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isChunked) {
@@ -109,13 +115,13 @@ class Hdf4File(val filename : String) : Netchdf {
             }
         } else {
             if (!vinfo.isLinked && !vinfo.isChunked) {
-                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, IndexSpace(section))
+                val layout = LayoutRegular(0, vinfo.elemSize, section)
                 val input: InputStream = getCompressedInputStream(header, vinfo)
                 val reader = PositioningDataInputStream(input)
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
 
             } else if (vinfo.isLinked) {
-                val layout = LayoutRegular(0, vinfo.elemSize, v.shape, IndexSpace(section))
+                val layout = LayoutRegular(0, vinfo.elemSize, section)
                 val input: InputStream = getLinkedCompressedInputStream(header, vinfo)
                 val reader = PositioningDataInputStream(input)
                 return readDataWithFill(reader, layout, v, vinfo.fillValue, section)
@@ -130,7 +136,7 @@ class Hdf4File(val filename : String) : Netchdf {
     // LOOK use fillValue
     private fun readDataWithFill(reader: ReaderIntoByteArray, layout: Layout, v2: Variable, fillValue: Any?, wantSection: Section)
             : ArrayTyped<*> {
-        require(wantSection.size() == layout.totalNelems)
+        require(wantSection.totalElements == layout.totalNelems)
         val vinfo = v2.spObject as Vinfo
         val totalNbytes = (vinfo.elemSize * layout.totalNelems)
         require(totalNbytes < Int.MAX_VALUE)
@@ -147,18 +153,19 @@ class Hdf4File(val filename : String) : Netchdf {
         }
         values.position(0)
 
+        val shape = wantSection.shape.toIntArray()
         return when (v2.datatype) {
-            Datatype.BYTE -> ArrayByte(wantSection.shape, values)
-            Datatype.UBYTE -> ArrayUByte(wantSection.shape, values)
-            Datatype.CHAR, Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values)
-            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values)
-            Datatype.INT -> ArrayInt(wantSection.shape, values)
-            Datatype.UINT -> ArrayUInt(wantSection.shape, values)
-            Datatype.LONG -> ArrayLong(wantSection.shape, values)
-            Datatype.ULONG -> ArrayULong(wantSection.shape, values)
-            Datatype.SHORT -> ArrayShort(wantSection.shape, values)
-            Datatype.USHORT -> ArrayUShort(wantSection.shape, values)
+            Datatype.BYTE -> ArrayByte(shape, values)
+            Datatype.UBYTE -> ArrayUByte(shape, values)
+            Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+            Datatype.DOUBLE -> ArrayDouble(shape, values)
+            Datatype.FLOAT -> ArrayFloat(shape, values)
+            Datatype.INT -> ArrayInt(shape, values)
+            Datatype.UINT -> ArrayUInt(shape, values)
+            Datatype.LONG -> ArrayLong(shape, values)
+            Datatype.ULONG -> ArrayULong(shape, values)
+            Datatype.SHORT -> ArrayShort(shape, values)
+            Datatype.USHORT -> ArrayUShort(shape, values)
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }
@@ -168,45 +175,46 @@ class Hdf4File(val filename : String) : Netchdf {
         val vinfo = v2.spObject as Vinfo
 
         if (vinfo.tagData != null) {
-            vinfo.setLayoutInfo(this) // make sure needed info is present LOOK why wait until now ??
+            vinfo.setLayoutInfo(header) // make sure needed info is present LOOK why wait until now ??
         } else {
             vinfo.hasNoData = true
         }
-        println("readStructureDataArray refno=${vinfo.refno}")
 
         requireNotNull(v2.datatype.typedef)
         require(v2.datatype.typedef is CompoundTypedef)
         val recsize: Int = vinfo.elemSize
         val members = v2.datatype.typedef.members
+        val shape = section.shape.toIntArray()
 
         if (vinfo.hasNoData) {
             // class ArrayStructureData(shape : IntArray, val bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
             // can you just use a zero bb ??
-            val bbz = ByteBuffer.allocate(recsize * section.shape.computeSize())
-            return ArrayStructureData(section.shape, bbz, recsize, members)
+            val nbytes = (recsize * section.totalElements).toInt()
+            val bbz = ByteBuffer.allocate(nbytes)
+            return ArrayStructureData(shape, bbz, recsize, members)
         }
 
         if (!vinfo.isLinked && !vinfo.isCompressed) {
-            val layout = LayoutRegular(vinfo.start, recsize, v2.shape, IndexSpace(section))
-            return header.readArrayStructureData(layout, section.shape, members)
+            val layout = LayoutRegular(vinfo.start, recsize, section)
+            return header.readArrayStructureData(layout, shape, members)
 
         } else if (vinfo.isLinked && !vinfo.isCompressed) {
             val input: InputStream = LinkedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
-            return dataSource.readArrayStructureData(layout, section.shape, members)
+            val layout = LayoutRegular(0, recsize, section)
+            return dataSource.readArrayStructureData(layout, shape, members)
 
         } else if (!vinfo.isLinked && vinfo.isCompressed) {
             val input: InputStream = getCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout: Layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
-            return dataSource.readArrayStructureData(layout, section.shape, members)
+            val layout: Layout = LayoutRegular(0, recsize, section)
+            return dataSource.readArrayStructureData(layout, shape, members)
 
         } else  { // if (vinfo.isLinked && vinfo.isCompressed)
             val input: InputStream = getLinkedCompressedInputStream(header, vinfo)
             val dataSource = PositioningDataInputStream(input)
-            val layout: Layout = LayoutRegular(0, recsize, v2.shape, IndexSpace(section))
-            return dataSource.readArrayStructureData(layout, section.shape, members)
+            val layout: Layout = LayoutRegular(0, recsize, section)
+            return dataSource.readArrayStructureData(layout, shape, members)
         }
     }
 }
@@ -224,28 +232,29 @@ internal fun getLinkedCompressedInputStream(h4: H4builder, vinfo: Vinfo): InputS
 }
 
 // called from special.getDataChunks()
-internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, shape: IntArray, members: List<StructureMember>)
-: ArrayStructureData {
+internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, section: Section, members: List<StructureMember>): ArrayStructureData {
+    val shape = section.shape.toIntArray()
     val recsize: Int = vinfo.elemSize
+
     if (!vinfo.isLinked && !vinfo.isCompressed) {
-        val layout = LayoutRegular(vinfo.start, recsize, shape, IndexSpace(shape))
+        val layout = LayoutRegular(vinfo.start, recsize, section)
         return h4.readArrayStructureData(layout, shape, members)
     } else if (vinfo.isLinked && !vinfo.isCompressed) {
         val input: InputStream = LinkedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
+        val layout = LayoutRegular(0, recsize, section)
         return dataSource.readArrayStructureData(layout, shape, members)
 
     } else if (!vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout: Layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
+        val layout: Layout = LayoutRegular(0, recsize, section)
         return dataSource.readArrayStructureData(layout, shape, members)
 
     } else { // if (vinfo.isLinked && vinfo.isCompressed) {
         val input: InputStream = getLinkedCompressedInputStream(h4, vinfo)
         val dataSource = PositioningDataInputStream(input)
-        val layout: Layout = LayoutRegular(0, recsize, shape, IndexSpace(shape))
+        val layout: Layout = LayoutRegular(0, recsize, section)
         return dataSource.readArrayStructureData(layout, shape, members)
     }
 }
@@ -253,7 +262,7 @@ internal fun readStructureDataArray(h4: H4builder, vinfo: Vinfo, shape: IntArray
 internal fun H4builder.readArrayStructureData(layout: Layout, shape: IntArray, members: List<StructureMember>)
 : ArrayStructureData {
     val state = OpenFileState(0, ByteOrder.BIG_ENDIAN)
-    val sizeBytes = Section.computeSize(shape).toInt() * layout.elemSize
+    val sizeBytes = shape.computeSize() * layout.elemSize
     val bb = ByteBuffer.allocate(sizeBytes)
     bb.order(state.byteOrder)
 
@@ -276,7 +285,7 @@ internal fun H4builder.readArrayStructureData(layout: Layout, shape: IntArray, m
 internal fun PositioningDataInputStream.readArrayStructureData(layout: Layout, shape : IntArray, members : List<StructureMember>)
 : ArrayStructureData {
     val state = OpenFileState(0, ByteOrder.BIG_ENDIAN)
-    val sizeBytes = Section.computeSize(shape).toInt() * layout.elemSize
+    val sizeBytes = shape.computeSize() * layout.elemSize
     val bb = ByteBuffer.allocate(sizeBytes)
     bb.order(state.byteOrder)
 

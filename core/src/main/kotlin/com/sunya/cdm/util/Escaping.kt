@@ -30,7 +30,77 @@ fun makeValidCdmObjectName(orgName: String): String {
     }
 }
 
-/////////////////////
+///////////////////////////////////////////////////////////////////////
+// All CDM naming convention enforcement are here.
+// reservedFullName defines the characters that must be escaped
+// when a short name is inserted into a full name
+const val reservedFullName = ".\\"
+
+/**
+ * backslash escape a string
+ *
+ * @param x escape this; may be null
+ * @param reservedChars these chars get a backslash in front of them
+ * @return escaped string
+ */
+fun backslashEscape(x: String, reservedChars: String = reservedFullName): String {
+    var ok = true
+    for (pos in 0 until x.length) {
+        val c = x[pos]
+        if (reservedChars.indexOf(c) >= 0) {
+            ok = false
+            break
+        }
+    }
+    if (ok) {
+        return x
+    }
+
+    // gotta do it
+    val sb = java.lang.StringBuilder(x)
+    var pos = 0
+    while (pos < sb.length) {
+        val c = sb[pos]
+        if (reservedChars.indexOf(c) < 0) {
+            pos++
+            continue
+        }
+        sb.setCharAt(pos, '\\')
+        pos++
+        sb.insert(pos, c)
+        pos++
+        pos++
+    }
+    return sb.toString()
+}
+
+/**
+ * backslash unescape a string
+ *
+ * @param x unescape this
+ * @return string with \c -> c
+ */
+fun backslashUnescape(x: String): String {
+    if (!x.contains("\\")) {
+        return x
+    }
+
+    // gotta do it
+    val sb = java.lang.StringBuilder(x.length)
+    var pos = 0
+    while (pos < x.length) {
+        var c = x[pos]
+        if (c == '\\') {
+            c = x[++pos] // skip backslash, get next cha
+        }
+        sb.append(c)
+        pos++
+    }
+    return sb.toString()
+}
+
+///////////////////////////////////////////////////////////////
+
 private val org = charArrayOf('\b', '\n', '\r', '\t', '\\', '\'', '\"')
 private val replace = arrayOf("\\b", "\\n", "\\r", "\\t", "\\\\", "\\'", "\\\"")
 

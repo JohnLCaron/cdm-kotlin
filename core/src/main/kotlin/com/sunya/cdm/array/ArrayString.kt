@@ -1,9 +1,6 @@
 package com.sunya.cdm.array
 
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Section.Companion.breakoutInner
-import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.*
 import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
@@ -28,12 +25,12 @@ class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<Stri
     }
 
     override fun section(section : Section) : ArrayString {
-        val odo = IndexND(IndexSpace(section), this.shape)
+        val odo = IndexND(IndexSpace(section), this.shape.toLongArray())
         val sectionList = mutableListOf<String>()
         for (index in odo) {
             sectionList.add( values[odo.element().toInt()])
         }
-        return ArrayString(section.shape, sectionList)
+        return ArrayString(section.shape.toIntArray(), sectionList)
     }
 }
 
@@ -75,7 +72,7 @@ fun ArrayUByte.makeStringsFromBytes(): ArrayString {
         return ArrayString(intArrayOf(), listOf(makeStringFromBytes()))
     }
     val (outerShape, innerLength) = shape.breakoutInner()
-    val outerLength = computeSize(outerShape).toInt()
+    val outerLength = outerShape.computeSize()
 
     val result = arrayOfNulls<String>(outerLength)
     val carr = ByteArray(innerLength)

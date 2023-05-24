@@ -1,5 +1,7 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.toIntArray
+import com.sunya.cdm.api.toLongArray
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.IndexND
@@ -16,8 +18,8 @@ import java.util.zip.InflaterInputStream
 private const val defaultBufferSize = 50_000
 
 // replace H4ChunkIterator, LayoutBB
-internal class H4tiledData(val h4 : H4builder, varShape : IntArray, chunk : IntArray, val chunks: List<SpecialDataChunk>) {
-    val tiling = Tiling(varShape, chunk)
+internal class H4tiledData(val h4 : H4builder, varShape : LongArray, chunk : IntArray, val chunks: List<SpecialDataChunk>) {
+    val tiling = Tiling(varShape, chunk.toLongArray())
 
     // optimize later
     fun findEntryContainingKey(want : IntArray) : SpecialDataChunk? {
@@ -35,7 +37,7 @@ internal class H4tiledData(val h4 : H4builder, varShape : IntArray, chunk : IntA
         // println("tileSection = ${tileSection}")
 
         for (wantTile in tileOdometer) {
-            val wantKey = tiling.index(wantTile) // convert to chunk origin
+            val wantKey = tiling.index(wantTile).toIntArray() // convert to chunk origin
             val chunk = findEntryContainingKey(wantKey)
             val useEntry = if (chunk != null) H4CompressedDataChunk(h4, chunk.origin, chunk.data.compress)
                 else H4CompressedDataChunk(h4, wantKey, null)
@@ -98,6 +100,6 @@ internal class H4CompressedDataChunk(
     }
 
     fun show(tiling : Tiling) =
-        "chunkStart=${offsets.contentToString()}, tile= ${tiling.tile(offsets).contentToString()}"
+        "chunkStart=${offsets.contentToString()}, tile= ${tiling.tile(offsets.toLongArray()).contentToString()}"
 
 }

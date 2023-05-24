@@ -7,7 +7,7 @@ import com.sunya.cdm.util.unsignedByteToShort
 import com.sunya.cdm.util.unsignedIntToLong
 import com.sunya.cdm.util.unsignedShortToInt
 import com.sunya.netchdf.hdf4.ODLparser
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat
+import com.sunya.netchdf.NetchdfFileFormat
 import mu.KotlinLogging
 import java.io.IOException
 import java.nio.*
@@ -530,7 +530,7 @@ class H5builder(
                 val convertAtt = convertAttribute(att)
                 if (convertAtt != null) {
                     if (att.name == HDF5_DIMENSION_LIST) {
-                        vb.dimList = convertAtt.values as List<String>
+                        vb.dimNames = convertAtt.values as List<String>
                     } else {
                         vb.addAttribute(convertAtt)
                     }

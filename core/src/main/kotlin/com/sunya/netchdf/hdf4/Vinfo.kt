@@ -1,18 +1,18 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_BYTE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_CHAR
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_DOUBLE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_FLOAT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_SHORT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UBYTE
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_USHORT
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_INT64
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_STRING
-import com.sunya.netchdf.netcdf4.Netcdf4.Companion.NC_FILL_UINT64
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_BYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_CHAR
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_DOUBLE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_FLOAT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_INT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_SHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UBYTE
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UINT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_USHORT
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_INT64
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_STRING
+import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UINT64
 import java.nio.ByteOrder
 
 internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
@@ -75,20 +75,20 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 
     // make sure needed info is present : call this when variable needs to be read
     // this allows us to defer getting layout info until then
-    fun setLayoutInfo(h4file: Hdf4File) {
+    fun setLayoutInfo(header: H4builder) {
         if (tagData == null) return
         val useData = tagData!!
         if (null != useData.linked) {
             isLinked = true
-            setDataBlocks(useData.linked!!.getLinkedDataBlocks(h4file.header))
+            setDataBlocks(useData.linked!!.getLinkedDataBlocks(header))
 
         } else if (null != useData.compress) {
             isCompressed = true
-            val compData: TagData = useData.compress!!.getDataTag(h4file.header)
+            val compData: TagData = useData.compress!!.getDataTag(header)
             tags.add(compData)
             isLinked = (compData.linked != null)
             if (isLinked) {
-                setDataBlocks(compData.linked!!.getLinkedDataBlocks(h4file.header))
+                setDataBlocks(compData.linked!!.getLinkedDataBlocks(header))
             } else {
                 start = compData.offset
                 length = compData.length
@@ -96,7 +96,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
             }
         } else if (null != useData.chunked) {
             isChunked = true
-            chunks = useData.chunked!!.getDataChunks(h4file)
+            chunks = useData.chunked!!.getDataChunks(header)
             chunkLengths = useData.chunked!!.chunkLength
             isCompressed = useData.chunked!!.isCompressed
         } else {

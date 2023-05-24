@@ -405,7 +405,7 @@ fun H5builder.readDatatypeMessage(state: OpenFileState): DatatypeMessage {
             for (i in 0 until nmembers) {
                 enumNums.add(readVariableSizeUnsigned(tstate, base.elemSize).toInt())
             }
-            // LOOK since we've switched to tstate, the state position isnt updated. but we can igmore since this is the
+            // LOOK since we've switched to tstate, the state position isnt updated. but we can ignore since this is the
             //  last field in the message
 
             return DatatypeEnum(address, elemSize, base.endian?: ByteOrder.LITTLE_ENDIAN, enumNames, enumNums)
@@ -451,7 +451,7 @@ fun H5builder.readStructureMember(state: OpenFileState, version: Int, structSize
     val offset = if (version < 3) {
         raf.readInt(state) // always 4 bytes
     } else {
-        // var length of bytes, stupid
+        // variable length of bytes, so stupid
         this.readVariableSizeMax(state, structSize.toLong()).toInt()
     }
 

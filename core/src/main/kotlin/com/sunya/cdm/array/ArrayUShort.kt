@@ -2,8 +2,9 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
-import java.nio.ShortBuffer
 
 class ArrayUShort(shape : IntArray, bb : ByteBuffer) : ArrayTyped<UShort>(bb, Datatype.USHORT, shape) {
     val values = bb.asShortBuffer()
@@ -15,6 +16,15 @@ class ArrayUShort(shape : IntArray, bb : ByteBuffer) : ArrayTyped<UShort>(bb, Da
     }
 
     override fun section(section : Section) : ArrayUShort {
-        return ArrayUShort(section.shape, sectionFrom(section))
+        return ArrayUShort(section.shape.toIntArray(), sectionFrom(section))
+    }
+
+    companion object {
+        fun fromArray(shape : IntArray, sa : ShortArray) : ArrayUShort {
+            val bb = ByteBuffer.allocate(2 * shape.computeSize())
+            val sbb = bb.asShortBuffer()
+            sa.forEach { sbb.put(it) }
+            return ArrayUShort(shape, bb)
+        }
     }
 }

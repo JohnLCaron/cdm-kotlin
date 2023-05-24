@@ -1,31 +1,29 @@
 package com.sunya.cdm.layout
 
 import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Section.Companion.computeSize
+import com.sunya.cdm.api.computeSize
+import com.sunya.cdm.api.toLongArray
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * A rectangular subsection of indices
- * Replaces Section for data chunk layout. no stride, negative indices are allowed.
- */
-data class IndexSpace(val start : IntArray, val shape : IntArray) {
+/** A rectangular subsection of indices, going from start to start + shape */
+data class IndexSpace(val start : LongArray, val shape : LongArray) {
     val rank = start.size
-    val totalElements = computeSize(shape)
-    val last by lazy { IntArray(rank) { idx -> start[idx] + shape[idx] - 1 } } // inclusive
-    val ranges : List<IntProgression> by lazy { start.mapIndexed {
-            idx, start -> IntProgression.fromClosedRange(start, start + shape[idx] - 1, 1) } } // inclusive
+    val totalElements = shape.computeSize()
+    val last by lazy { LongArray(rank) { idx -> start[idx] + shape[idx] - 1 } } // inclusive
+    val ranges : List<LongProgression> by lazy { start.mapIndexed {
+            idx, start -> LongProgression.fromClosedRange(start, start + shape[idx] - 1, 1) } } // inclusive
 
-    constructor(shape : IntArray) : this( IntArray(shape.size), shape) // starts at 0
-    constructor(section : Section) : this(section.origin, section.shape)
-    constructor(rank : Int, start : IntArray, shape : IntArray) : this( IntArray(rank) { start[it] }, IntArray(rank) { shape[it] })
+    constructor(shape : IntArray) : this( shape.toLongArray()) // starts at 0
+    constructor(shape : LongArray) : this( LongArray(shape.size), shape) // starts at 0
+    constructor(section : Section) : this(section.ranges.map { it.first() }.toLongArray(), section.shape)
+    constructor(rank : Int, start : LongArray, shape : LongArray) : this( LongArray(rank) { start[it] }, LongArray(rank) { shape[it] })
 
-    fun section() : Section {
-        val useShape = if (shape.size == start.size) shape else IntArray(start.size) { shape[it] }
-        return Section(start, useShape)
+    fun section(varShape : LongArray) : Section {
+        return Section(ranges, varShape)
     }
 
-    fun contains(pt : IntArray): Boolean {
+    fun contains(pt : LongArray): Boolean {
         require(rank == pt.size)
         ranges.forEachIndexed { idx, range ->
             if (!range.contains(pt[idx])) {
@@ -37,22 +35,23 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
 
     fun contains(other : IndexSpace): Boolean {
         require(rank == other.rank)
-        ranges.forEachIndexed { idx, range ->
-            if (!range.contains(other.ranges[idx])) {
+        ranges.forEachIndexed { idx, range : LongProgression ->
+            val o : LongProgression = other.ranges[idx]
+            if (!range.contains(o)) {
                 return false
             }
         }
         return true
     }
 
-    fun shift(origin : IntArray): IndexSpace {
-        val newOrigin = IntArray(rank) { idx -> start[idx] - origin[idx] }
+    fun shift(origin : LongArray): IndexSpace {
+        val newOrigin = LongArray(rank) { idx -> start[idx] - origin[idx] }
         return IndexSpace(newOrigin, shape)
     }
 
     fun intersect(other: IndexSpace): IndexSpace {
-        val firstList = mutableListOf<Int>()
-        val lengthList = mutableListOf<Int>()
+        val firstList = mutableListOf<Long>()
+        val lengthList = mutableListOf<Long>()
         ranges.mapIndexed  { idx, range ->
             val orange = other.ranges[idx]
             val first = max(range.first, orange.first)
@@ -60,7 +59,7 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
             firstList.add(first)
             lengthList.add(last - first + 1)
         }
-        return IndexSpace(IntArray(rank) { firstList[it] }, IntArray(rank) { lengthList[it] })
+        return IndexSpace(LongArray(rank) { firstList[it] }, LongArray(rank) { lengthList[it] })
     }
 
     fun intersects(other: IndexSpace): Boolean {
@@ -73,10 +72,6 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
             }
         }
         return true
-    }
-
-    fun makeSection() : Section {
-        return Section(start, shape)
     }
 
     override fun toString(): String {
@@ -105,10 +100,6 @@ data class IndexSpace(val start : IntArray, val shape : IntArray) {
     }
 }
 
-private fun IntProgression.contains(pt : Int) : Boolean {
-    return (pt >= this.first && pt <= this.last)
-}
-
-private fun IntProgression.contains(other : IntProgression) : Boolean {
+private fun LongProgression.contains(other : LongProgression) : Boolean {
     return (other.first >= this.first && other.last <= this.last)
 }

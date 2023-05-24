@@ -2,6 +2,7 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayLong(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Long>(bb, Datatype.LONG, shape) {
@@ -14,6 +15,6 @@ class ArrayLong(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Long>(bb, Dataty
     }
 
     override fun section(section : Section) : ArrayLong {
-        return ArrayLong(section.shape, sectionFrom(section))
+        return ArrayLong(section.shape.toIntArray(), sectionFrom(section))
     }
 }

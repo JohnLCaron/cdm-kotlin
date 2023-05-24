@@ -15,12 +15,11 @@ class N4Files {
 
             val moar4 =
                 testFilesIn(testData + "cdmUnitTest/formats/netcdf4")
-                    .withPathFilter { p -> !p.toString().contains("exclude") }
                     .addNameFilter { name -> !name.endsWith("compound-attribute-test.nc") } // bug in clib
                     .withRecursion()
                     .build()
 
-            return Stream.of(stream4, moar4).flatMap { i -> i };
+            return Stream.of(stream4, moar4).flatMap { i -> i }
         }
     }
 }

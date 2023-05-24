@@ -2,6 +2,7 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayShort(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Short>(bb, Datatype.SHORT, shape) {
@@ -14,6 +15,6 @@ class ArrayShort(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Short>(bb, Data
     }
 
     override fun section(section : Section) : ArrayShort {
-        return ArrayShort(section.shape, sectionFrom(section))
+        return ArrayShort(section.shape.toIntArray(), sectionFrom(section))
     }
 }

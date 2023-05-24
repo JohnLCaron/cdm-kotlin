@@ -2,7 +2,6 @@ package com.sunya.netchdf
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.util.Stats
-import com.sunya.netchdf.netcdf4.openNetchdfFile
 import com.sunya.testdata.NetchdfExtraFiles
 import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test

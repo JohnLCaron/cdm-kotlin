@@ -3,7 +3,7 @@ package com.sunya.netchdf.netcdf3
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
-import com.sunya.netchdf.netcdfClib.NetcdfClibFile
+import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.N3Files
 import java.util.*
 import java.util.stream.Stream
@@ -34,7 +34,7 @@ class N3headerCompare {
     fun readN3header(filename : String) {
         println(filename)
         Netcdf3File(filename).use { n3file ->
-            NetcdfClibFile(filename).use { ncfile ->
+            NClibFile(filename).use { ncfile ->
                 //println("actual = $root")
                 //println("expect = $expect")
                 assertEquals(ncfile.cdl(), n3file.cdl())

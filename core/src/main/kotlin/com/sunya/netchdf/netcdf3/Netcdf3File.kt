@@ -30,13 +30,16 @@ class Netcdf3File(val filename : String) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val wantSection = Section.fill(section, v2.shape)
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        if (v2.nelems == 0L) {
+            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+        }
+        val wantSection : Section = SectionPartial.fill(section, v2.shape)
         val vinfo = v2.spObject as VinfoN3
         val layout = if (!v2.hasUnlimited()) {
-            LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(wantSection))
+            LayoutRegular(vinfo.begin, vinfo.elemSize, wantSection)
         } else {
-            LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(wantSection))
+            LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, wantSection)
         }
         return readDataWithLayout(layout, v2, wantSection)
     }
@@ -45,27 +48,30 @@ class Netcdf3File(val filename : String) : Netchdf {
         return this.dimensions.find { it == header.unlimitedDimension } != null
     }
 
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?): Iterator<ArraySection> {
-        val wantSection = Section.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
+        val wantSection = SectionPartial.fill(section, v2.shape)
         return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
     }
 
     private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
         private val debugChunking = false
         val vinfo = v2.spObject as VinfoN3
-        private val maxIterator  = MaxChunker(maxElems,  IndexSpace(wantSection), v2.shape)
+        private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
         override fun computeNext() {
             if (maxIterator.hasNext()) {
                 val indexSection = maxIterator.next()
                 if (debugChunking) println("  chunk=${indexSection}")
-                val section = indexSection.section()
+                val section = indexSection.section(v2.shape)
 
                 val layout = if (!v2.hasUnlimited()) {
-                    LayoutRegular(vinfo.begin, vinfo.elemSize, v2.shape, IndexSpace(section))
+                    LayoutRegular(vinfo.begin, vinfo.elemSize, section)
                 } else {
                     // I think this will segment on the record dimension
-                    LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, v2.shape, IndexSpace(section))
+                    LayoutRegularSegmented(vinfo.begin, vinfo.elemSize, header.recsize, section)
                 }
 
                 val array = readDataWithLayout(layout, v2, section)
@@ -78,7 +84,7 @@ class Netcdf3File(val filename : String) : Netchdf {
 
     @Throws(IOException::class)
     private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
-        require(wantSection.size() == layout.totalNelems)
+        require(wantSection.totalElements == layout.totalNelems)
         val vinfo = v2.spObject as VinfoN3
         val totalNbytes = (vinfo.elemSize * layout.totalNelems)
         require(totalNbytes < Int.MAX_VALUE)
@@ -95,19 +101,20 @@ class Netcdf3File(val filename : String) : Netchdf {
         }
         require(bytesRead == totalNbytes.toInt())
 
+        val shape = wantSection.shape.toIntArray()
         return when (v2.datatype) {
-            Datatype.BYTE -> ArrayByte(wantSection.shape, values)
-            Datatype.UBYTE -> ArrayUByte(wantSection.shape, values)
-            Datatype.CHAR -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes() // LOOK
-            Datatype.STRING -> ArrayUByte(wantSection.shape, values).makeStringsFromBytes()
-            Datatype.DOUBLE -> ArrayDouble(wantSection.shape, values)
-            Datatype.FLOAT -> ArrayFloat(wantSection.shape, values)
-            Datatype.INT -> ArrayInt(wantSection.shape, values)
-            Datatype.UINT -> ArrayUInt(wantSection.shape, values)
-            Datatype.LONG -> ArrayLong(wantSection.shape, values)
-            Datatype.ULONG -> ArrayULong(wantSection.shape, values)
-            Datatype.SHORT -> ArrayShort(wantSection.shape, values)
-            Datatype.USHORT -> ArrayUShort(wantSection.shape, values)
+            Datatype.BYTE -> ArrayByte(shape, values)
+            Datatype.UBYTE -> ArrayUByte(shape, values)
+            Datatype.CHAR -> ArrayUByte(shape, values).makeStringsFromBytes() // LOOK
+            Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+            Datatype.DOUBLE -> ArrayDouble(shape, values)
+            Datatype.FLOAT -> ArrayFloat(shape, values)
+            Datatype.INT -> ArrayInt(shape, values)
+            Datatype.UINT -> ArrayUInt(shape, values)
+            Datatype.LONG -> ArrayLong(shape, values)
+            Datatype.ULONG -> ArrayULong(shape, values)
+            Datatype.SHORT -> ArrayShort(shape, values)
+            Datatype.USHORT -> ArrayUShort(shape, values)
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
     }
@@ -127,6 +134,5 @@ class Netcdf3File(val filename : String) : Netchdf {
         result = 31 * result + rootGroup.hashCode()
         return result
     }
-
 
 }

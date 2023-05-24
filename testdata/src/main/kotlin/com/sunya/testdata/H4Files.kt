@@ -18,16 +18,15 @@ class H4Files {
                 .build()
 
             // remove files that core dump
+            // /home/all/testdata/hdf4/eisalt/VHRR-KALPANA_20081216_070002.hdf  // CORE DUMP
             val hdf4NoCore =
                 testFilesIn(testData + "hdf4")
                     .withRecursion()
                     //    .withPathFilter { p -> !(p.toString().contains("/eos/"))}
-                    .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MOD01.A2007303.0325.005.2007306182401.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MOD02OBC.A2007001.0005.005.2007307210540.hdf") }
-                    .addNameFilter { name -> !name.endsWith("MYD01.A2007001.0440.005.2007311085701.hdf") }
+                    // .addNameFilter { name -> !name.endsWith("VHRR-KALPANA_20081216_070002.hdf") }
                     .build()
 
+            // return Stream.of(devcdm, hdfeos2).flatMap { i -> i }
             return Stream.of(devcdm, hdfeos2, hdf4NoCore).flatMap { i -> i }
         }
 

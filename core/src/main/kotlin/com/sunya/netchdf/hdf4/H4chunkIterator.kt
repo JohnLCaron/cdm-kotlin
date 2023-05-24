@@ -1,9 +1,6 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.ArraySection
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
@@ -36,7 +33,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
     }
 
     private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection {
-        val dataSpace = IndexSpace(v2.rank, dataChunk.offsets, vinfo.chunkLengths)
+        val dataSpace = IndexSpace(v2.rank, dataChunk.offsets.toLongArray(), vinfo.chunkLengths.toLongArray())
         val useEntireChunk = wantSpace.contains(dataSpace)
         val intersectSpace = if (useEntireChunk) dataSpace else wantSpace.intersect(dataSpace)
 
@@ -63,7 +60,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
         bb.limit(bb.capacity())
         bb.order(vinfo.endian)
 
-        val shape = wantSpace.shape
+        val shape = wantSpace.shape.toIntArray()
         val array = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
             Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
@@ -79,7 +76,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
 
-        return ArraySection(array, intersectSpace.section()) // LOOK use space instead of Section ??
+        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 
 }

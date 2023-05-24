@@ -1,8 +1,6 @@
 package com.sunya.netchdf.hdf4
 
-import com.sunya.cdm.api.Datatype
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
@@ -33,7 +31,7 @@ class H4chunkReader(val h4 : H4builder) {
         var count = 0
         var transferChunks = 0
         for (dataChunk in tiledData.findDataChunks(wantSpace)) { // : Iterable<BTree1New.DataChunkEntry>
-            val dataSection = IndexSpace(v2.rank, dataChunk.offsets, vinfo.chunkLengths)
+            val dataSection = IndexSpace(v2.rank, dataChunk.offsets.toLongArray(), vinfo.chunkLengths.toLongArray())
             val chunker = Chunker(dataSection, wantSpace) // each dataChunk has its own Chunker iteration
             if (dataChunk.isMissing()) {
                 if (debugMissing) println(" ${dataChunk.show(tiledData.tiling)}")
@@ -50,7 +48,7 @@ class H4chunkReader(val h4 : H4builder) {
         bb.position(0)
         bb.limit(bb.capacity())
 
-        val shape = wantSpace.shape
+        val shape = wantSpace.shape.toIntArray()
         val result = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
             Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)

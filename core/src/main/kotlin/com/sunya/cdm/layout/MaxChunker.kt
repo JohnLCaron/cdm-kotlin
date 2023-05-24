@@ -1,5 +1,6 @@
 package com.sunya.cdm.layout
 
+import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.computeSize
 
 /**
@@ -7,29 +8,25 @@ import com.sunya.cdm.api.computeSize
  * chunks of approx maxElems.
  * Used in Netchdf.chunkIterator() for non-chunked data.
  *
- * @param maxElems the approx size of the dataChunk
- * @param elemSize size in bytes of one element
- * @param wantSpace the requested section of data.
- * @param mergeFirst merge strategy for dimensions that can be merged and still keep contiguous transfer
+ * @param maxElems the approx size of the dataChunks to make
+ * @param wantSection the requested section of data.
  */
-class MaxChunker(val maxElems: Int, val wantSpace: IndexSpace, varshape : IntArray) : AbstractIterator<IndexSpace>() {
-    val totalNelems = wantSpace.totalElements
-    val rank = wantSpace.rank
+class MaxChunker(val maxElems: Int, val wantSection: Section) : AbstractIterator<IndexSpace>() {
+    val totalNelems = wantSection.totalElements
+    val rank = wantSection.rank
     val strider = LongArray(rank)
-    val odo = IndexND(wantSpace, varshape)
+    val odo = IndexND(wantSection)
 
     init {
         var accumStride = 1L
         for (k in rank - 1 downTo 0) {
             strider[k] = accumStride
-            accumStride *= wantSpace.shape[k]
+            accumStride *= wantSection.shape[k]
         }
     }
 
     //// iterator
-
     private var done: Long = 0 // done so far
-    private var first = true
 
     // start with the case where varshape == wantshape
     override fun computeNext() {
@@ -37,7 +34,7 @@ class MaxChunker(val maxElems: Int, val wantSpace: IndexSpace, varshape : IntArr
             return done()
         }
 
-        val chunk = maxChunkShape(wantSpace.shape, odo.current)
+        val chunk = maxChunkShape(wantSection.shape, odo.current)
         val sectionSpace = IndexSpace(odo.current.copyOf(), chunk)
         setNext(sectionSpace)
 
@@ -45,12 +42,12 @@ class MaxChunker(val maxElems: Int, val wantSpace: IndexSpace, varshape : IntArr
         odo.set(done)
     }
 
-    fun maxChunkShape(shape: IntArray, current: IntArray): IntArray {
+    fun maxChunkShape(shape: LongArray, current: LongArray): LongArray {
         // always use the full length of the innermost dimension
-        val chunkShape = IntArray(rank) { idx ->
+        val chunkShape = LongArray(rank) { idx ->
             if (idx == rank - 1) shape[idx] else {
-                var size: Int = (maxElems / strider[idx]).toInt()
-                size = if (size == 0) 1 else size
+                var size : Long = (maxElems / strider[idx])
+                size = if (size == 0L) 1L else size
                 Math.min(size, shape[idx] - current[idx])
             }
         }

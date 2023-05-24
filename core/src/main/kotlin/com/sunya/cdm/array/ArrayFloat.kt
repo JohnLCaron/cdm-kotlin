@@ -2,6 +2,7 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
 class ArrayFloat(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Float>(bb, Datatype.FLOAT, shape) {
@@ -14,7 +15,7 @@ class ArrayFloat(shape : IntArray, bb : ByteBuffer) : ArrayTyped<Float>(bb, Data
     }
 
     override fun section(section : Section) : ArrayFloat {
-        return ArrayFloat(section.shape, sectionFrom(section))
+        return ArrayFloat(section.shape.toIntArray(), sectionFrom(section))
     }
 
 }

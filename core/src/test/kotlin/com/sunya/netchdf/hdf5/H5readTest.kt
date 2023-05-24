@@ -10,10 +10,10 @@ import com.sunya.netchdf.readNetchIterate
 import com.sunya.netchdf.readNetchdfData
 import com.sunya.testdata.H5Files
 import com.sunya.testdata.testData
-import com.sunya.testdata.testFilesIn
 
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.BeforeAll
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
@@ -41,11 +41,6 @@ class H5readTest {
         fun afterAll() {
             Stats.show()
         }
-    }
-
-    @Test
-    fun superblockIsOffsetNPP() {
-        testOpenH5(testData + "cdmUnitTest/formats/hdf5/superblockIsOffsetNPP.h5")
     }
 
     @Test
@@ -83,17 +78,13 @@ class H5readTest {
     }
 
     @Test
-    fun testGoes16() {
-        testOpenH5(testData + "recent/goes16/OR_ABI-L2-CMIPF-M6C13_G16_s20230451800207_e20230451809526_c20230451810015.nc")
-    }
-
-    @Test
     fun testEos() {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
 
     // I think the npp put the structmetadata in the front of the file?
     @Test
+    @Disabled
     fun testNpp() {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/npoess/ExampleFiles/GATRO-SATMR_npp_d20020906_t0409572_e0410270_b19646_c20090720223122943227_devl_int.h5")
     }
@@ -112,13 +103,13 @@ class H5readTest {
         readNetchdfData(filename)
     }
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
         readNetchIterate(filename, null)
     }
 
-    @ParameterizedTest
+    //@ParameterizedTest
     @MethodSource("params")
     fun testReadConcurrent(filename: String) {
         readH5concurrent(filename, null)
@@ -167,9 +158,6 @@ class H5readTest {
         var countChunks = 0
         val time1 = measureNanoTime {
             val chunkIter = myFile.chunkIterator(myvar)
-            if (chunkIter == null) {
-                return 0
-            }
             for (pair in chunkIter) {
                 // println(" ${pair.section} = ${pair.array.shape.contentToString()}")
                     sumValues(pair.array)

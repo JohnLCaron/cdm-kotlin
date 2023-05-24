@@ -119,7 +119,7 @@ class H5Cbuilder(val filename: String) {
                 val convertAtt = convertAttribute(att)
                 if (convertAtt != null) {
                     if (att.name == HDF5_DIMENSION_LIST) {
-                        vb.dimList = convertAtt.values as List<String>
+                        vb.dimNames = convertAtt.values as List<String>
                     } else {
                         vb.addAttribute(convertAtt)
                     }
@@ -315,7 +315,7 @@ class H5Cbuilder(val filename: String) {
         val dims_p = context.session.allocateArray(C_LONG as MemoryLayout, MAX_DIMS)
         val maxdims_p = context.session.allocateArray(C_LONG  as MemoryLayout, MAX_DIMS)
         val ndims = H5Sget_simple_extent_dims(dataspace_id, dims_p, maxdims_p)
-        val dims = IntArray(ndims) { dims_p.getAtIndex(C_LONG, it.toLong()).toInt() }
+        val dims = LongArray(ndims) { dims_p.getAtIndex(C_LONG, it.toLong()) }
 
         val type_id = H5Dget_type(datasetId)
         val h5ctype = readH5CTypeInfo(context, type_id, obj_name)
@@ -338,7 +338,7 @@ class H5Cbuilder(val filename: String) {
             vb.setDimensionsAnonymous(dims)
             atts
         } else {
-            val dim = Dimension(obj_name, dims[0])
+            val dim = Dimension(obj_name, dims[0], true)
             context.group.addDimension(dim)
             vb.addDimension(dim)
             if (hideInternalAttributes) atts.filter{ !HDF5_IGNORE_ATTS.contains(it.name) } else atts
@@ -561,8 +561,7 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     // checkErr("H5Dread", H5Dread(datasetId, h5ctype.type_id, H5S_ALL(), spaceId, H5P_DEFAULT(), data_p))
 
     val datatype = h5ctype.datatype()
-    val dims = want.shape
-    val size = want.computeSize() * h5ctype.elemSize.toLong()
+    val size = want.totalElements * h5ctype.elemSize.toLong()
     val data_p = session.allocate(size)
 
     val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
@@ -572,6 +571,7 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     val bb = ByteBuffer.wrap(raw)
     bb.order(h5ctype.endian)
 
+    val dims = want.shape.toIntArray()
     if (datatype == Datatype.COMPOUND) {
         val members = (datatype.typedef as CompoundTypedef).members
         val sdataArray = ArrayStructureData(dims, bb, h5ctype.elemSize, members)
@@ -583,22 +583,23 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
 
 internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : Pair<Long, Long> {
     val datatype = h5ctype.datatype()
-    val size = want.computeSize() * h5ctype.elemSize.toLong()
-    println("readRegularData $want start=${want.origin.contentToString()} shape=${want.shape.contentToString()} ${want.computeSize()} $datatype size=$size")
-    val rank = want.rank().toLong()
-    if (rank == 0L) { // scalar
+    val size = want.totalElements * h5ctype.elemSize.toLong()
+    println("readRegularData want=$want nelems=${want.totalElements} $datatype size=$size")
+    if (want.rank == 0) { // scalar
         return Pair(H5S_ALL(), H5S_ALL())
     }
 
+    val rank = want.rank.toLong()
     val origin_p = session.allocateArray(C_LONG as MemoryLayout, rank)
     val shape_p = session.allocateArray(C_LONG as MemoryLayout, rank)
     val stride_p = session.allocateArray(C_LONG as MemoryLayout, rank)
     val block_p = session.allocateArray(C_LONG as MemoryLayout, rank)
-    for (idx in 0 until rank) {
-        origin_p.setAtIndex(C_LONG, idx, want.origin(idx.toInt()).toLong())
-        shape_p.setAtIndex(C_LONG, idx, want.shape(idx.toInt()).toLong())
-        stride_p.setAtIndex(C_LONG, idx, want.stride(idx.toInt()).toLong())
-        block_p.setAtIndex(C_LONG, idx, 1L)
+    for (idx in 0 until want.rank) {
+        val range = want.ranges[idx]
+        origin_p.setAtIndex(C_LONG, idx.toLong(), range.first)
+        shape_p.setAtIndex(C_LONG, idx.toLong(), want.shape[idx])
+        stride_p.setAtIndex(C_LONG, idx.toLong(), range.step)
+        block_p.setAtIndex(C_LONG, idx.toLong(), 1L)
     }
 
     val fileSpaceId : Long = H5Dget_space(datasetId)
@@ -613,8 +614,8 @@ internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5
     println("  selection ${start.contentToString()} ${end.contentToString()}")
 
     val dims_p = session.allocateArray(C_LONG as MemoryLayout, rank)
-    for (idx in 0 until rank) {
-        dims_p.setAtIndex(C_LONG, idx, want.shape(idx.toInt()).toLong())
+    for (idx in 0 until want.rank) {
+        dims_p.setAtIndex(C_LONG, idx.toLong(), want.shape[idx])
     }
     // hid_t H5Screate_simple	(	int 	rank, const hsize_t 	dims[], const hsize_t 	maxdims[]
     // long H5Screate_simple ( int rank,  Addressable dims,  Addressable maxdims)

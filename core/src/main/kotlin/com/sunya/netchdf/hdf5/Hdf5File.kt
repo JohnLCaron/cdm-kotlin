@@ -1,9 +1,7 @@
 package com.sunya.netchdf.hdf5
 
-import com.sunya.cdm.api.ArraySection
-import com.sunya.cdm.api.Netchdf
-import com.sunya.cdm.api.Section
-import com.sunya.cdm.api.Variable
+import com.sunya.cdm.api.*
+import com.sunya.cdm.array.ArrayEmpty
 import com.sunya.cdm.array.ArraySingle
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.*
@@ -26,32 +24,35 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
 
     override fun rootGroup() = header.cdmRoot
     override fun location() = filename
-    override fun cdl() = com.sunya.cdm.api.cdl(this)
+    override fun cdl() = cdl(this)
     override fun type() = header.formatType()
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: Section?): ArrayTyped<*> {
-        val wantSection = Section.fill(section, v2.shape)
+    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+        if (v2.nelems == 0L) {
+            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+        }
+        val wantSection = SectionPartial.fill(section, v2.shape)
 
         // promoted attributes
         if (v2.spObject is DataContainerAttribute) {
-            return header.readRegularData(v2.spObject, section)
+            return header.readRegularData(v2.spObject, wantSection)
         }
 
         val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.onlyFillValue) { // fill value only, no data
-            return ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue)
+            return ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue)
         }
 
-        try {
-             if (vinfo.isChunked) {
-                return H5chunkReader(header).readChunkedData(v2, wantSection)
-             } else if (vinfo.isCompact) {
-                 val alldata = header.readCompactData(vinfo, v2.shape)
-                 return alldata.section(wantSection)
-             } else {
-                return header.readRegularData(vinfo, wantSection)
+        return try {
+            if (vinfo.isChunked) {
+                H5chunkReader(header).readChunkedData(v2, wantSection)
+            } else if (vinfo.isCompact) {
+                val alldata = header.readCompactData(vinfo, v2.shape.toIntArray())
+                alldata.section(wantSection)
+            } else {
+                header.readRegularData(vinfo, wantSection)
             }
         } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")
@@ -60,20 +61,23 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     }
 
     @Throws(IOException::class)
-    override fun chunkIterator(v2: Variable, section: Section?, maxElements : Int?) : Iterator<ArraySection> {
-        val wantSection = Section.fill(section, v2.shape)
+    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?) : Iterator<ArraySection> {
+        if (v2.nelems == 0L) {
+            return listOf<ArraySection>().iterator()
+        }
+        val wantSection = SectionPartial.fill(section, v2.shape)
 
         val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.onlyFillValue) { // fill value only, no data
-            val single = ArraySection(ArraySingle(wantSection.shape, v2.datatype, vinfo.fillValue), wantSection)
+            val single = ArraySection(ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue), wantSection)
             return listOf(single).iterator()
         }
 
-        try {
+        return try {
             if (vinfo.isChunked) {
-                return H5chunkIterator(header, v2, wantSection)
+                H5chunkIterator(header, v2, wantSection)
             } else {
-                return H5maxIterator(header, v2, wantSection, maxElements ?: 100_000)
+                H5maxIterator(header, v2, wantSection, maxElements ?: 100_000)
             }
         } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")

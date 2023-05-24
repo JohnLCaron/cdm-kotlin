@@ -10,6 +10,7 @@ import com.sunya.netchdf.hdf4.H4builder.Companion.tagidNameR
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
+import java.lang.foreign.ValueLayout.JAVA_BYTE
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.*
@@ -21,15 +22,16 @@ private val debugVSdetails = false
 private val debugSD = false
 private val debugSDdetails = false
 private val debugGR = false
-private val debugAttributes = false
+private val debugNestedGroup = false
 private val debugAttributeBug = false
 private val debugDims = false
 
 private val MAX_NAME = 255L
-private val MAX_FIELDS_NAME = 1000L
+// The combined width of the fields in a vdata is less than MAX_FIELD_SIZE (or 65535.)
+private val MAX_FIELDS_SIZE = MAX_FIELD_SIZE().toLong()
 
 class HCheader(val filename: String) {
-    internal val rootGroup4 = Group4("", null)
+    internal val rootBuilder = Group.Builder("")
     val rootGroup: Group
     val read_access_mode: MemorySegment
 
@@ -39,20 +41,22 @@ class HCheader(val filename: String) {
 
     private val completedObjects = mutableSetOf<Int>()
     private val metadata = mutableListOf<Attribute>()
+    private val promotedAttributes = mutableListOf<Attribute>()
     private val structMetadata = mutableListOf<String>()
+
+    private val unparentedGroups = mutableMapOf<Int, Group4>() // vg refno, vg group4
+    private val parentedGroups = mutableMapOf<Int, Group4>() // vg refno, vg
 
     init {
         MemorySession.openConfined().use { session ->
             this.read_access_mode = session.allocateUtf8String("r")
-            build(session)
-            this.rootGroup = rootGroup4.gb.build(null)
-            // println("last seen")
+            val rootBuilder = build(session)
+            this.rootGroup = rootBuilder.build(null)
         }
-        // println("doesnt get here")
     }
 
     @Throws(IOException::class)
-    private fun build(session: MemorySession) {
+    private fun build(session: MemorySession) : Group.Builder {
         val filenameSeg: MemorySegment = session.allocateUtf8String(filename)
 
         /* Initialize the SD interface. */
@@ -63,17 +67,35 @@ class HCheader(val filename: String) {
         checkErr("Vinitialize", Vinitialize(this.fileOpenId))
         this.grStartId = GRstart(this.fileOpenId)
 
-        VgroupIterate(session, rootGroup4)
-        SDiterate(session, rootGroup4)
-        GRiterate(session, rootGroup4)
-        VStructureIterate(session, rootGroup4)
+        VgroupIterate("constructNestedGroups") { ref : Int -> constructNestedGroups(session, null, ref) }
+        unparentedGroups.forEach { refno, group4 ->  // these are the top level groups - do them and all nested groups first
+            rootBuilder.addGroup(group4.gb)
+            Vgroup4Read(session, group4, refno)
+        }
 
-        metadata.forEach { makeVariableFromStringAttribute(rootGroup4, it) }
+        // now add all the orphans to the rootGroup
+        VgroupIterate("VgroupRead") { ref : Int -> VgroupRead(session, rootBuilder, ref) }
+        SDiterate(session, rootBuilder)
+        GRiterate(session, rootBuilder)
+        VStructureIterate(session, rootBuilder)
+
+        if (metadata.isNotEmpty()) {
+            val eos = Group.Builder("EosMetadata")
+            rootBuilder.addGroup(eos)
+            metadata.forEach { makeVariableFromStringAttribute(eos, it) }
+        }
+        promotedAttributes.forEach { makeVariableFromStringAttribute(rootBuilder, it) }
 
         if (structMetadata.isNotEmpty()) {
             val sm = structMetadata.joinToString("")
-            ODLparser(rootGroup4.gb, false).applyStructMetadata(sm)
+            ODLparser(rootBuilder, false).applyStructMetadata(sm)
         }
+
+        addFileVersionAttribute(session, rootBuilder)
+        addAnnotations(session, rootBuilder)
+
+        rootBuilder.removeEmptyGroups()
+        return rootBuilder
     }
 
     fun close() {
@@ -83,27 +105,187 @@ class HCheader(val filename: String) {
         Hclose(this.fileOpenId)
     }
 
+    fun addFileVersionAttribute(session: MemorySession, gb: Group.Builder) {
+        val major_p = session.allocate(C_INT, 0)
+        val minor_p = session.allocate(C_INT, 0)
+        val release_p = session.allocate(C_INT, 0)
+        val info_p: MemorySegment = session.allocate(MAX_NAME)
+
+        // status = Hgetfileversion(file_id, &major_v, &minor_v, &release, string);
+        checkErr("Hgetfileversion", Hgetfileversion(this.fileOpenId, major_p, minor_p, release_p, info_p))
+
+        val major = major_p[C_INT, 0]
+        val minor = minor_p[C_INT, 0]
+        val release = release_p[C_INT, 0]
+        val info = info_p.getUtf8String(0)
+        require(info.length < MAX_NAME)
+
+        gb.addAttribute(Attribute("HDF4FileVersion", "$major.$minor.$release ($info)"))
+    }
+
+    fun addAnnotations(session: MemorySession, gb: Group.Builder) {
+        val an_id = ANstart(this.fileOpenId)
+
+        val n_file_labels_p = session.allocate(C_INT, 0)
+        val n_file_descs_p = session.allocate(C_INT, 0)
+        val n_data_labels_p = session.allocate(C_INT, 0)
+        val n_data_descs_p = session.allocate(C_INT, 0)
+
+        // ANfileinfo (an_id, &n_file_labels, &n_file_descs, &n_data_labels, &n_data_descs)
+        checkErr("ANfileinfo", ANfileinfo(an_id, n_file_labels_p, n_file_descs_p, n_data_labels_p, n_data_descs_p))
+
+        val n_file_labels = n_file_labels_p[C_INT, 0]
+        val n_file_descs = n_file_descs_p[C_INT, 0]
+        val n_data_labels = n_data_labels_p[C_INT, 0]
+        val n_data_descs = n_data_descs_p[C_INT, 0]
+
+        repeat(n_data_labels) {index ->
+            val ann_id = ANselect (an_id, index, AN_DATA_LABEL())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            require(info.length < MAX_NAME)
+            gb.addAttribute(Attribute("DataLabel.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_data_descs) {index ->
+            val ann_id = ANselect (an_id, index, AN_DATA_DESC())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            gb.addAttribute(Attribute("DataDesc.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_file_labels) {index ->
+            val ann_id = ANselect (an_id, index, AN_FILE_LABEL())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            require(info.length < MAX_NAME)
+            gb.addAttribute(Attribute("FileLabel.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        repeat(n_file_descs) {index ->
+            val ann_id = ANselect (an_id, index, AN_FILE_DESC())
+            val ann_length = ANannlen (ann_id)
+
+            val info_p: MemorySegment = session.allocate(ann_length + 1L)
+            checkErr("ANreadann", ANreadann (ann_id, info_p, ann_length+1))
+            val info = info_p.getUtf8String(0)
+            gb.addAttribute(Attribute("FileDesc.$index", info.trim()))
+
+            checkErr("ANendaccess", ANendaccess (ann_id))
+        }
+
+        checkErr( "ANend", ANend(an_id))
+    }
+
+    ///////////////////////////////////////////////////////////////////////////////////
+
+    // create a Group4 hierarchy, with deferred assignment of parent, allowing groups to be in any order in the file
+    private fun constructNestedGroups(session: MemorySession, parent: Group4?, vgroup_ref: Int) {
+        val vgroup_id = Vattach(fileOpenId, vgroup_ref, read_access_mode)
+        try {
+            val vclass_p: MemorySegment = session.allocate(MAX_NAME)
+            checkErr("Vgetclass", Vgetclass(vgroup_id, vclass_p))
+            val vclass = vclass_p.getUtf8String(0)
+            require(vclass.length < MAX_NAME)
+
+            val nobjects_p = session.allocate(C_INT, 0)
+            val name_p: MemorySegment = session.allocate(MAX_NAME)
+
+            checkErr("Vinquire", Vinquire(vgroup_id, nobjects_p, name_p))
+            val max_nobjects = nobjects_p[C_INT, 0]
+            val groupName = name_p.getUtf8String(0)
+            require(groupName.length < MAX_NAME)
+
+            val tag_array_p = session.allocateArray(C_INT as MemoryLayout, max_nobjects.toLong())
+            val ref_array_p = session.allocateArray(C_INT as MemoryLayout, max_nobjects.toLong())
+            val nobjects = Vgettagrefs(vgroup_id, tag_array_p, ref_array_p, max_nobjects)
+            val ref_array = IntArray(nobjects) { ref_array_p.getAtIndex(C_INT, it.toLong()) }
+            val tag_array = IntArray(nobjects) { tag_array_p.getAtIndex(C_INT, it.toLong()) }
+            if (!isNestedGroup(groupName, vclass, tag_array)) {
+                return
+            }
+
+            if (parentedGroups[vgroup_ref] != null) {
+                if (debugNestedGroup)  println("  already parented $vgroup_ref $groupName")
+                return
+            }
+
+            val already = unparentedGroups[vgroup_ref]
+            if (already != null && parent != null) {
+                parent.subgroups[vgroup_ref] = already
+                unparentedGroups.remove(vgroup_ref)
+                parentedGroups[vgroup_ref] = already
+                if (debugNestedGroup) println("  reparent $vgroup_ref ${groupName} to ${parent.name}")
+                return
+            }
+            val group4 = Group4(groupName, parent)
+            if (parent == null) {
+                unparentedGroups[vgroup_ref] = group4
+                if (debugNestedGroup) println("  unparented $vgroup_ref ${groupName}")
+            } else {
+                parentedGroups[vgroup_ref] = group4
+                parent.subgroups[vgroup_ref] = group4
+                if (debugNestedGroup) println("  parent $vgroup_ref ${groupName} to ${parent.name}")
+            }
+
+            tag_array.forEachIndexed { idx, tag ->
+                if (tag == TagEnum.VG.code) {
+                    constructNestedGroups(session, group4, ref_array[idx])
+                }
+            }
+
+        } finally {
+            checkErr("Vdetach", Vdetach(vgroup_id))
+        }
+
+    }
+
     ///////////////////////////////////////////////////////////////////////////////
     // The Vgroup API: group related objects. DFTAG_VG.
     // "vgroups can contain any combination of HDF data objects". so that narrows it down.
 
-    // Iterates over Vgroups (1965)
-    private fun VgroupIterate(session: MemorySession, g4: Group4) {
-        if (debugVGroup) println("iterateVgroups '${g4.gb.name}'")
-
+    // Iterate over Vgroups (1965)
+    private fun VgroupIterate(what : String, lamda : (t : Int) -> Unit) {
+        if (debugVGroup) println(" VgroupIterate $what")
         var last_ref = -1
         while (true) {
             val vgroup_ref = Vgetid(fileOpenId, last_ref)
             if (vgroup_ref == -1) {
                 break
             }
-            VgroupRead(session, g4, vgroup_ref)
+            if (debugNestedGroup) println("VgroupIterate $vgroup_ref")
+            lamda.invoke(vgroup_ref)
             last_ref = vgroup_ref
         }
     }
 
-    // read a VGroup (1965)
-    private fun VgroupRead(session: MemorySession, g4: Group4, vgroup_ref: Int) {
+    // read a VGroup wrapped in a Group4, and recurse
+    private fun Vgroup4Read(session: MemorySession, g4: Group4, vgroup_ref : Int) {
+        VgroupRead(session, g4.gb, vgroup_ref)
+
+        g4.subgroups.forEach { ref, nested4 ->
+            g4.gb.addGroup(nested4.gb)
+            Vgroup4Read(session, nested4, ref)
+        }
+    }
+
+    // read a VGroup message (1965)
+    private fun VgroupRead(session: MemorySession, gb: Group.Builder, vgroup_ref : Int) {
         val tagid = tagid(vgroup_ref, TagEnum.VG.code)
         if (completedObjects.contains(tagid)) {
             if (debugVGroup) println(" VgroupRead skip $vgroup_ref")
@@ -141,65 +323,40 @@ class HCheader(val filename: String) {
                 }
             }
 
-            if (nobjects > 0) {
-                if (isNestedGroup(vclass)) {
-                    VgroupGroup(session, g4, groupName, ref_array, tag_array)
-                } else if (isDimClass(vclass)) { // ??
-                    VgroupDim(ref_array, tag_array)
-                } else if (vclass == "Var0.0") { // ??
-                    VgroupVar(session, g4, ref_array, tag_array)
-                } else if (vclass == "CDF0.0") {
-                    // LOOK ignoring the contents of the VGroup, and looking at the attributes on the group
-                    VgroupCDF(session, g4, vgroup_id)
+            if (nobjects == 0) {
+                return
+            }
+
+            if (isDimClass(vclass)) { // ??
+                VgroupDim(ref_array, tag_array)
+            } else if (vclass == "Var0.0") {
+                VgroupVar(session, gb, ref_array, tag_array)
+            } else if (vclass == "CDF0.0") {
+                // only looking at the attributes on the group
+                VgroupCDF(session, gb, vgroup_id)
+            } else {
+                repeat(ref_array.size) { objIdx ->
+                    val tag = tag_array[objIdx]
+                    val ref = ref_array[objIdx]
+                    val tage = TagEnum.byCode(tag)
+                    when (tage) {
+                        TagEnum.NDG -> {
+                            val sds_index = SDreftoindex(sdsStartId, ref)
+                            SDread(session, gb, sds_index)
+                        }
+                        TagEnum.VH -> {
+                            VStructureRead(session, gb, ref, true)
+                        }
+                        else -> {}
+                    }
                 }
             }
-
-            /*
-            val nattrs = Vnattrs(vgroup_id)
-            repeat(nattrs) { idx ->
-                val aname_p: MemorySegment = session.allocate(MAX_NAME)
-                val datatype_p = session.allocate(C_INT, 0)
-                val nvalues_p = session.allocate(C_INT, 0)
-                val size_p = session.allocate(C_INT, 0)
-                checkErr("Vattrinfo", Vattrinfo(vgroup_id, idx, aname_p, datatype_p, nvalues_p, size_p))
-
-                val aname = aname_p.getUtf8String(0)
-                require(aname.length < MAX_NAME)
-                val datatype = datatype_p[C_INT, 0]
-                val nvalues = nvalues_p[C_INT, 0]
-                val size = size_p[C_INT, 0]
-                if (debugVGroupDetails) println("    readVGroupAttr '$aname' datatype='$datatype' nvalues=$nvalues size =$size")
-            }
-             */
         } finally {
             checkErr("Vdetach", Vdetach(vgroup_id))
         }
     }
 
-    private fun VgroupGroup(
-        session: MemorySession,
-        g4: Group4,
-        groupName: String,
-        ref_array: IntArray,
-        tag_array: IntArray
-    ) {
-        val nested = Group4(groupName, g4)
-
-        repeat(ref_array.size) { objIdx ->
-            val tag = tag_array[objIdx]
-            val ref = ref_array[objIdx]
-            val tage = TagEnum.byCode(tag)
-            if (tage == TagEnum.VG) {
-                VgroupRead(session, nested, ref)
-            } else if (tage == TagEnum.NDG) {
-                val sds_index = SDreftoindex(sdsStartId, ref)
-                SDread(session, nested, sds_index)
-            } else if (tage == TagEnum.VH) {
-                VStructureRead(session, nested, ref, true)
-            }
-        }
-    }
-
+    // Vgroup contains a object identified as a Dimension. LOOK not actually using this
     private fun VgroupDim(ref_array: IntArray, tag_array: IntArray) {
         repeat(ref_array.size) { objIdx ->
             val tag = tag_array[objIdx]
@@ -212,43 +369,35 @@ class HCheader(val filename: String) {
         }
     }
 
-    private fun VgroupVar(session: MemorySession, g4: Group4, ref_array: IntArray, tag_array: IntArray) {
+    // Vgroup contains an object identified as a Variable using the NDG tag.
+    private fun VgroupVar(session: MemorySession, gb: Group.Builder, ref_array: IntArray, tag_array: IntArray) {
         repeat(ref_array.size) { objIdx ->
             val tag = tag_array[objIdx]
             val ref = ref_array[objIdx]
             val tage = TagEnum.byCode(tag)
             if (tage == TagEnum.NDG) {
                 val sds_index = SDreftoindex(sdsStartId, ref)
-                SDread(session, g4, sds_index)
+                SDread(session, gb, sds_index)
                 // break
             }
         }
     }
 
-    private fun VgroupCDF(session: MemorySession, g4: Group4, vgroup_id: Int) {
+    // Vgroup contains an object of CDF class, assume to be container of attributes.
+    private fun VgroupCDF(session: MemorySession, gb: Group.Builder, vgroup_id: Int) {
         val nattrs2 = Vnattrs2(vgroup_id)
         repeat(nattrs2) { idx ->
             // val attr = VgroupReadAttribute(session, vgroup_id, idx)
-            // val attr2 = VgroupReadAttribute2(session, vgroup_id, idx)
-            val attr3 = VgroupReadAttribute3(session, vgroup_id, idx)
-            if (attr3 == null) {
+            val attr2 = VgroupReadAttribute2(session, vgroup_id, idx)
+            if (attr2 == null) {
                 return
             }
-
-            if (debugVGroupDetails) println("     read attribute ${attr3.name}")
-            val promoted = attr3.isString && attr3.values.size == 1 && (attr3.values[0] as String).length > 4000
-            if (EOS.isMetadata(attr3.name) || promoted) {
-                metadata.add(attr3)
-                if (attr3.name.startsWith("StructMetadata")) {
-                    this.structMetadata.add(attr3.values[0] as String)
-                }
-            } else {
-                if (debugAttributes) println("     add attribute ${attr3}")
-                g4.gb.addAttribute(attr3)
-            }
+            if (debugVGroupDetails) println("     read attribute ${attr2.name}")
+            checkEosOrPromote(attr2, gb, true)
         }
     }
 
+    // read attributes with Vgetattr() - not used
     fun VgroupReadAttribute(session: MemorySession, vgroup_id: Int, idx: Int): Attribute {
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val datatype_p = session.allocate(C_INT, 0)
@@ -282,10 +431,11 @@ class HCheader(val filename: String) {
         return processAttribute(aname, nelems, datatype, bb)
     }
 
-    // we can guess that theres only one field in an attribute. so nvalues should be vh.nelems * fld[0].nelems
-    // looks like a bug where they are just using nvalues = fld[0].nelems
-    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute {
-        // return Attribute("fake", "dog")
+    // read attributes with Vgetattr2()
+    // LOOK a bug where C API has nvalues = fld[0].nelems, instead of vh.count * fld[0].nelems
+    // LOOK sometimes a bug where size returns nelems instead
+    // workaround by not calling Vgetattr2, but use refno to call VSinquire(). See VStructureReadAsAttribute(), vattr.c in HClib.
+    fun VgroupReadAttribute2(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute? {
         val name_p: MemorySegment = session.allocate(MAX_NAME)
         val datatype_p = session.allocate(C_INT, 0)
         val count_p = session.allocate(C_INT, 0)
@@ -299,62 +449,39 @@ class HCheader(val filename: String) {
         require(aname.length < MAX_NAME)
         val datatype4 = datatype_p[C_INT, 0] // Data type of the attribute
         val datatype = H4type.getDataType(datatype4)
-        val nvalues = count_p[C_INT, 0]    // Number of values in the attribute // LOOK a bug where nvalues returns fld[0].nelems instead of vh.nelems * fld[0].nelems
+        val count = count_p[C_INT, 0]    // Number of values in the attribute ? // LOOK a bug where nvalues returns fld[0].nelems instead of vh.count * fld[0].nelems
         val sizeInBytes = size_p[C_INT, 0] // Size, in bytes, of the attribute values // LOOK sometimes a bug where size returns nelems instead
         val nflds = flds_p[C_INT, 0] // Number of fields in the attribute vdata
-        val refnum = refnum_p[C_SHORT, 0] // Reference number of the attribute vdata
-        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
+        val refnum = refnum_p[C_SHORT, 0].toUShort().toInt() // Reference number of the attribute vdata
+        if (debugAttributeBug) println("VgroupReadAttribute2 $aname size = $sizeInBytes count = $count datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
 
-        println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
-        println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
-        if (datatype.size != sizeInBytes)
+        // println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
+        // println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
+
+        if (aname == "start_latlon")
             println()
-        if (nflds != 1)
-            println()
-        return Attribute("fake", "dog")
 
-        /*
-
-        // DFTAG_VS on page 143: bytes needed = vh.nelems * SUM( fld_size * fld_order )
-        val data_p: MemorySegment = session.allocate(nvalues * datatype.size.toLong())
-        // val data_p: MemorySegment = session.allocate(nvalues * sizeInBytes.toLong())
-        // intn Vgetattr2(int32 vgroup_id, intn attr_index, VOIDP attr_values)
-        checkErr("Vgetattr2", Vgetattr2(vgroup_id, attr_idx, data_p)) // LOOK malloc(): corrupted top size
-        val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
-        val bb = ByteBuffer.wrap(raw)
-        bb.order(ByteOrder.LITTLE_ENDIAN) // ??
-        bb.position(0)
-        bb.limit(bb.capacity())
-
-        return processAttribute(aname, nvalues, datatype, bb)
-         */
+        // only use the VS refno to read the VS "directly"
+        return VStructureReadAsAttribute(session, refnum)
     }
 
     //////////////////////////////////////////////////////////////////////////////
 
-    private fun SDiterate(session: MemorySession, g4: Group4): Int {
-        if (debugSD) println("iterateSDs '${g4.gb.name}'")
+    private fun SDiterate(session: MemorySession, gb: Group.Builder): Int {
+        if (debugSD) println("iterateSDs '${gb.name}'")
 
         val nvars_p = session.allocate(C_INT, 0)
         val nattrs_p = session.allocate(C_INT, 0)
         checkErr("SDfileinfo", SDfileinfo(sdsStartId, nvars_p, nattrs_p))
         val nvars = nvars_p[C_INT, 0]
-        val nattrs = nattrs_p[C_INT, 0]
+        val nattrs = nattrs_p[C_INT, 0] // Number of global attributes in the file
 
-        repeat(nvars) { SDread(session, g4, it) }
+        repeat(nvars) { SDread(session, gb, it) }
 
-        /*
         repeat(nattrs) {
-            val attr = readSDattribute(session, sd_id, it)
-            if (!EOSmetadata.contains(attr.name)) {
-                g4.gb.addAttribute(attr)
-            } else {
-                this.metadata.add(attr)
-                if (attr.name == "StructMetadata.0") {
-                    this.structMetadata = attr.values[0] as String
-                }
-            }
-        } */
+            val attr = SDreadAttribute(session, sdsStartId, it)
+            checkEosOrPromote(attr, gb, true)
+        }
 
         return nvars
     }
@@ -366,7 +493,7 @@ class HCheader(val filename: String) {
     //a coordinate variable.
 
     @Throws(IOException::class)
-    private fun SDread(session: MemorySession, g4: Group4, sdidx: Int) {
+    private fun SDread(session: MemorySession, gb: Group.Builder, sdidx: Int) {
         val sd_id = SDselect(sdsStartId, sdidx)
         try {
             val sd_ref = SDidtoref(sd_id)
@@ -423,8 +550,8 @@ class HCheader(val filename: String) {
                 if (dimName.startsWith("fakeDim")) { // LOOK
                     dimList.add(dimLength.toString())
                 } else {
-                    val useDim = Dimension(dimName, dimLength, true)
-                    g4.gb.addDimensionIfNotExists(useDim)
+                    val useDim = Dimension(dimName, dimLength)
+                    gb.addDimensionIfNotExists(useDim)
                     dimList.add(useDim.name) // name has been cleaned up
                 }
             }
@@ -434,7 +561,7 @@ class HCheader(val filename: String) {
             val vb = Variable.Builder(sdName)
             vb.datatype = datatype
             vb.spObject = Vinfo4().setSDSindex(sdidx)
-            vb.dimList = dimList
+            vb.dimNames = dimList
 
             // read Variable attributes
             repeat(nattrs) {
@@ -442,7 +569,7 @@ class HCheader(val filename: String) {
                 if (debugSDdetails) println("    att = ${att.name}")
                 vb.addAttribute(att)
             }
-            g4.gb.addVariable(vb)
+            gb.addVariable(vb)
 
         } finally {
             SDendaccess(sd_id)
@@ -476,7 +603,7 @@ class HCheader(val filename: String) {
     //////////////////////////////////////////////////////////////////////
 
     // the GR API
-    private fun GRiterate(session: MemorySession, g4: Group4) {
+    private fun GRiterate(session: MemorySession, gb : Group.Builder) {
         val n_datasets_p = session.allocate(C_INT, 0)
         val n_gattrs_p = session.allocate(C_INT, 0)
 
@@ -489,11 +616,11 @@ class HCheader(val filename: String) {
         val n_gattrs = n_gattrs_p[C_INT, 0]
 
         if (debugGR) println("GRiterator $n_datasets attrs = $n_gattrs")
-        repeat(n_datasets) { idx -> GRread(session, g4, idx) }
+        repeat(n_datasets) { idx -> GRread(session, gb, idx) }
     }
 
-    private fun GRread(session: MemorySession, g4: Group4, gridx: Int) {
-        val grId = GRselect(grStartId, gridx)
+    private fun GRread(session: MemorySession, gb : Group.Builder, gridx: Int) {
+        val grId = GRselect(grStartId, gridx) // Raster image identifier
         try {
             val name_p: MemorySegment = session.allocate(MAX_NAME)
             val n_comps_p = session.allocate(C_INT, 0) // Number of pixel components in the pixel
@@ -502,36 +629,78 @@ class HCheader(val filename: String) {
             val dim_sizes_p: MemorySegment = session.allocateArray(C_INT as MemoryLayout, 2)
             val n_attrs_p = session.allocate(C_INT, 0)
 
-            checkErr(
-                "GRgetiminfo",
-                GRgetiminfo(grId, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p)
-            )
+            checkErr("GRgetiminfo", GRgetiminfo(grId, name_p, n_comps_p, data_type_p, interlace_p, dim_sizes_p, n_attrs_p))
 
             val name = name_p.getUtf8String(0)
             require(name.length < MAX_NAME)
             val n_comps = n_comps_p[C_INT, 0]
-            val datatype = data_type_p[C_INT, 0]
+            val orgDataType = H4type.getDataType(data_type_p[C_INT, 0])
             val interlace = interlace_p[C_INT, 0]
             val dims = IntArray(2) { dim_sizes_p.getAtIndex(C_INT, it.toLong()) }
             val nattrs = n_attrs_p[C_INT, 0]
 
             // create the Variable
             val vb = Variable.Builder(name)
-            vb.datatype = H4type.getDataType(datatype)
+            val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
+            vb.datatype = datatype
             vb.spObject = Vinfo4().setGRindex(gridx)
 
-            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. p 321
+            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. p 321 TODO
             val rdims = IntArray(2) { if (it == 0) dims[1] else dims[0] }
             vb.setDimensionsAnonymous(rdims)
+            gb.addVariable(vb)
 
             // read Variable attributes // look probably need GRattrinfo
-            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order. For
+            // For GRreadimage, those parameters are expressed in (x,y) or [column,row] order.
             repeat(nattrs) { vb.addAttribute(GRreadAttribute(session, grId, it)) }
-            g4.gb.addVariable(vb)
+            if (debugGR) println("  GRgetiminfo '$name', n_comps=$n_comps, type=${vb.datatype}, interlace=$interlace, dims=${dims.contentToString()}, attrs=$nattrs")
 
-            // LOOK probably need GRgetlutinfo(), GRgetnluts
+            // get the pallette if it exists
+            // intn GRgetnluts(int32 ri_id)
+            val npalettes = GRgetnluts(grId) // Gets the identifier of a palette given its index.
 
-            if (debugGR) println("  GRgetiminfo '$name', n_comps=$n_comps, type=${vb.datatype}, interlace=$interlace, dims${dims.contentToString()}, attrs=$nattrs")
+            if (npalettes == 1) {
+                // int32 GRgetlutid(int32 ri_id, int32 pal_index)
+                val palId = GRgetlutid(grId, 0) // Gets the identifier of a palette given its index.
+
+                // intn GRgetlutinfo(int32 pal_id, int32 *ncomp, int32 *data_type, int32 *interlace_mode, int32 *num_entries)
+                val nt_p = session.allocate(C_INT, 0) // Number type of the palette
+                val nentries_p = session.allocate(C_INT, 0) // Number of color lookup table entries in the palette
+                checkErr("GRgetlutinfo", GRgetlutinfo(palId, n_comps_p, nt_p, interlace_p, nentries_p))
+
+                val ncomps = n_comps_p[C_INT, 0]
+                val nt = nt_p[C_INT, 0]
+                val porgDatatype = H4type.getDataType(nt)
+                val pdatatype = if (porgDatatype == Datatype.CHAR) Datatype.UBYTE else porgDatatype
+
+                val interlace = interlace_p[C_INT, 0]
+                val nentries = nentries_p[C_INT, 0]
+                if (debugGR) println("  GRgetlutinfo '$name', ncomps=$ncomps, type=$nt, datatype = $pdatatype interlace=$interlace, nentries=$nentries")
+
+                // intn GRreadlut(int32 pal_id, VOIDP pal_data)
+                val pal_data_p = session.allocate((pdatatype.size * ncomps * nentries).toLong())
+                checkErr("GRreadlut", GRreadlut(palId, pal_data_p))
+                val palData : ByteBuffer = ByteBuffer.wrap(pal_data_p.toArray(JAVA_BYTE))
+                val shape = intArrayOf(nentries, ncomps)
+                val lutData = when (pdatatype) {
+                    Datatype.BYTE -> ArrayByte(shape, palData)
+                    Datatype.UBYTE -> ArrayUByte(shape, palData)
+                    Datatype.SHORT -> ArrayShort(shape, palData)
+                    Datatype.USHORT -> ArrayUShort(shape, palData)
+                    Datatype.INT -> ArrayInt(shape, palData)
+                    Datatype.UINT -> ArrayUInt(shape, palData)
+                    else -> throw RuntimeException("not supporting $datatype for GR lookup table")
+                }
+                if (debugGR) println("  lutData=${lutData}")
+
+                val lutv_name = "${name}_lookup"
+                val lutvb = Variable.Builder(lutv_name)
+                lutvb.datatype = pdatatype
+                lutvb.setDimensionsAnonymous(shape)
+                lutvb.spObject = Vinfo4().setValue(lutData)
+                gb.addVariable(lutvb)
+            }
+
         } finally {
             GRendaccess(grId)
         }
@@ -566,20 +735,21 @@ class HCheader(val filename: String) {
     // A vdata is a collection of records whose values are stored in fixed-length fields.
 
     // sequentially iterates through an HDF file to obtain the vdata
-    private fun VStructureIterate(session: MemorySession, g4: Group4) {
-        if (debugVSdata) println("iterateVSdata '${g4.gb.name}'")
+    private fun VStructureIterate(session: MemorySession, gb : Group.Builder) {
+        if (debugVSdata) println("VStructureIterate group='${gb.name}'")
         var last_ref = -1
         while (true) {
             val vdata_ref = VSgetid(fileOpenId, last_ref)
             if (vdata_ref == -1) {
                 break
             }
-            VStructureRead(session, g4, vdata_ref, false)
+            VStructureRead(session, gb, vdata_ref, false)
             last_ref = vdata_ref
         }
+        if (debugVSdata) println("VStructureIterate DONE")
     }
 
-    private fun VStructureRead(session: MemorySession, g4: Group4, vs_ref: Int, addAttributesToGroup: Boolean) {
+    private fun VStructureRead(session: MemorySession, gb : Group.Builder, vs_ref: Int, addAttributesToGroup: Boolean) {
         val tagid = tagid(vs_ref, TagEnum.VG.code)
         if (completedObjects.contains(tagid)) {
             if (debugVSdata) println(" VStructureRead skip $vs_ref")
@@ -593,38 +763,46 @@ class HCheader(val filename: String) {
             checkErr("VSgetclass", VSgetclass(vdata_id, vclass_p))
             val vclass = vclass_p.getUtf8String(0)
             require(vclass.length < MAX_NAME)
+            if (vclass.startsWith("RIATTR0")) { // VHRR
+                return
+            }
 
             val n_records_p = session.allocate(C_INT, 0)
             val interlace_p = session.allocate(C_INT, 0)
-            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_NAME)
+            val fieldnames_p = session.allocate(MAX_FIELDS_SIZE)
             val recsize_p = session.allocate(C_INT, 0) // size, in bytes, of the vdata record
             val vsname_p: MemorySegment = session.allocate(MAX_NAME)
 
-            // VSinquire(vdata_id, &n_records, &interlace_mode, fieldname_list, &vdata_size, vdata_name)
+            // intn VSinquire(int32 vdata_id, int32 *n_records, int32 *interlace_mode, char *field_name_list,
+            // int32 *vdata_size, char *vdata_name)
             checkErr("VSinquire", VSinquire(vdata_id, n_records_p, interlace_p, fieldnames_p, recsize_p, vsname_p))
             val nrecords = n_records_p[C_INT, 0]
             val interlace = interlace_p[C_INT, 0]
             val fieldnames = fieldnames_p.getUtf8String(0)
-            require(fieldnames.length < MAX_FIELDS_NAME)
+            require(fieldnames.length < MAX_FIELDS_SIZE)
+
             val recsize = recsize_p[C_INT, 0]
             val vsname = vsname_p.getUtf8String(0)
             require(vsname.length < MAX_NAME)
 
             if (debugVSdata) {
-                println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
+                println("  VStructureRead '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' (${fieldnames.length}) recsize=$recsize")
+            }
+
+            // bail out if no data
+            if (nrecords == 0) {
+                return
             }
 
             val vhname = if (vsname.equals("Ancillary_Data")) vclass else vsname // Lame
             val vb = Variable.Builder(vhname)
-
-            if (vs_ref == 7)
-                println()
 
             val index_p = session.allocate(C_INT, 0)
             val names = fieldnames.split(",").map { it.trim() }
             val members = mutableListOf<StructureMember>()
             var offset = 0
             for (name in names) {
+                // intn VSfindex(int32 vdata_id, char *fieldname, int32 *field_index)
                 checkErr("VSfindex", VSfindex(vdata_id, session.allocateUtf8String(name), index_p))
                 val idx = index_p[C_INT, 0]
                 val type = VFfieldtype(vdata_id, idx)
@@ -661,39 +839,32 @@ class HCheader(val filename: String) {
             vinfo.vsInfo = VSInfo(vs_ref, nrecords, recsize, fieldnames, interlace)
             vb.spObject = vinfo
 
-            /* LOOK no attributes
-        val nattrs = VSnattrs(vdata_id)
-        repeat(nattrs) {
-            val attr = VStructureReadAttribute(session, vdata_id, -1, it)
-            // println("VStructureReadAttribute ${attr.name}")
-            // vb.addAttribute( attr)
-        }
-
-         */
-
             if (vclass.startsWith("Attr")) {
-                if (EOS.isMetadata(vsname)) {
-                    //val attr = convertToAttribute(vb)
-                    //metadata.add(attr)
-                }
-                if (addAttributesToGroup) {
-                    val attr = VStructureMakeAttribute(session, vb.name, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
-                    g4.gb.addAttribute(attr)
+                val attr = VStructureMakeAttribute(session, vb.name, vb.datatype!!, vdata_id, vinfo.vsInfo!!)
+                if (attr != null) {
+                    checkEosOrPromote(attr, gb, addAttributesToGroup)
                 }
             } else if (vclass.startsWith("DimVal") || vclass.startsWith("_HDF_CHK_TBL")) {
                 // noop
             } else {
-                if (vb.datatype!!.cdlName == "compound") { // why?
-                    rootGroup4.gb.addTypedef(vb.datatype!!.typedef!!)
+                if (vb.datatype!!.cdlName == "compound") { // LOOK why?
+                    rootBuilder.addTypedef(vb.datatype!!.typedef!!)
                 }
-                g4.gb.addVariable(vb)
+                gb.addVariable(vb)
             }
         } finally {
             checkErr("VSdetach", VSdetach(vdata_id))
         }
     }
 
-    fun VStructureMakeAttribute(session: MemorySession, aname : String, datatype: Datatype, vdata_id : Int, vsInfo : VSInfo): Attribute {
+    fun VStructureMakeAttribute(session: MemorySession, aname : String, datatype: Datatype, vdata_id : Int, vsInfo : VSInfo): Attribute? {
+        val tagid = tagid(vsInfo.vs_ref, TagEnum.VS.code)
+        if (completedObjects.contains(tagid)) {
+            if (debugVSdata) println(" VStructureReadAsAttribute skip ${vsInfo.vs_ref}")
+            return null
+        }
+        completedObjects.add(tagid)
+
         val fldNames: MemorySegment = session.allocateUtf8String(vsInfo.fldNames)
         val nbytes = vsInfo.nrecords * vsInfo.recsize
         val data_p = session.allocate(nbytes.toLong())
@@ -736,48 +907,17 @@ class HCheader(val filename: String) {
         return processAttribute(aname, nelems, datatype, bb)
     }
 
-    // its possible we can workaround by not calling Vgetattr2, but calling VSread. See vattr.c in HClib.
-    fun VgroupReadAttribute3(session: MemorySession, vgroup_id: Int, attr_idx: Int): Attribute? {
-        // return Attribute("fake", "dog")
-        val name_p: MemorySegment = session.allocate(MAX_NAME)
-        val datatype_p = session.allocate(C_INT, 0)
-        val count_p = session.allocate(C_INT, 0)
-        val size_p = session.allocate(C_INT, 0)
-        val flds_p = session.allocate(C_INT, 0)
-        val refnum_p = session.allocate(C_SHORT, 0)
-
-        // intn Vattrinfo2(int32 vgroup_id, intn attr_index, char *attr_name, int32 *data_type, int32 *count, int32 *size, int32 *nfields, uint16 *refnum)
-        checkErr("Vattrinfo2", Vattrinfo2(vgroup_id, attr_idx, name_p, datatype_p, count_p, size_p, flds_p, refnum_p))
-        val aname: String = name_p.getUtf8String(0) // Name of the attribute
-        require(aname.length < MAX_NAME)
-        val datatype4 = datatype_p[C_INT, 0] // Data type of the attribute
-        val datatype = H4type.getDataType(datatype4)
-        val nvalues = count_p[C_INT, 0]    // Number of values in the attribute // LOOK a bug where nvalues returns fld[0].nelems instead of vh.nelems * fld[0].nelems
-        val sizeInBytes = size_p[C_INT, 0] // Size, in bytes, of the attribute values // LOOK sometimes a bug where size returns nelems instead
-        val nflds = flds_p[C_INT, 0] // Number of fields in the attribute vdata
-        val refnum = refnum_p[C_SHORT, 0].toUShort().toInt() // Reference number of the attribute vdata
-        if (debugAttributeBug) println("VgroupReadAttribute3 $aname size = $sizeInBytes nvalues = $nvalues datatype.size = ${datatype.size} nflds = $nflds refnum=$refnum")
-
-        // println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
-        // println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
-
-        if (aname == "ArchiveMetadata.0")
-            println()
-
-        return VStructureReadAsAttribute(session, refnum)
-    }
-
+    // use VSinquire() to get info for an attribute
+    // then use VSfindex() and VFfieldtype() to read rest of info
     private fun VStructureReadAsAttribute(session: MemorySession, vs_ref: Int) : Attribute? {
-        val tagid = tagid(vs_ref, TagEnum.VG.code)
+        val tagid = tagid(vs_ref, TagEnum.VS.code) //  Reference number of the attribute vdata
         if (completedObjects.contains(tagid)) {
-            if (debugVSdata) println(" VStructureRead skip $vs_ref")
+            if (debugVSdata) println(" VStructureReadAsAttribute skip $vs_ref")
             return null
         }
         completedObjects.add(tagid)
 
         val vdata_id = VSattach(fileOpenId, vs_ref, read_access_mode)
-        if (vdata_id < 1)
-            println()
         try {
             val vclass_p: MemorySegment = session.allocate(MAX_NAME)
             checkErr("VSgetclass", VSgetclass(vdata_id, vclass_p))
@@ -785,8 +925,8 @@ class HCheader(val filename: String) {
             require(vclass.length < MAX_NAME)
 
             val n_records_p = session.allocate(C_INT, 0)
-            val interlace_p = session.allocateArray(C_INT as MemoryLayout, 100)
-            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_NAME)
+            val interlace_p = session.allocateArray(C_INT as MemoryLayout, 100) // LOOK 100 ??
+            val fieldnames_p: MemorySegment = session.allocate(MAX_FIELDS_SIZE)
             val recsize_p = session.allocate(C_INT, 0) // size, in bytes, of the vdata record
             val vsname_p: MemorySegment = session.allocate(MAX_NAME)
 
@@ -795,15 +935,16 @@ class HCheader(val filename: String) {
             val nrecords = n_records_p[C_INT, 0]
             val interlace = interlace_p[C_INT, 0]
             val fieldnames = fieldnames_p.getUtf8String(0)
-            require(fieldnames.length < MAX_FIELDS_NAME)
-            val recsize = recsize_p[C_INT, 0]
+            require(fieldnames.length < MAX_FIELDS_SIZE)
+            val recsize = recsize_p[C_INT, 0] // this is correct, bypassing the Vattrinfo2 bug
             val vsname = vsname_p.getUtf8String(0)
-            require(fieldnames.length < MAX_NAME)
+            require(vsname.length < MAX_NAME)
 
             if (debugVSdata) {
                 println("  VStructureReadAsAttribute '$vsname' ref=$vs_ref class = '$vclass' nrecords=$nrecords fieldnames='$fieldnames' recsize=$recsize")
             }
 
+            // now we use the fieldnames to get the field index, which lets us call the VF*() methods.
             val index_p = session.allocate(C_INT, 0)
             val names = fieldnames.split(",").map { it.trim() }
             val members = mutableListOf<StructureMember>()
@@ -815,7 +956,7 @@ class HCheader(val filename: String) {
                 val fdatatype = H4type.getDataType(type)
                 val esize = VFfieldesize(vdata_id, idx)
                 val isize = VFfieldisize(vdata_id, idx) // native machine size of the field.
-                val nelems = VFfieldorder(vdata_id, idx) // field "order" ??
+                val nelems = VFfieldorder(vdata_id, idx) // misnamed field "order" ??
                 if (debugVSdetails) println("    VSfield name='$name' fdatatype=$fdatatype offset='$offset' nelems=$nelems esize =$esize isize = $isize")
                 val m = StructureMember(name, fdatatype, offset, intArrayOf(nelems))
                 members.add(m)
@@ -839,7 +980,52 @@ class HCheader(val filename: String) {
         }
     }
 
+    /////////////////////////////////////////////////////////////////////////////////
+
+    fun isNestedGroup(groupName: String, className : String, tag_array: IntArray) : Boolean {
+        if (groupName.contains("RIG0"))
+            return false
+        if (className.startsWith("Var0") || className.startsWith("Att0") || className.startsWith("CDF0")
+            || className.startsWith("RI0")
+            || className.startsWith("Dim0") || className.startsWith("DimVal0") || className.startsWith("UDim0")) {
+            return false
+        }
+
+        var isGroup = false
+        repeat(tag_array.size) {
+            val tagCode = tag_array[it]
+            if (tagCode == TagEnum.VG.code || tagCode == TagEnum.VH.code || tagCode == TagEnum.NDG.code) {
+                isGroup = true
+            }
+        }
+        return isGroup
+    }
+
+    fun checkEosOrPromote(attr : Attribute, gb : Group.Builder, addAttributesToGroup: Boolean) {
+        if (EOS.isMetadata(attr.name)) {
+            if (metadata.find { it.name == attr.name } == null) {
+                metadata.add(attr)
+                if (attr.name.startsWith("StructMetadata")) { // LOOK assume its in order
+                    this.structMetadata.add(attr.values[0] as String)
+                }
+            }
+            return
+        }
+        if (!addAttributesToGroup) {
+            return
+        }
+        if (attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMaxPromote) {
+            if (promotedAttributes.find { it.name == attr.name } == null) {
+                promotedAttributes.add(attr)
+            }
+        } else {
+            gb.addAttributeIfNotExists(attr)
+        }
+    }
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////
+
 
 private fun processAttribute(name : String, nelems : Int, datatype : Datatype, bb : ByteBuffer) : Attribute {
     val shape = intArrayOf(nelems)
@@ -865,14 +1051,14 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype, b
     return Attribute(name, datatype, values.toList())
 }
 
-private fun makeVariableFromStringAttribute(g4 : Group4, att : Attribute) {
+private fun makeVariableFromStringAttribute(group : Group.Builder, att : Attribute) {
     require(att.isString)
     val svalue = att.values[0] as String
     // create the Variable
     val vb = Variable.Builder(att.name)
     vb.datatype = Datatype.STRING
     vb.spObject = Vinfo4().setSValue(svalue)
-    g4.gb.addVariable(vb)
+    group.addVariable(vb)
 }
 
 fun checkErr (where : String, ret: Int) {
@@ -888,16 +1074,15 @@ fun checkErrNeg (where : String, ret: Int) {
 }
 
 data class Group4(val name : String, val parent: Group4?) {
+    val subgroups = mutableMapOf<Int, Group4>()
     var gb = Group.Builder(name)
-    init {
-        parent?.gb?.addGroup(gb)
-    }
 }
 
+// info needed to read data with VSread()
 data class VSInfo(val vs_ref : Int, val nrecords : Int, val recsize : Int, val fldNames : String, val interlace : Int)
 
 class Vinfo4() {
-    var svalue : String? = null
+    var value : ArrayTyped<*>? = null
     var sdsIndex : Int? = null
     var grIndex : Int? = null
     var vsInfo : VSInfo? = null
@@ -913,7 +1098,12 @@ class Vinfo4() {
     }
 
     fun setSValue(svalue : String) : Vinfo4 {
-        this.svalue = svalue
+        this.value = ArrayString(intArrayOf(), listOf(svalue))
+        return this
+    }
+
+    fun setValue(value : ArrayTyped<*>) : Vinfo4 {
+        this.value = value
         return this
     }
 }

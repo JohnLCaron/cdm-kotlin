@@ -1,6 +1,6 @@
 package com.sunya.cdm.layout
 
-import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.TestSection
 import org.junit.jupiter.api.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertTrue
@@ -9,7 +9,7 @@ class TestOdometer {
 
     @Test
     fun testFull() {
-        val shape = intArrayOf(2, 3, 4)
+        val shape = longArrayOf(2, 3, 4)
         val dataSection = IndexSpace(shape)
         val odo = IndexND(dataSection, shape)
         var count = 0L
@@ -24,8 +24,8 @@ class TestOdometer {
 
     @Test
     fun testSlice() {
-        val shape = intArrayOf(3, 4, 5)
-        val dataSection = IndexSpace(Section("1:2, 2:3, 3:4"))
+        val shape = longArrayOf(3, 4, 5)
+        val dataSection = IndexSpace(TestSection.fromSpec("1:2, 2:3, 3:4"))
         val odo = IndexND(dataSection, shape)
         var count = 0
         for (ia in odo) {
@@ -38,8 +38,8 @@ class TestOdometer {
 
     @Test
     fun testSlice2() {
-        val shape = intArrayOf(3, 4, 50)
-        val dataSection = IndexSpace(Section("1:2, 2:3, 47:47"))
+        val shape = longArrayOf(3, 4, 50)
+        val dataSection = IndexSpace(TestSection.fromSpec("1:2, 2:3, 47:47"))
         val odo = IndexND(dataSection, shape)
         var count = 0
         for (ia in odo) {

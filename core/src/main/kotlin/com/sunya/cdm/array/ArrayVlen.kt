@@ -2,6 +2,8 @@ package com.sunya.cdm.array
 
 import com.sunya.cdm.api.Datatype
 import com.sunya.cdm.api.Section
+import com.sunya.cdm.api.toIntArray
+import com.sunya.cdm.api.toLongArray
 import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
@@ -48,11 +50,11 @@ class ArrayVlen(shape : IntArray, val values : List<Array<*>>, val baseType : Da
     }
 
     override fun section(section: Section): ArrayVlen {
-        val odo = IndexND(IndexSpace(section), this.shape)
+        val odo = IndexND(IndexSpace(section), this.shape.toLongArray())
         val sectionList = mutableListOf<Array<*>>()
         for (index in odo) {
             sectionList.add(values[odo.element().toInt()])
         }
-        return ArrayVlen(section.shape, sectionList, baseType)
+        return ArrayVlen(section.shape.toIntArray(), sectionList, baseType)
     }
 }

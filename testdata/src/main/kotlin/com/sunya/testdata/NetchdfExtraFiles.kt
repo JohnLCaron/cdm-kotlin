@@ -26,12 +26,18 @@ class NetchdfExtraFiles {
                 .addNameFilter { name -> !name.endsWith(".txt") }
                 .addNameFilter { name -> !name.endsWith(".xml") }
 
+            /*
+            /home/all/testdata/netchdf/esben/level2_MSG2_8bit_VISIR_STD_20091005_0700.H5
+            /home/all/testdata/netchdf/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5
+            /home/all/testdata/netchdf/austin/H12007_1m_MLLW_1of6.bag
+            /home/all/testdata/netchdf/tomas/S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4
+             */
             if (excludeClibFails) {
-                builder.addNameFilter { name -> !name.lowercase().contains("_npp_") }          // disagree with netcdf4 library
+                builder.addNameFilter { name -> !name.lowercase().contains("_npp_") }          // disagree with C library
                     .addNameFilter { name -> !name.endsWith("level2_MSG2_8bit_VISIR_STD_20091005_0700.H5") } // ditto
                     .addNameFilter { name -> !name.endsWith("I3A_VHR_22NOV2007_0902_L1B_STD.h5") }          // ditto
                     .addNameFilter { name -> !name.endsWith("H12007_1m_MLLW_1of6.bag") }                    // ditto
-                    .addNameFilter { name -> !name.endsWith("S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4") } // ditto
+                    // .addNameFilter { name -> !name.endsWith("S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4") } // ditto
             }
 
             return builder.build()

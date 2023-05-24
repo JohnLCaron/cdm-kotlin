@@ -3,7 +3,6 @@ package com.sunya.netchdf.hdf5
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
-import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.Layout
 import com.sunya.cdm.layout.LayoutRegular
 import java.io.IOException
@@ -18,11 +17,10 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
         return ArrayString(intArrayOf(), listOf())
     }
     val h5type = dc.h5type
-    val shape: IntArray = dc.storageDims
     val elemSize = h5type.elemSize
 
-    val wantSection = Section.fill(section, shape)
-    val layout: Layout = LayoutRegular(dc.dataPos, elemSize, shape, IndexSpace(wantSection))
+    val wantSection = section ?: Section(dc.storageDims)
+    val layout: Layout = LayoutRegular(dc.dataPos, elemSize, wantSection)
 
     if (h5type.datatype5 == Datatype5.Vlen) {
         return readVlenDataWithLayout(dc, layout, wantSection)
@@ -65,7 +63,7 @@ internal fun H5builder.readCompactData(vinfo : DataContainerVariable, shape : In
 
 // handles reading data with a Layout. LOOK: Fill Value ??
 @Throws(IOException::class)
-internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo): ArrayTyped<*> {
+internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, datatype: Datatype, shape : LongArray, h5type : H5TypeInfo): ArrayTyped<*> {
     val sizeBytes = layout.totalNelems * layout.elemSize
     if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
         throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
@@ -90,7 +88,7 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
     bb.limit(bb.capacity())
     bb.order(h5type.base?.endian ?: h5type.endian)
 
-    return this.processDataIntoArray(bb, datatype, shape, h5type, layout.elemSize)
+    return this.processDataIntoArray(bb, datatype, shape.toIntArray(), h5type, layout.elemSize)
 }
 
 internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo, elemSize : Int): ArrayTyped<*> {
@@ -157,8 +155,9 @@ internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endi
 }
 
 // this apparently has heapId addresses
-internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantedSection : Section) : ArrayTyped<*> {
+internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantSection : Section) : ArrayTyped<*> {
     val h5heap = H5heap(this)
+    val shape = wantSection.shape.toIntArray()
 
     if (dc.h5type.isVlenString) {
         val sarray = mutableListOf<String>()
@@ -170,7 +169,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 sarray.add(sval ?: "")
             }
         }
-        return ArrayString(wantedSection.shape, sarray)
+        return ArrayString(shape, sarray)
 
     } else {
         val base = dc.h5type.base!!
@@ -188,7 +187,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                     }
                 }
             }
-            return ArrayString(wantedSection.shape, refsList)
+            return ArrayString(shape, refsList)
         }
 
         // general case is to read an array of vlen objects
@@ -206,7 +205,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 count++
             }
         }
-        return ArrayVlen(wantedSection.shape, listOfArrays.toList(), readDatatype)
+        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
     }
 }
 

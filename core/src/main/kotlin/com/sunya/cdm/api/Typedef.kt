@@ -11,7 +11,7 @@ enum class TypedefKind {Compound, Enum, Opaque, Vlen, Unknown}
 abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : Datatype) {
     val name = makeValidCdmObjectName(orgName)
 
-    abstract fun cdl(indent : Indent): String
+    abstract fun cdl(indent : Indent = Indent(2)): String
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
@@ -28,6 +28,11 @@ abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : 
         result = 31 * result + name.hashCode()
         return result
     }
+
+    override fun toString(): String {
+        return cdl()
+    }
+
 }
 
 class CompoundTypedef(name : String, val members : List<StructureMember>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
@@ -106,7 +111,7 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
 
 /** Convert array of ENUM into equivalent array of String */
 fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
-    val size = Section.computeSize(this.shape).toInt()
+    val size = this.shape.computeSize()
     val enumIter = this.iterator()
     val stringValues = List(size) {
         val enumVal = enumIter.next()

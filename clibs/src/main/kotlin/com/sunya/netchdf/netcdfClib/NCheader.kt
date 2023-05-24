@@ -3,9 +3,9 @@ package com.sunya.netchdf.netcdfClib
 import com.sunya.cdm.api.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_SKIP_ATTS
 import com.sunya.netchdf.netcdf3.*
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormat
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfFormatExtended
-import com.sunya.netchdf.netcdf4.NetchdfFileFormat.Companion.netcdfMode
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfFormat
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfFormatExtended
+import com.sunya.netchdf.NetchdfFileFormat.Companion.netcdfMode
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
 import java.io.IOException
 import java.lang.foreign.*
@@ -151,10 +151,10 @@ class NCheader(val filename: String) {
             if (debug) println(" nc_inq_dim $dimId = $dimName $dimLength $isUnlimited")
 
             if (dimName.startsWith("phony_dim_")) {
-                val dimension = Dimension(dimLength.toInt())
+                val dimension = Dimension(dimLength)
                 g4.dimHash[dimId] = dimension
             } else {
-                val dimension = Dimension(dimName, dimLength.toInt(), true)
+                val dimension = Dimension(dimName, dimLength, true)
                 g4.gb.addDimension(dimension)
                 g4.dimHash[dimId] = dimension
             }
@@ -445,7 +445,7 @@ class NCheader(val filename: String) {
 
         fun makeDimList(dimIds: IntArray): List<Dimension> {
             return dimIds.map {
-                findDim(it) ?: Dimension("", it, false)
+                findDim(it) ?: Dimension(it)
             }
         }
 
