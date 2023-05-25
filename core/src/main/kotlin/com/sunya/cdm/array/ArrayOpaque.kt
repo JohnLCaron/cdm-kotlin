@@ -8,7 +8,8 @@ import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
 
-class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int) : ArrayTyped<ByteBuffer>(values, Datatype.OPAQUE, shape) {
+class ArrayOpaque(shape : IntArray, val values : ByteBuffer, val size : Int)
+        : ArrayTyped<ByteBuffer>(values, Datatype.OPAQUE, shape) {
     init {
         require(nelems * size <= values.capacity())
     }

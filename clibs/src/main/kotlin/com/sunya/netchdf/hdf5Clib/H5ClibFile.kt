@@ -74,7 +74,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         return ArrayString(want.shape.toIntArray(), slist)
     }
 
-    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayVlen {
+    internal fun readVlens(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayVlen<*> {
         val (memSpaceId, fileSpaceId) = makeSection(session, datasetId, h5ctype, want)
         val nelems = want.totalElements
         val vlen_p: MemorySegment = hvl_t.allocateArray(nelems.toInt(), session)
@@ -91,7 +91,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
             val address = hvl_t.`p$get`(vlen_p, elem)
             listOfVlen.add(readVlenArray(arraySize, address, basetype))
         }
-        return ArrayVlen(want.shape.toIntArray(), listOfVlen, basetype)
+        return ArrayVlen.fromArray(want.shape.toIntArray(), listOfVlen, basetype)
     }
 
     private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {

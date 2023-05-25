@@ -145,10 +145,9 @@ internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endi
         for (i in 0 until member.nelems) {
             val heapId = h5heap.readHeapIdentifier(sdataArray.bb, offset)
             val vlenArray = h5heap.getHeapDataArray(heapId, member.datatype, endian)
-            // println("  ${vlenArray.contentToString()}")
             listOfArrays.add(vlenArray)
         }
-        ArrayVlen(member.dims, listOfArrays, member.datatype)
+        ArrayVlen.fromArray(member.dims, listOfArrays, member.datatype)
     }
 
     return sdataArray
@@ -205,7 +204,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 count++
             }
         }
-        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
+        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype)
     }
 }
 

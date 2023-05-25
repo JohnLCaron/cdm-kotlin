@@ -103,7 +103,7 @@ class NClibFile(val filename: String) : Netchdf {
                         val address = nc_vlen_t.getAddress(vlen_p, elem)
                         listOfVlen.add( readVlenArray(arraySize, address, basetype))
                     }
-                    return ArrayVlen(shape, listOfVlen, basetype)
+                    return ArrayVlen.fromArray(shape, listOfVlen, basetype)
                     // TODO nc_free_vlen(nc_vlen_t *vl);
                     //      nc_free_string(size_t len, char **data);
                 }
@@ -135,7 +135,7 @@ class NClibFile(val filename: String) : Netchdf {
                             val address = val_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
                             listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
                         }
-                        ArrayVlen(member.dims, listOfVlen, member.datatype)
+                        ArrayVlen.fromArray(member.dims, listOfVlen, member.datatype)
                     }
                     return sdataArray
                 }
