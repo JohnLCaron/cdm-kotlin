@@ -102,6 +102,6 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
             // LOOK require vlenArray is Array<T>
             listOfArrays.add(vlenArray)
         }
-        return ArrayVlen(shape, listOfArrays.toList(), readDatatype)
+        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype)
     }
 }

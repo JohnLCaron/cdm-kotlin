@@ -7,7 +7,8 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 
 // fake ByteBuffer
-class ArrayString(shape : IntArray, val values : List<String>) : ArrayTyped<String>(ByteBuffer.allocate(1), Datatype.STRING, shape) {
+class ArrayString(shape : IntArray, val values : List<String>)
+        : ArrayTyped<String>(ByteBuffer.allocate(1), Datatype.STRING, shape) {
 
     constructor(shape : IntArray, valueArray : Array<String>) : this (shape, valueArray.toList())
 

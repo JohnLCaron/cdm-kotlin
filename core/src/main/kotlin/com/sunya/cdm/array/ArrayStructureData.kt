@@ -9,7 +9,7 @@ import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
 class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
-    : ArrayTyped<ArrayStructureData.StructureData>(bb, Datatype.COMPOUND, shape) {
+        : ArrayTyped<ArrayStructureData.StructureData>(bb, Datatype.COMPOUND, shape) {
 
     init {
         require(bb.capacity() >= recsize * shape.computeSize())
@@ -129,7 +129,7 @@ fun ArrayStructureData.putStringsOnHeap(lamda : (StructureMember, Int) -> List<S
     }
 }
 
-fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVlen) {
+fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVlen<*>) {
     members.filter { it.datatype == Datatype.VLEN }.forEach { member ->
         // println("member ${member.name}")
         this.forEachIndexed { idx, sdata ->
@@ -201,7 +201,7 @@ open class StructureMember(val orgName: String, val datatype : Datatype, val off
             }
             Datatype.VLEN -> {
                 val ret = sdata.getFromHeap(offset)
-                if (ret != null) (ret as ArrayVlen) else {
+                if (ret != null) (ret as ArrayVlen<*>) else {
                     throw RuntimeException("cant find ArrayVlen on heap at $offset")
                 }
             }

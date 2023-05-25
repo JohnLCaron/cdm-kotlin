@@ -68,12 +68,12 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
 With these tools we can be confident that our library gives the same results as the reference libraries.
 
-Currently (5/21/23) we have this coverage from core/test:
+Currently (5/25/23) we have this coverage from core/test:
 
 ````
- cdm      81% (1318/1616) LOC
- hdf4     81% (1703/2081) LOC
- hdf5     81% (2268/2787) LOC
+ cdm      84% (1408/1664) LOC
+ hdf4     78% (1640/2078) LOC
+ hdf5     81% (2271/2787) LOC
  netcdf3  77% (229/297) LOC
  ````
 
