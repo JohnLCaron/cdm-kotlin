@@ -8,7 +8,7 @@ import com.sunya.cdm.util.makeValidCdmObjectName
 
 enum class TypedefKind {Compound, Enum, Opaque, Vlen, Unknown}
 
-abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : Datatype) {
+abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : Datatype<*>) {
     val name = makeValidCdmObjectName(orgName)
 
     abstract fun cdl(indent : Indent = Indent(2)): String
@@ -35,7 +35,7 @@ abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : 
 
 }
 
-class CompoundTypedef(name : String, val members : List<StructureMember>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
+class CompoundTypedef(name : String, val members : List<StructureMember<*>>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
     override fun cdl(indent : Indent) : String {
         return buildString {
             append("${indent}compound $name {\n")
@@ -75,12 +75,12 @@ private fun showDims(dims : IntArray) : String {
     }
 }
 
-class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, String>) : Typedef(TypedefKind.Enum, name, baseType) {
+class EnumTypedef(name : String, baseType : Datatype<*>, val valueMap : Map<Int, String>) : Typedef(TypedefKind.Enum, name, baseType) {
     override fun cdl(indent : Indent) : String {
         return buildString {
             append("${indent}${baseType.strictEnumType().cdlName} enum $name {")
             var idx = 0
-            values.forEach {
+            valueMap.forEach {
                 if (idx > 0) append(", ")
                 append("${it.key} = ${it.value}")
                 idx++
@@ -91,7 +91,12 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
 
     /** Convert array of ENUM into equivalent array of String */
     fun ArrayTyped<*>.convertEnums(): ArrayString {
-        return this.convertEnums(values)
+        return this.convertEnums(valueMap)
+    }
+
+    /** Convert array of ENUM into equivalent array of String */
+    fun convertEnums(values : List<*>): List<String> {
+        return values.convertEnums(valueMap)
     }
 
     override fun equals(other: Any?): Boolean {
@@ -99,12 +104,12 @@ class EnumTypedef(name : String, baseType : Datatype, val values : Map<Int, Stri
         if (other !is EnumTypedef) return false
         if (!super.equals(other)) return false
 
-        return values == other.values
+        return valueMap == other.valueMap
     }
 
     override fun hashCode(): Int {
         var result = super.hashCode()
-        result = 31 * result + values.hashCode()
+        result = 31 * result + valueMap.hashCode()
         return result
     }
 }
@@ -126,7 +131,21 @@ fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
     return ArrayString(this.shape, stringValues)
 }
 
-private fun Datatype.strictEnumType() : Datatype {
+/** Convert Iterator of ENUM into equivalent List of String */
+fun List<*>.convertEnums(map: Map<Int, String>): List<String> {
+    val stringValues = this.map { enumVal ->
+        val num = when (enumVal) {
+            is UByte ->  enumVal.toInt()
+            is UShort ->  enumVal.toInt()
+            is UInt ->  enumVal.toInt()
+            else -> RuntimeException("unknown enum ${enumVal!!::class}")
+        }
+        map[num] ?: "Unknown enum number=$enumVal"
+    }
+    return stringValues
+}
+
+private fun Datatype<*>.strictEnumType() : Datatype<*> {
     return when(this) {
         Datatype.ENUM1 -> Datatype.UBYTE
         Datatype.ENUM2 -> Datatype.USHORT
@@ -157,7 +176,7 @@ class OpaqueTypedef(name : String, val elemSize : Int) : Typedef(TypedefKind.Opa
 }
 
 // dont really need a typedef, no extra information
-class VlenTypedef(name : String, baseType : Datatype) : Typedef(TypedefKind.Vlen, name, baseType) {
+class VlenTypedef(name : String, baseType : Datatype<*>) : Typedef(TypedefKind.Vlen, name, baseType) {
     override fun cdl(indent : Indent) : String {
         return "${indent}${baseType.cdlName}(*) $name ;"
     }

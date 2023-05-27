@@ -21,7 +21,7 @@ class CdmFullNames(val root: Group) {
     }
 
     /** Find a Variable, with the specified (escaped full) name. */
-    fun findVariable(fullName: String): Variable? {
+    fun findVariable(fullName: String): Variable<*>? {
         val names : List<String> = fullName.split("/").filter { !it.isEmpty() }
         if (names.isEmpty()) {
             return null
@@ -53,7 +53,7 @@ class CdmFullNames(val root: Group) {
      * An embedded "@" is interpreted as variable@attribute or group@attribute.
      * '@attribute' is an attribute in the root group
      */
-    fun findAttribute(fullName: String): Attribute? {
+    fun findAttribute(fullName: String): Attribute<*>? {
         val names : List<String> = fullName.split("/","@").filter { !it.isEmpty() }
         if (names.isEmpty()) {
             return null

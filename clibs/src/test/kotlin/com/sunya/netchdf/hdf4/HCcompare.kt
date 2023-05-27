@@ -152,7 +152,7 @@ class HCcompare {
     @Test
     fun problem2() {
         compareH4header(testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF")
-        readH4CheckUnused(testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF")
+        compareData(testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF", "Raster_Image_#0")
     }
 
     @Test

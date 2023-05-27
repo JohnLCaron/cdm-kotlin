@@ -1,5 +1,8 @@
 package com.sunya.cdm.api
 
+import com.sunya.cdm.array.ArrayStructureData
+import java.nio.ByteBuffer
+
 /**
  * The CDM API datatype. Note that file storage types may be different.
  * @param cdlName name in CDL
@@ -7,36 +10,37 @@ package com.sunya.cdm.api
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  * @param isVlen TODO HDF5 needs to track if this in Vlen or regular String.
  */
-data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
+data class Datatype<T>(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
 
     companion object {
-        val BYTE = Datatype("byte", 1)
-        val CHAR = Datatype("char", 1)
-        val SHORT = Datatype("short", 2)
-        val INT = Datatype("int", 4)
-        val LONG = Datatype("int64", 8)
-        val FLOAT = Datatype("float", 4)
-        val DOUBLE = Datatype("double", 8)
-        val UBYTE = Datatype("ubyte", 1)
-        val USHORT = Datatype("ushort", 2)
-        val UINT = Datatype("uint", 4)
-        val ULONG = Datatype("uint64", 8)
+        val BYTE = Datatype<Byte>("byte", 1)
+        val CHAR = Datatype<String>("char", 1)
+        val SHORT = Datatype<Short>("short", 2)
+        val INT = Datatype<Int>("int", 4)
+        val LONG = Datatype<Long>("int64", 8)
+        val FLOAT = Datatype<Float>("float", 4)
+        val DOUBLE = Datatype<Double>("double", 8)
+        val UBYTE = Datatype<UByte>("ubyte", 1)
+        val USHORT = Datatype<UShort>("ushort", 2)
+        val UINT = Datatype<UInt>("uint", 4)
+        val ULONG = Datatype<ULong>("uint64", 8)
 
-        val ENUM1 = Datatype("ubyte enum", 1)
-        val ENUM2 = Datatype("ushort enum", 2)
-        val ENUM4 = Datatype("uint enum", 4)
+        val ENUM1 = Datatype<UByte>("ubyte enum", 1)
+        val ENUM2 = Datatype<UShort>("ushort enum", 2)
+        val ENUM4 = Datatype<UInt>("uint enum", 4)
 
         //// object types have variable length storage; inside StructureData, they have 32 bit index onto a heap
-        val STRING = Datatype("string", 4)
-        val OPAQUE = Datatype("opaque", 4)
+        val STRING = Datatype<String>("string", 4)
+        val OPAQUE = Datatype<ByteBuffer>("opaque", 4)
 
         // unlike netcdf-java, we follow the netcdf4/hdf5 convention, making Vlen and Compound into separate types
-        val COMPOUND = Datatype("compound", 4)
-        val VLEN = Datatype("vlen", 4)
-        val REFERENCE = Datatype("reference", 4) // string = full path to referenced dataset
+        val COMPOUND = Datatype<ArrayStructureData.StructureData>("compound", 4)
+        val VLEN = Datatype<Array<*>>("vlen", 4)
+        val REFERENCE = Datatype<Long>("reference", 4) // string = full path to referenced dataset
 
         fun values() = listOf(BYTE, UBYTE, SHORT, USHORT, INT, UINT, LONG, ULONG, DOUBLE, FLOAT, ENUM1, ENUM2, ENUM4,
-            CHAR, STRING, OPAQUE, COMPOUND, VLEN, REFERENCE)
+            CHAR, STRING, OPAQUE, COMPOUND, VLEN, REFERENCE
+        )
     }
 
     override fun toString(): String {
@@ -73,7 +77,7 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
      * This method is only meaningful for [integral][.isIntegral] data types; if it is called on a non-integral
      * type, then `this` is simply returned.
      */
-    fun withSignedness(signed: Boolean): Datatype {
+    fun withSignedness(signed: Boolean): Datatype<*> {
         return when (this) {
             BYTE, UBYTE -> if (!signed) UBYTE else BYTE
             SHORT, USHORT -> if (!signed) USHORT else SHORT
@@ -85,16 +89,16 @@ data class Datatype(val cdlName: String, val size: Int, val typedef : Typedef? =
 
     /** Used for Hdf5 Enum, Compound, Opaque, Vlen.
      * The last two arent particularly useful, but we leave them in to agree with the Netcdf4 C library. */
-    fun withTypedef(typedef: Typedef?): Datatype = this.copy(typedef = typedef)
+    fun withTypedef(typedef: Typedef?): Datatype<T> = this.copy(typedef = typedef)
 
-    fun withVlen(isVlen: Boolean): Datatype = this.copy(isVlen = isVlen)
+    fun withVlen(isVlen: Boolean): Datatype<T> = this.copy(isVlen = isVlen)
 
     // like enum, equals just compares the type, ignoring the "with" properties.
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
         if (javaClass != other?.javaClass) return false
 
-        other as Datatype
+        other as Datatype<T>
 
         if (cdlName != other.cdlName) return false
         if (size != other.size) return false

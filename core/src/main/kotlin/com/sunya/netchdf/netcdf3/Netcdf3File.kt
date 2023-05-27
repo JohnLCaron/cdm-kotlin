@@ -30,9 +30,9 @@ class Netcdf3File(val filename : String) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+    override fun <T> readArrayData(v2: Variable<T>, section: SectionPartial?): ArrayTyped<T> {
         if (v2.nelems == 0L) {
-            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+            return ArrayEmpty(v2.shape.toIntArray(), v2.datatype)
         }
         val wantSection : Section = SectionPartial.fill(section, v2.shape)
         val vinfo = v2.spObject as VinfoN3
@@ -44,19 +44,19 @@ class Netcdf3File(val filename : String) : Netchdf {
         return readDataWithLayout(layout, v2, wantSection)
     }
 
-    private fun Variable.hasUnlimited() : Boolean {
+    private fun Variable<*>.hasUnlimited() : Boolean {
         return this.dimensions.find { it == header.unlimitedDimension } != null
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+    override fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection<T>> {
         if (v2.nelems == 0L) {
-            return listOf<ArraySection>().iterator()
+            return listOf<ArraySection<T>>().iterator()
         }
         val wantSection = SectionPartial.fill(section, v2.shape)
         return NCmaxIterator(v2, wantSection, maxElements ?: 100_000)
     }
 
-    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class NCmaxIterator<T>(val v2: Variable<T>, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection<T>>() {
         private val debugChunking = false
         val vinfo = v2.spObject as VinfoN3
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
@@ -83,7 +83,7 @@ class Netcdf3File(val filename : String) : Netchdf {
     }
 
     @Throws(IOException::class)
-    private fun readDataWithLayout(layout: Layout, v2: Variable, wantSection : Section): ArrayTyped<*> {
+    private fun <T> readDataWithLayout(layout: Layout, v2: Variable<T>, wantSection : Section): ArrayTyped<T> {
         require(wantSection.totalElements == layout.totalNelems)
         val vinfo = v2.spObject as VinfoN3
         val totalNbytes = (vinfo.elemSize * layout.totalNelems)
@@ -102,7 +102,7 @@ class Netcdf3File(val filename : String) : Netchdf {
         require(bytesRead == totalNbytes.toInt())
 
         val shape = wantSection.shape.toIntArray()
-        return when (v2.datatype) {
+        val result = when (v2.datatype) {
             Datatype.BYTE -> ArrayByte(shape, values)
             Datatype.UBYTE -> ArrayUByte(shape, values)
             Datatype.CHAR -> ArrayUByte(shape, values).makeStringsFromBytes() // LOOK
@@ -117,6 +117,7 @@ class Netcdf3File(val filename : String) : Netchdf {
             Datatype.USHORT -> ArrayUShort(shape, values)
             else -> throw IllegalArgumentException("datatype ${v2.datatype}")
         }
+        return result as ArrayTyped<T>
     }
 
     override fun equals(other: Any?): Boolean {

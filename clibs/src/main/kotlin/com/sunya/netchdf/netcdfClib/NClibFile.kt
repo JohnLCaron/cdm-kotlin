@@ -64,11 +64,11 @@ class NClibFile(val filename: String) : Netchdf {
         // NOOP
     }
 
-    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+    override fun <T> readArrayData(v2: Variable<T>, section: SectionPartial?): ArrayTyped<T> {
         return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, wantSection: Section): ArrayTyped<*> {
+    internal fun <T> readArrayData(v2: Variable<T>, wantSection: Section): ArrayTyped<T> {
         val nelems = wantSection.totalElements
         require(nelems < Int.MAX_VALUE)
 
@@ -103,7 +103,7 @@ class NClibFile(val filename: String) : Netchdf {
                         val address = nc_vlen_t.getAddress(vlen_p, elem)
                         listOfVlen.add( readVlenArray(arraySize, address, basetype))
                     }
-                    return ArrayVlen.fromArray(shape, listOfVlen, basetype)
+                    return ArrayVlen.fromArray(shape, listOfVlen, basetype) as ArrayTyped<T>
                     // TODO nc_free_vlen(nc_vlen_t *vl);
                     //      nc_free_string(size_t len, char **data);
                 }
@@ -135,9 +135,9 @@ class NClibFile(val filename: String) : Netchdf {
                             val address = val_p.get(ValueLayout.ADDRESS, (offset + 8).toLong())
                             listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
                         }
-                        ArrayVlen.fromArray(member.dims, listOfVlen, member.datatype)
+                        ArrayVlen.fromArray(member.dims, listOfVlen, member.datatype.typedef!!.baseType)
                     }
-                    return sdataArray
+                    return sdataArray as ArrayTyped<T>
                 }
 
                 Datatype.ENUM1, Datatype.ENUM2, Datatype.ENUM4 -> {
@@ -151,9 +151,9 @@ class NClibFile(val filename: String) : Netchdf {
                     val values = ByteBuffer.wrap(raw)
                     with (datatype.typedef as EnumTypedef) {
                         when (datatype) {
-                            Datatype.ENUM1 -> return ArrayUByte(shape, values).convertEnums()
-                            Datatype.ENUM2 -> return ArrayUShort(shape, values).convertEnums()
-                            Datatype.ENUM4 -> return ArrayUInt(shape, values).convertEnums()
+                            Datatype.ENUM1 -> return ArrayUByte(shape, values).convertEnums() as ArrayTyped<T>
+                            Datatype.ENUM2 -> return ArrayUShort(shape, values).convertEnums() as ArrayTyped<T>
+                            Datatype.ENUM4 -> return ArrayUInt(shape, values).convertEnums() as ArrayTyped<T>
                             else -> throw RuntimeException()
                         }
                     }
@@ -165,7 +165,7 @@ class NClibFile(val filename: String) : Netchdf {
                         nc_get_vars_schar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayByte(shape, values)
+                    return ArrayByte(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.UBYTE -> {
@@ -174,7 +174,7 @@ class NClibFile(val filename: String) : Netchdf {
                         nc_get_vars_uchar(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayUByte(shape, values)
+                    return ArrayUByte(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.CHAR -> {
@@ -183,7 +183,7 @@ class NClibFile(val filename: String) : Netchdf {
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayUByte(shape, values).makeStringsFromBytes() // LOOK
+                    return ArrayUByte(shape, values).makeStringsFromBytes() as ArrayTyped<T> // LOOK
                 }
 
                 Datatype.DOUBLE -> {
@@ -196,7 +196,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         dvalues.put(i.toInt(), val_p.getAtIndex(C_DOUBLE, i))
                     }
-                    return ArrayDouble(shape, values)
+                    return ArrayDouble(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.FLOAT -> {
@@ -208,7 +208,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         fvalues.put(i.toInt(), val_p.getAtIndex(C_FLOAT, i))
                     }
-                    return ArrayFloat(shape, values)
+                    return ArrayFloat(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.INT -> {
@@ -221,7 +221,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         ivalues.put(i.toInt(), val_p.getAtIndex(C_INT, i))
                     }
-                    return ArrayInt(shape, values)
+                    return ArrayInt(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.UINT -> {
@@ -234,7 +234,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         ivalues.put(i.toInt(), val_p.getAtIndex(C_INT, i))
                     }
-                    return ArrayUInt(shape, values)
+                    return ArrayUInt(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.LONG -> {
@@ -247,7 +247,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         lvalues.put(i.toInt(), val_p.getAtIndex(C_LONG, i))
                     }
-                    return ArrayLong(shape, values)
+                    return ArrayLong(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.ULONG -> {
@@ -260,7 +260,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         lvalues.put(i.toInt(), val_p.getAtIndex(C_LONG, i))
                     }
-                    return ArrayULong(shape, values)
+                    return ArrayULong(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.SHORT -> {
@@ -272,7 +272,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         svalues.put(i.toInt(), val_p.getAtIndex(C_SHORT, i))
                     }
-                    return ArrayShort(shape, values)
+                    return ArrayShort(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.USHORT -> {
@@ -284,7 +284,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         svalues.put(i.toInt(), val_p.getAtIndex(C_SHORT, i))
                     }
-                    return ArrayUShort(shape, values)
+                    return ArrayUShort(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.STRING -> {
@@ -295,7 +295,7 @@ class NClibFile(val filename: String) : Netchdf {
                     for (i in 0 until nelems) {
                         values.add(val_p.getAtIndex(ValueLayout.ADDRESS, i).getUtf8String(0))
                     }
-                    return ArrayString(shape, values)
+                    return ArrayString(shape, values) as ArrayTyped<T>
                 }
 
                 Datatype.OPAQUE -> {
@@ -303,7 +303,7 @@ class NClibFile(val filename: String) : Netchdf {
                     checkErr("opaque nc_get_var", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val bb = ByteBuffer.wrap(raw)
-                    return ArrayOpaque(shape, bb, userType.size)
+                    return ArrayOpaque(shape, bb, userType.size) as ArrayTyped<T>
                 }
 
                 else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
@@ -311,12 +311,12 @@ class NClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+    override fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection<T>> {
         val filled = SectionPartial.fill(section, v2.shape)
         return NCmaxIterator(v2, filled, maxElements ?: 100_000)
     }
 
-    private inner class NCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class NCmaxIterator<T>(val v2: Variable<T>, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection<T>>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
@@ -335,14 +335,19 @@ class NClibFile(val filename: String) : Netchdf {
     }
 }
 
-private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {
-    return when (datatype) {
+private fun <T> readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<T>) : Array<T> {
+    val result = when (datatype) {
         Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
         Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(JAVA_DOUBLE, idx.toLong()) }
-        Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
-        Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
-        Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
-        Datatype.LONG, Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+        Datatype.BYTE -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()) }
+        Datatype.UBYTE, Datatype.ENUM1 -> Array(arraySize) { idx -> address.get(JAVA_BYTE, idx.toLong()).toUByte() }
+        Datatype.SHORT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()) }
+        Datatype.USHORT, Datatype.ENUM2 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_SHORT, idx.toLong()).toUShort() }
+        Datatype.INT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()) }
+        Datatype.UINT, Datatype.ENUM4 -> Array(arraySize) { idx -> address.getAtIndex(JAVA_INT, idx.toLong()).toUInt() }
+        Datatype.LONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()) }
+        Datatype.ULONG -> Array(arraySize) { idx -> address.getAtIndex(JAVA_LONG, idx.toLong()).toULong() }
         else -> throw IllegalArgumentException("unsupported datatype ${datatype}")
     }
+    return result as Array<T>
 }

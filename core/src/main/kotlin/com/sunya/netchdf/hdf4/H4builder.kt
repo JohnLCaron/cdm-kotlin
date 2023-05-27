@@ -1,6 +1,7 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.array.ArrayStructureData
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.util.Indent
@@ -12,17 +13,18 @@ import java.nio.charset.StandardCharsets
 
 const val attLengthMaxPromote = 4000
 
+/**
+ * @see "https://support.hdfgroup.org/release4/doc/index.html"
+ */
 /* Implementation Notes
    1. Early version seem to use the refno as a groouping mechanism. Perhaps before Vgroup??
-
  */
-
 class H4builder(val raf: OpenFile, val valueCharset: Charset) {
     private val alltags = mutableListOf<Tag>() // in order as they appear in the file
 
     var rootBuilder: Group.Builder = Group.Builder("")
-    val metadata = mutableListOf<Attribute>()
-    val promotedAttributes = mutableListOf<Attribute>()
+    val metadata = mutableListOf<Attribute<*>>()
+    val promotedAttributes = mutableListOf<Attribute<*>>()
     val structMetadata = mutableListOf<String>()
 
     private val unparentedGroups = mutableMapOf<Int, Group4>() // vg refno, vg group4
@@ -116,27 +118,27 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         alltags.reversed().forEach {
             when (it.code) {
                 TagEnum.VERSION.code -> {
-                    rootBuilder.addAttribute(Attribute("HDF4FileVersion", (it as TagVersion).value()))
+                    rootBuilder.addAttribute(Attribute.from("HDF4FileVersion", (it as TagVersion).value()))
                     it.isUsed = true
                 }
 
                 TagEnum.DIL.code -> {
-                    rootBuilder.addAttribute(Attribute("DataLabel.${dataLabel++}", (it as TagAnnotate).text))
+                    rootBuilder.addAttribute(Attribute.from("DataLabel.${dataLabel++}", (it as TagAnnotate).text))
                     it.isUsed = true
                 }
 
                 TagEnum.DIA.code -> {
-                    rootBuilder.addAttribute(Attribute("DataDesc.${dataDesc++}", (it as TagAnnotate).text))
+                    rootBuilder.addAttribute(Attribute.from("DataDesc.${dataDesc++}", (it as TagAnnotate).text))
                     it.isUsed = true
                 }
 
                 TagEnum.FID.code -> {
-                    rootBuilder.addAttribute(Attribute("FileLabel.${fileLabel++}", (it as TagText).text))
+                    rootBuilder.addAttribute(Attribute.from("FileLabel.${fileLabel++}", (it as TagText).text))
                     it.isUsed = true
                 }
 
                 TagEnum.FD.code -> {
-                    rootBuilder.addAttribute(Attribute("FileDesc.${fileDesc++}", (it as TagText).text))
+                    rootBuilder.addAttribute(Attribute.from("FileDesc.${fileDesc++}", (it as TagText).text))
                     it.isUsed = true
                 }
             }
@@ -263,18 +265,18 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
     private fun findRasterInfo(tag: Tag) {
         if (tag.code == TagEnum.VG.code) {
             val vgroup = tag as TagVGroup
-            vgroup.nestedTags().forEach { tag ->
-                if (tag.tagEnum() == TagEnum.RI) {
-                    grVGaliasMap[tag.refno] = vgroup
+            vgroup.nestedTags().forEach { ntag ->
+                if (ntag.tagEnum() == TagEnum.RI) {
+                    grVGaliasMap[ntag.refno] = vgroup
                 }
             }
         }
 
         if (tag.code == TagEnum.RIG.code) {
             val dgroup = tag as TagDataGroup
-            dgroup.nestedTags().forEach { tag ->
-                if (tag.tagEnum() == TagEnum.RI) {
-                    grRIGaliasMap[tag.refno] = dgroup
+            dgroup.nestedTags().forEach { ntag ->
+                if (ntag.tagEnum() == TagEnum.RI) {
+                    grRIGaliasMap[ntag.refno] = dgroup
                 }
             }
         }
@@ -486,7 +488,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         }
     }
 
-    fun checkEosOrPromote(attr: Attribute, gb: Group.Builder, addAttributesToGroup: Boolean) {
+    fun checkEosOrPromote(attr: Attribute<*>, gb: Group.Builder, addAttributesToGroup: Boolean) {
         if (EOS.isMetadata(attr.name)) {
             if (metadata.find { it.name == attr.name } == null) {
                 metadata.add(attr)
@@ -522,7 +524,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         groupName: String?,
         parent: Group.Builder,
         dimNames: List<String>
-    ): Variable.Builder? {
+    ): Variable.Builder<*>? {
         if (dataGroup.isUsed) {
             if (debugConstruct) println("SDread skip  ${dataGroup.refCode()} $groupName")
             return null
@@ -556,7 +558,13 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         }
         val dimSDD = dimSDDout!!
 
-        val vb = Variable.Builder(groupName ?: "Data-Set-${dataGroup.refno}")
+        val nt: TagNT = tagidMap[tagid(dimSDD.data_nt_ref, TagEnum.NT.code)] as TagNT?
+            ?: throw IllegalStateException("   **** NO nt tag found for SD ${dataGroup.refCode()}")
+        nt.isUsed = true
+        nt.usedBy = dataGroup
+        val dataType = H4type.getDataType(nt.numberType)
+
+        val vb = Variable.Builder(groupName ?: "Data-Set-${dataGroup.refno}", dataType)
 
         // have to use the variables to figure out the dimensions. barf
         val rank = dimSDD.shape.size
@@ -571,13 +579,6 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             val dim = Dimension(dimSDD.shape[dimidx]) // anon
             vb.addDimension(dim)
         }
-
-        val nt: TagNT = tagidMap[tagid(dimSDD.data_nt_ref, TagEnum.NT.code)] as TagNT?
-            ?: throw IllegalStateException("   **** NO nt tag found for SD ${dataGroup.refCode()}")
-        nt.isUsed = true
-        nt.usedBy = dataGroup
-        val dataType = H4type.getDataType(nt.numberType)
-        vb.datatype = dataType
 
         vinfo.setVariable(vb)
         vinfo.setData(data, dataType.size)
@@ -615,8 +616,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             if (tag.tagEnum() == TagEnum.SDM) {
                 val minmax: TagSDminmax = tag as TagSDminmax
                 tag.isUsed = true
-                vb.addAttribute(Attribute("valid_min", dataType, listOf(minmax.getMin(dataType))))
-                vb.addAttribute(Attribute("valid_max", dataType, listOf(minmax.getMax(dataType))))
+                vb.addAttribute(Attribute.Builder("valid_min", dataType).setValue(minmax.getMin(dataType)).build())
+                vb.addAttribute(Attribute.Builder("valid_max", dataType).setValue(minmax.getMax(dataType)).build())
             }
         }
 
@@ -641,7 +642,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         groupName: String?,
         parent: Group.Builder,
         addAttsToGroup: Boolean
-    ): Variable.Builder? {
+    ): Variable.Builder<*>? {
         if (vh.isUsed) {
             return null
         }
@@ -687,31 +688,32 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         }
 
         val vsname = if (vh.name.equals("Ancillary_Data")) vh.className else vh.name // Lame
-        val vb = Variable.Builder(vsname)
-        vinfo.setVariable(vb)
-
         val members = vh.readStructureMembers()
         val nrecords = vh.nelems
-        if (members.size == 1) { // one field - dont make it into a structure
+
+        val vb = if (members.size == 1) { // one field - dont make it into a structure
             val member = members[0]
-            vb.datatype = member.datatype
+            val vb1 = Variable.Builder(vsname, member.datatype)
             vinfo.elemSize = member.datatype.size // look correct the size, not tagVH.ivsize
             val totalNelems = nrecords * member.nelems
             if (totalNelems > 1) {
                 if (nrecords != 1 && member.nelems != 1)
-                    vb.setDimensionsAnonymous(intArrayOf(nrecords, member.nelems))
+                    vb1.setDimensionsAnonymous(intArrayOf(nrecords, member.nelems))
                 else
-                    vb.setDimensionsAnonymous(intArrayOf(totalNelems))
+                    vb1.setDimensionsAnonymous(intArrayOf(totalNelems))
             }
+            vb1
         } else {
             val typedef = CompoundTypedef(vh.name, members)
-            vb.datatype = Datatype.COMPOUND.withTypedef(typedef)
+            val vb2 = Variable.Builder(vsname, Datatype.COMPOUND.withTypedef(typedef))
             if (nrecords > 1) {
-                vb.setDimensionsAnonymous(intArrayOf(nrecords))
+                vb2.setDimensionsAnonymous(intArrayOf(nrecords))
             }
             // LOOK, always put typedef into root. otherwise get duplicates
             rootBuilder.addTypedef(typedef)
+            vb2
         }
+        vinfo.setVariable(vb)
 
         if (debugConstruct) {
             println("added variable ${vb.name} from VH $vh group $groupName")
@@ -721,7 +723,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         return vb
     }
 
-    private fun VStructureReadAttribute(vh: TagVH): Attribute? {
+    private fun VStructureReadAttribute(vh: TagVH): Attribute<*>? {
         // LOOK assume always only one field. Maybe multiple fields are allowed to make a compound-typed attribute?
         require(vh.nfields == 1)
 
@@ -840,17 +842,17 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
     //// sometimes theres a TagDataGroup, sometimes a VGroup with the same RI in it. The VGroup takes precedence.
     //// sometimes only diff is that the VGroup has attributes
 
-    private fun GRVariableFromDataGroup(dataGroup: TagDataGroup, group: Group.Builder): Variable.Builder? {
+    private fun GRVariableFromDataGroup(dataGroup: TagDataGroup, group: Group.Builder): Variable.Builder<*>? {
         val name = "Raster_Image_#" + imageCount
         imageCount++
         return GRVariable(dataGroup, name, dataGroup.nestedTags(), group)
     }
 
-    private fun GRVariableFromVGroup(vgroup: TagVGroup, group: Group.Builder): Variable.Builder? {
+    private fun GRVariableFromVGroup(vgroup: TagVGroup, group: Group.Builder): Variable.Builder<*>? {
         return GRVariable(vgroup, vgroup.name, vgroup.nestedTags(), group)
     }
 
-    private fun GRVariable(owner: Tag, name: String, nested: List<Tag>, group: Group.Builder): Variable.Builder? {
+    private fun GRVariable(owner: Tag, name: String, nested: List<Tag>, group: Group.Builder): Variable.Builder<*>? {
         if (owner.isUsed) {
             return null
         }
@@ -918,9 +920,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         val orgDataType = H4type.getDataType(ntag.numberType)
         val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
 
-        val vb = Variable.Builder(name)
+        val vb = Variable.Builder(name, datatype)
         vinfo.start = rasterImageTag!!.offset
-        vb.datatype = datatype
         vinfo.elemSize = datatype.size
         vinfo.setVariable(vb)
 
@@ -930,9 +931,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
 
         if (ip8Tag != null) {
             val lutv_name = "${name}_lookup"
-            val lutvb = Variable.Builder(lutv_name)
+            val lutvb = Variable.Builder(lutv_name, Datatype.UBYTE)
             val lutVinfo = Vinfo(owner.refno)
-            lutvb.datatype = Datatype.UBYTE
             lutvb.setDimensionsAnonymous(intArrayOf(256, 3))
             lutVinfo.start = ip8Tag!!.offset
             lutVinfo.elemSize = 1
@@ -941,17 +941,19 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
 
         } else if (lutTag != null && ludTag != null) {
             val lutv_name = "${name}_lookup"
-            val lutvb = Variable.Builder(lutv_name)
-            val lutVinfo = Vinfo(owner.refno)
 
             val lutnt = tagidMap[tagid(ludTag!!.nt_ref, TagEnum.NT.code)] as TagNT
             lutnt.isUsed = true
             lutnt.usedBy = ludTag
+
             val lutType = H4type.getDataType(lutnt.numberType)
-            lutvb.datatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
+            val ldatatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
+            val lutvb = Variable.Builder(lutv_name, ldatatype)
+            val lutVinfo = Vinfo(owner.refno)
+
             lutvb.setDimensionsAnonymous(intArrayOf( /* ludTag!!.ydim, */ ludTag!!.xdim, ludTag!!.nelems))
             lutVinfo.start = lutTag!!.offset
-            lutVinfo.elemSize = lutvb.datatype!!.size
+            lutVinfo.elemSize = lutvb.datatype.size
             lutvb.spObject = lutVinfo
             group.addVariable(lutvb)
         }
@@ -973,24 +975,23 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
 
 //////////////////////////////////////////////////////////////////////////////////////////////
 
-    private fun makeVariableFromStringAttribute(group: Group.Builder, att: Attribute) {
+    private fun makeVariableFromStringAttribute(group: Group.Builder, att: Attribute<*>) {
         require(att.isString)
         val svalue = att.values[0] as String
-        val vb = Variable.Builder(att.name)
-        vb.datatype = Datatype.STRING
+        val vb = Variable.Builder(att.name, Datatype.STRING)
         vb.spObject = Vinfo(-1).setSValue(svalue)
         group.addVariable(vb)
     }
 
     // look for tagVHs on the TagDataGroup (NDG); might be attributes
-    private fun addVariableAttributes(ndg: TagDataGroup, vb: Variable.Builder, vinfo: Vinfo) {
+    private fun addVariableAttributes(ndg: TagDataGroup, vb: Variable.Builder<*>, vinfo: Vinfo) {
         ndg.nestedTags().forEach { tag ->
             tag.usedBy = ndg
             // look for attributes
             if (tag.code == 1962) { // VH
                 val vh: TagVH = tag as TagVH
                 if (vh.className.startsWith("Att")) {
-                    val att: Attribute? = VStructureReadAttribute(vh)
+                    val att: Attribute<*>? = VStructureReadAttribute(vh)
                     if (null != att) {
                         vb.addAttribute(att)
                         if (att.name.equals(NUG.FILL_VALUE)) vinfo.setFillValue(att)

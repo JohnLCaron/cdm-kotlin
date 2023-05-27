@@ -8,7 +8,7 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 
 // fixed length data in the ByteBuffer, var length data goes on the heap
-class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, val members : List<StructureMember>)
+class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, val members : List<StructureMember<*>>)
         : ArrayTyped<ArrayStructureData.StructureData>(bb, Datatype.COMPOUND, shape) {
 
     init {
@@ -60,7 +60,7 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
         return ArrayStructureData(section.shape.toIntArray(), sectionFrom(section), recsize, members)
     }
 
-    inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember>) {
+    inner class StructureData(val bb: ByteBuffer, val offset: Int, val members: List<StructureMember<*>>) {
         override fun toString(): String {
             return buildString {
                 append("{")
@@ -89,7 +89,7 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
         }
 
         fun getFromHeap(offset: Int) = this@ArrayStructureData.getFromHeap(offset)
-        fun putOnHeap(member : StructureMember, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
+        fun putOnHeap(member : StructureMember<*>, value: Any) = this@ArrayStructureData.putOnHeap(member.offset + this.offset, value)
 
         override fun equals(other: Any?): Boolean {
             if (this === other) return true
@@ -120,7 +120,7 @@ class ArrayStructureData(shape : IntArray, bb : ByteBuffer, val recsize : Int, v
     }
 }
 
-fun ArrayStructureData.putStringsOnHeap(lamda : (StructureMember, Int) -> List<String>) {
+fun ArrayStructureData.putStringsOnHeap(lamda : (StructureMember<*>, Int) -> List<String>) {
     members.filter { it.datatype.isVlenString }.forEach { member ->
         this.forEach { sdata ->
             val sval = lamda(member, sdata.offset + member.offset)
@@ -129,7 +129,7 @@ fun ArrayStructureData.putStringsOnHeap(lamda : (StructureMember, Int) -> List<S
     }
 }
 
-fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVlen<*>) {
+fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember<*>, Int) -> ArrayVlen<*>) {
     members.filter { it.datatype == Datatype.VLEN }.forEach { member ->
         // println("member ${member.name}")
         this.forEachIndexed { idx, sdata ->
@@ -141,7 +141,7 @@ fun ArrayStructureData.putVlensOnHeap(lamda : (StructureMember, Int) -> ArrayVle
 }
 
 // dim lengths here are ints; Hdf4,5 only supports ints.
-open class StructureMember(val orgName: String, val datatype : Datatype, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
+open class StructureMember<T>(val orgName: String, val datatype : Datatype<T>, val offset: Int, val dims : IntArray, val endian : ByteOrder? = null) {
     val name = makeValidCdmObjectName(orgName)
     val nelems = dims.computeSize()
 
@@ -222,7 +222,7 @@ open class StructureMember(val orgName: String, val datatype : Datatype, val off
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is StructureMember) return false
+        if (other !is StructureMember<*>) return false
 
         if (name != other.name) return false
         if (datatype != other.datatype) return false

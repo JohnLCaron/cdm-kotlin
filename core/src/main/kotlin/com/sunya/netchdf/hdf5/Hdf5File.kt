@@ -29,30 +29,30 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     override val size : Long get() = raf.size
 
     @Throws(IOException::class)
-    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+    override fun <T> readArrayData(v2: Variable<T>, section: SectionPartial?): ArrayTyped<T> {
         if (v2.nelems == 0L) {
-            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+            return ArrayEmpty(v2.shape.toIntArray(), v2.datatype)
         }
         val wantSection = SectionPartial.fill(section, v2.shape)
 
         // promoted attributes
         if (v2.spObject is DataContainerAttribute) {
-            return header.readRegularData(v2.spObject, wantSection)
+            return header.readRegularData(v2.spObject, v2.datatype, wantSection)
         }
 
         val vinfo = v2.spObject as DataContainerVariable
         if (vinfo.onlyFillValue) { // fill value only, no data
-            return ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue)
+            return ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue!!)
         }
 
         return try {
             if (vinfo.isChunked) {
                 H5chunkReader(header).readChunkedData(v2, wantSection)
             } else if (vinfo.isCompact) {
-                val alldata = header.readCompactData(vinfo, v2.shape.toIntArray())
+                val alldata = header.readCompactData(v2, v2.shape.toIntArray())
                 alldata.section(wantSection)
             } else {
-                header.readRegularData(vinfo, wantSection)
+                header.readRegularData(vinfo, v2.datatype, wantSection)
             }
         } catch (ex: Exception) {
             println("failed to read ${v2.name}, $ex")
@@ -61,29 +61,23 @@ class Hdf5File(val filename : String, strict : Boolean = false) : Netchdf {
     }
 
     @Throws(IOException::class)
-    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?) : Iterator<ArraySection> {
+    override fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial?, maxElements : Int?) : Iterator<ArraySection<T>> {
         if (v2.nelems == 0L) {
-            return listOf<ArraySection>().iterator()
+            return listOf<ArraySection<T>>().iterator()
         }
         val wantSection = SectionPartial.fill(section, v2.shape)
-
         val vinfo = v2.spObject as DataContainerVariable
+
         if (vinfo.onlyFillValue) { // fill value only, no data
-            val single = ArraySection(ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue), wantSection)
+            val single = ArraySection(ArraySingle(wantSection.shape.toIntArray(), v2.datatype, vinfo.fillValue!!), wantSection)
             return listOf(single).iterator()
         }
 
-        return try {
-            if (vinfo.isChunked) {
-                H5chunkIterator(header, v2, wantSection)
-            } else {
-                H5maxIterator(header, v2, wantSection, maxElements ?: 100_000)
-            }
-        } catch (ex: Exception) {
-            println("failed to read ${v2.name}, $ex")
-            throw ex
+        return if (vinfo.isChunked) {
+            H5chunkIterator(header, v2, wantSection)
+        } else {
+            H5maxIterator(header, v2, wantSection, maxElements ?: 100_000)
         }
     }
-
 
 }

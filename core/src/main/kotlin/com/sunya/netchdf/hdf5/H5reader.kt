@@ -8,13 +8,14 @@ import com.sunya.cdm.layout.LayoutRegular
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
+import kotlin.reflect.KClass
 
 private val debugLayout = false
 
 // Handles reading attributes and non-chunked Variables
-internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): ArrayTyped<*> {
+internal fun <T> H5builder.readRegularData(dc: DataContainer, datatype: Datatype<T>, section : Section?): ArrayTyped<T> {
     if (dc.mds.type == DataspaceType.Null) {
-        return ArrayString(intArrayOf(), listOf())
+        return ArrayString(intArrayOf(), listOf()) as ArrayTyped<T>
     }
     val h5type = dc.h5type
     val elemSize = h5type.elemSize
@@ -26,7 +27,7 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
         return readVlenDataWithLayout(dc, layout, wantSection)
     }
 
-    val datatype: Datatype = h5type.datatype()
+    val datatype = h5type.datatype()
     if (h5type.datatype5 == Datatype5.Compound) {
         require(datatype == Datatype.COMPOUND)
         requireNotNull(datatype.typedef)
@@ -37,18 +38,21 @@ internal fun H5builder.readRegularData(dc: DataContainer, section : Section?): A
     val dataArray = readDataWithLayout(state, layout, datatype, wantSection.shape, h5type)
 
     // convert enums to strings
+    // LOOK, converted to String, T = USHORT. Gets away with it because of type erasure, but breaks the API contract
     if (h5type.datatype5 == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
         val enumMsg = dc.mdt as DatatypeEnum
-        return dataArray.convertEnums(enumMsg.valuesMap)
+        return dataArray.convertEnums(enumMsg.valuesMap) as ArrayTyped<T>
+
     }
 
-    return dataArray
+    return dataArray as ArrayTyped<T>
 }
 
 // LOOK: not subsetting
 @Throws(IOException::class)
-internal fun H5builder.readCompactData(vinfo : DataContainerVariable, shape : IntArray): ArrayTyped<*> {
+internal fun <T> H5builder.readCompactData(v2 : Variable<T>, shape : IntArray): ArrayTyped<T> {
+    val vinfo = v2.spObject as DataContainerVariable
     val bb = when (vinfo.mdl) {
         is DataLayoutCompact -> vinfo.mdl.compactData
         is DataLayoutCompact3 -> vinfo.mdl.compactData
@@ -58,12 +62,12 @@ internal fun H5builder.readCompactData(vinfo : DataContainerVariable, shape : In
     bb.limit(bb.capacity())
     bb.order(vinfo.h5type.endian)
 
-    return this.processDataIntoArray(bb, vinfo.h5type.datatype(), shape, vinfo.h5type, vinfo.elementSize)
+    return this.processDataIntoArray(bb, vinfo.h5type.datatype(), shape, vinfo.h5type, vinfo.elementSize) as ArrayTyped<T>
 }
 
 // handles reading data with a Layout. LOOK: Fill Value ??
 @Throws(IOException::class)
-internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, datatype: Datatype, shape : LongArray, h5type : H5TypeInfo): ArrayTyped<*> {
+internal fun <T> H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, datatype: Datatype<T>, shape : LongArray, h5type : H5TypeInfo): ArrayTyped<T> {
     val sizeBytes = layout.totalNelems * layout.elemSize
     if (sizeBytes <= 0 || sizeBytes >= Integer.MAX_VALUE) {
         throw java.lang.RuntimeException("Illegal nbytes to read = $sizeBytes")
@@ -91,19 +95,19 @@ internal fun H5builder.readDataWithLayout(state: OpenFileState, layout: Layout, 
     return this.processDataIntoArray(bb, datatype, shape.toIntArray(), h5type, layout.elemSize)
 }
 
-internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, shape : IntArray, h5type : H5TypeInfo, elemSize : Int): ArrayTyped<*> {
+internal fun <T> H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype<T>, shape : IntArray, h5type : H5TypeInfo, elemSize : Int): ArrayTyped<T> {
 
     if (h5type.datatype5 == Datatype5.Compound) {
         val members = (datatype.typedef as CompoundTypedef).members
         val sdataArray =  ArrayStructureData(shape, bb, elemSize, members)
-        return processCompoundData(sdataArray, bb.order())
+        return processCompoundData(sdataArray, bb.order()) as ArrayTyped<T>
     }
 
     // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
     if (h5type.datatype5 == Datatype5.String) {
         val extshape = IntArray(shape.size + 1) {if (it == shape.size) elemSize else shape[it] }
         val result = ArrayUByte(extshape, bb)
-        return result.makeStringsFromBytes()
+        return result.makeStringsFromBytes() as ArrayTyped<T>
     }
 
     val result = when (datatype) {
@@ -125,7 +129,7 @@ internal fun H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Datatype, 
         return ArrayString(shape, this.convertReferencesToDataObjectName(result as ArrayLong))
     } */
 
-    return result
+    return result as ArrayTyped<T>
 }
 
 // Put the variable length members (vlen, string) on the heap
@@ -147,14 +151,15 @@ internal fun H5builder.processCompoundData(sdataArray : ArrayStructureData, endi
             val vlenArray = h5heap.getHeapDataArray(heapId, member.datatype, endian)
             listOfArrays.add(vlenArray)
         }
-        ArrayVlen.fromArray(member.dims, listOfArrays, member.datatype)
+        val basetype = member.datatype.typedef!!.baseType
+        ArrayVlen.fromArray(member.dims, listOfArrays, basetype)
     }
 
     return sdataArray
 }
 
 // this apparently has heapId addresses
-internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantSection : Section) : ArrayTyped<*> {
+internal fun <T> H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout, wantSection : Section) : ArrayTyped<T> {
     val h5heap = H5heap(this)
     val shape = wantSection.shape.toIntArray()
 
@@ -168,7 +173,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 sarray.add(sval ?: "")
             }
         }
-        return ArrayString(shape, sarray)
+        return ArrayString(shape, sarray) as ArrayTyped<T>
 
     } else {
         val base = dc.h5type.base!!
@@ -186,7 +191,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                     }
                 }
             }
-            return ArrayString(shape, refsList)
+            return ArrayString(shape, refsList) as ArrayTyped<T>
         }
 
         // general case is to read an array of vlen objects
@@ -204,7 +209,7 @@ internal fun H5builder.readVlenDataWithLayout(dc: DataContainer, layout : Layout
                 count++
             }
         }
-        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype)
+        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype) as ArrayTyped<T>
     }
 }
 

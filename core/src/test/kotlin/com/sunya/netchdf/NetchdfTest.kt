@@ -79,12 +79,13 @@ class NetchdfTest {
 
     @Test
     fun problem() {
-        readNetchdfData(testData + "devcdm/netcdf3/nctest_classic.nc")
+        showNetchdfHeader(testData + "netchdf/castel/20110421-153623-snippet-VI_MB7125_01.sni")
+        readNetchdfData(testData + "netchdf/castel/20110421-153623-snippet-VI_MB7125_01.sni")
     }
 
     @Test
     fun problem2() {
-        readNetchdfData(testData + "devcdm/netcdf3/tst_ncml.nc")
+        readNetchdfData(testData + "devcdm/netcdf4/cdm_sea_soundings.nc4")
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -173,7 +174,9 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial
 
 const val maxBytes = 10_000_000
 
-fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?) {
+    if (myvar.name.contains("mbReflectivity"))
+        println()
 
     val sectionF = SectionPartial.fill(section, myvar.shape)
     val nbytes = sectionF.totalElements * myvar.datatype.size
@@ -210,7 +213,7 @@ fun removeLast(org: IntArray): IntArray {
     return IntArray(org.size - 1) { org[it] }
 }
 
-fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
+fun readMiddleSection(myfile: Netchdf, myvar: Variable<*>, shape: LongArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         if (range == null) throw RuntimeException("Range is null")
@@ -267,7 +270,7 @@ fun compareNetchIterate(filename: String, varname : String? = null, compare : Bo
 }
 
 // compare readArrayData with chunkIterator
-fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
+fun compareOneVarIterate(myFile: Netchdf, myvar: Variable<*>, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
     val varBytes = myvar.nelems
     if (varBytes >= maxBytes) {
@@ -332,7 +335,7 @@ fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, sec
     }
 }
 
-fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: SectionPartial?) {
+fun compareOneVarIterate(myvar: Variable<*>, myfile: Netchdf, ncvar : Variable<*>, ncfile: Netchdf, section: SectionPartial?) {
     val sum = AtomicDouble()
     var countChunks = 0
     val time1 = measureNanoTime {

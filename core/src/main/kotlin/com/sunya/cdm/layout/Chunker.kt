@@ -134,7 +134,7 @@ class Chunker(val dataChunk: IndexSpace, val wantSpace: IndexSpace, merge : Merg
     }
 
     // transfer fillValue to dst buffer, using my computed chunks
-    internal fun transferMissing(fillValue: Any?, datatype: Datatype, elemSize: Int, dst: ByteBuffer) {
+    internal fun transferMissing(fillValue: Any?, datatype: Datatype<*>, elemSize: Int, dst: ByteBuffer) {
         if (fillValue == null) {
             return
         }
@@ -148,7 +148,7 @@ class Chunker(val dataChunk: IndexSpace, val wantSpace: IndexSpace, merge : Merg
 
 private const val debugChunking = false
 
-internal fun transferMissingNelems(fillValue: Any?, datatype: Datatype, nelems : Int, dst: ByteBuffer) {
+internal fun transferMissingNelems(fillValue: Any?, datatype: Datatype<*>, nelems : Int, dst: ByteBuffer) {
     if (fillValue == null) {
         return
     }

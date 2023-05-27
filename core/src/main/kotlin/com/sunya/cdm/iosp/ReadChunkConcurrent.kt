@@ -12,7 +12,7 @@ import kotlinx.coroutines.channels.produce
 @OptIn(ExperimentalCoroutinesApi::class)
 internal class ReadChunkConcurrent() {
 
-    fun readChunks(nthreads : Int, chunkIter : Iterator<ArraySection>, lamda : (ArraySection) -> Unit) {
+    fun <T> readChunks(nthreads : Int, chunkIter : Iterator<ArraySection<T>>, lamda : (ArraySection<T>) -> Unit) {
 
         runBlocking {
             val jobs = mutableListOf<Job>()
@@ -28,7 +28,7 @@ internal class ReadChunkConcurrent() {
 
     private val allResults = mutableListOf<Double>()
     private var count = 0
-    private fun CoroutineScope.produceChunks(producer: Iterator<ArraySection>): ReceiveChannel<ArraySection> =
+    private fun <T> CoroutineScope.produceChunks(producer: Iterator<ArraySection<T>>): ReceiveChannel<ArraySection<T>> =
         produce {
             for (ballot in producer) {
                 send(ballot)
@@ -40,10 +40,10 @@ internal class ReadChunkConcurrent() {
 
     private val mutex = Mutex()
 
-    private fun CoroutineScope.launchJob(
+    private fun <T> CoroutineScope.launchJob(
         id: Int,
-        input: ReceiveChannel<ArraySection>,
-        lamda: (ArraySection) -> Unit,
+        input: ReceiveChannel<ArraySection<T>>,
+        lamda: (ArraySection<T>) -> Unit,
     ) = launch(Dispatchers.Default) {
         for (arraySection in input) {
             lamda(arraySection)

@@ -2,43 +2,47 @@ package com.sunya.cdm.api
 
 import com.sunya.cdm.util.makeValidCdmObjectName
 
-data class Attribute(val orgName : String, val datatype : Datatype, val values : List<*>) {
+data class Attribute<T>(val orgName : String, val datatype : Datatype<T>, val values : List<T>) {
     val name = makeValidCdmObjectName(orgName)
     val isString = (datatype == Datatype.STRING)
 
-    constructor(name : String, svalue : String) : this(name, Datatype.STRING, List<String>(1) { svalue })
+    companion object {
+        fun from(name : String, value : String) = Attribute(name, Datatype.STRING, listOf(value))
+    }
 
-    class Builder {
-        var name : String? = null
-        var datatype : Datatype? = null
-        var values : List<*>? = null
+    class Builder<T>(val name : String, var datatype : Datatype<T>) {
+        var values : List<T> = emptyList()
 
-        fun setName(name : String) : Builder {
-            this.name = name
+        fun setValues(values : List<*>) : Builder<T> {
+            this.values = values as List<T> // TODO immutable ??
             return this
         }
 
-        fun setDatatype(type : Datatype) : Builder {
-            this.datatype = type
+        fun setValuesCheckChar(values : List<*>) : Builder<T> {
+            this.values = values as List<T> // TODO immutable ??
             return this
         }
 
-        fun setValues(values : List<*>) : Builder {
-            this.values = values
+        fun setValue(value : Any) : Builder<T> {
+            this.values = listOf(value as T)
             return this
         }
 
-        fun build() : Attribute {
+        fun build() : Attribute<T> {
+            /*
             if (datatype == Datatype.CHAR && values == null) {
                 values = listOf("") // special case to match c library
             }
-            var useType = datatype
-            // TODO is this worth it ? make calling routine do this ??
-            // note this only happens on build()
-            if (datatype == Datatype.CHAR && values != null && values!!.isNotEmpty() && values!![0] is String) {
-                useType = Datatype.STRING
+            // TODO is this worth it ? make calling routine do this ?? note this only happens on build()
+            var useType = if (datatype == Datatype.CHAR && values != null && values!!.isNotEmpty() && values!![0] is String) {
+               Datatype.STRING
+            } else {
+                datatype
             }
-            return Attribute(name!!, useType!!, values ?: emptyList<Any>())
+            // return Attribute(name, useType, values ?: emptyList<T>())
+             */
+
+            return Attribute(name, datatype, values)
         }
     }
 }

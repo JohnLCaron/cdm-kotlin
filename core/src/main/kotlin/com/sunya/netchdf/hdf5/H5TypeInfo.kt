@@ -40,7 +40,7 @@ internal data class H5TypeInfo(val isVlenString: Boolean, val isRefObject : Bool
                                val signed : Boolean, val endian : ByteOrder, val mdtAddress : Long, val mdtHash : Int,
                                val base : H5TypeInfo? = null, val typedef : Typedef? = null, val dims : IntArray? = null) {
 
-    fun datatype(): Datatype {
+    fun datatype(): Datatype<*> {
         return when (datatype5) {
             Datatype5.Fixed, Datatype5.BitField ->
                 when (this.elemSize) {

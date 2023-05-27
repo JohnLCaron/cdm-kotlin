@@ -12,7 +12,7 @@ class H4chunkReader(val h4 : H4builder) {
     private val debugChunking = false
     private val debugMissing = false
 
-    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
+    internal fun <T> readChunkedData(v2: Variable<T>, wantSection : Section) : ArrayTyped<T> {
         val vinfo = v2.spObject as Vinfo
         val elemSize = vinfo.elemSize
         val datatype = v2.datatype
@@ -62,7 +62,7 @@ class H4chunkReader(val h4 : H4builder) {
             Datatype.ULONG -> ArrayULong(shape, bb)
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
-        return result
+        return result as ArrayTyped<T>
     }
 
 }
