@@ -183,9 +183,19 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         return Array(nelems) { dst[it] }
     }
 
+    fun readArrayUByte(state : OpenFileState, nelems : Int): Array<UByte> {
+        val dst = readByteBuffer(state, nelems)
+        return Array(nelems) { dst[it].toUByte() }
+    }
+
     fun readArrayShort(state : OpenFileState, nelems : Int): Array<Short> {
         val dst = readByteBuffer(state, 2 * nelems).asShortBuffer()
         return Array(nelems) { dst[it] }
+    }
+
+    fun readArrayUShort(state : OpenFileState, nelems : Int): Array<UShort> {
+        val dst = readByteBuffer(state, 2 * nelems).asShortBuffer()
+        return Array(nelems) { dst[it].toUShort() }
     }
 
     fun readArrayInt(state : OpenFileState, nelems : Int): Array<Int> {
@@ -193,9 +203,19 @@ data class OpenFile(val location : String) : ReaderIntoByteArray, Closeable {
         return Array(nelems) { dst[it] }
     }
 
+    fun readArrayUInt(state : OpenFileState, nelems : Int): Array<UInt> {
+        val dst = readByteBuffer(state, 4 * nelems).asIntBuffer()
+        return Array(nelems) { dst[it].toUInt() }
+    }
+
     fun readArrayLong(state : OpenFileState, nelems : Int): Array<Long> {
         val dst = readByteBuffer(state, 8 * nelems).asLongBuffer()
         return Array(nelems) { dst[it] }
+    }
+
+    fun readArrayULong(state : OpenFileState, nelems : Int): Array<ULong> {
+        val dst = readByteBuffer(state, 8 * nelems).asLongBuffer()
+        return Array(nelems) { dst[it].toULong() }
     }
 
     fun readArrayFloat(state : OpenFileState, nelems : Int): Array<Float> {

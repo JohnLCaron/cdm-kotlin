@@ -13,16 +13,16 @@ interface Netchdf : Closeable {
     fun cdl() : String
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun readArrayData(v2: Variable, section: SectionPartial? = null) : ArrayTyped<*>
+    fun <T> readArrayData(v2: Variable<T>, section: SectionPartial? = null) : ArrayTyped<T>
 
     @Throws(IOException::class, InvalidRangeException::class)
-    fun chunkIterator(v2: Variable, section: SectionPartial? = null, maxElements : Int? = null) : Iterator<ArraySection>
+    fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial? = null, maxElements : Int? = null) : Iterator<ArraySection<T>>
 }
 
-data class ArraySection(val array : ArrayTyped<*>, val section : Section)
+data class ArraySection<T>(val array : ArrayTyped<T>, val section : Section)
 
 // Experimental
-fun Netchdf.chunkConcurrent(v2: Variable, section: SectionPartial? = null, maxElements : Int? = null, lamda : (ArraySection) -> Unit) {
+fun <T> Netchdf.chunkConcurrent(v2: Variable<T>, section: SectionPartial? = null, maxElements : Int? = null, lamda : (ArraySection<T>) -> Unit) {
     val reader = ReadChunkConcurrent()
     val chunkIter = this.chunkIterator( v2, section, maxElements)
     reader.readChunks(20, chunkIter, lamda)

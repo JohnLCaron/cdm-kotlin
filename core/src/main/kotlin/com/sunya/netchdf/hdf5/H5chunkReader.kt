@@ -13,7 +13,7 @@ import java.nio.ByteBuffer
 internal class H5chunkReader(val h5 : H5builder) {
     private val debugChunking = false
 
-    internal fun readChunkedData(v2: Variable, wantSection : Section) : ArrayTyped<*> {
+    internal fun <T> readChunkedData(v2: Variable<T>, wantSection : Section) : ArrayTyped<T> {
         val vinfo = v2.spObject as DataContainerVariable
         val h5type = vinfo.h5type
 
@@ -59,13 +59,13 @@ internal class H5chunkReader(val h5 : H5builder) {
         return if (h5type.datatype5 == Datatype5.Vlen) {
             h5.processVlenIntoArray(h5type, shape, bb, wantSpace.totalElements.toInt(), elemSize)
         } else {
-            h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize)
+            h5.processDataIntoArray(bb, datatype, shape, h5type, elemSize) as ArrayTyped<T>
         }
     }
 }
 
 // Chunked data apparently has heapIds directly, not addresses of heapIds. Go figure.
-internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray, bb: ByteBuffer, nelems: Int, elemSize : Int): ArrayTyped<*> {
+internal fun <T> H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray, bb: ByteBuffer, nelems: Int, elemSize : Int): ArrayTyped<T> {
     val h5heap = H5heap(this)
 
     if (h5type.isVlenString) {
@@ -74,7 +74,7 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
             val sval = h5heap.readHeapString(bb, i * elemSize)
             sarray.add(sval ?: "")
         }
-        return ArrayString(shape, sarray)
+        return ArrayString(shape, sarray) as ArrayTyped<T>
 
     } else {
         val base = h5type.base!!
@@ -89,7 +89,7 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
                     refsList.add(s)
                 }
             }
-            return ArrayString(shape, refsList)
+            return ArrayString(shape, refsList) as ArrayTyped<T>
         }
 
         // general case is to read an array of vlen objects
@@ -102,6 +102,6 @@ internal fun H5builder.processVlenIntoArray(h5type: H5TypeInfo, shape: IntArray,
             // LOOK require vlenArray is Array<T>
             listOfArrays.add(vlenArray)
         }
-        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype)
+        return ArrayVlen.fromArray(shape, listOfArrays, readDatatype) as ArrayTyped<T>
     }
 }

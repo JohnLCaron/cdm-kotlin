@@ -10,9 +10,9 @@ class TestCdmFullNames {
 
     @Test
     fun testFindFromFullname() {
-        val vroot: Variable.Builder = Variable.Builder("vroot").setDatatype(Datatype.STRING)
-        val vleaf: Variable.Builder = Variable.Builder("vleaf").setDatatype(Datatype.STRING)
-        val voff: Variable.Builder = Variable.Builder("voff").setDatatype(Datatype.STRING)
+        val vroot = Variable.Builder("vroot", Datatype.STRING)
+        val vleaf = Variable.Builder("vleaf", Datatype.STRING)
+        val voff = Variable.Builder("voff", Datatype.STRING)
         val parent: Group.Builder = Group.Builder("parent").addVariable(vleaf).addDimension(Dimension("dim", 1))
         val gramps: Group.Builder = Group.Builder("gramps").addGroup(parent)
         val uncle: Group.Builder = Group.Builder("uncle").addVariable(voff).addDimension(Dimension("dim", 2))
@@ -88,19 +88,19 @@ class TestCdmFullNames {
 
     @Test
     fun testFindAttributes() {
-        val vroot: Variable.Builder = Variable.Builder("vroot").setDatatype(Datatype.STRING)
-        val vleaf: Variable.Builder = Variable.Builder("vleaf").setDatatype(Datatype.STRING)
-        val voff: Variable.Builder = Variable.Builder("voff").setDatatype(Datatype.STRING)
-            .addAttribute(Attribute("zoom", "schwartz"))
+        val vroot = Variable.Builder("vroot", Datatype.STRING)
+        val vleaf = Variable.Builder("vleaf", Datatype.STRING)
+        val voff = Variable.Builder("voff", Datatype.STRING)
+            .addAttribute(Attribute.from("zoom", "schwartz"))
         val parent: Group.Builder = Group.Builder("parent").addVariable(vleaf).addDimension(Dimension("dim", 1))
-        val gramps: Group.Builder = Group.Builder("gramps").addGroup(parent).addAttribute(Attribute("zoom", "pafigliano"))
+        val gramps: Group.Builder = Group.Builder("gramps").addGroup(parent).addAttribute(Attribute.from("zoom", "pafigliano"))
         val uncle: Group.Builder = Group.Builder("uncle").addVariable(voff).addDimension(Dimension("dim", 2))
         val root: Group = Group.Builder("")
             .addGroup(gramps)
             .addGroup(uncle)
             .addVariable(vroot)
             .addDimension(Dimension("wit", 3))
-            .addAttribute(Attribute("wit", "tee"))
+            .addAttribute(Attribute.from("wit", "tee"))
             .build(null)
         println(root.cdl(true))
         val fullNames = CdmFullNames(root)

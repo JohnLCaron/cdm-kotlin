@@ -34,7 +34,7 @@ class N3dataCompare {
     // Im going to remove it from the test files (placed in exclude)
     @Test
     fun calcRecordSize() {
-        readDataCompareNC(testData + "netchdf/csiro/sixCells.nc", null) // , "cellId")
+        readDataCompareNC(testData + "netchdf/csiro/sixCellsc.nc", null) // , "cellId")
     }
 
     @Test
@@ -45,6 +45,11 @@ class N3dataCompare {
     @Test
     fun vsizeCdf2() {
         readDataCompareNC(testData + "devcdm/netcdf3/tst_small_64bit.nc", null) // , "cellId")
+    }
+
+    @Test
+    fun problem() {
+        readDataCompareNC(testData + "devcdm/netcdf3/tst_ncml.nc", null)
     }
 
     @ParameterizedTest

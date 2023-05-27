@@ -26,7 +26,7 @@ class TestArrayStructureData {
         }
 
         val testArray = ArrayVlen(shape, listOfVlen, Datatype.INT)
-        assertEquals(Datatype.VLEN, testArray.datatype)
+        assertTrue(Datatype.VLEN == testArray.datatype)
         assertEquals(size, testArray.nelems)
         assertTrue(testArray.toString().startsWith("class ArrayVlen shape=[4, 2] data=[0],[0, 1, 4],[0, 1, 4, 9, 16],[0, 1, 4, 9,"))
 
@@ -59,7 +59,7 @@ class TestArrayStructureData {
                 val section = Section(sectionStart, sectionLength, shape.toLongArray())
                 val sectionArray = testArray.section(section)
 
-                assertEquals(Datatype.VLEN, sectionArray.datatype)
+                assertTrue(Datatype.VLEN == sectionArray.datatype)
                 assertEquals(sectionLength.computeSize(), sectionArray.nelems)
 
                 val full = IndexND(IndexSpace(sectionStart.toLongArray(), sectionLength.toLongArray()), shape.toLongArray())
@@ -109,7 +109,7 @@ class TestArrayStructureData {
         }
     }
 
-    fun testFromArray(datatype : Datatype) {
+    fun testFromArray(datatype : Datatype<*>) {
         val shape = intArrayOf(4,5,6)
         val size = shape.computeSize()
         val listOfVlen = mutableListOf<Array<*>>()

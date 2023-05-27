@@ -23,10 +23,10 @@ class TestArrayOpaque {
         assertEquals(osize, testArray.size)
         assertTrue(testArray.toString().startsWith("class ArrayOpaque shape=[4, 5] data='[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]','[10, 11, 12, 13, "))
 
-        testArray.forEachIndexed { idx, bb ->
-            assertEquals(osize, bb.limit())
+        testArray.forEachIndexed { idx, nbb ->
+            assertEquals(osize, nbb.limit())
             repeat(osize) { pos ->
-                assertEquals( (idx * osize + pos).toByte(), bb.get(pos),  "idx=$idx, pos=$pos")
+                assertEquals( (idx * osize + pos).toByte(), nbb.get(pos),  "idx=$idx, pos=$pos")
             }
         }
     }

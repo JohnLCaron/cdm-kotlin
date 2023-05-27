@@ -92,14 +92,14 @@ class TestDatatype {
 
     @Test
     fun testStringVlen() {
-        var tvlen = Datatype.VLEN.withTypedef(VlenTypedef("viva", Datatype.UINT)).withVlen(true)
+        val tvlen = Datatype.VLEN.withTypedef(VlenTypedef("viva", Datatype.UINT)).withVlen(true)
         assertFalse(tvlen.isVlenString)
 
-        tvlen = Datatype.STRING.withVlen(false)
-        assertFalse(tvlen.isVlen?: true)
+        val tvlen1 = Datatype.STRING.withVlen(false)
+        assertFalse(tvlen1.isVlen?: true)
 
-        tvlen = Datatype.STRING.withVlen(true)
-        assertTrue(tvlen.isVlen?: false)
+        val tvlen2 = Datatype.STRING.withVlen(true)
+        assertTrue(tvlen2.isVlen?: false)
     }
 
     @Test
@@ -113,7 +113,8 @@ class TestDatatype {
         var tvlen2 = Datatype.VLEN.withTypedef(VlenTypedef("voova", Datatype.UINT))
         assertEquals(tvlen1, tvlen2)
 
-        assertNotEquals(Datatype.STRING, Datatype.VLEN)
+        assertEquals(Datatype.UBYTE.withSignedness(false), Datatype.UBYTE)
+        assertNotEquals(Datatype.UBYTE.withSignedness(true), Datatype.UBYTE)
     }
 
 }

@@ -152,7 +152,7 @@ class H5readTest {
         }
     }
 
-    fun testOneVarConcurrent(myFile: Netchdf, myvar: Variable) : Int {
+    fun testOneVarConcurrent(myFile: Netchdf, myvar: Variable<*>) : Int {
         val filename = myFile.location().substringAfterLast('/')
         sum = AtomicDouble()
         var countChunks = 0

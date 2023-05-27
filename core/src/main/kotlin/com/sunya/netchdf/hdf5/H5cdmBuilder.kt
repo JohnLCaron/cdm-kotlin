@@ -39,7 +39,7 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
         val attr = buildAttribute(it)
         val promoted = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
         if (promoted) { // too big for an attribute
-            val vb = Variable.Builder(attr.name).setDatatype(Datatype.STRING)
+            val vb = Variable.Builder(attr.name, Datatype.STRING)
             vb.spObject = DataContainerAttribute(it.name, makeH5TypeInfo(it.mdt), it.dataPos, it.mdt, it.mds)
             groupb.addVariable( vb)
         } else {
@@ -70,31 +70,30 @@ internal fun H5builder.buildGroup(group5 : H5Group) : Group.Builder {
     return groupb
 }
 
-internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute {
+internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute<*> {
     val typedef = this.findTypedef(att5.mdt.address, att5.mdt.hashCode())
     if (debugTypedefs and (typedef != null)) {
         println(" made attribute ${att5.name} from typedef ${typedef!!.name}@${att5.mdt.address}")
     }
     val h5type = makeH5TypeInfo(att5.mdt)
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
-    val values = this.readRegularData(dc, null)
+    val values = this.readRegularData(dc, h5type.datatype(), null)
     var useType = h5type.datatype()
     if (useType == Datatype.CHAR) useType = Datatype.STRING // ok for attributes
-    return Attribute(att5.name, useType, values.toList())
+    return Attribute.Builder(att5.name, useType).setValues(values.toList()).build()
 }
 
-internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
-    // what the cdm variable looks like
-    val builder = Variable.Builder(v5.name.substringAfter(NETCDF4_NON_COORD))
+internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder<*> {
     if (v5.name.startsWith(NETCDF4_NON_COORD)) {
         isNetcdf4 = true
     }
 
     val h5type = makeH5TypeInfo(v5.mdt)
-    builder.datatype = h5type.datatype() // typedefs added here
-    if (builder.datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
-        builder.datatype = Datatype.STRING
+    var datatype = h5type.datatype() // typedefs added here
+    if (datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
+        datatype = Datatype.STRING
     }
+    val builder = Variable.Builder(v5.name.substringAfter(NETCDF4_NON_COORD), datatype)
 
     if (v5.dimList != null) {
         builder.dimNames = v5.dimList!!.trim().split(" ")
@@ -123,7 +122,7 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder {
     val vdata = DataContainerVariable(builder.name, h5type, v5, this)
 
     if (v5.name.startsWith("StructMetadata")) {
-        val data = readRegularData(vdata, null)
+        val data = readRegularData(vdata, Datatype.STRING, null)
         require (data is ArrayString)
         structMetadata.add(data.values.get(0))
     }
@@ -253,7 +252,7 @@ internal fun getFillValueNonDefault(h5 : H5builder, v5 : H5Variable, h5type: H5T
     }
 }
 
-internal fun getFillValueDefault(datatype : Datatype): Any {
+internal fun getFillValueDefault(datatype : Datatype<*>): Any {
     // a single data value, same datatype as the dataset
     return when (datatype) {
         Datatype.BYTE -> 0.toByte()
@@ -266,7 +265,7 @@ internal fun getFillValueDefault(datatype : Datatype): Any {
         Datatype.DOUBLE -> 0.0
         Datatype.LONG -> 0L
         Datatype.ULONG -> 0.toULong()
-        Datatype.OPAQUE -> ByteBuffer.allocate(1)
+        Datatype.OPAQUE -> ByteBuffer.allocate(0)
         else -> 0
     }
 }
@@ -362,6 +361,9 @@ internal fun H5builder.findDimensionScales(g: Group.Builder, h5group: H5Group, h
     val removeAtts = mutableListOf<AttributeMessage>()
     h5variable.attributes().filter { it.name.equals(HDF5_CLASS) }.forEach {
         val att = buildAttribute(it)
+        if (!(att.values[0] is String)) {
+            buildAttribute(it)
+        }
         check(att.isString)
         val value: String = att.values[0] as String
         if (value == HDF5_DIMENSION_SCALE && h5variable.mds.rank() > 0) {
@@ -485,7 +487,7 @@ internal fun H5builder.findSharedDimensions(parentGroup: Group.Builder, h5group:
                 }
 
                 // references : may extend the dimension rank?
-                val att: Attribute = buildAttribute(matt) // this reads in the data
+                val att = buildAttribute(matt) // this reads in the data
                 if (att.values.size != h5variable.mds.rank()) {
                     // some attempts to writing hdf5 directly fail here
                     if (debugDimensionScales) println("DIMENSION_LIST: must have same number of dimension scales as dimensions att=${att} on variable ${h5variable.name}")

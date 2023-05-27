@@ -42,7 +42,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
     val type_endian = if (H5Tget_order(type_id) == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
 
     if (datatype5 == Datatype5.Compound) {
-        val members = mutableListOf<StructureMember>()
+        val members = mutableListOf<StructureMember<*>>()
         val nmembers = H5Tget_nmembers(type_id)
         repeat(nmembers) {membno ->
             // char* H5Tget_member_name	(	hid_t 	type_id, unsigned 	membno)
@@ -147,7 +147,7 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
     val isVlenString = H5Tis_variable_str(type_id) > 0
 
     // Call this after all the typedefs have been found
-    fun datatype(): Datatype {
+    fun datatype(): Datatype<*> {
         return when (datatype5) {
             Datatype5.Fixed, Datatype5.BitField ->
                 when (this.elemSize) {

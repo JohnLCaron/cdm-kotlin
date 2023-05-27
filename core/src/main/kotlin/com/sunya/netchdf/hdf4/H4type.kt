@@ -34,7 +34,7 @@ object H4type {
    * #define DFNT_INT64 26
    * #define DFNT_UINT64 27
    */
-    fun getDataType(type: Int): Datatype {
+    fun getDataType(type: Int): Datatype<*> {
         return when (type) {
             3, 4 -> Datatype.CHAR
             5 -> Datatype.FLOAT

@@ -28,24 +28,24 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         val status = H5Fclose(header.file_id)
     }
 
-    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+    override fun <T> readArrayData(v2: Variable<T>, section: SectionPartial?): ArrayTyped<T> {
         return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, fillSection: Section): ArrayTyped<*> {
-        if (v2.spObject is Attribute) {
-            val att = v2.spObject as Attribute
-            return ArrayString(v2.shape.toIntArray(), att.values as List<String>)
+    internal fun <T> readArrayData(v2: Variable<T>, fillSection: Section): ArrayTyped<T> {
+        if (v2.spObject is Attribute<*>) {
+            val att = v2.spObject as Attribute<*>
+            return ArrayString(v2.shape.toIntArray(), att.values as List<String>) as ArrayTyped<T>
         }
         val vinfo = v2.spObject as Vinfo5C
         //    internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, dims : IntArray) : ArrayTyped<*>
         MemorySession.openConfined().use { session ->
             return if (vinfo.h5ctype.isVlenString) {
-                readVlenStrings(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
+                readVlenStrings(session, vinfo.datasetId, vinfo.h5ctype, fillSection) as ArrayTyped<T>
             } else if (vinfo.h5ctype.datatype5 == Datatype5.Vlen) {
-                readVlens(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
+                readVlens(session, vinfo.datasetId, vinfo.h5ctype, fillSection) as ArrayTyped<T>
             } else {
-                readRegularData(session, vinfo.datasetId, vinfo.h5ctype, fillSection)
+                readRegularData(session, vinfo.datasetId, vinfo.h5ctype, vinfo.h5ctype.datatype(), fillSection) as ArrayTyped<T>
             }
         }
     }
@@ -94,7 +94,7 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         return ArrayVlen.fromArray(want.shape.toIntArray(), listOfVlen, basetype)
     }
 
-    private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {
+    private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<*>) : Array<*> {
         return when (datatype) {
             Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(C_FLOAT, idx.toLong()) }
             Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(C_DOUBLE, idx.toLong()) }
@@ -106,11 +106,11 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         }
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+    override fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection<T>> {
         return H5CmaxIterator(v2, section, maxElements ?: 100_000)
     }
 
-    private inner class H5CmaxIterator(val v2: Variable, section : SectionPartial?, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class H5CmaxIterator<T>(val v2: Variable<T>, section : SectionPartial?, maxElems: Int) : AbstractIterator<ArraySection<T>>() {
         private val debugChunking = false
         val filled = SectionPartial.fill(section, v2.shape)
         private val maxIterator  = MaxChunker(maxElems,  filled)

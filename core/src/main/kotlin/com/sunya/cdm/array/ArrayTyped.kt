@@ -6,7 +6,7 @@ import com.sunya.cdm.layout.IndexSpace
 import java.nio.ByteBuffer
 
 // here, shape must be integers, since size cant exceed 32 bits
-abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val shape : IntArray) : Iterable<T> {
+abstract class ArrayTyped<T>(val bb: ByteBuffer, val datatype: Datatype<T>, val shape: IntArray) : Iterable<T> {
     val nelems = shape.computeSize()
 
     override fun toString(): String {
@@ -50,15 +50,16 @@ abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val s
         if (this === other) return true
         if (other !is ArrayTyped<*>) return false
 
-        if (bb != other.bb) return false
         if (datatype != other.datatype) return false
-        if (!shape.contentEquals(other.shape)) return false
-        return nelems == other.nelems
+        if (!shape.equivalent(other.shape)) return false
+        if (nelems != other.nelems) return false
+        // cant compare bb because byte-order might be different
+        return valuesEqual(this, other)
     }
 
+    // TODO problem with not using values()
     override fun hashCode(): Int {
-        var result = bb.hashCode()
-        result = 31 * result + datatype.hashCode()
+        var result = datatype.hashCode()
         result = 31 * result + shape.contentHashCode()
         result = 31 * result + nelems
         return result
@@ -98,7 +99,8 @@ abstract class ArrayTyped<T>(val bb : ByteBuffer, val datatype : Datatype, val s
 }
 
 // An array of any shape that has a single value for all elements, usually the fill value
-class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) : ArrayTyped<T>(ByteBuffer.allocate(1), datatype, shape) {
+class ArraySingle<T>(shape : IntArray, datatype : Datatype<T>, fillValueAny : Any) : ArrayTyped<T>(ByteBuffer.allocate(0), datatype, shape) {
+    val fillValue = fillValueAny as T
     override fun iterator(): Iterator<T> = SingleIterator()
     private inner class SingleIterator : AbstractIterator<T>() {
         private var idx = 0
@@ -112,12 +114,12 @@ class ArraySingle<T>(shape : IntArray, datatype : Datatype, val fillValue : T) :
     }
 
     override fun section(section : Section) : ArrayTyped<T> {
-        return ArraySingle(section.shape.toIntArray(), datatype, fillValue)
+        return ArraySingle(section.shape.toIntArray(), datatype, fillValue as Any)
     }
 }
 
 // An empty array of any shape that has no values
-class ArrayEmpty<T>(shape : IntArray, datatype : Datatype) : ArrayTyped<T>(ByteBuffer.allocate(1), datatype, shape) {
+class ArrayEmpty<T>(shape : IntArray, datatype : Datatype<T>) : ArrayTyped<T>(ByteBuffer.allocate(0), datatype, shape) {
     override fun iterator(): Iterator<T> = listOf<T>().iterator()
     override fun section(section : Section) : ArrayTyped<T> {
         return ArrayEmpty(section.shape.toIntArray(), datatype)

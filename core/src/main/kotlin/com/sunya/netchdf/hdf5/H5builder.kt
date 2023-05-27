@@ -24,6 +24,8 @@ internal val debugTypedefs = false
  * Build the rootGroup for an HDF5 file.
  * @param strict  true = make it agree with nclib if possible
  * @param valueCharset used when reading HDF5 header. LOOK need example to test
+ *
+ * @see "https://support.hdfgroup.org/HDF5/doc/Specs.html"
  */
 class H5builder(
     val raf: OpenFile,
@@ -47,7 +49,7 @@ class H5builder(
     internal val symlinkMap = mutableMapOf<String, DataObjectFacade>()
     private val dataObjectMap = mutableMapOf<Long, DataObject>() // key = DataObject address
     val structMetadata = mutableListOf<String>()
-    val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
+    val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder<*>>>()
 
     val cdmRoot : Group
     fun formatType() : String {
@@ -542,7 +544,7 @@ class H5builder(
         gb.groups.forEach{ convertReferences(it) }
     }
 
-    fun convertAttribute(att : Attribute) : Attribute? {
+    fun convertAttribute(att : Attribute<*>) : Attribute<*>? {
         val svalues = mutableListOf<String>()
         att.values.forEach {
             val dsetId = it as Long
@@ -555,6 +557,6 @@ class H5builder(
             val name = vb.fullname(gb)
             svalues.add(name)
         }
-        return att.copy(values=svalues)
+        return Attribute(att.name, Datatype.STRING, svalues)
     }
 }

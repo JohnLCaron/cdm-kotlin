@@ -7,7 +7,7 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
+class H4chunkIterator<T>(h4 : H4builder, val v2: Variable<*>, val wantSection : Section) : AbstractIterator<ArraySection<T>>() {
     private val debugChunking = false
 
     private val vinfo = v2.spObject as Vinfo
@@ -32,7 +32,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
         }
     }
 
-    private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection {
+    private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection<T> {
         val dataSpace = IndexSpace(v2.rank, dataChunk.offsets.toLongArray(), vinfo.chunkLengths.toLongArray())
         val useEntireChunk = wantSpace.contains(dataSpace)
         val intersectSpace = if (useEntireChunk) dataSpace else wantSpace.intersect(dataSpace)
@@ -75,7 +75,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
 
-        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
+        return ArraySection(array as ArrayTyped<T>, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 
 }
