@@ -20,8 +20,11 @@ abstract class ArrayTyped<T>(val bb: ByteBuffer, val datatype: Datatype<T>, val 
     open fun showValues(): String {
         return buildString {
             val iter = this@ArrayTyped.iterator()
+            var idx = 0
             for (value in iter) {
-                append("$value,")
+                if (idx > 0) append(",")
+                append(value)
+                idx++
             }
         }
     }
