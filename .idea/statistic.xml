@@ -4,7 +4,7 @@
     <option name="fileTypesIncluded" value="kt" />
     <option name="excludedDirectories">
       <list>
-        <option value="$PROJECT_DIR$/core/src/main/kotlin" />
+        <option value="$PROJECT_DIR$/core/src/main" />
       </list>
     </option>
   </component>

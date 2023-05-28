@@ -4,13 +4,20 @@ import com.sunya.cdm.array.ArrayStructureData
 import java.nio.ByteBuffer
 
 /**
- * The CDM API datatype. Note that file storage types may be different.
+ * The CDM API datatype.
+ * Uunlike netcdf-java, we follow the netcdf4/hdf5 convention, making Vlen and Compound into separate types
+ *
  * @param cdlName name in CDL
  * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
  * @param isVlen TODO HDF5 needs to track if this in Vlen or regular String.
+ *
  */
 data class Datatype<T>(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
+
+    // TODO 3 kinds of Strings: CHAR, STRING, STRING.isVlenString
+    //   file CHAR is ubyte, or fixed String
+    //   perhaps CHAR, STRING, STRING_FIXED with size set ??
 
     companion object {
         val BYTE = Datatype<Byte>("byte", 1)
@@ -29,13 +36,13 @@ data class Datatype<T>(val cdlName: String, val size: Int, val typedef : Typedef
         val ENUM2 = Datatype<UShort>("ushort enum", 2)
         val ENUM4 = Datatype<UInt>("uint enum", 4)
 
-        //// object types have variable length storage; inside StructureData, they have 32 bit index onto a heap
+        //// these types have variable length storage; inside StructureData, they have 32 bit index onto a heap
         val STRING = Datatype<String>("string", 4)
         val OPAQUE = Datatype<ByteBuffer>("opaque", 4)
-
-        // unlike netcdf-java, we follow the netcdf4/hdf5 convention, making Vlen and Compound into separate types
         val COMPOUND = Datatype<ArrayStructureData.StructureData>("compound", 4)
         val VLEN = Datatype<Array<*>>("vlen", 4)
+
+        // Experimental for HDF5; maybe should be T = String ??
         val REFERENCE = Datatype<Long>("reference", 4) // string = full path to referenced dataset
 
         fun values() = listOf(BYTE, UBYTE, SHORT, USHORT, INT, UINT, LONG, ULONG, DOUBLE, FLOAT, ENUM1, ENUM2, ENUM4,

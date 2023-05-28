@@ -9,9 +9,6 @@ import java.nio.ByteBuffer
 class ArrayVlen<T>(shape : IntArray, val values : List<Array<T>>, val baseType : Datatype<T>)
     : ArrayTyped<Array<T>>(ByteBuffer.allocate(0), Datatype.VLEN as Datatype<Array<T>>, shape) {
 
-    fun constructor(shape : IntArray, values : List<Array<Float>>) =
-        ArrayVlen(shape, values, Datatype.FLOAT)
-
     override fun iterator(): Iterator<Array<T>> = ArrayIterator()
     private inner class ArrayIterator : AbstractIterator<Array<T>>() {
         private var idx = 0

@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 5/21/2023_
+_last updated: 5/28/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -68,12 +68,12 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
 With these tools we can be confident that our library gives the same results as the reference libraries.
 
-Currently (5/25/23) we have this coverage from core/test:
+Currently (5/28/23) we have this coverage from core/test:
 
 ````
- cdm      84% (1408/1664) LOC
- hdf4     78% (1640/2078) LOC
- hdf5     81% (2271/2787) LOC
+ cdm      88% (1528/1727) LOC
+ hdf4     78% (1639/2077) LOC
+ hdf5     81% (2273/2800) LOC
  netcdf3  77% (229/297) LOC
  ````
 
@@ -107,6 +107,8 @@ We do not plan to provide write capabilities.
 ### Data Model notes
 
 (Work in progress)
+
+Type safety with generics.
 
 #### Differ from Netcdf4 and CDM data models
 * Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
