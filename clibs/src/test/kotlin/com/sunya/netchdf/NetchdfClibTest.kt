@@ -101,7 +101,22 @@ class NetchdfClibTest {
         compareCdlWithClib(filename)
     }
 
-    // devcdm/netcdf4/tst_vlen_data.nc4
+    @Test
+    fun testEnums() {
+        compareCdlWithClib(testData + "devcdm/netcdf4/test_enum_type.nc")
+        compareCdlWithClib(testData + "devcdm/netcdf4/tst_enums.nc")
+        compareCdlWithClib(testData + "devcdm/hdf5/enumcmpnd.h5")
+        compareCdlWithClib(testData + "devcdm/hdf5/enum.h5")
+        compareCdlWithClib(testData + "devcdm/hdf5/cenum.h5")
+
+        compareDataWithClib(testData + "devcdm/netcdf4/test_enum_type.nc")
+        compareDataWithClib(testData + "devcdm/netcdf4/tst_enums.nc")
+        compareDataWithClib(testData + "devcdm/hdf5/enumcmpnd.h5")
+        compareDataWithClib(testData + "devcdm/hdf5/enum.h5")
+        compareDataWithClib(testData + "devcdm/hdf5/cenum.h5")
+    }
+
+    // /home/all/testdata/devcdm/netcdf4/test_enum_type.nc
 
     @Test
     fun problem() {

@@ -35,15 +35,12 @@ open class StructureMember<T>(val orgName: String, val datatype : Datatype<T>, v
                 Datatype.SHORT -> ArrayShort(dims, memberBB)
                 Datatype.INT -> ArrayInt(dims, memberBB)
                 Datatype.LONG -> ArrayLong(dims, memberBB)
-                Datatype.UBYTE, Datatype.ENUM1  -> ArrayUByte(dims, memberBB)
-                Datatype.USHORT, Datatype.ENUM2  -> ArrayUShort(dims, memberBB)
-                Datatype.UINT, Datatype.ENUM4  -> ArrayUInt(dims, memberBB)
+                Datatype.UBYTE, Datatype.ENUM1  -> ArrayUByte(dims, datatype as Datatype<UByte>, memberBB)
+                Datatype.USHORT, Datatype.ENUM2  -> ArrayUShort(dims, datatype as Datatype<UShort>, memberBB)
+                Datatype.UINT, Datatype.ENUM4  -> ArrayUInt(dims, datatype as Datatype<UInt>, memberBB)
                 Datatype.ULONG -> ArrayULong(dims, memberBB)
                 Datatype.FLOAT -> ArrayFloat(dims, memberBB)
                 Datatype.DOUBLE -> ArrayDouble(dims, memberBB)
-                // TODO 3 kinds of Strings: CHAR, STRING, STRING.isVlenString
-                //   CHAR often ubyte, or fixed String
-                //   perhaps CHAR, STRING, STRING_FIXED ??
                 Datatype.CHAR -> makeStringZ(bb, offset, nelems)
                 Datatype.STRING -> {
                     if (datatype.isVlenString) {
@@ -90,6 +87,50 @@ open class StructureMember<T>(val orgName: String, val datatype : Datatype<T>, v
                 }
             }
             else -> String(bb.array(), offset, nelems, StandardCharsets.UTF_8) // wtf?
+        }
+    }
+
+    /**
+     * Get the values of this member from the given StructureData as an ArrayTyped.
+     * return T for nelems = 1, ArrayTyped<T> for nelems > 1
+     */
+    open fun values(sdata: ArrayStructureData.StructureData): ArrayTyped<*> {
+        val bb = sdata.bb
+        bb.order(this.endian ?: sdata.bb.order())
+        val offset = sdata.offset + this.offset
+
+        val memberBB = ByteBuffer.allocate(nelems * datatype.size) // why cant we use a view ??
+        memberBB.order(this.endian ?: sdata.bb.order())
+        repeat(nelems * datatype.size) { memberBB.put(it, sdata.bb.get(offset + it)) }
+        return when (datatype) {
+            Datatype.BYTE -> ArrayByte(dims, memberBB)
+            Datatype.SHORT -> ArrayShort(dims, memberBB)
+            Datatype.INT -> ArrayInt(dims, memberBB)
+            Datatype.LONG -> ArrayLong(dims, memberBB)
+            Datatype.UBYTE, Datatype.ENUM1  -> ArrayUByte(dims, datatype as Datatype<UByte>, memberBB)
+            Datatype.USHORT, Datatype.ENUM2  -> ArrayUShort(dims, datatype as Datatype<UShort>, memberBB)
+            Datatype.UINT, Datatype.ENUM4  -> ArrayUInt(dims, datatype as Datatype<UInt>, memberBB)
+            Datatype.ULONG -> ArrayULong(dims, memberBB)
+            Datatype.FLOAT -> ArrayFloat(dims, memberBB)
+            Datatype.DOUBLE -> ArrayDouble(dims, memberBB)
+            /* Datatype.CHAR -> makeStringZ(bb, offset, nelems)
+            Datatype.STRING -> {
+                if (datatype.isVlenString) {
+                    val ret = sdata.getFromHeap(offset)
+                    if (ret == null) "unknown" else ret
+                } else {
+                    makeStringZ(bb, offset, nelems)
+                }
+            }
+
+             */
+            Datatype.VLEN -> {
+                val ret = sdata.getFromHeap(offset)
+                if (ret != null) (ret as ArrayVlen<*>) else {
+                    throw RuntimeException("cant find ArrayVlen on heap at $offset")
+                }
+            }
+            else -> throw RuntimeException("unimplemented datatype=$datatype")
         }
     }
 

@@ -94,6 +94,8 @@ class Hdf5ClibFile(val filename: String) : Netchdf {
         return ArrayVlen.fromArray(want.shape.toIntArray(), listOfVlen, basetype)
     }
 
+    // TODO ENUMS seem to be wrong
+    // also duplicate in H5Cbuilder ?
     private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<*>) : Array<*> {
         return when (datatype) {
             Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(C_FLOAT, idx.toLong()) }

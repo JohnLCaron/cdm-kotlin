@@ -6,8 +6,10 @@ import com.sunya.cdm.api.computeSize
 import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
-class ArrayUInt(shape : IntArray, bb : ByteBuffer) : ArrayTyped<UInt>(bb, Datatype.UINT, shape) {
+class ArrayUInt(shape : IntArray, datatype : Datatype<UInt>, bb : ByteBuffer) : ArrayTyped<UInt>(bb, datatype, shape) {
     val values = bb.asIntBuffer()
+
+    constructor(shape : IntArray, bb : ByteBuffer) : this(shape, Datatype.UINT, bb)
 
     override fun iterator(): Iterator<UInt> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<UInt>() {

@@ -71,23 +71,6 @@ class TestAttribute {
         assertTrue(att.isString)
     }
 
-    /*
-    @Test
-    fun testCharValue() {
-        val att = Attribute.Builder("name", Datatype.CHAR)
-            .setValues(listOf('a', 'b', 'c'))
-            .build()
-        assertEquals("name", att.name)
-        assertEquals(Datatype.CHAR, att.datatype)
-        assertEquals(3, att.values.size)
-        assertEquals('a', att.values[0])
-        assertEquals('b', att.values[1])
-        assertEquals('c', att.values[2])
-        assertFalse(att.isString)
-    }
-
-     */
-
     @Test
     fun testCharStringValue() {
         val att = Attribute.Builder("name", Datatype.CHAR)

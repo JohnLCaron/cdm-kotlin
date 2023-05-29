@@ -124,6 +124,7 @@ ArrayTyped<T> of the same type:
 * Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
 * Datatype.REFERENCE is added
 * Opaque, Vlen typedefs ??
+* Variables or Attributes of datatype CHAR have T = String. In some cases these may be changed to UBYTE.
 
 #### Compare with HDF5 data model
 * Creation order is ignored

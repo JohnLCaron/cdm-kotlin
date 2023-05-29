@@ -56,29 +56,23 @@ class TestTypedef {
 
         val bb = ByteBuffer.wrap(byteArrayOf(1,1,0))
         val enumVals = ArrayUByte(intArrayOf(3), bb)
-        with (tenum) {
-            val enumNames = enumVals.convertEnums()
-            val expected = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
-            assertEquals(expected, enumNames)
-        }
+        val enumNames = tenum.convertEnums(enumVals)
+        val expected = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
+        assertEquals(expected, enumNames)
 
         val tenum2 = EnumTypedef("low", Datatype.ENUM2, map)
         assertEquals("  ushort enum low {1 = name1, 2 = name2, 3 = name3};", tenum2.cdl())
         val enumVals2 = ArrayUShort.fromArray(intArrayOf(3), shortArrayOf(1,1,0))
-        with (tenum2) {
-            val enumNames = enumVals2.convertEnums()
-            val expected = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
-            assertEquals(expected, enumNames)
-        }
+        val enumNames2 = tenum2.convertEnums(enumVals2)
+        val expected2 = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
+        assertEquals(expected2, enumNames2)
 
         val tenum4 = EnumTypedef("low", Datatype.ENUM4, map)
         assertEquals("  uint enum low {1 = name1, 2 = name2, 3 = name3};", tenum4.cdl())
         val enumVals4 = ArrayUInt.fromArray(intArrayOf(3), intArrayOf(1,1,0))
-        with (tenum4) {
-            val enumNames = enumVals4.convertEnums()
-            val expected = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
-            assertEquals(expected, enumNames)
-        }
+        val enumNames4 = tenum4.convertEnums(enumVals4)
+        val expected4 = ArrayString(intArrayOf(3), listOf("name1", "name1", "Unknown enum number=0"))
+        assertEquals(expected4, enumNames4)
     }
 
     @Test

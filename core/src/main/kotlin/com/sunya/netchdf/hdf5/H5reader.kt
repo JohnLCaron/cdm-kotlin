@@ -27,6 +27,7 @@ internal fun <T> H5builder.readRegularData(dc: DataContainer, datatype: Datatype
         return readVlenDataWithLayout(dc, layout, wantSection)
     }
 
+    /*
     val datatype = h5type.datatype()
     if (h5type.datatype5 == Datatype5.Compound) {
         require(datatype == Datatype.COMPOUND)
@@ -34,10 +35,12 @@ internal fun <T> H5builder.readRegularData(dc: DataContainer, datatype: Datatype
         require(datatype.typedef is CompoundTypedef)
     }
 
+     */
+
     val state = OpenFileState(0, h5type.endian)
     val dataArray = readDataWithLayout(state, layout, datatype, wantSection.shape, h5type)
 
-    // convert enums to strings
+    /* convert enums to strings
     // LOOK, converted to String, T = USHORT. Gets away with it because of type erasure, but breaks the API contract
     if (h5type.datatype5 == Datatype5.Enumerated) {
         // hopefully this is shared and not replicated
@@ -45,6 +48,8 @@ internal fun <T> H5builder.readRegularData(dc: DataContainer, datatype: Datatype
         return dataArray.convertEnums(enumMsg.valuesMap) as ArrayTyped<T>
 
     }
+
+     */
 
     return dataArray as ArrayTyped<T>
 }
@@ -112,11 +117,12 @@ internal fun <T> H5builder.processDataIntoArray(bb: ByteBuffer, datatype: Dataty
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR -> ArrayUByte(shape, bb)
+        Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, datatype as Datatype<UShort>, bb)
         Datatype.INT -> ArrayInt(shape, bb)
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, datatype as Datatype<UInt>, bb)
         Datatype.FLOAT -> ArrayFloat(shape, bb)
         Datatype.DOUBLE -> ArrayDouble(shape, bb)
         Datatype.REFERENCE, Datatype.LONG -> ArrayLong(shape, bb)
