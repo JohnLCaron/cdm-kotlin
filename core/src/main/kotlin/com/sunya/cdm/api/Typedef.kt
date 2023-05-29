@@ -32,7 +32,6 @@ abstract class Typedef(val kind : TypedefKind, orgName : String, val baseType : 
     override fun toString(): String {
         return cdl()
     }
-
 }
 
 class CompoundTypedef(name : String, val members : List<StructureMember<*>>) : Typedef(TypedefKind.Compound, name, Datatype.COMPOUND) {
@@ -89,14 +88,14 @@ class EnumTypedef(name : String, baseType : Datatype<*>, val valueMap : Map<Int,
         }
     }
 
-    /** Convert array of ENUM into equivalent array of String */
-    fun ArrayTyped<*>.convertEnums(): ArrayString {
-        return this.convertEnums(valueMap)
-    }
-
-    /** Convert array of ENUM into equivalent array of String */
-    fun convertEnums(values : List<*>): List<String> {
-        return values.convertEnums(valueMap)
+    /** Convert enums into equivalent array of String */
+    fun convertEnums(enums : Any): ArrayString {
+        return when (enums) {
+            is ArrayTyped<*> -> enums.convertEnums(valueMap)
+            is Attribute<*> -> ArrayString(intArrayOf(enums.values.size), enums.values.convertEnums(valueMap))
+            is List<*> -> ArrayString(intArrayOf(enums.size), enums.convertEnums(valueMap))
+            else -> this.convertEnums(valueMap)
+        }
     }
 
     override fun equals(other: Any?): Boolean {
@@ -114,8 +113,22 @@ class EnumTypedef(name : String, baseType : Datatype<*>, val valueMap : Map<Int,
     }
 }
 
-/** Convert array of ENUM into equivalent array of String */
-fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
+/** Convert Attribute values of type ENUM into equivalent names */
+fun Attribute<*>.convertEnums(): List<String> {
+    require(this.datatype.isEnum)
+    val typedef = (this.datatype.typedef as EnumTypedef)
+    return values.convertEnums(typedef.valueMap)
+}
+
+/** Convert array of ENUM into equivalent names */
+fun ArrayTyped<*>.convertEnums(): ArrayString {
+    require(this.datatype.isEnum)
+    val typedef = (this.datatype.typedef as EnumTypedef)
+    return this.convertEnums(typedef.valueMap)
+}
+
+/** Convert array of ENUM into equivalent names */
+private fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
     val size = this.shape.computeSize()
     val enumIter = this.iterator()
     val stringValues = List(size) {
@@ -132,7 +145,7 @@ fun ArrayTyped<*>.convertEnums(map: Map<Int, String>): ArrayString {
 }
 
 /** Convert Iterator of ENUM into equivalent List of String */
-fun List<*>.convertEnums(map: Map<Int, String>): List<String> {
+private fun List<*>.convertEnums(map: Map<Int, String>): List<String> {
     val stringValues = this.map { enumVal ->
         val num = when (enumVal) {
             is UByte ->  enumVal.toInt()
@@ -186,5 +199,4 @@ class VlenTypedef(name : String, baseType : Datatype<*>) : Typedef(TypedefKind.V
         if (other !is VlenTypedef) return false
         return super.equals(other)
     }
-
 }

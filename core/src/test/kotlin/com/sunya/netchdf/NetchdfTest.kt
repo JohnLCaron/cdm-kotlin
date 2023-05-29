@@ -137,7 +137,7 @@ fun showNetchdfHeader(filename: String) {
     }
 }
 
-fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
+fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false, showData : Boolean = false) {
     // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
@@ -145,14 +145,14 @@ fun readNetchdfData(filename: String, varname: String? = null, section: SectionP
             return
         }
         println("--- ${myfile.type()} $filename ")
-        readMyData(myfile,varname, section, showCdl)
+        readMyData(myfile,varname, section, showCdl, showData)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // just read data from myfile
 
-fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
+fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false, showData : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
@@ -164,17 +164,17 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial
             println("cant find $varname")
             return
         }
-        readOneVar(myvar, myfile, section)
+        readOneVar(myvar, myfile, section, showData)
     } else {
         myfile.rootGroup().allVariables().forEach { it ->
-            readOneVar(it, myfile, null)
+            readOneVar(it, myfile, null, showData)
         }
     }
 }
 
 const val maxBytes = 10_000_000
 
-fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?) {
+fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?, showData : Boolean = NetchdfTest.showData) {
     if (myvar.name.contains("mbReflectivity"))
         println()
 
@@ -193,7 +193,7 @@ fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?) {
         } else {
             assertTrue(myvarshape.equivalent(mydata.shape), "variable ${myvar.name}")
         }
-        if (NetchdfTest.showData) println(mydata)
+        if (showData) println(mydata)
     }
 
     if (myvar.nelems > 8 && myvar.datatype != Datatype.CHAR) {

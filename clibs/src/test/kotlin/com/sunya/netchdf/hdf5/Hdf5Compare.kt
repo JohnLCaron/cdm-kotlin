@@ -1,5 +1,6 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.netchdf.compareCdlWithClib
 import com.sunya.netchdf.compareDataWithClib
 import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.*
@@ -64,8 +65,15 @@ class Hdf5Compare {
     fun checkVersion(filename: String) {
         Hdf5File(filename).use { ncfile ->
             println("${ncfile.type()} $filename ")
-            assertTrue(ncfile.type().contains("hdf5") or (ncfile.type().contains("netcdf4")))
+            assertTrue(ncfile.type().contains("hdf5") || ncfile.type().contains("hdf-eos5")
+                    || (ncfile.type().contains("netcdf4")))
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testCdlWithClib(filename: String) {
+        compareCdlWithClib(filename)
     }
 
     @ParameterizedTest

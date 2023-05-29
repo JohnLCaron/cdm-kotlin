@@ -89,10 +89,12 @@ fun Attribute<*>.cdl(varname: String, indent : Indent = Indent(2)) : String {
         }
         if (datatype == Datatype.OPAQUE) {
             append("${(values[0] as ByteBuffer).toHex()}")
-/*        } else if (datatype.isEnum) {
-            val enumTypedef = datatype.typedef as EnumTypedef
-            val enumNames = enumTypedef.convertEnums(values).joinToString(",")
-            append("${enumNames}") */
+        } else if (datatype.isEnum) {
+            val converted = this@cdl.convertEnums()
+            converted.forEachIndexed { idx, it ->
+                if (idx != 0) append(", ")
+                append("$it")
+            }
         } else if (datatype == Datatype.VLEN) {
             values.forEachIndexed { idx, it ->
                 if (idx != 0) append(", ")

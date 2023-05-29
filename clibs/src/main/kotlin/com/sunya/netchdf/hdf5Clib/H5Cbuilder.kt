@@ -634,11 +634,12 @@ internal fun <T> processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, dat
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
+        Datatype.ENUM1 -> ArrayUByte(shape, datatype as Datatype<UByte>,  bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, datatype as Datatype<UShort>, bb)
         Datatype.INT -> ArrayInt(shape, bb)
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, datatype as Datatype<UInt>, bb)
         Datatype.FLOAT -> ArrayFloat(shape, bb)
         Datatype.DOUBLE -> ArrayDouble(shape, bb)
         Datatype.LONG -> ArrayLong(shape, bb)
@@ -648,12 +649,6 @@ internal fun <T> processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, dat
             // return ArraySingle(shape, Datatype.INT, 0) as ArrayTyped<T>
             throw IllegalStateException("unimplemented type= $datatype")
         }
-    }
-
-    // convert enums to strings
-    if (datatype.isEnum) {
-        val enumTypedef = datatype.typedef as EnumTypedef
-        return result.convertEnums(enumTypedef.valueMap) as ArrayTyped<T>
     }
 
     return result as ArrayTyped<T>
@@ -687,6 +682,7 @@ internal fun processCompoundData(session : MemorySession, sdataArray : ArrayStru
     return sdataArray
 }
 
+// TODO ENUMS seem to be wrong
 private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<*>) : Array<*> {
     return when (datatype) {
         Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(ValueLayout.JAVA_FLOAT, idx.toLong()) }

@@ -45,7 +45,7 @@ The HDF5 library can be built with MPI-IO for parallel file systems. The serial 
 but does not support concurrent reading. These are serious limitations for high performance, scalable applications.
 
 Our library tries to ameliorate these problems for scientists and the interested public to access the data without
-having to become specialists in the file formats.
+having to become specialists in the file formats and legacy APIs.
 
 ### Why kotlin?
 
@@ -65,10 +65,10 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 
 ### Testing
 
-We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
+We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf, HDF5, and HDF4 C libraries. 
 With these tools we can be confident that our library gives the same results as the reference libraries.
 
-Currently (5/28/23) we have this coverage from core/test:
+Currently we have this test coverage from core/test:
 
 ````
  cdm      88% (1528/1727) LOC
@@ -77,9 +77,13 @@ Currently (5/28/23) we have this coverage from core/test:
  netcdf3  77% (229/297) LOC
  ````
 
-Core library has ~6500 LOC.
+The core library has ~6500 LOC.
 
-We have ~1500 test files:
+More and deeper test coverage is provided in the clibs module, which compares netchdf metadata and data against
+the Netcdf, HDF5, and HDF4 C libraries. The clibs module is not part of the released netchdf library and is 
+only supported for test purposes.
+
+Currently we have ~1500 test files:
 
 ````
  hdf4      = 205 files
@@ -108,26 +112,35 @@ We do not plan to provide write capabilities.
 
 (Work in progress)
 
-Type safety with generics.
+Type safety with generics. The main impact on users is that reading a Variable of type T returns an
+ArrayTyped<T> of the same type:
 
-#### Differ from Netcdf4 and CDM data models
+````
+    fun <T> readArrayData(v2: Variable<T>, section: SectionPartial? = null) : ArrayTyped<T>
+````
+
+#### Compare with Netcdf4 and CDM data models
 * Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
 * Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
 * Datatype.REFERENCE is added
 * Opaque, Vlen typedefs ??
+* Variables or Attributes of datatype CHAR have T = String. In some cases these may be changed to UBYTE.
 
-#### Differ from HDF5 data model
+#### Compare with HDF5 data model
 * Creation order is ignored
 * Not including symbolic links in a group, as these point to an existing dataset (variable)
 * Opaque: hdf5 makes arrays of Opaque all the same size, which gives up some of its usefulness. If theres a need,
   we will allow Opaque(*) indicating that the sizes can vary.
 * Attributes can be of type REFERENCE, with value the full path name of the referenced dataset.
 
+#### Compare with HDF4 data model
+* All data access is unified under the netchdf API
 
 ##
-An independent implementation of HDF4 in kotlin.
+An independent implementation of HDF4/HDF5/HDF-EOS in kotlin.
 
-I am working on an independent library implementation of HDF4/HDF5/HDF-EOS in kotlin here. 
+I am working on an independent library implementation of HDF4/HDF5/HDF-EOS in kotlin 
+[here](https://github.com/JohnLCaron/cdm-kotlin). 
 This will be complementary to the important work of maintaining the primary HDF libraries.
 The goal is to give read access to all the content in NetCDF, HDF5, HDF4 and HDF-EOS files.
 
@@ -136,7 +149,7 @@ Kotlin currently runs on JVM's as far back as Java 8. However, I am targeting th
 (long term support) Java version, and will not be explicitly supporting older versions.
 
 A separate library tests the core against the C libraries.
-The key to this will be if members of the HDF community contribute test files to make sure
+The key to this working reliably is if members of the HDF community contribute test files to make sure
 the libraries agree. I have a large cache of test files from my work on netcdf-java, but these
 are mostly 10-20 years old.
 

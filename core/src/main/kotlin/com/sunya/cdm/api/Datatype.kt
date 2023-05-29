@@ -15,10 +15,6 @@ import java.nio.ByteBuffer
  */
 data class Datatype<T>(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
 
-    // TODO 3 kinds of Strings: CHAR, STRING, STRING.isVlenString
-    //   file CHAR is ubyte, or fixed String
-    //   perhaps CHAR, STRING, STRING_FIXED with size set ??
-
     companion object {
         val BYTE = Datatype<Byte>("byte", 1)
         val CHAR = Datatype<String>("char", 1)

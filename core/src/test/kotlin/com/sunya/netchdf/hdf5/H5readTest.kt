@@ -2,6 +2,7 @@ package com.sunya.netchdf.hdf5
 
 import com.google.common.util.concurrent.AtomicDouble
 import com.sunya.cdm.api.Netchdf
+import com.sunya.cdm.api.SectionPartial
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.api.chunkConcurrent
 import com.sunya.cdm.array.ArrayTyped
@@ -53,7 +54,9 @@ class H5readTest {
     // or look for it when building H5group
     @Test
     fun compoundEnumTypedef() {
-        testOpenH5(testData + "devcdm/hdf5/enumcmpnd.h5")
+        val filename = testData + "devcdm/hdf5/enumcmpnd.h5"
+        testOpenH5(filename)
+        readNetchdfData(filename, null, null, true, true)
     }
 
     @Test

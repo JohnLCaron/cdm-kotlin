@@ -1035,11 +1035,11 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype<*>
 
     val values = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.USHORT -> ArrayUShort(shape, bb)
         Datatype.INT -> ArrayInt(shape, bb)
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.UINT -> ArrayUInt(shape, bb)
         Datatype.FLOAT -> ArrayFloat(shape, bb)
         Datatype.DOUBLE -> ArrayDouble(shape, bb)
         Datatype.LONG -> ArrayLong(shape, bb)

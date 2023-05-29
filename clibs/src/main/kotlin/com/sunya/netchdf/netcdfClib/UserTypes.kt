@@ -1,9 +1,7 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.array.ArrayStructureData
-import com.sunya.cdm.array.StructureMember
-import com.sunya.cdm.array.putStringsOnHeap
+import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
@@ -207,9 +205,9 @@ private fun readOpaqueAttValues(session: MemorySession, grpid: Int, varid: Int, 
 }
 
 @Throws(IOException::class)
-private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
-                                       datatype : Datatype<*>, userType: UserType
-): Attribute.Builder<*> {
+private fun <T> NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
+                                       datatype : Datatype<T>, userType: UserType
+): Attribute.Builder<T> {
     val attb = Attribute.Builder(attname, datatype)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
@@ -220,17 +218,15 @@ private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid
     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
     val bb = ByteBuffer.wrap(raw)
 
-    val result = mutableListOf<String>()
-    val map = (userType.typedef as EnumTypedef).valueMap
+    val result = mutableListOf<Any>()
     for (i in 0 until nelems.toInt()) {
         val num = when (userType.enumBasePrimitiveType) {
-            Datatype.UBYTE -> bb.get(i).toUByte().toInt()
-            Datatype.USHORT -> bb.getShort(i).toUShort().toInt()
-            Datatype.UINT -> bb.getInt(i)
+            Datatype.UBYTE -> bb.get(i).toUByte()
+            Datatype.USHORT -> bb.getShort(i).toUShort()
+            Datatype.UINT -> bb.getInt(i).toUInt()
             else -> throw RuntimeException("convertEnums unknown type = ${userType.enumBasePrimitiveType}")
         }
-        val s = map[num] ?: throw RuntimeException("convertEnums unknown num = ${num}")
-        result.add(s)
+        result.add(num)
     }
     attb.setValues(result)
     return attb

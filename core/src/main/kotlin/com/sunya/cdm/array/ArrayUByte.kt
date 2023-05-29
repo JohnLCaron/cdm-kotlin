@@ -5,7 +5,9 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.toIntArray
 import java.nio.ByteBuffer
 
-class ArrayUByte(shape : IntArray, val values : ByteBuffer) : ArrayTyped<UByte>(values, Datatype.UBYTE, shape) {
+class ArrayUByte(shape : IntArray, datatype : Datatype<UByte>, val values : ByteBuffer) : ArrayTyped<UByte>(values, datatype, shape) {
+
+    constructor(shape : IntArray, bb : ByteBuffer) : this(shape, Datatype.UBYTE, bb)
 
     override fun iterator(): Iterator<UByte> = BufferIterator()
     private inner class BufferIterator : AbstractIterator<UByte>() {

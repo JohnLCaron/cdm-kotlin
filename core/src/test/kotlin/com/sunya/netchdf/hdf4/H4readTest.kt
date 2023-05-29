@@ -93,7 +93,7 @@ class H4readTest {
     fun readH4CheckUnused(filename: String) {
         Hdf4File(filename).use { h4file ->
             println("--- ${h4file.type()} $filename ")
-            assertTrue( 0 == h4file.header.showTags(true, true, false))
+            assertTrue( 0 == h4file.header.showTags(true, true, true))
         }
     }
 

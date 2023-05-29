@@ -149,13 +149,11 @@ class NClibFile(val filename: String) : Netchdf {
                     checkErr("enum nc_get_vars", nc_get_vars(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    with (datatype.typedef as EnumTypedef) {
-                        when (datatype) {
-                            Datatype.ENUM1 -> return ArrayUByte(shape, values).convertEnums() as ArrayTyped<T>
-                            Datatype.ENUM2 -> return ArrayUShort(shape, values).convertEnums() as ArrayTyped<T>
-                            Datatype.ENUM4 -> return ArrayUInt(shape, values).convertEnums() as ArrayTyped<T>
-                            else -> throw RuntimeException()
-                        }
+                    when (datatype) {
+                        Datatype.ENUM1 -> return ArrayUByte(shape, datatype as Datatype<UByte>, values) as ArrayTyped<T>
+                        Datatype.ENUM2 -> return ArrayUShort(shape, datatype as Datatype<UShort>, values) as ArrayTyped<T>
+                        Datatype.ENUM4 -> return ArrayUInt(shape, datatype as Datatype<UInt>, values) as ArrayTyped<T>
+                        else -> throw RuntimeException()
                     }
                 }
 
@@ -335,6 +333,7 @@ class NClibFile(val filename: String) : Netchdf {
     }
 }
 
+// TODO ENUMS seem to be wrong
 private fun <T> readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<T>) : Array<T> {
     val result = when (datatype) {
         Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(JAVA_FLOAT, idx.toLong()) }
