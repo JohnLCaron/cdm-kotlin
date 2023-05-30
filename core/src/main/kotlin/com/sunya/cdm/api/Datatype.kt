@@ -10,14 +10,14 @@ import java.nio.ByteBuffer
  * @param cdlName name in CDL
  * @param size Size in bytes of one element of this data type.
  * @param typedef used for ENUM, VLEN, OPAQUE, COMPOUND
- * @param isVlen TODO HDF5 needs to track if this in Vlen or regular String.
+ * @param isVlen HDF5 needs to track if this in Vlen or regular String.
  *
  */
 data class Datatype<T>(val cdlName: String, val size: Int, val typedef : Typedef? = null, val isVlen : Boolean? = null) {
 
     companion object {
         val BYTE = Datatype<Byte>("byte", 1)
-        val CHAR = Datatype<String>("char", 1)
+        val CHAR = Datatype<UByte>("char", 1)
         val SHORT = Datatype<Short>("short", 2)
         val INT = Datatype<Int>("int", 4)
         val LONG = Datatype<Long>("int64", 8)

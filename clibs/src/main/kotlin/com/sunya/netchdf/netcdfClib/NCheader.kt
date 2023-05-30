@@ -240,7 +240,7 @@ class NCheader(val filename: String) {
                 var attb = Attribute.Builder(attName, datatype)
                 if (attLength > 0) {
                     val values = readAttributeValues(session, grpid, varid, attName, datatype, attLength)
-                    if (datatype == Datatype.CHAR && values.isNotEmpty() && values[0] is String) {
+                    if (datatype == Datatype.CHAR) {
                         attb = Attribute.Builder(attName, Datatype.STRING).setValues(values)
                     } else {
                         attb.setValues(values)

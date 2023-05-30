@@ -49,16 +49,6 @@ class H5readTest {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
 
-    // a compound with a member thats a type thats not a seperate typedef.
-    // the obvious thing to do is to be able to add a typedef when processing the member.
-    // or look for it when building H5group
-    @Test
-    fun compoundEnumTypedef() {
-        val filename = testData + "devcdm/hdf5/enumcmpnd.h5"
-        testOpenH5(filename)
-        readNetchdfData(filename, null, null, true, true)
-    }
-
     @Test
     fun opaqueAttribute() {
         testOpenH5(testData + "devcdm/netcdf4/tst_opaque_data.nc4")

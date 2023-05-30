@@ -225,9 +225,9 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
     for (i in 0 until natts) {
       val name = readString()!!
       val type: Int = raf.readInt(filePos)
-      val att = if (type == 2) { // CHAR
+      val att = if (type == 2) { // CHAR converted to String for Attributes
         val value = readString(valueCharset)
-        if (value == null) Attribute(name, Datatype.STRING, emptyList<String>()) // nelems = 0
+        if (value == null) Attribute(name, Datatype.STRING, emptyList()) // nelems = 0
               else Attribute.from(name, value) // may be empty string
       } else {
         val nelems: Int = if (isPnetcdf) raf.readLong(filePos).toInt() else raf.readInt(filePos)
@@ -257,7 +257,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
         nelems
       }
       Datatype.CHAR -> {
-        val wtf  = ArrayUByte(intArrayOf(1), raf.readByteBuffer(filePos, nelems))
+        val wtf  = ArrayUByte(intArrayOf(1), Datatype.CHAR, raf.readByteBuffer(filePos, nelems))
         attBuilder.setValues(wtf.makeStringFromBytes().toList())
         nelems
       }
