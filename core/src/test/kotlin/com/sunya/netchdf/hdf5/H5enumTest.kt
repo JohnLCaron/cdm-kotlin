@@ -103,6 +103,15 @@ class H5enumTest {
         }
     }
 
+    // a compound with a member thats a type thats not a seperate typedef.
+    // the obvious thing to do is to be able to add a typedef when processing the member.
+    // or look for it when building H5group
+    @Test
+    fun compoundEnumTypedef() {
+        val filename = testData + "devcdm/hdf5/enumcmpnd.h5"
+        readNetchdfData(filename, null, null, true, false)
+    }
+
     @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchdfData(filename: String) {

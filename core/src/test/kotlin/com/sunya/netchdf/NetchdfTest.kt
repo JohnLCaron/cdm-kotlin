@@ -49,7 +49,7 @@ class NetchdfTest {
 
         private val versions = mutableMapOf<String, MutableList<String>>()
 
-        var showDataRead = true
+        var showDataRead = false
         var showData = false
         var showFailedData = false
         var showCdl = false

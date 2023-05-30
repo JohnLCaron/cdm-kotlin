@@ -477,6 +477,46 @@ fun compareNetcdfData(myfile: Netchdf, cfile: Netchdf, varname: String?, section
     }
 }
 
+
+fun compareSelectedDataWithClib(filename: String, wanted : (Variable<*>) -> Boolean) {
+    println("=============================================================")
+    openNetchdfFile(filename).use { netchdf ->
+        if (netchdf == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
+        if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
+
+        if (netchdf.type().contains("hdf4")) {
+            Hdf4ClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        } else if (netchdf.type().contains("netcdf")) {
+            NClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
+            Hdf5ClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        } else {
+            println("*** no c library to compare for $filename")
+        }
+    }
+}
+
+fun compareSelectedData(myfile: Netchdf, cfile: Netchdf, wanted : (Variable<*>) -> Boolean) {
+    myfile.rootGroup().allVariables().filter { wanted(it) }. forEach { myvar ->
+        val cvar = cfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
+        if (cvar == null) {
+            println(" *** cant find ${myvar.fullname()} in cfile")
+        } else {
+            compareOneVar(myvar, myfile, cvar, cfile, null)
+        }
+    }
+}
+
 fun compareOneVar(myvar: Variable<*>, myfile: Netchdf, cvar : Variable<*>, cfile: Netchdf, section: SectionPartial?) {
     val filledSection = SectionPartial.fill(section, myvar.shape)
     val nbytes = filledSection.totalElements * myvar.datatype.size
@@ -565,6 +605,7 @@ fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>)
         println("   *** FAIL comparing char variable = ${name}")
         print("   ncdata = $ncdata")
         print("   mydata = $mydata")
+        assertTrue(false, "variable $name")
     }
 }
 

@@ -67,7 +67,6 @@ class TestAttribute {
         assertEquals("name", att.name)
         assertEquals(Datatype.CHAR, att.datatype)
         assertEquals(0, att.values.size)
-        // assertEquals("", att.values[0])
         assertTrue(att.isString)
     }
 
@@ -79,8 +78,8 @@ class TestAttribute {
         assertEquals("name", att.name)
         assertEquals(Datatype.CHAR, att.datatype)
         assertEquals(2, att.values.size)
-        assertEquals("abc", att.values[0])
-        assertEquals("def", att.values[1])
-        // assertTrue(att.isString)
+        assertEquals("abc", att.values[0] as String)
+        assertEquals("def", att.values[1] as String)
+        assertTrue(att.isString)
     }
 }

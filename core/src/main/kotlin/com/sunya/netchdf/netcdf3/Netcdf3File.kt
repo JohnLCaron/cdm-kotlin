@@ -105,7 +105,7 @@ class Netcdf3File(val filename : String) : Netchdf {
         val result = when (v2.datatype) {
             Datatype.BYTE -> ArrayByte(shape, values)
             Datatype.UBYTE -> ArrayUByte(shape, values)
-            Datatype.CHAR -> ArrayUByte(shape, values).makeStringsFromBytes()
+            Datatype.CHAR -> ArrayUByte(shape, Datatype.CHAR, values)
             Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
             Datatype.DOUBLE -> ArrayDouble(shape, values)
             Datatype.FLOAT -> ArrayFloat(shape, values)

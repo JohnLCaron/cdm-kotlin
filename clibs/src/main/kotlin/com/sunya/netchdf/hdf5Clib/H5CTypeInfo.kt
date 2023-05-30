@@ -166,7 +166,13 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
-            Datatype5.String -> if (isVlenString || elemSize > 1) Datatype.STRING.withVlen(isVlenString) else Datatype.CHAR
+            Datatype5.String -> if (isVlenString || elemSize > 1) {
+                Datatype.STRING.withVlen(isVlenString)
+            } else {
+                // should only happen for Netcdf-4 files, encoding CHAR as fixed length elemSize = 1.
+                // but now theres confusion with HDF5 strings of length 1.
+                Datatype.CHAR
+            }
             Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
             Datatype5.Compound -> Datatype.COMPOUND.withTypedef(typedef!!)

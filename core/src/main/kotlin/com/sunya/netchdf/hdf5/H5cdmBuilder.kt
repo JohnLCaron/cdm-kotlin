@@ -2,6 +2,8 @@ package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.ArrayString
+import com.sunya.cdm.array.ArrayUByte
+import com.sunya.cdm.array.makeStringsFromBytes
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_CLASS
 import com.sunya.netchdf.hdf5.H5builder.Companion.HDF5_DIMENSION_LABELS
@@ -79,8 +81,12 @@ internal fun H5builder.buildAttribute(att5 : AttributeMessage) : Attribute<*> {
     val dc = DataContainerAttribute(att5.name, h5type, att5.dataPos, att5.mdt, att5.mds)
     val values = this.readRegularData(dc, h5type.datatype(), null)
     var useType = h5type.datatype()
-    if (useType == Datatype.CHAR) useType = Datatype.STRING // ok for attributes
-    return Attribute.Builder(att5.name, useType).setValues(values.toList()).build()
+    return if (useType == Datatype.CHAR) {
+        val svalues = if (values is ArrayString) values else (values as ArrayUByte).makeStringsFromBytes()
+        Attribute.Builder(att5.name, Datatype.STRING).setValues(svalues.toList()).build()
+    } else {
+        Attribute.Builder(att5.name, useType).setValues(values.toList()).build()
+    }
 }
 
 internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder<*> {
@@ -90,9 +96,6 @@ internal fun H5builder.buildVariable(v5 : H5Variable) : Variable.Builder<*> {
 
     val h5type = makeH5TypeInfo(v5.mdt)
     var datatype = h5type.datatype() // typedefs added here
-    if (datatype == Datatype.CHAR && v5.mdt.elemSize > 1) {
-        datatype = Datatype.STRING
-    }
     val builder = Variable.Builder(v5.name.substringAfter(NETCDF4_NON_COORD), datatype)
 
     if (v5.dimList != null) {

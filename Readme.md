@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 5/28/2023_
+_last updated: 5/30/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -20,7 +20,7 @@ By focusing on read-only access to just these formats, the API and the code are 
 In short, a library that focuses on simplicity and clarity is a safeguard for the huge investment in these
 scientific datasets.
 
-### Why do we need an alternative library from the standard reference libraries?
+### Why do we need an alternative to the standard reference libraries?
 
 The reference libraries are well maintained but complex. They are coded in C, which is a difficult language to master
 and keep bug free, with implication for memory safety and security. The libraries require various machine and OS dependent
@@ -119,6 +119,17 @@ ArrayTyped<T> of the same type:
     fun <T> readArrayData(v2: Variable<T>, section: SectionPartial? = null) : ArrayTyped<T>
 ````
 
+#### Type Notes
+
+* Datatype.ENUM returns an array of the corresponding UBYTE/USHORT/UINT. Call data.convertEnums() to turn this into
+  an ArrayString of corresponding enum names.
+* Datatype.CHAR is a legacy type from Netcdf-3. It may encode a String of unknown encoding, or it may indicate an 
+  unsigned byte. All Attributes of type CHAR are assumed to be Strings. All Variables of type CHAR return data as 
+  ArrayUByte. Call data.makeStringsFromBytes() to turn this into Strings with rank reduced by one. The Netcdf-4 library
+  encodes CHAR values as HDF5 string type with elemSize = 1, so we use that convention to detect legacy CHAR variables.
+  NC_CHAR should not be used in Netcdf-4, use NC_UBYTE or NC_STRING types.
+* Datatype.STRING is variable length, whether the file storage is variable or fixed length.
+ 
 #### Compare with Netcdf4 and CDM data models
 * Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
 * Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
