@@ -220,8 +220,8 @@ fun <T> readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype<T>, wantSectio
 private fun <T> shapeData(datatype: Datatype<T>, values: ByteBuffer, shape: IntArray): ArrayTyped<T> {
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, values)
-        Datatype.UBYTE -> ArrayUByte(shape, values)
-        Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+        Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, datatype as Datatype<UByte>, values)
+        Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
         Datatype.DOUBLE -> ArrayDouble(shape, values)
         Datatype.FLOAT -> ArrayFloat(shape, values)
         Datatype.INT -> ArrayInt(shape, values)

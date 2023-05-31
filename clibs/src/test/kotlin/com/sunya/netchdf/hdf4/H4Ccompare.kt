@@ -1,5 +1,7 @@
 package com.sunya.netchdf.hdf4
 
+import com.sunya.cdm.api.Datatype
+import com.sunya.cdm.array.ArrayUByte
 import com.sunya.cdm.util.Stats
 import com.sunya.netchdf.*
 import com.sunya.netchdf.hdf4Clib.Hdf4ClibFile
@@ -10,11 +12,12 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.Arguments
 import org.junit.jupiter.params.provider.MethodSource
 import com.sunya.testdata.testData
+import org.junit.jupiter.api.Assertions
 import java.util.*
 import java.util.stream.Stream
 import kotlin.test.*
 
-class HCcompare {
+class H4Ccompare {
 
     companion object {
         @JvmStatic
@@ -242,6 +245,12 @@ class HCcompare {
                 compareNetcdfData(myfile, ncfile, varname)
             }
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readCharDataCompare(filename : String) {
+        compareSelectedDataWithClib(filename) { it.datatype == Datatype.CHAR } //  || it.datatype == Datatype.STRING }
     }
 
     @ParameterizedTest

@@ -1,7 +1,6 @@
 package com.sunya.netchdf.hdf4
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.array.ArrayStructureData
 import com.sunya.cdm.iosp.OpenFile
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.util.Indent
@@ -197,7 +196,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             val tag = tagidMap[tagid(elem_ref[idx], code)]
             if (tag != null) {
                 result.add(tag)
-            } else if (code != TagEnum.IGNORE.code) {
+            } else if (code != TagEnum.IGNORE.code && debugTagUsed) {
                 println("vGroup ${refCode()} missing tag ${Tag.refCode(elem_ref[idx], code)} ")
             }
         }
@@ -210,7 +209,7 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             val tag = tagidMap[tagid(elem_ref[idx], code)]
             if (tag != null) {
                 result.add(tag)
-            } else if (code != TagEnum.IGNORE.code) {
+            } else if (code != TagEnum.IGNORE.code && debugTagUsed) {
                 println("dataGroup ${refCode()} missing tag ${Tag.refCode(elem_ref[idx], code)} ")
             }
         }
@@ -333,8 +332,6 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
     }
 
     private fun VgroupRead(vgroup: TagVGroup, group: Group.Builder) {
-        if (vgroup.name.contains("Parameters file"))
-            println()
         /*if (vgroup.isUsed) {
             if (debugConstruct) println("VgroupRead skip ${vgroup.refno} '${vgroup.name}'")
             return
@@ -917,8 +914,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
         ntag.isUsed = true
         ntag.usedBy = owner
 
-        val orgDataType = H4type.getDataType(ntag.numberType)
-        val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
+        val datatype = H4type.getDataType(ntag.numberType)
+        // val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
 
         val vb = Variable.Builder(name, datatype)
         vinfo.start = rasterImageTag!!.offset
@@ -946,8 +943,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             lutnt.isUsed = true
             lutnt.usedBy = ludTag
 
-            val lutType = H4type.getDataType(lutnt.numberType)
-            val ldatatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
+            val ldatatype = H4type.getDataType(lutnt.numberType)
+            // val ldatatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
             val lutvb = Variable.Builder(lutv_name, ldatatype)
             val lutVinfo = Vinfo(owner.refno)
 

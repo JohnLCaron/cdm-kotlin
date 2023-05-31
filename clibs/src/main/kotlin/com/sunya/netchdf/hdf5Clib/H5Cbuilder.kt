@@ -634,7 +634,7 @@ internal fun <T> processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, dat
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
         Datatype.ENUM1 -> ArrayUByte(shape, datatype as Datatype<UByte>,  bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
         Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, datatype as Datatype<UShort>, bb)

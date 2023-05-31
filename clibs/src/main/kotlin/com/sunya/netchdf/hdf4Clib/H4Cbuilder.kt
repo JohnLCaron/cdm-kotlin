@@ -458,9 +458,6 @@ class HCheader(val filename: String) {
         // println("  sizeInBytes = $sizeInBytes nvalues = $nvalues total = ${sizeInBytes * nvalues}" )
         // println("  datatype.size = ${datatype.size} nvalues = $nvalues total = ${datatype.size * nvalues}" )
 
-        if (aname == "start_latlon")
-            println()
-
         // only use the VS refno to read the VS "directly"
         return VStructureReadAsAttribute(session, refnum)
     }
@@ -633,13 +630,13 @@ class HCheader(val filename: String) {
             val name = name_p.getUtf8String(0)
             require(name.length < MAX_NAME)
             val n_comps = n_comps_p[C_INT, 0]
-            val orgDataType = H4type.getDataType(data_type_p[C_INT, 0])
+            val datatype = H4type.getDataType(data_type_p[C_INT, 0])
             val interlace = interlace_p[C_INT, 0]
             val dims = IntArray(2) { dim_sizes_p.getAtIndex(C_INT, it.toLong()) }
             val nattrs = n_attrs_p[C_INT, 0]
 
             // create the Variable
-            val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
+           //  val datatype = if (orgDataType == Datatype.CHAR) Datatype.UBYTE else orgDataType
             val vb = Variable.Builder(name, datatype)
             vb.spObject = Vinfo4().setGRindex(gridx)
 
@@ -668,8 +665,8 @@ class HCheader(val filename: String) {
 
                 val ncomps = n_comps_p[C_INT, 0]
                 val nt = nt_p[C_INT, 0]
-                val porgDatatype = H4type.getDataType(nt)
-                val pdatatype = if (porgDatatype == Datatype.CHAR) Datatype.UBYTE else porgDatatype
+                val pdatatype = H4type.getDataType(nt)
+                // val pdatatype = if (porgDatatype == Datatype.CHAR) Datatype.UBYTE else porgDatatype
 
                 val interlace = interlace_p[C_INT, 0]
                 val nentries = nentries_p[C_INT, 0]
@@ -682,12 +679,12 @@ class HCheader(val filename: String) {
                 val shape = intArrayOf(nentries, ncomps)
                 val lutData = when (pdatatype) {
                     Datatype.BYTE -> ArrayByte(shape, palData)
-                    Datatype.UBYTE -> ArrayUByte(shape, palData)
+                    Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, pdatatype as Datatype<UByte>, palData)
                     Datatype.SHORT -> ArrayShort(shape, palData)
                     Datatype.USHORT -> ArrayUShort(shape, palData)
                     Datatype.INT -> ArrayInt(shape, palData)
                     Datatype.UINT -> ArrayUInt(shape, palData)
-                    else -> throw RuntimeException("not supporting $datatype for GR lookup table")
+                    else -> throw RuntimeException("not supporting $pdatatype for GR lookup table")
                 }
                 if (debugGR) println("  lutData=${lutData}")
 
@@ -1035,7 +1032,7 @@ private fun processAttribute(name : String, nelems : Int, datatype : Datatype<*>
 
     val values = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
+        Datatype.UBYTE -> ArrayUByte(shape, bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
         Datatype.USHORT -> ArrayUShort(shape, bb)
         Datatype.INT -> ArrayInt(shape, bb)

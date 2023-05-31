@@ -51,7 +51,7 @@ class H4chunkReader(val h4 : H4builder) {
         val shape = wantSpace.shape.toIntArray()
         val result = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
+            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
             Datatype.SHORT -> ArrayShort(shape, bb)
             Datatype.USHORT -> ArrayUShort(shape, bb)
             Datatype.INT -> ArrayInt(shape, bb)

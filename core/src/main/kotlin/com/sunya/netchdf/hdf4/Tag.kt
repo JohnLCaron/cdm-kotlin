@@ -340,8 +340,7 @@ class TagLookupTable(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
         val shape = intArrayOf(tagID.ydim, tagID.xdim, tagID.nelems)
         table = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.UBYTE -> ArrayUByte(shape, bb)
-            Datatype.CHAR -> ArrayUByte(shape, bb)
+            Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
             Datatype.SHORT -> ArrayShort(shape, bb)
             Datatype.USHORT -> ArrayUShort(shape, bb)
             Datatype.INT -> ArrayInt(shape, bb)
