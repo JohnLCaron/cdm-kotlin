@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 5/30/2023_
+_last updated: 5/31/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -110,32 +110,38 @@ We do not plan to provide write capabilities.
 
 ### Data Model notes
 
-(Work in progress)
+#### Type Safety and Generics
 
-Type safety with generics. The main impact on users is that reading a Variable of type T returns an
-ArrayTyped<T> of the same type:
+Datatype\<T\>, Attribute\<T\>, Variable\<T\>, StructureMember\<T\>, Array\<T\> and ArraySection\<T\> are all generics, 
+with T indicating the data type returned when read, eg:
 
 ````
     fun <T> readArrayData(v2: Variable<T>, section: SectionPartial? = null) : ArrayTyped<T>
 ````
 
-#### Type Notes
-
-* Datatype.ENUM returns an array of the corresponding UBYTE/USHORT/UINT. Call data.convertEnums() to turn this into
+#### Datatype
+* __Datatype.ENUM__ returns an array of the corresponding UBYTE/USHORT/UINT. Call _data.convertEnums()_ to turn this into
   an ArrayString of corresponding enum names.
-* Datatype.CHAR is a legacy type from Netcdf-3. It may encode a String of unknown encoding, or it may indicate an 
-  unsigned byte. All Attributes of type CHAR are assumed to be Strings. All Variables of type CHAR return data as 
-  ArrayUByte. Call data.makeStringsFromBytes() to turn this into Strings with rank reduced by one. The Netcdf-4 library
-  encodes CHAR values as HDF5 string type with elemSize = 1, so we use that convention to detect legacy CHAR variables.
-  NC_CHAR should not be used in Netcdf-4, use NC_UBYTE or NC_STRING types.
-* Datatype.STRING is variable length, whether the file storage is variable or fixed length.
- 
-#### Compare with Netcdf4 and CDM data models
-* Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
-* Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
-* Datatype.REFERENCE is added
-* Opaque, Vlen typedefs ??
-* Variables or Attributes of datatype CHAR have T = String. In some cases these may be changed to UBYTE.
+* __Datatype.CHAR__: All Attributes of type CHAR are assumed to be Strings. All Variables of type CHAR return data as
+  ArrayUByte. Call _data.makeStringsFromBytes()_ to turn this into Strings with the array rank reduced by one.
+  * _Netcdf-3_ does not have STRING or UBYTE types. In practice, CHAR is used for either. 
+  * _Netcdf-4/HDF5_ library encodes CHAR values as HDF5 string type with elemSize = 1, so we use that convention to detect 
+    legacy CHAR variables in HDF5 files. NC_CHAR should not be used in Netcdf-4, use NC_UBYTE or NC_STRING.
+  * _HDF4_ does not have a STRING type, but does have signed and unsigned CHAR, and signed and unsigned BYTE. 
+    We map both signed and unsigned to Datatype.CHAR and handle it as above (Attributes are Strings, Variables are UBytes).
+* __Datatype.STRING__ is variable length, whether the file storage is variable or fixed length.
+
+#### Typedef
+Unlike Netcdf-Java, we follow Netcdf-4 "user defined types" and add typedefs for Compound, Enum, Opaque, and Vlen.
+* __Datatype.ENUM__ typedef has a map from integer to name (same as Netcdf-Java)
+* __Datatype.COMPOUND__ typedef contains a description of the members of the Compound (aka Structure).
+* __Datatype.OPAQUE__ typedef may contain the byte length of OPAQUE data.
+* __Datatype.VLEN__ typedef has the base type. An array of VLEN may have different lengths for each object.
+
+#### Dimension
+* Unlike Netcdf-3 and Netcdf-4, dimensions may be "anonymous", in which case they have a length but not a name, and are 
+local to the variable they are referenced by.
+* There are no UNLIMITED dimensions. These are unneeded since we do not support writing.
 
 #### Compare with HDF5 data model
 * Creation order is ignored
@@ -146,6 +152,10 @@ ArrayTyped<T> of the same type:
 
 #### Compare with HDF4 data model
 * All data access is unified under the netchdf API
+
+#### Compare with HDF-EOS data model
+* The _StructMetadata_ ODL is gathered and applied to the file header metadata as well as possible. 
+  Contact us with example files if you see something we are missing.
 
 ##
 An independent implementation of HDF4/HDF5/HDF-EOS in kotlin.

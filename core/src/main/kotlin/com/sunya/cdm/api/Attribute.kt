@@ -4,7 +4,7 @@ import com.sunya.cdm.util.makeValidCdmObjectName
 
 data class Attribute<T>(val orgName : String, val datatype : Datatype<T>, val values : List<T>) {
     val name = makeValidCdmObjectName(orgName)
-    val isString = (datatype == Datatype.STRING)
+    val isString = (datatype == Datatype.CHAR) || (datatype == Datatype.STRING)
 
     companion object {
         fun from(name : String, value : String) = Attribute(name, Datatype.STRING, listOf(value))

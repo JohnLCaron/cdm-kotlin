@@ -311,7 +311,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
         println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
@@ -339,7 +339,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
         println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
@@ -488,7 +488,7 @@ fun compareSelectedDataWithClib(filename: String, wanted : (Variable<*>) -> Bool
         println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { ncfile ->
                 compareSelectedData(netchdf, ncfile, wanted)
             }
@@ -512,6 +512,7 @@ fun compareSelectedData(myfile: Netchdf, cfile: Netchdf, wanted : (Variable<*>) 
         if (cvar == null) {
             println(" *** cant find ${myvar.fullname()} in cfile")
         } else {
+            println("   ${myvar.nameAndShape()}")
             compareOneVar(myvar, myfile, cvar, cfile, null)
         }
     }

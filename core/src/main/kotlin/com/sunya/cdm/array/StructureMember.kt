@@ -65,13 +65,12 @@ open class StructureMember<T>(val orgName: String, val datatype : Datatype<T>, v
             Datatype.SHORT -> bb.getShort(offset)
             Datatype.INT -> bb.getInt(offset)
             Datatype.LONG -> bb.getLong(offset)
-            Datatype.UBYTE, Datatype.ENUM1 -> bb.get(offset).toUByte()
+            Datatype.UBYTE, Datatype.CHAR, Datatype.ENUM1 -> bb.get(offset).toUByte()
             Datatype.USHORT, Datatype.ENUM2 -> bb.getShort(offset).toUShort()
             Datatype.UINT, Datatype.ENUM4 -> bb.getInt(offset).toUInt()
             Datatype.ULONG -> bb.getLong(offset).toULong()
             Datatype.FLOAT -> bb.getFloat(offset)
             Datatype.DOUBLE -> bb.getDouble(offset)
-            Datatype.CHAR -> makeStringZ(bb, offset, nelems)
             Datatype.STRING -> {
                 if (datatype.isVlenString) {
                     val ret = sdata.getFromHeap(offset)
@@ -107,13 +106,13 @@ open class StructureMember<T>(val orgName: String, val datatype : Datatype<T>, v
             Datatype.SHORT -> ArrayShort(dims, memberBB)
             Datatype.INT -> ArrayInt(dims, memberBB)
             Datatype.LONG -> ArrayLong(dims, memberBB)
-            Datatype.UBYTE, Datatype.ENUM1  -> ArrayUByte(dims, datatype as Datatype<UByte>, memberBB)
+            Datatype.UBYTE, Datatype.CHAR, Datatype.ENUM1  -> ArrayUByte(dims, datatype as Datatype<UByte>, memberBB)
             Datatype.USHORT, Datatype.ENUM2  -> ArrayUShort(dims, datatype as Datatype<UShort>, memberBB)
             Datatype.UINT, Datatype.ENUM4  -> ArrayUInt(dims, datatype as Datatype<UInt>, memberBB)
             Datatype.ULONG -> ArrayULong(dims, memberBB)
             Datatype.FLOAT -> ArrayFloat(dims, memberBB)
             Datatype.DOUBLE -> ArrayDouble(dims, memberBB)
-            /* Datatype.CHAR -> makeStringZ(bb, offset, nelems)
+            /*
             Datatype.STRING -> {
                 if (datatype.isVlenString) {
                     val ret = sdata.getFromHeap(offset)

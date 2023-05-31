@@ -63,7 +63,7 @@ class H4chunkIterator<T>(h4 : H4builder, val v2: Variable<*>, val wantSection : 
         val shape = wantSpace.shape.toIntArray()
         val array = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, bb)
+            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
             Datatype.SHORT -> ArrayShort(shape, bb)
             Datatype.USHORT -> ArrayUShort(shape, bb)
             Datatype.INT -> ArrayInt(shape, bb)

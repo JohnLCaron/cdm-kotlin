@@ -156,8 +156,8 @@ class Hdf4File(val filename : String) : Netchdf {
         val shape = wantSection.shape.toIntArray()
         val array = when (v2.datatype) {
             Datatype.BYTE -> ArrayByte(shape, values)
-            Datatype.UBYTE -> ArrayUByte(shape, values)
-            Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+            Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, v2.datatype as Datatype<UByte>, values)
+            Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
             Datatype.DOUBLE -> ArrayDouble(shape, values)
             Datatype.FLOAT -> ArrayFloat(shape, values)
             Datatype.INT -> ArrayInt(shape, values)

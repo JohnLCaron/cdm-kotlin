@@ -326,7 +326,7 @@ private fun stripQuotes(name: String): String {
 
 private val showDetail = false
 private val showProblems = false
-private val showValidationFailures = true
+private val showValidationFailures = false
 
 class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
 
@@ -404,7 +404,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
                     val odlname = makeValidCdmObjectName(name)
                     val vb = parent.variables.find { it.name == name } ?: parent.variables.find { it.name == odlname }
                     if (vb == null) {
-                        println(" *** ODL cant find variable $name")
+                        if (showProblems) println(" *** ODL cant find variable $name")
                         return false
                     }
                 }
@@ -415,7 +415,7 @@ class ODLparser(val rootGroup: Group.Builder, val show : Boolean = false) {
                 val ngroup = parent.findNestedGroupByShortName(odl.name) ?:
                              parent.findNestedGroupByShortName(makeValidCdmObjectName(odl.name))
                 if (ngroup == null) {
-                    println(" *** ODL cant find GROUP ${odl.name}")
+                    if (showProblems) println(" *** ODL cant find GROUP ${odl.name}")
                     parent.findNestedGroupByShortName(makeValidCdmObjectName(odl.name))
                     return false
                 } else {
