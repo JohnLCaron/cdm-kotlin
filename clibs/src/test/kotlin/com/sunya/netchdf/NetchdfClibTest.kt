@@ -534,9 +534,9 @@ fun compareOneVar(myvar: Variable<*>, myfile: Netchdf, cvar : Variable<*>, cfile
         }
         println(" ${myvar.datatype} ${myvar.fullname()}[${filledSection}] = ${mydata.shape.computeSize()} elems" )
 
-        if (myvar.datatype == Datatype.CHAR) {
-            compareCharData(myvar.fullname(), mydata, ncdata)
-        } else {
+        //if (myvar.datatype == Datatype.CHAR) {
+        //    compareCharData(myvar.fullname(), mydata, ncdata)
+        //} else {
             if (!ncdata.equals(mydata)) {
                 println(" *** FAIL comparing data for variable = ${cvar.datatype} ${cvar.fullname()} ${cvar.dimensions.map { it.name }}")
                 if (NetchdfClibTest.showFailedData) {
@@ -554,7 +554,7 @@ fun compareOneVar(myvar: Variable<*>, myfile: Netchdf, cvar : Variable<*>, cfile
                     print(" cdata = $ncdata")
                 }
             }
-        }
+        // }
     }
     if (NetchdfClibTest.compareMiddleSection && cvar.nelems > 8 && cvar.datatype != Datatype.CHAR) {
         compareMiddleSection(myfile, myvar, cfile, cvar, cvar.shape)
@@ -585,9 +585,9 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable<*>, cfile: Netchdf, cv
     }
     println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${mydata.shape.computeSize()} elems")
 
-    if (myvar.datatype == Datatype.CHAR) {
-        compareCharData(myvar.fullname(), mydata, ncdata)
-    } else {
+    //if (myvar.datatype == Datatype.CHAR) {
+    //    compareCharData(myvar.fullname(), mydata, ncdata)
+    //} else {
         if (!ncdata.equals(mydata)) {
             println(" *** FAIL comparing middle section variable = ${cvar.nameAndShape()}")
             if (NetchdfClibTest.showFailedData) {
@@ -599,9 +599,9 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable<*>, cfile: Netchdf, cv
             assertTrue(false, "variable ${myvar.name}")
             return
         }
-    }
+    //}
 }
-fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>) {
+fun compareCharDataOld(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>) {
     if (!ArrayTyped.valuesEqual(ncdata, mydata)) {
         println("   *** FAIL comparing char variable = ${name}")
         print("   ncdata = $ncdata")

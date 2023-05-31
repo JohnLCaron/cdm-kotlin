@@ -665,7 +665,8 @@ class HCheader(val filename: String) {
 
                 val ncomps = n_comps_p[C_INT, 0]
                 val nt = nt_p[C_INT, 0]
-                val pdatatype = H4type.getDataType(nt)
+                // going to ignore GRgetlutinfo and just use UBYTE
+                val pdatatype = Datatype.UBYTE // H4type.getDataType(nt)
                 // val pdatatype = if (porgDatatype == Datatype.CHAR) Datatype.UBYTE else porgDatatype
 
                 val interlace = interlace_p[C_INT, 0]

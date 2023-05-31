@@ -208,9 +208,10 @@ fun <T> readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype<T>, wantSectio
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
             values.order(ByteOrder.nativeOrder())
+            return shapeData(datatype, values, wantSection.shape.toIntArray())
             // flip the data back
-            val flipper = IndexFn(wantSection.shape.toIntArray())
-            return shapeData(datatype, flipper.flip(values, datatype.size), flipper.flippedShape())
+            //val flipper = IndexFn(wantSection.shape.toIntArray())
+            //return shapeData(datatype, flipper.flip(values, datatype.size), flipper.flippedShape())
         } finally {
             GRendaccess(grId)
         }
