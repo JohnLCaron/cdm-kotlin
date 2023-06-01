@@ -943,9 +943,8 @@ class H4builder(val raf: OpenFile, val valueCharset: Charset) {
             lutnt.isUsed = true
             lutnt.usedBy = ludTag
 
-            // going to ignore lutnt and just use UBYTE
-            val ldatatype = Datatype.UBYTE // H4type.getDataType(lutnt.numberType)
-            // val ldatatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType
+            val lutType = H4type.getDataType(lutnt.numberType)
+            val ldatatype = if (lutType == Datatype.CHAR) Datatype.UBYTE else lutType // inconsistent C Library
             val lutvb = Variable.Builder(lutv_name, ldatatype)
             val lutVinfo = Vinfo(owner.refno)
 
