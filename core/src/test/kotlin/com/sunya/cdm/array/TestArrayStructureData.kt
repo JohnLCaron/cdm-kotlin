@@ -78,7 +78,7 @@ class TestArrayStructureData {
         for (sdata in arraySD) {
             assertEquals(arraySD.members, sdata.members)
             println(sdata.toString())
-            assertContains(sdata.toString(), "muint_enum-13 = 0, mchar-14 = \"\", mstring-15 = \"\", mbyte-16 = [0,0],")
+            assertContains(sdata.toString(), "muint_enum-13 = 0, mchar-14 = 0, mstring-15 = \"\", mbyte-16 = [0,0], mubyte-17 = [0,0]")
             assertEquals(sdata, arraySD.get(count))
             assertEquals(sdata.hashCode(), arraySD.get(count).hashCode())
             count++
