@@ -19,6 +19,7 @@ dependencies {
     testImplementation(libs.guava)
     testImplementation(kotlin("test"))
     testImplementation("org.junit.jupiter:junit-jupiter-params:5.1.0")
+    testImplementation(libs.kotest.property)
 }
 
 tasks {
@@ -41,7 +42,7 @@ tasks {
         // https://www.jvt.me/posts/2021/03/11/gradle-speed-parallel/
         // Configuration parameters to execute top-level classes in parallel but methods in same thread
         // https://junit.org/junit5/docs/current/user-guide/#writing-tests-parallel-execution
-        systemProperties["junit.jupiter.execution.parallel.enabled"] = "true"
+        systemProperties["junit.jupiter.execution.parallel.enabled"] = "false"
         systemProperties["junit.jupiter.execution.parallel.mode.default"] = "concurrent"
         systemProperties["junit.jupiter.execution.parallel.mode.classes.default"] = "concurrent"
     }

@@ -2,12 +2,12 @@ package com.sunya.cdm.api
 
 import com.sunya.cdm.util.makeValidCdmObjectName
 
-data class Variable(
+data class Variable<T>(
     val group : Group,
     val orgName: String, // artifact of being a data class
-    val datatype: Datatype,
+    val datatype: Datatype<T>,
     val dimensions: List<Dimension>,
-    val attributes: List<Attribute>,
+    val attributes: List<Attribute<*>>,
     val spObject: Any?,
 ) {
     val name = makeValidCdmObjectName(orgName)
@@ -20,7 +20,7 @@ data class Variable(
     }
 
     /** find named attribute in this Variable */
-    fun findAttribute(attName: String) : Attribute? {
+    fun findAttribute(attName: String) : Attribute<*>? {
         return attributes.find {it.name == attName}
     }
 
@@ -28,7 +28,7 @@ data class Variable(
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other !is Variable) return false
+        if (other !is Variable<*>) return false
 
         if (name != other.name) return false
         if (datatype != other.datatype) return false
@@ -50,29 +50,23 @@ data class Variable(
         return "$datatype ${fullname()}${shape.contentToString()}"
     }
 
-    class Builder(val name : String) {
-        var datatype : Datatype? = null
+    class Builder<T>(val name : String, val datatype : Datatype<T>) {
         val dimensions = mutableListOf<Dimension>()
-        val attributes = mutableListOf<Attribute>()
+        val attributes = mutableListOf<Attribute<*>>()
         var spObject: Any? = null
         var dimNames: List<String>? = null
 
-        fun addAttribute(attr : Attribute) : Builder {
+        fun addAttribute(attr : Attribute<*>) : Builder<T> {
             attributes.add(attr)
             return this
         }
 
-        fun addDimension(dim : Dimension) : Builder {
+        fun addDimension(dim : Dimension) : Builder<T> {
             dimensions.add(dim)
             return this
         }
 
-        fun setDatatype(datatype : Datatype) : Builder {
-            this.datatype = datatype
-            return this
-        }
-
-        fun setDimensionsAnonymous(shape : LongArray) : Builder {
+        fun setDimensionsAnonymous(shape : LongArray) : Builder<T> {
             dimensions.clear()
             dimNames = null
             for (len in shape) {
@@ -81,7 +75,7 @@ data class Variable(
             return this
         }
 
-        fun setDimensionsAnonymous(shape : IntArray) : Builder {
+        fun setDimensionsAnonymous(shape : IntArray) : Builder<T> {
             return setDimensionsAnonymous(shape.toLongArray())
         }
 
@@ -89,14 +83,12 @@ data class Variable(
             return if (group.fullname() == "") name else "${group.fullname()}/$name"
         }
 
-        fun build(group : Group) : Variable {
+        fun build(group : Group) : Variable<T> {
             var useDimensions = dimensions.toList()
             if (dimNames != null) {
                 useDimensions = dimNames!!.map { getDimension(it, group) }
             }
-
-            val useName = makeValidCdmObjectName(name)
-            return Variable(group, useName, datatype!!, useDimensions, attributes, spObject)
+            return Variable(group, name, datatype, useDimensions, attributes, spObject)
         }
 
         private fun getDimension(dimName : String, group : Group) : Dimension {

@@ -75,7 +75,7 @@ class NCheader(val filename: String) {
 
         if (numAtts > 0) {
             if (debug) println(" group attributes")
-            val gatts: List<Attribute.Builder> = readAttributes(session, g4.grpid, NC_GLOBAL(), numAtts)
+            val gatts: List<Attribute.Builder<*>> = readAttributes(session, g4.grpid, NC_GLOBAL(), numAtts)
             for (attb in gatts) {
                 val att = attb.build()
                 g4.gb.addAttribute(att)
@@ -195,8 +195,7 @@ class NCheader(val filename: String) {
             }
 
             // create the Variable
-            val vb = Variable.Builder(vname)
-            vb.datatype = convertType(typeid)
+            val vb = Variable.Builder(vname, convertType(typeid))
             vb.dimensions.addAll(g4.makeDimList(dimIds))
 
             val usertype = if (typeid >= 32) userTypes[typeid] else null
@@ -206,7 +205,7 @@ class NCheader(val filename: String) {
             // read Variable attributes
             if (natts > 0) {
                 if (debug) println(" Variable attributes")
-                val atts: List<Attribute.Builder> = readAttributes(session, g4.grpid, varid, natts)
+                val atts = readAttributes(session, g4.grpid, varid, natts)
                 for (attb in atts) {
                     val att = attb.build()
                     if (!HDF5_SKIP_ATTS.contains(att.name)) {
@@ -219,8 +218,8 @@ class NCheader(val filename: String) {
     }
 
     @Throws(IOException::class)
-    private fun readAttributes(session: MemorySession, grpid: Int, varid: Int, natts: Int): List<Attribute.Builder> {
-        val result = mutableListOf<Attribute.Builder>()
+    private fun readAttributes(session: MemorySession, grpid: Int, varid: Int, natts: Int): List<Attribute.Builder<*>> {
+        val result = mutableListOf<Attribute.Builder<*>>()
         val name_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
         val type_p = session.allocate(C_INT, 0)
         val size_p = session.allocate(C_LONG, 0)
@@ -238,25 +237,27 @@ class NCheader(val filename: String) {
             if (userType != null) {
                 result.add(readUserAttributeValues(session, grpid, varid, attName, datatype, userType, attLength))
             } else {
-                val attb = Attribute.Builder().setName(attName).setDatatype(datatype)
+                var attb = Attribute.Builder(attName, datatype)
                 if (attLength > 0) {
-                    attb.values = readAttributeValues(session, grpid, varid, attName, datatype, attLength)
-                } else {
-                    attb.values = emptyList<Any>()
+                    val values = readAttributeValues(session, grpid, varid, attName, datatype, attLength)
+                    if (datatype == Datatype.CHAR) {
+                        attb = Attribute.Builder(attName, Datatype.STRING).setValues(values)
+                    } else {
+                        attb.setValues(values)
+                    }
                 }
                 result.add(attb)
             }
-
         }
         return result
     }
 
-    fun readAttributeValues(
+    fun <T> readAttributeValues(
         session: MemorySession,
         grpid: Int,
         varid: Int,
         attname: String,
-        datatype: Datatype,
+        datatype: Datatype<T>,
         nelems: Long
     ): List<Any> {
         val name_p: MemorySegment = session.allocateUtf8String(attname)
@@ -461,7 +462,7 @@ class NCheader(val filename: String) {
         val debugFormat = false
     }
 
-    fun convertType(type: Int): Datatype {
+    fun convertType(type: Int): Datatype<*> {
         return when (type) {
             NC_BYTE() -> Datatype.BYTE
             NC_CHAR() -> Datatype.CHAR

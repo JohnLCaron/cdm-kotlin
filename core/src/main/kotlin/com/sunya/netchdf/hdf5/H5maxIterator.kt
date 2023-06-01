@@ -5,10 +5,8 @@ import com.sunya.cdm.api.Section
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.layout.MaxChunker
 
-internal class H5maxIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+internal class H5maxIterator<T>(val h5 : H5builder, val v2: Variable<T>, val wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection<T>>() {
     private val debugChunking = false
-
-    val vinfo = v2.spObject as DataContainerVariable
     private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
     override fun computeNext() {
@@ -17,7 +15,7 @@ internal class H5maxIterator(val h5 : H5builder, val v2: Variable, val wantSecti
             if (debugChunking) println("  chunk=${indexSection}")
 
             val section = indexSection.section(v2.shape)
-            val array = h5.readRegularData(vinfo, section)
+            val array = h5.readRegularData(v2.spObject as DataContainerVariable, v2.datatype, section)
             setNext(ArraySection(array, section))
         } else {
             done()

@@ -42,7 +42,7 @@ internal fun H5Cbuilder.readH5CTypeInfo (context : GroupContext, type_id : Long,
     val type_endian = if (H5Tget_order(type_id) == 0) ByteOrder.LITTLE_ENDIAN else ByteOrder.BIG_ENDIAN
 
     if (datatype5 == Datatype5.Compound) {
-        val members = mutableListOf<StructureMember>()
+        val members = mutableListOf<StructureMember<*>>()
         val nmembers = H5Tget_nmembers(type_id)
         repeat(nmembers) {membno ->
             // char* H5Tget_member_name	(	hid_t 	type_id, unsigned 	membno)
@@ -147,7 +147,7 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
     val isVlenString = H5Tis_variable_str(type_id) > 0
 
     // Call this after all the typedefs have been found
-    fun datatype(): Datatype {
+    fun datatype(): Datatype<*> {
         return when (datatype5) {
             Datatype5.Fixed, Datatype5.BitField ->
                 when (this.elemSize) {
@@ -166,7 +166,13 @@ internal data class H5CTypeInfo(val type_id: Long, val type_class : Int, val ele
                 }
 
             Datatype5.Time -> Datatype.LONG.withSignedness(true) // LOOK use bitPrecision i suppose?
-            Datatype5.String -> if (isVlenString || elemSize > 1) Datatype.STRING.withVlen(isVlenString) else Datatype.CHAR
+            Datatype5.String -> if (isVlenString || elemSize > 1) {
+                Datatype.STRING.withVlen(isVlenString)
+            } else {
+                // should only happen for Netcdf-4 files, encoding CHAR as fixed length elemSize = 1.
+                // but now theres confusion with HDF5 strings of length 1.
+                Datatype.CHAR
+            }
             Datatype5.Reference -> Datatype.REFERENCE // "object" gets converted to dataset path, "region" ignored
             Datatype5.Opaque -> if (typedef != null) Datatype.OPAQUE.withTypedef(typedef) else Datatype.OPAQUE
             Datatype5.Compound -> Datatype.COMPOUND.withTypedef(typedef!!)

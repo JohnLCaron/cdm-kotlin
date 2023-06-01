@@ -98,21 +98,32 @@ class NetchdfClibTest {
     @Test
     fun testOneCdl() {
         val filename = testData + "netchdf/tomas/S3A_OL_CCDB_CHAR_AllFiles.20101019121929_1.nc4"
-        /* see if it can be read through H5
-        openNetchdfFile(filename).use { ncfile ->
-            println("netchdf ${ncfile!!.type()} $filename ")
-            println("${ncfile.cdl()} ")
-        }
-        // see if it can be read through N4C
-        NetcdfClibFile(filename).use { ncfile ->
-            println("NetcdfClibFile ${ncfile.type()} $filename ")
-            println("${ncfile.cdl()} ")
-        }
-        Hdf5ClibFile(filename).use { ncfile ->
-            println("Hdf5ClibFile ${ncfile.type()} $filename ")
-            println("${ncfile.cdl()} ")
-        } */
         compareCdlWithClib(filename)
+    }
+
+    @Test
+    fun testEnums() {
+        compareCdlWithClib(testData + "devcdm/netcdf4/test_enum_type.nc")
+        compareCdlWithClib(testData + "devcdm/netcdf4/tst_enums.nc")
+        compareCdlWithClib(testData + "devcdm/hdf5/enumcmpnd.h5")
+        compareCdlWithClib(testData + "devcdm/hdf5/enum.h5")
+        compareCdlWithClib(testData + "devcdm/hdf5/cenum.h5")
+
+        compareDataWithClib(testData + "devcdm/netcdf4/test_enum_type.nc")
+        compareDataWithClib(testData + "devcdm/netcdf4/tst_enums.nc")
+        compareDataWithClib(testData + "devcdm/hdf5/enumcmpnd.h5")
+        compareDataWithClib(testData + "devcdm/hdf5/enum.h5")
+        compareDataWithClib(testData + "devcdm/hdf5/cenum.h5")
+    }
+
+    // /home/all/testdata/devcdm/netcdf4/test_enum_type.nc
+
+    @Test
+    fun problem() {
+        val filename = testData + "devcdm/hdf4/TOVS_BROWSE_MONTHLY_AM_B861001.E861031_NF.HDF"
+        // compareN4withH5cdl(filename)
+        compareCdlWithClib(filename)
+        compareDataWithClib(filename)
     }
 
     @Test
@@ -274,6 +285,22 @@ fun compareCdlWithClib(filename: String) {
     }
 }
 
+fun compareN4withH5cdl(filename: String) {
+    println("=================")
+    Hdf5ClibFile(filename).use { h5file ->
+        if (h5file == null) {
+            println("*** not an hdf5 file = $filename")
+            return
+        }
+        println("${h5file.type()} $filename ")
+        println("\nh5file = ${h5file.cdl()}")
+
+        NClibFile(filename).use { ncfile ->
+            assertEquals(h5file.cdl(), ncfile.cdl())
+        }
+    }
+}
+
 fun compareDataWithClib(filename: String, varname: String? = null, section: SectionPartial? = null) {
     println("=============================================================")
     openNetchdfFile(filename).use { netchdf ->
@@ -284,7 +311,7 @@ fun compareDataWithClib(filename: String, varname: String? = null, section: Sect
         println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { ncfile ->
                 compareNetcdfData(netchdf, ncfile, varname, section)
             }
@@ -312,7 +339,7 @@ fun compareIterateWithClib(filename: String, varname: String? = null, section: S
         println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
         if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
 
-        if (netchdf.type().contains("hdf4")) {
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
             Hdf4ClibFile(filename).use { ncfile ->
                 compareIterateNetchdf(netchdf, ncfile, varname, section) // LOOK should be compareIterateWithHC
             }
@@ -355,7 +382,7 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial
 
 const val maxBytes = 10_000_000
 
-fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?) {
     val sectionF = SectionPartial.fill(section, myvar.shape)
     val nbytes = sectionF.totalElements * myvar.datatype.size
     val myvarshape = myvar.shape.toIntArray()
@@ -391,7 +418,7 @@ fun removeLast(org: IntArray): IntArray {
     return IntArray(org.size - 1) { org[it] }
 }
 
-fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
+fun readMiddleSection(myfile: Netchdf, myvar: Variable<*>, shape: LongArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         val length = orgSection.shape[idx]
@@ -450,7 +477,48 @@ fun compareNetcdfData(myfile: Netchdf, cfile: Netchdf, varname: String?, section
     }
 }
 
-fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionPartial?) {
+
+fun compareSelectedDataWithClib(filename: String, wanted : (Variable<*>) -> Boolean) {
+    println("=============================================================")
+    openNetchdfFile(filename).use { netchdf ->
+        if (netchdf == null) {
+            println("*** not a netchdf file = $filename")
+            return
+        }
+        println("${netchdf.type()} $filename ${"%.2f".format(netchdf.size / 1000.0 / 1000.0)} Mbytes")
+        if (NetchdfClibTest.showCdl) println("\n${netchdf.cdl()}")
+
+        if (netchdf.type().contains("hdf4")  || netchdf.type().contains("hdf-eos2")) {
+            Hdf4ClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        } else if (netchdf.type().contains("netcdf")) {
+            NClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        }  else if (netchdf.type().contains("hdf5") || netchdf.type().contains("hdf-eos5")) {
+            Hdf5ClibFile(filename).use { ncfile ->
+                compareSelectedData(netchdf, ncfile, wanted)
+            }
+        } else {
+            println("*** no c library to compare for $filename")
+        }
+    }
+}
+
+fun compareSelectedData(myfile: Netchdf, cfile: Netchdf, wanted : (Variable<*>) -> Boolean) {
+    myfile.rootGroup().allVariables().filter { wanted(it) }. forEach { myvar ->
+        val cvar = cfile.rootGroup().allVariables().find { it.fullname() == myvar.fullname() }
+        if (cvar == null) {
+            println(" *** cant find ${myvar.fullname()} in cfile")
+        } else {
+            println("   ${myvar.nameAndShape()}")
+            compareOneVar(myvar, myfile, cvar, cfile, null)
+        }
+    }
+}
+
+fun compareOneVar(myvar: Variable<*>, myfile: Netchdf, cvar : Variable<*>, cfile: Netchdf, section: SectionPartial?) {
     val filledSection = SectionPartial.fill(section, myvar.shape)
     val nbytes = filledSection.totalElements * myvar.datatype.size
 
@@ -466,16 +534,16 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netc
         }
         println(" ${myvar.datatype} ${myvar.fullname()}[${filledSection}] = ${mydata.shape.computeSize()} elems" )
 
-        if (myvar.datatype == Datatype.CHAR) {
-            compareCharData(myvar.fullname(), mydata, ncdata)
-        } else {
+        //if (myvar.datatype == Datatype.CHAR) {
+        //    compareCharData(myvar.fullname(), mydata, ncdata)
+        //} else {
             if (!ncdata.equals(mydata)) {
                 println(" *** FAIL comparing data for variable = ${cvar.datatype} ${cvar.fullname()} ${cvar.dimensions.map { it.name }}")
                 if (NetchdfClibTest.showFailedData) {
                     println("\n mydata = $mydata")
                     println(" cdata = $ncdata")
                 } else {
-                    println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
+                    println("\n countDifferences = ${countArrayDiffs(ncdata, mydata)}")
                 }
                 assertTrue(false, "variable ${myvar.fullname()}")
                 return
@@ -486,14 +554,14 @@ fun compareOneVar(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netc
                     print(" cdata = $ncdata")
                 }
             }
-        }
+        // }
     }
     if (NetchdfClibTest.compareMiddleSection && cvar.nelems > 8 && cvar.datatype != Datatype.CHAR) {
         compareMiddleSection(myfile, myvar, cfile, cvar, cvar.shape)
     }
 }
 
-fun compareMiddleSection(myfile: Netchdf, myvar: Variable, cfile: Netchdf, cvar: Variable, shape : LongArray) {
+fun compareMiddleSection(myfile: Netchdf, myvar: Variable<*>, cfile: Netchdf, cvar: Variable<*>, shape : LongArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         val length = orgSection.shape[idx]
@@ -517,27 +585,28 @@ fun compareMiddleSection(myfile: Netchdf, myvar: Variable, cfile: Netchdf, cvar:
     }
     println("  ${myvar.fullname()}[$middleSection] = ${mydata.shape.contentToString()} ${mydata.shape.computeSize()} elems")
 
-    if (myvar.datatype == Datatype.CHAR) {
-        compareCharData(myvar.fullname(), mydata, ncdata)
-    } else {
+    //if (myvar.datatype == Datatype.CHAR) {
+    //    compareCharData(myvar.fullname(), mydata, ncdata)
+    //} else {
         if (!ncdata.equals(mydata)) {
             println(" *** FAIL comparing middle section variable = ${cvar.nameAndShape()}")
             if (NetchdfClibTest.showFailedData) {
                 println(" mydata = $mydata")
                 println(" cdata = $ncdata")
             } else {
-                println("\n countDifferences = ${ArrayTyped.countDiff(ncdata, mydata)}")
+                println("\n countDifferences = ${countArrayDiffs(ncdata, mydata)}")
             }
             assertTrue(false, "variable ${myvar.name}")
             return
         }
-    }
+    //}
 }
-fun compareCharData(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>) {
+fun compareCharDataOld(name : String, mydata: ArrayTyped<*>, ncdata: ArrayTyped<*>) {
     if (!ArrayTyped.valuesEqual(ncdata, mydata)) {
         println("   *** FAIL comparing char variable = ${name}")
         print("   ncdata = $ncdata")
         print("   mydata = $mydata")
+        assertTrue(false, "variable $name")
     }
 }
 
@@ -563,7 +632,7 @@ fun readDataIterate(myfile: Netchdf, varname: String? = null, section: SectionPa
     }
 }
 
-fun readOneVarIterate(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+fun readOneVarIterate(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?) {
     val chunkIter = myfile.chunkIterator(myvar, section, maxBytes)
     for (pair in chunkIter) {
         sumValues(pair.array)
@@ -602,7 +671,7 @@ fun compareIterateNetchdf(myfile: Netchdf, cfile: Netchdf, varname: String?, sec
     }
 }
 
-fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, cvar : Variable, cfile: Netchdf, section: SectionPartial?) {
+fun compareOneVarIterate(myvar: Variable<*>, myfile: Netchdf, cvar : Variable<*>, cfile: Netchdf, section: SectionPartial?) {
     val sum = AtomicDouble()
     sum.set(0.0)
     var countChunks = 0
@@ -660,4 +729,21 @@ fun sumValues(array : ArrayTyped<*>) {
             }
         }
     }
+}
+
+fun countArrayDiffs(array1 : ArrayTyped<*>, array2 : ArrayTyped<*>, showDiff : Boolean = false) : Int {
+    val iter1 = array1.iterator()
+    val iter2 = array2.iterator()
+    var allcount = 0
+    var count = 0
+    while (iter1.hasNext() && iter2.hasNext()) {
+        val v1 = iter1.next()
+        val v2 = iter2.next()
+        if (v1 != v2) {
+            if (showDiff) println("$allcount $v1 != $v2")
+            count++
+        }
+        allcount++
+    }
+    return count
 }

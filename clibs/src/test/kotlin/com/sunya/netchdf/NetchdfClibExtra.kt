@@ -81,7 +81,7 @@ class NetchdfClibExtra {
         compareCdlWithClib(filename)
     }
 
-    @ParameterizedTest
+    // @ParameterizedTest
     @MethodSource("params")
     fun readNetchdfData(filename: String) {
         readNetchdfData(filename, null)

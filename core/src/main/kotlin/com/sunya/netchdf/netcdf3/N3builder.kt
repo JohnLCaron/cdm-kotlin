@@ -11,6 +11,10 @@ import java.nio.charset.Charset
 import java.nio.charset.StandardCharsets
 import java.util.*
 
+/**
+ * @see "https://docs.unidata.ucar.edu/netcdf-c/current/file_format_specifications.html"
+ * @see "http://cucis.ece.northwestern.edu/projects/PnetCDF/CDF-5.html"
+ */
 class N3header(val raf: OpenFile, val root: Group.Builder) {
   private val filePos = OpenFileState(0L, ByteOrder.BIG_ENDIAN)
   private val valueCharset = StandardCharsets.UTF_8
@@ -59,7 +63,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
     readVariables(raf, root)
 
     // count stuff
-    val unlimitedVariables = mutableListOf<Variable.Builder>()
+    val unlimitedVariables = mutableListOf<Variable.Builder<*>>()
     var sumRecord = 0L
     var firstData = Long.MAX_VALUE
     var firstRecordData = Long.MAX_VALUE
@@ -157,7 +161,6 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
     // loop over variables
     for (i in 0 until nvars) {
       val name = readString()!!
-      val ncvarb = Variable.Builder(name)
       if (debug) println("  reading variable ${name} pos=${filePos.pos}")
 
       // get element count in non-record dimensions
@@ -179,16 +182,18 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
         dimIdx.add(dimIndex)
         dimLengths.add(dim.length)
       }
-      ncvarb.dimensions.addAll(dims)
       if (debug) println("  reading variable ${name} pos=${filePos.pos} dimIdx = ${dimIdx}")
 
       // variable attributes
-      readAttributes(ncvarb.attributes)
+      val varAtts = mutableListOf<Attribute<*>>()
+      readAttributes(varAtts)
 
       // data type
       val type: Int = raf.readInt(filePos)
       val datatype = getDatatype(type)
-      ncvarb.datatype = datatype
+      val ncvarb = Variable.Builder(name, datatype)
+      ncvarb.dimensions.addAll(dims)
+      ncvarb.attributes.addAll(varAtts)
 
       // Use vsize, even if it disagrees with the "calculated" value. Clib recalculates, at least sometimes.
       val vsize = if (isPnetcdf) raf.readLong(filePos) else raf.readInt(filePos).toLong()
@@ -207,7 +212,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
   }
 
   @Throws(IOException::class)
-  private fun readAttributes(atts: MutableList<Attribute>): Int {
+  private fun readAttributes(atts: MutableList<Attribute<*>>): Int {
     val magic: Int = raf.readInt(filePos)
     val natts = if (magic == 0) {
       if (isPnetcdf) filePos.pos += 8 else filePos.pos += 4
@@ -220,16 +225,14 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
     for (i in 0 until natts) {
       val name = readString()!!
       val type: Int = raf.readInt(filePos)
-      val att = if (type == 2) { // CHAR
+      val att = if (type == 2) { // CHAR converted to String for Attributes
         val value = readString(valueCharset)
-        if (value == null) Attribute(name, Datatype.STRING, emptyList<String>()) // nelems = 0
-              else Attribute(name, value) // may be empty string
+        if (value == null) Attribute(name, Datatype.STRING, emptyList()) // nelems = 0
+              else Attribute.from(name, value) // may be empty string
       } else {
         val nelems: Int = if (isPnetcdf) raf.readLong(filePos).toInt() else raf.readInt(filePos)
-        val dtype: Datatype = getDatatype(type)
-        val builder = Attribute.Builder()
-        builder.name = name
-        builder.datatype = dtype
+        val dtype = getDatatype(type)
+        val builder = Attribute.Builder(name, dtype)
         if (nelems > 0) {
           val nbytes = readAttributeArray(dtype, nelems, builder)
           skipToBoundary(nbytes)
@@ -243,51 +246,51 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
   }
 
   @Throws(IOException::class)
-  fun readAttributeArray(type: Datatype, nelems: Int, attBuilder: Attribute.Builder): Int {
+  fun readAttributeArray(type: Datatype<*>, nelems: Int, attBuilder: Attribute.Builder<*>): Int {
     return when (type) {
       Datatype.BYTE -> {
-        attBuilder.values = raf.readArrayByte(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayByte(filePos, nelems).toList())
         nelems
       }
       Datatype.UBYTE -> {
-        attBuilder.values = raf.readArrayByte(filePos, nelems).map { it.toUByte() }
+        attBuilder.setValues(raf.readArrayByte(filePos, nelems).map { it.toUByte() })
         nelems
       }
       Datatype.CHAR -> {
-        val wtf  = ArrayUByte(intArrayOf(1), raf.readByteBuffer(filePos, nelems))
-        attBuilder.values = wtf.makeStringFromBytes().toList()
+        val wtf  = ArrayUByte(intArrayOf(1), Datatype.CHAR, raf.readByteBuffer(filePos, nelems))
+        attBuilder.setValues(wtf.makeStringFromBytes().toList())
         nelems
       }
       Datatype.SHORT -> {
-        attBuilder.values = raf.readArrayShort(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayShort(filePos, nelems).asList())
         2 * nelems
       }
       Datatype.USHORT -> {
-        attBuilder.values = raf.readArrayShort(filePos, nelems).map { it.toUShort() }
+        attBuilder.setValues(raf.readArrayShort(filePos, nelems).map { it.toUShort() })
         2 * nelems
       }
       Datatype.INT -> {
-        attBuilder.values = raf.readArrayInt(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayInt(filePos, nelems).asList())
         4 * nelems
       }
       Datatype.UINT -> {
-        attBuilder.values = raf.readArrayShort(filePos, nelems).map { it.toUInt() }
+        attBuilder.setValues(raf.readArrayShort(filePos, nelems).map { it.toUInt() })
         4 * nelems
       }
       Datatype.FLOAT -> {
-        attBuilder.values = raf.readArrayFloat(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayFloat(filePos, nelems).asList())
         4 * nelems
       }
       Datatype.DOUBLE -> {
-        attBuilder.values = raf.readArrayDouble(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayDouble(filePos, nelems).asList())
         8 * nelems
       }
       Datatype.LONG -> {
-        attBuilder.values = raf.readArrayLong(filePos, nelems).asList()
+        attBuilder.setValues(raf.readArrayLong(filePos, nelems).asList())
         8 * nelems
       }
       Datatype.ULONG -> {
-        attBuilder.values = raf.readArrayLong(filePos, nelems).map { it.toULong() }
+        attBuilder.setValues(raf.readArrayLong(filePos, nelems).map { it.toULong() })
         8 * nelems
       }
       else -> return 0
@@ -348,7 +351,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
       return pad
     }
 
-    fun getDatatype(type: Int): Datatype {
+    fun getDatatype(type: Int): Datatype<*> {
       return when (type) {
         1 -> Datatype.BYTE
         2 -> Datatype.CHAR
@@ -356,6 +359,7 @@ class N3header(val raf: OpenFile, val root: Group.Builder) {
         4 -> Datatype.INT
         5 -> Datatype.FLOAT
         6 -> Datatype.DOUBLE
+        // the rest are possible in pnetcdf
         7 -> Datatype.UBYTE
         8 -> Datatype.USHORT
         9 -> Datatype.UINT

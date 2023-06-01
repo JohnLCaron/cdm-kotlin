@@ -31,7 +31,7 @@ class H5Cbuilder(val filename: String) {
     private val typeinfoMap = mutableMapOf<Typedef, MutableList<Group.Builder>>()
     private val typeinfoList = mutableListOf<H5CTypeInfo>()
     private val typeinfoMap2 = mutableMapOf<H5CTypeInfo, MutableList<Group.Builder>>()
-    private val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder>>()
+    private val datasetMap = mutableMapOf<Long, Pair<Group.Builder, Variable.Builder<*>>>()
 
     init {
         MemorySession.openConfined().use { session ->
@@ -131,7 +131,7 @@ class H5Cbuilder(val filename: String) {
         gb.groups.forEach{ convertReferences(it) }
     }
 
-    fun convertAttribute(att : Attribute) : Attribute? {
+    fun convertAttribute(att : Attribute<*>) : Attribute<*>? {
         val svalues = mutableListOf<String>()
         att.values.forEach {
             val dsetId = it as Long
@@ -144,7 +144,7 @@ class H5Cbuilder(val filename: String) {
             val name = vb.fullname(gb)
             svalues.add(name)
         }
-        return att.copy(values=svalues)
+        return Attribute(att.name, Datatype.STRING, svalues)
     }
 
     ////////////////////////////////////////////////////////////////////////////////
@@ -199,7 +199,7 @@ class H5Cbuilder(val filename: String) {
         atts.forEach { attr ->
             val promoted = !strict && attr.isString && attr.values.size == 1 && (attr.values[0] as String).length > attLengthMax
             if (promoted) { // too big for an attribute
-                val vb = Variable.Builder(attr.name).setDatatype(Datatype.STRING)
+                val vb = Variable.Builder(attr.name, Datatype.STRING)
                 vb.spObject = attr
                 context.group.addVariable( vb)
             } else {
@@ -321,8 +321,7 @@ class H5Cbuilder(val filename: String) {
         val h5ctype = readH5CTypeInfo(context, type_id, obj_name)
 
         // create the Variable
-        val vb = Variable.Builder(obj_name)
-        vb.datatype = h5ctype.datatype()
+        val vb = Variable.Builder(obj_name, h5ctype.datatype())
 
         var isDimensionScale = false
         var isVariable = true
@@ -353,7 +352,7 @@ class H5Cbuilder(val filename: String) {
         if (address > 0) datasetMap[address] = Pair(context.group, vb)
 
         if (obj_name.startsWith("StructMetadata")) {
-            val data = readRegularData(context.session, datasetId, h5ctype, Section(dims))
+            val data = readRegularData(context.session, datasetId, h5ctype, h5ctype.datatype(), Section(dims))
             require (data is ArrayString)
             structMetadata.add(data.values.get(0))
         }
@@ -363,9 +362,9 @@ class H5Cbuilder(val filename: String) {
     }
 
     @Throws(IOException::class)
-    private fun readAttributes(dataset_id : Long, obj_name: String, numAtts : Int, context: GroupContext): List<Attribute> {
+    private fun readAttributes(dataset_id : Long, obj_name: String, numAtts : Int, context: GroupContext): List<Attribute<*>> {
         if (debug) println("${context.indent}readAttributes for '$obj_name'")
-        val results = mutableListOf<Attribute>()
+        val results = mutableListOf<Attribute<*>>()
 
         repeat(numAtts) { idx ->
             // hid_t H5Aopen_by_idx	(	hid_t 	loc_id, const char * 	obj_name, H5_index_t 	idx_type, H5_iter_order_t 	order, hsize_t 	n, hid_t 	aapl_id, hid_t 	lapl_id)
@@ -423,7 +422,7 @@ class H5Cbuilder(val filename: String) {
                     Attribute(aname, Datatype.REFERENCE, values)
                 } else {
                     val values = readVlenData(nelems, base.datatype(), vlen_p)
-                    Attribute(aname, h5ctype.datatype(), values)
+                    Attribute.Builder(aname, h5ctype.datatype()).setValues(values).build()
                 }
                 results.add(att)
 
@@ -451,16 +450,16 @@ class H5Cbuilder(val filename: String) {
 
                 val datatype = h5ctype.datatype()
                 val att = if (nelems == 0L) {
-                    Attribute(aname, datatype, listOf<Any>())
+                    Attribute.Builder(aname, datatype).build()
                 } else if (datatype == Datatype.COMPOUND) {
                     val members = (datatype.typedef as CompoundTypedef).members
                     val sdataArray =  ArrayStructureData(dims, bb, h5ctype.elemSize, members)
                     processCompoundData(context.session, sdataArray, bb)
-                    Attribute(aname, datatype, sdataArray.toList())
+                    Attribute.Builder(aname, datatype).setValues(sdataArray.toList()).build()
 
                 } else {
                     val values = processDataIntoArray(bb, h5ctype.datatype5, h5ctype.datatype(), dims, h5ctype.elemSize)
-                    Attribute(aname, values.datatype, values.toList())
+                    Attribute.Builder(aname, values.datatype).setValues(values.toList()).build()
                 }
                 results.add(att)
             }
@@ -490,13 +489,14 @@ class H5Cbuilder(val filename: String) {
     }
 
     // LOOK same as in nclib UserTypes
-    internal fun readVlenData(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
-        val parray = mutableListOf<Any>()
+    internal fun readVlenData(nelems : Long, basetype : Datatype<*>, vlen_p : MemorySegment) : List<*> {
+        val attValues = mutableListOf<List<*>>()
         for (elem in 0 until nelems) {
             val count = hvl_t.`len$get`(vlen_p, elem)
             val address: MemoryAddress = hvl_t.`p$get`(vlen_p, elem)
+            val vlenValues = mutableListOf<Any>()
             for (idx in 0 until count) {
-                val wtf = when (basetype) {
+                val value = when (basetype) {
                     Datatype.BYTE-> address.get(ValueLayout.JAVA_BYTE, idx)
                     Datatype.SHORT -> address.getAtIndex(C_SHORT, idx)
                     Datatype.INT -> address.getAtIndex(C_INT, idx)
@@ -506,10 +506,11 @@ class H5Cbuilder(val filename: String) {
                     Datatype.STRING -> address.getUtf8String(0)
                     else -> throw RuntimeException("readVlenDataList unknown type = ${basetype}")
                 }
-                parray.add(wtf)
+                vlenValues.add(value)
             }
+            attValues.add(vlenValues)
         }
-        return parray
+        return attValues
     }
 
     internal fun readVlenReferences(obj_id : Long, nelems : Long, vlen_p : MemorySegment) : List<Long> {
@@ -540,7 +541,7 @@ fun checkErr (where : String, ret: Int) {
     }
 }
 
-internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : ArrayTyped<*> {
+internal fun <T> readRegularData(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, datatype : Datatype<T>, want : Section) : ArrayTyped<T> {
     // int H5Dread ( long dset_id,  long mem_type_id,  long mem_space_id,  long file_space_id,  long plist_id,  Addressable buf) {
     // herr_t H5Dread(hid_t dset_id, hid_t 	mem_type_id, hid_t 	mem_space_id, hid_t file_space_id, hid_t dxpl_id, void *buf)
     //[in]	dset_id	Dataset identifier Identifier of the dataset to read from
@@ -575,10 +576,10 @@ internal fun readRegularData(session : MemorySession, datasetId : Long, h5ctype 
     if (datatype == Datatype.COMPOUND) {
         val members = (datatype.typedef as CompoundTypedef).members
         val sdataArray = ArrayStructureData(dims, bb, h5ctype.elemSize, members)
-        return processCompoundData(session, sdataArray, bb)
+        return processCompoundData(session, sdataArray, bb) as ArrayTyped<T>
     }
 
-    return processDataIntoArray(bb, h5ctype.datatype5, datatype, dims, h5ctype.elemSize)
+    return processDataIntoArray(bb, h5ctype.datatype5, datatype, dims, h5ctype.elemSize) as ArrayTyped<T>
 }
 
 internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5CTypeInfo, want : Section) : Pair<Long, Long> {
@@ -623,39 +624,34 @@ internal fun makeSection(session : MemorySession, datasetId : Long, h5ctype : H5
     return Pair(memSpaceId, fileSpaceId)
 }
 
-internal fun processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatype: Datatype, shape : IntArray, elemSize : Int): ArrayTyped<*> {
+internal fun <T> processDataIntoArray(bb: ByteBuffer, datatype5 : Datatype5, datatype: Datatype<T>, shape : IntArray, elemSize : Int): ArrayTyped<T> {
     // convert to array of Strings by reducing rank by 1, tricky shape shifting for non-scalars
     if (datatype5 == Datatype5.String) {
         val extshape = IntArray(shape.size + 1) {if (it == shape.size) elemSize else shape[it] }
         val result = ArrayUByte(extshape, bb)
-        return result.makeStringsFromBytes()
+        return result.makeStringsFromBytes() as ArrayTyped<T>
     }
 
     val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, bb)
-        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+        Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
+        Datatype.ENUM1 -> ArrayUByte(shape, datatype as Datatype<UByte>,  bb)
         Datatype.SHORT -> ArrayShort(shape, bb)
-        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+        Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, datatype as Datatype<UShort>, bb)
         Datatype.INT -> ArrayInt(shape, bb)
-        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+        Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, datatype as Datatype<UInt>, bb)
         Datatype.FLOAT -> ArrayFloat(shape, bb)
         Datatype.DOUBLE -> ArrayDouble(shape, bb)
         Datatype.LONG -> ArrayLong(shape, bb)
         Datatype.ULONG -> ArrayULong(shape, bb)
         Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
         else -> {
-            return ArraySingle(shape, Datatype.INT, 0)
-            // throw IllegalStateException("unimplemented type= $datatype")
+            // return ArraySingle(shape, Datatype.INT, 0) as ArrayTyped<T>
+            throw IllegalStateException("unimplemented type= $datatype")
         }
     }
 
-    // convert enums to strings
-    if (datatype.isEnum) {
-        val enumTypedef = datatype.typedef as EnumTypedef
-        return result.convertEnums(enumTypedef.values)
-    }
-
-    return result
+    return result as ArrayTyped<T>
 }
 
 // Put the variable length members (vlen, string) on the heap
@@ -680,13 +676,14 @@ internal fun processCompoundData(session : MemorySession, sdataArray : ArrayStru
             val address = MemoryAddress.ofLong(longAddress)
             listOfVlen.add( readVlenArray(arraySize, address, member.datatype.typedef!!.baseType))
         }
-        ArrayVlen(member.dims, listOfVlen, member.datatype)
+        ArrayVlen.fromArray(member.dims, listOfVlen, member.datatype.typedef!!.baseType)
     }
 
     return sdataArray
 }
 
-private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype) : Array<*> {
+// TODO ENUMS seem to be wrong
+private fun readVlenArray(arraySize : Int, address : MemoryAddress, datatype : Datatype<*>) : Array<*> {
     return when (datatype) {
         Datatype.FLOAT -> Array(arraySize) { idx -> address.getAtIndex(ValueLayout.JAVA_FLOAT, idx.toLong()) }
         Datatype.DOUBLE -> Array(arraySize) { idx -> address.getAtIndex(ValueLayout.JAVA_DOUBLE, idx.toLong()) }

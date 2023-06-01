@@ -19,6 +19,8 @@ cd /home/oem/install/jextract-19/bin
 
 import com.sunya.cdm.api.*
 import com.sunya.cdm.array.*
+import com.sunya.cdm.layout.IndexFn
+import com.sunya.cdm.layout.IndexND
 import com.sunya.cdm.layout.MaxChunker
 
 import com.sunya.netchdf.mfhdfClib.ffm.mfhdf_h.*
@@ -45,13 +47,13 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 
     // LOOK SDreadchunk ??
-    override fun readArrayData(v2: Variable, section: SectionPartial?): ArrayTyped<*> {
+    override fun <T> readArrayData(v2: Variable<T>, section: SectionPartial?): ArrayTyped<T> {
         return readArrayData(v2, SectionPartial.fill(section, v2.shape))
     }
 
-    internal fun readArrayData(v2: Variable, filled: Section): ArrayTyped<*> {
+    internal fun <T> readArrayData(v2: Variable<T>, filled: Section): ArrayTyped<T> {
         if (v2.nelems == 0L) {
-            return ArrayEmpty<Datatype>(v2.shape.toIntArray(), v2.datatype)
+            return ArrayEmpty(v2.shape.toIntArray(), v2.datatype)
         }
 
         val vinfo = v2.spObject as Vinfo4
@@ -62,8 +64,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         }
 
         if (vinfo.value != null) {
-            // TODO subset
-            return vinfo.value!!
+            return vinfo.value!!.section(filled) as ArrayTyped<T>
 
         } else if (vinfo.sdsIndex != null) {
             return readSDdata(header.sdsStartId, vinfo.sdsIndex!!, datatype, filled, nbytes)
@@ -80,16 +81,16 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
         throw RuntimeException("cant read ${v2.name}")
     }
 
-    override fun chunkIterator(v2: Variable, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection> {
+    override fun <T> chunkIterator(v2: Variable<T>, section: SectionPartial?, maxElements : Int?): Iterator<ArraySection<T>> {
         if (v2.nelems == 0L) {
-            return listOf<ArraySection>().iterator()
+            return listOf<ArraySection<T>>().iterator()
         }
 
         val filled = SectionPartial.fill(section, v2.shape)
         return HCmaxIterator(v2, filled, maxElements ?: 100_000)
     }
 
-    private inner class HCmaxIterator(val v2: Variable, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection>() {
+    private inner class HCmaxIterator<T>(val v2: Variable<T>, wantSection : Section, maxElems: Int) : AbstractIterator<ArraySection<T>>() {
         private val debugChunking = false
         private val maxIterator  = MaxChunker(maxElems,  wantSection)
 
@@ -112,7 +113,7 @@ class Hdf4ClibFile(val filename: String) : Netchdf {
     }
 }
 
-fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, wantSection: Section, nbytes: Long): ArrayTyped<*> {
+fun <T> readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype<T>, wantSection: Section, nbytes: Long): ArrayTyped<T> {
     val rank = wantSection.rank
 
     MemorySession.openConfined().use { session ->
@@ -142,7 +143,7 @@ fun readSDdata(sdsStartId: Int, sdindex: Int, datatype: Datatype, wantSection: S
     }
 }
 
-fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum: Int, wantRecords: Int): ArrayTyped<*> {
+fun <T> readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype<T>, startRecnum: Int, wantRecords: Int): ArrayTyped<T> {
     val startRecord = if (vsInfo.nrecords == 1) 0 else startRecnum // trick because we promote single field structures
     val numRecords = min(vsInfo.nrecords, wantRecords) // trick because we promote single field structures
     val shape = intArrayOf(numRecords)
@@ -170,7 +171,7 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum
 
             if (datatype.typedef is CompoundTypedef) {
                 val members = (datatype.typedef as CompoundTypedef).members
-                return ArrayStructureData(shape, values, vsInfo.recsize, members)
+                return ArrayStructureData(shape, values, vsInfo.recsize, members) as ArrayTyped<T>
             } else {
                 // a single field is made into a regular variable
                 return shapeData(datatype, values, shape)
@@ -181,7 +182,7 @@ fun readVSdata(fileOpenId: Int, vsInfo: VSInfo, datatype : Datatype, startRecnum
     }
 }
 
-fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: Section, nbytes: Long): ArrayTyped<*> {
+fun <T> readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype<T>, wantSection: Section, nbytes: Long): ArrayTyped<T> {
 
     MemorySession.openConfined().use { session ->
         // flip the shape
@@ -207,19 +208,21 @@ fun readGRdata(grStartId: Int, grIdx: Int, datatype: Datatype, wantSection: Sect
             val raw = data_p.toArray(ValueLayout.JAVA_BYTE)
             val values = ByteBuffer.wrap(raw)
             values.order(ByteOrder.nativeOrder())
-            // TODO flip the data back
             return shapeData(datatype, values, wantSection.shape.toIntArray())
+            // flip the data back
+            //val flipper = IndexFn(wantSection.shape.toIntArray())
+            //return shapeData(datatype, flipper.flip(values, datatype.size), flipper.flippedShape())
         } finally {
             GRendaccess(grId)
         }
     }
 }
 
-private fun shapeData(datatype: Datatype, values: ByteBuffer, shape: IntArray): ArrayTyped<*> {
-    return when (datatype) {
+private fun <T> shapeData(datatype: Datatype<T>, values: ByteBuffer, shape: IntArray): ArrayTyped<T> {
+    val result = when (datatype) {
         Datatype.BYTE -> ArrayByte(shape, values)
-        Datatype.UBYTE -> ArrayUByte(shape, values)
-        Datatype.CHAR, Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
+        Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, datatype as Datatype<UByte>, values)
+        Datatype.STRING -> ArrayUByte(shape, values).makeStringsFromBytes()
         Datatype.DOUBLE -> ArrayDouble(shape, values)
         Datatype.FLOAT -> ArrayFloat(shape, values)
         Datatype.INT -> ArrayInt(shape, values)
@@ -230,4 +233,5 @@ private fun shapeData(datatype: Datatype, values: ByteBuffer, shape: IntArray): 
         Datatype.USHORT -> ArrayUShort(shape, values)
         else -> throw IllegalArgumentException("datatype ${datatype}")
     }
+    return result as ArrayTyped<T>
 }

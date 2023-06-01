@@ -5,13 +5,13 @@ import com.sunya.cdm.util.makeValidCdmObjectName
 class Group(orgName : String,
             val typedefs : List<Typedef>,
             val dimensions : List<Dimension>,
-            val attributes : List<Attribute>,
-            variableBuilders : List<Variable.Builder>,
+            val attributes : List<Attribute<*>>,
+            variableBuilders : List<Variable.Builder<*>>,
             groupBuilders : List<Group.Builder>,
             val parent: Group?
     ) {
     val name : String
-    val variables : List<Variable>
+    val variables : List<Variable<*>>
     val groups : List<Group>
 
     init {
@@ -25,7 +25,7 @@ class Group(orgName : String,
     }
 
     /** find named attribute in this group */
-    fun findAttribute(attName: String) : Attribute? {
+    fun findAttribute(attName: String) : Attribute<*>? {
         return attributes.find{it.name == attName}
     }
 
@@ -51,7 +51,7 @@ class Group(orgName : String,
     }
 
     /** find the first nested variable with a matching string attribute */
-    fun findVariableByAttribute(attName: String, attValue: String): Variable? {
+    fun findVariableByAttribute(attName: String, attValue: String): Variable<*>? {
         for (v in variables) {
             for (att in v.attributes) {
                 if (attName == att.name && att.values.isNotEmpty() && attValue == att.values[0]) {
@@ -68,8 +68,8 @@ class Group(orgName : String,
         return null
     }
 
-    fun allVariables() : List<Variable> {
-        val allVariables = mutableListOf<Variable>()
+    fun allVariables() : List<Variable<*>> {
+        val allVariables = mutableListOf<Variable<*>>()
         allVariables.addAll(variables)
         groups.forEach  { allVariables.addAll(it.allVariables()) }
         return allVariables
@@ -108,9 +108,9 @@ class Group(orgName : String,
 
     class Builder(val name : String) {
         val dimensions = mutableListOf<Dimension>()
-        val attributes = mutableListOf<Attribute>()
+        val attributes = mutableListOf<Attribute<*>>()
         val typedefs = mutableListOf<Typedef>()
-        val variables = mutableListOf<Variable.Builder>()
+        val variables = mutableListOf<Variable.Builder<*>>()
         val groups = mutableListOf<Group.Builder>()
         var parent : Group.Builder? = null
 
@@ -139,12 +139,12 @@ class Group(orgName : String,
             return found
         }
 
-        fun addAttribute(att: Attribute) : Builder {
+        fun addAttribute(att: Attribute<*>) : Builder {
             attributes.add(att)
             return this
         }
 
-        fun addAttributeIfNotExists(att: Attribute) : Boolean {
+        fun addAttributeIfNotExists(att: Attribute<*>) : Boolean {
             if (attributes.find {it.name == att.name } != null) {
                 return false
             }
@@ -153,7 +153,7 @@ class Group(orgName : String,
         }
 
         // add if vb name not already added
-        fun addVariable(vb: Variable.Builder) : Builder {
+        fun addVariable(vb: Variable.Builder<*>) : Builder {
             if (variables.find {it.name == vb.name } == null) {
                 variables.add(vb)
             } else {

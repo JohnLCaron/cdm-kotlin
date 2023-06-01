@@ -54,7 +54,7 @@ fun Dimension.cdl(indent : Indent = Indent(2)) : String {
            else "${indent}$name = $length ;"
 }
 
-fun Variable.cdl(indent : Indent = Indent(2)) : String {
+fun Variable<*>.cdl(indent : Indent = Indent(2)) : String {
     val typedef = datatype.typedef
     val typename = if (typedef != null) typedef.name else datatype.cdlName
     return buildString {
@@ -77,7 +77,7 @@ fun Variable.cdl(indent : Indent = Indent(2)) : String {
     }
 }
 
-fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
+fun Attribute<*>.cdl(varname: String, indent : Indent = Indent(2)) : String {
     val typedef = datatype.typedef
     val typename = if (typedef != null) typedef.name else "" // datatype.cdlName
     val valueDatatype = if (typedef != null) typedef.baseType else datatype
@@ -89,16 +89,28 @@ fun Attribute.cdl(varname: String, indent : Indent = Indent(2)) : String {
         }
         if (datatype == Datatype.OPAQUE) {
             append("${(values[0] as ByteBuffer).toHex()}")
+        } else if (datatype.isEnum) {
+            val converted = this@cdl.convertEnums()
+            converted.forEachIndexed { idx, it ->
+                if (idx != 0) append(", ")
+                append("$it")
+            }
+        } else if (datatype == Datatype.VLEN) {
+            values.forEachIndexed { idx, it ->
+                if (idx != 0) append(", ")
+                if (it is Array<*>) append("${it.contentToString()}") else append("$it")
+            }
         } else {
             values.forEachIndexed { idx, it ->
-                if (idx != 0) {
-                    append(", ")
-                }
+                if (idx != 0) append(", ")
                 when (valueDatatype) {
                     Datatype.STRING, Datatype.REFERENCE -> append("\"${escapeCdl(it as String)}\"")
                     Datatype.FLOAT -> append("${it}f")
                     Datatype.SHORT -> append("${it}s")
                     Datatype.BYTE -> append("${it}b")
+                    Datatype.VLEN -> {
+                        if (it is Array<*>) append("${it.contentToString()}") else append("$it")
+                    }
                     else -> append("$it")
                 }
             }

@@ -49,7 +49,7 @@ class NetchdfTest {
 
         private val versions = mutableMapOf<String, MutableList<String>>()
 
-        var showDataRead = true
+        var showDataRead = false
         var showData = false
         var showFailedData = false
         var showCdl = false
@@ -73,18 +73,19 @@ class NetchdfTest {
 
     @Test
     fun testNetchIterate() { // cant readArrayData too many bytes= 2_524_250_575
-        readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
+        compareNetchIterate(testData + "cdmUnitTest/formats/netcdf4/UpperDeschutes_t4p10_swemelt.nc", "UpperDeschutes_t4p10_swemelt")
         // readNetchIterate(testData + "cdmUnitTest/formats/netcdf4/files/xma022032.nc", "/xma/dialoop_back")
     }
 
     @Test
     fun problem() {
-        readNetchdfData(testData + "devcdm/netcdf3/nctest_classic.nc")
+        showNetchdfHeader(testData + "netchdf/castel/20110421-153623-snippet-VI_MB7125_01.sni")
+        readNetchdfData(testData + "netchdf/castel/20110421-153623-snippet-VI_MB7125_01.sni")
     }
 
     @Test
     fun problem2() {
-        readNetchdfData(testData + "devcdm/netcdf3/tst_ncml.nc")
+        readNetchdfData(testData + "devcdm/netcdf4/cdm_sea_soundings.nc4")
     }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -115,10 +116,11 @@ class NetchdfTest {
         readNetchdfData(filename)
     }
 
+    // TODO too slow
     // @ParameterizedTest
     @MethodSource("params")
     fun testReadNetchIterate(filename: String) {
-        readNetchIterate(filename)
+        compareNetchIterate(filename)
     }
 }
 
@@ -135,7 +137,7 @@ fun showNetchdfHeader(filename: String) {
     }
 }
 
-fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
+fun readNetchdfData(filename: String, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false, showData : Boolean = false) {
     // println("=============================================================")
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
@@ -143,14 +145,14 @@ fun readNetchdfData(filename: String, varname: String? = null, section: SectionP
             return
         }
         println("--- ${myfile.type()} $filename ")
-        readMyData(myfile,varname, section, showCdl)
+        readMyData(myfile,varname, section, showCdl, showData)
     }
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////
 // just read data from myfile
 
-fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false) {
+fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial? = null, showCdl : Boolean = false, showData : Boolean = false) {
 
     if (showCdl) {
         println(myfile.cdl())
@@ -162,17 +164,19 @@ fun readMyData(myfile: Netchdf, varname: String? = null, section: SectionPartial
             println("cant find $varname")
             return
         }
-        readOneVar(myvar, myfile, section)
+        readOneVar(myvar, myfile, section, showData)
     } else {
         myfile.rootGroup().allVariables().forEach { it ->
-            readOneVar(it, myfile, null)
+            readOneVar(it, myfile, null, showData)
         }
     }
 }
 
 const val maxBytes = 10_000_000
 
-fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
+fun readOneVar(myvar: Variable<*>, myfile: Netchdf, section: SectionPartial?, showData : Boolean = NetchdfTest.showData) {
+    if (myvar.name.contains("mbReflectivity"))
+        println()
 
     val sectionF = SectionPartial.fill(section, myvar.shape)
     val nbytes = sectionF.totalElements * myvar.datatype.size
@@ -189,7 +193,7 @@ fun readOneVar(myvar: Variable, myfile: Netchdf, section: SectionPartial?) {
         } else {
             assertTrue(myvarshape.equivalent(mydata.shape), "variable ${myvar.name}")
         }
-        if (NetchdfTest.showData) println(mydata)
+        if (showData) println(mydata)
     }
 
     if (myvar.nelems > 8 && myvar.datatype != Datatype.CHAR) {
@@ -209,7 +213,7 @@ fun removeLast(org: IntArray): IntArray {
     return IntArray(org.size - 1) { org[it] }
 }
 
-fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
+fun readMiddleSection(myfile: Netchdf, myvar: Variable<*>, shape: LongArray) {
     val orgSection = Section(shape)
     val middleRanges = orgSection.ranges.mapIndexed { idx, range ->
         if (range == null) throw RuntimeException("Range is null")
@@ -243,7 +247,7 @@ fun readMiddleSection(myfile: Netchdf, myvar: Variable, shape: LongArray) {
 //////////////////////////////////////////////////////////////////////////////////////
 // compare reading data regular and through the chunkIterate API
 
-fun readNetchIterate(filename: String, varname : String? = null, compare : Boolean = true) {
+fun compareNetchIterate(filename: String, varname : String? = null, compare : Boolean = true) {
     openNetchdfFile(filename).use { myfile ->
         if (myfile == null) {
             println("*** not a netchdf file = $filename")
@@ -265,7 +269,8 @@ fun readNetchIterate(filename: String, varname : String? = null, compare : Boole
     }
 }
 
-fun compareOneVarIterate(myFile: Netchdf, myvar: Variable, compare : Boolean = true) : Int {
+// compare readArrayData with chunkIterator
+fun compareOneVarIterate(myFile: Netchdf, myvar: Variable<*>, compare : Boolean = true) : Int {
     val filename = myFile.location().substringAfterLast('/')
     val varBytes = myvar.nelems
     if (varBytes >= maxBytes) {
@@ -330,7 +335,7 @@ fun compareIterateWithNC(myfile: Netchdf, ncfile: Netchdf, varname: String?, sec
     }
 }
 
-fun compareOneVarIterate(myvar: Variable, myfile: Netchdf, ncvar : Variable, ncfile: Netchdf, section: SectionPartial?) {
+fun compareOneVarIterate(myvar: Variable<*>, myfile: Netchdf, ncvar : Variable<*>, ncfile: Netchdf, section: SectionPartial?) {
     val sum = AtomicDouble()
     var countChunks = 0
     val time1 = measureNanoTime {

@@ -7,7 +7,7 @@ import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
+class H4chunkIterator<T>(h4 : H4builder, val v2: Variable<*>, val wantSection : Section) : AbstractIterator<ArraySection<T>>() {
     private val debugChunking = false
 
     private val vinfo = v2.spObject as Vinfo
@@ -32,7 +32,7 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
         }
     }
 
-    private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection {
+    private fun getaPair(dataChunk : H4CompressedDataChunk) : ArraySection<T> {
         val dataSpace = IndexSpace(v2.rank, dataChunk.offsets.toLongArray(), vinfo.chunkLengths.toLongArray())
         val useEntireChunk = wantSpace.contains(dataSpace)
         val intersectSpace = if (useEntireChunk) dataSpace else wantSpace.intersect(dataSpace)
@@ -63,20 +63,19 @@ class H4chunkIterator(h4 : H4builder, val v2: Variable, val wantSection : Sectio
         val shape = wantSpace.shape.toIntArray()
         val array = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> ArrayUByte(shape, bb)
+            Datatype.STRING, Datatype.CHAR, Datatype.UBYTE -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
             Datatype.SHORT -> ArrayShort(shape, bb)
-            Datatype.USHORT, Datatype.ENUM2 -> ArrayUShort(shape, bb)
+            Datatype.USHORT -> ArrayUShort(shape, bb)
             Datatype.INT -> ArrayInt(shape, bb)
-            Datatype.UINT, Datatype.ENUM4 -> ArrayUInt(shape, bb)
+            Datatype.UINT -> ArrayUInt(shape, bb)
             Datatype.FLOAT -> ArrayFloat(shape, bb)
             Datatype.DOUBLE -> ArrayDouble(shape, bb)
             Datatype.LONG -> ArrayLong(shape, bb)
             Datatype.ULONG -> ArrayULong(shape, bb)
-            Datatype.OPAQUE -> ArrayOpaque(shape, bb, elemSize)
             else -> throw IllegalStateException("unimplemented type= $datatype")
         }
 
-        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
+        return ArraySection(array as ArrayTyped<T>, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 
 }

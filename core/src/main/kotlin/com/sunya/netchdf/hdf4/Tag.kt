@@ -340,8 +340,7 @@ class TagLookupTable(icode: Int, refno: Int, offset : Long, length : Int) : Tag(
         val shape = intArrayOf(tagID.ydim, tagID.xdim, tagID.nelems)
         table = when (datatype) {
             Datatype.BYTE -> ArrayByte(shape, bb)
-            Datatype.UBYTE -> ArrayUByte(shape, bb)
-            Datatype.CHAR -> ArrayUByte(shape, bb)
+            Datatype.UBYTE, Datatype.CHAR -> ArrayUByte(shape, datatype as Datatype<UByte>, bb)
             Datatype.SHORT -> ArrayShort(shape, bb)
             Datatype.USHORT -> ArrayUShort(shape, bb)
             Datatype.INT -> ArrayInt(shape, bb)
@@ -491,15 +490,15 @@ class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
         bb = h4.raf.readByteBuffer(state, length)
     }
 
-    fun getMin(dataType: Datatype): Number {
+    fun getMin(dataType: Datatype<*>): Number {
         return get(dataType, 1)
     }
 
-    fun getMax(dataType: Datatype): Number {
+    fun getMax(dataType: Datatype<*>): Number {
         return get(dataType, 0)
     }
 
-    operator fun get(dataType: Datatype?, index: Int): Number {
+    operator fun get(dataType: Datatype<*>?, index: Int): Number {
         if (dataType === Datatype.BYTE) return bb!![index]
         if (dataType === Datatype.SHORT) return bb!!.asShortBuffer()[index]
         if (dataType === Datatype.INT) return bb!!.asIntBuffer()[index]
@@ -508,7 +507,7 @@ class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
         return if (dataType === Datatype.DOUBLE) bb!!.asDoubleBuffer().get(index) else Double.NaN
     }
 
-    fun toString(dt : Datatype): String {
+    fun toString(dt : Datatype<*>): String {
         return "${super.toString()} min=${getMin(dt)} max=${getMax(dt)}"
     }
 }
@@ -518,21 +517,20 @@ class TagSDminmax(icode: Int, refno: Int, offset : Long, length : Int) : Tag(ico
 class TagFV(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, refno, offset, length) {
     var fillValue : Any? = null
 
-    fun readFillValue(h4 : H4builder, datatype : Datatype): Any? {
+    fun readFillValue(h4 : H4builder, datatype : Datatype<*>): Any? {
         val state = OpenFileState(offset, ByteOrder.BIG_ENDIAN)
         val fillValueBB = h4.raf.readByteBuffer(state, datatype.size)
         fillValue = when (datatype) {
             Datatype.BYTE -> fillValueBB.get()
-            Datatype.CHAR, Datatype.UBYTE, Datatype.ENUM1 -> fillValueBB.get().toUByte()
+            Datatype.CHAR, Datatype.UBYTE -> fillValueBB.get().toUByte()
             Datatype.SHORT -> fillValueBB.getShort()
-            Datatype.USHORT, Datatype.ENUM2 -> fillValueBB.getShort().toUShort()
+            Datatype.USHORT -> fillValueBB.getShort().toUShort()
             Datatype.INT -> fillValueBB.getInt()
-            Datatype.UINT, Datatype.ENUM4 -> fillValueBB.getInt().toUInt()
+            Datatype.UINT -> fillValueBB.getInt().toUInt()
             Datatype.FLOAT -> fillValueBB.getFloat()
             Datatype.DOUBLE -> fillValueBB.getDouble()
             Datatype.LONG -> fillValueBB.getLong()
             Datatype.ULONG -> fillValueBB.getLong().toULong()
-            Datatype.OPAQUE -> fillValueBB
             else -> null
         }
         return fillValue
@@ -665,8 +663,8 @@ class TagVH(icode: Int, refno: Int, offset : Long, length : Int) : Tag(icode, re
     }
 
     // fld_type fld_name(fld_order), so 1 dimensional of length fld_order
-    fun readStructureMembers(): List<StructureMember> {
-        val members = mutableListOf<StructureMember>()
+    fun readStructureMembers(): List<StructureMember<*>> {
+        val members = mutableListOf<StructureMember<*>>()
         for (fld in 0 until this.nfields) {
             val type = this.fld_type[fld].toInt()
             val fdatatype = H4type.getDataType(type)

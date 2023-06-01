@@ -24,26 +24,42 @@ internal class H5heap(val header: H5builder) {
      * @throws IOException on read error
      */
     @Throws(IOException::class)
-    fun getHeapDataArray(globalHeapIdAddress: Long, datatype: Datatype, endian: ByteOrder?): Array<*> {
+    fun getHeapDataArray(globalHeapIdAddress: Long, datatype: Datatype<*>, endian: ByteOrder?): Array<*> {
         val heapId: HeapIdentifier = readHeapIdentifier(globalHeapIdAddress)
         return getHeapDataArray(heapId, datatype, endian)
     }
 
     @Throws(IOException::class)
-    fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype, endian: ByteOrder?): Array<*> {
-        val ho = heapId.getHeapObject() ?: return emptyArray<Any>()
+    fun getHeapDataArray(heapId: HeapIdentifier, datatype: Datatype<*>, endian: ByteOrder?): Array<*> {
+        val ho = heapId.getHeapObject() ?: return when (datatype) { // LOOK set nelems = 0 ??
+            Datatype.FLOAT -> emptyArray<Float>()
+            Datatype.DOUBLE -> emptyArray<Double>()
+            Datatype.BYTE -> emptyArray<Byte>()
+            Datatype.UBYTE, Datatype.ENUM1 -> emptyArray<UByte>()
+            Datatype.SHORT -> emptyArray<Short>()
+            Datatype.USHORT, Datatype.ENUM2 -> emptyArray<UShort>()
+            Datatype.INT -> emptyArray<Int>()
+            Datatype.UINT, Datatype.ENUM4 -> emptyArray<UInt>()
+            Datatype.LONG -> emptyArray<Long>()
+            Datatype.ULONG -> emptyArray<ULong>()
+            else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
+        }
 
         val typedef = datatype.typedef
-        val valueDatatype = if (typedef != null) typedef.baseType else datatype
+        val valueDatatype = typedef?.baseType ?: datatype
 
         val state = OpenFileState(ho.dataPos, endian ?: ByteOrder.nativeOrder())
         val result = when (valueDatatype) {
             Datatype.FLOAT -> raf.readArrayFloat(state, heapId.nelems)
             Datatype.DOUBLE -> raf.readArrayDouble(state, heapId.nelems)
-            Datatype.BYTE, Datatype.UBYTE, Datatype.ENUM1 -> raf.readArrayByte(state, heapId.nelems)
-            Datatype.SHORT, Datatype.USHORT, Datatype.ENUM2 -> raf.readArrayShort(state, heapId.nelems)
-            Datatype.INT,  Datatype.UINT, Datatype.ENUM4 -> raf.readArrayInt(state, heapId.nelems)
-            Datatype.LONG, Datatype.ULONG -> raf.readArrayLong(state, heapId.nelems)
+            Datatype.BYTE -> raf.readArrayByte(state, heapId.nelems)
+            Datatype.UBYTE, Datatype.ENUM1 -> raf.readArrayUByte(state, heapId.nelems)
+            Datatype.SHORT -> raf.readArrayShort(state, heapId.nelems)
+            Datatype.USHORT, Datatype.ENUM2 -> raf.readArrayUShort(state, heapId.nelems)
+            Datatype.INT -> raf.readArrayInt(state, heapId.nelems)
+            Datatype.UINT, Datatype.ENUM4 -> raf.readArrayUInt(state, heapId.nelems)
+            Datatype.LONG -> raf.readArrayLong(state, heapId.nelems)
+            Datatype.ULONG -> raf.readArrayULong(state, heapId.nelems)
             else -> throw UnsupportedOperationException("getHeapDataAsArray datatype=$datatype")
         }
         return result
@@ -59,7 +75,7 @@ internal class H5heap(val header: H5builder) {
      */
     @Throws(IOException::class)
     fun readHeapString(bb: ByteBuffer, pos: Int): String? {
-        val heapId: HeapIdentifier = HeapIdentifier(bb, pos)
+        val heapId = HeapIdentifier(bb, pos)
         if (heapId.isEmpty()) {
             return null
         }
@@ -178,7 +194,6 @@ class GlobalHeap(h5: H5builder, address: Long) {
         var count = 0
         var countBytes = 0
         while (true) {
-            val startPos: Long = state.pos
             val o = HeapObject()
             o.id = h5.raf.readShort(state)
             if (o.id.toInt() == 0) break // ?? look

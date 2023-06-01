@@ -1,19 +1,20 @@
 package com.sunya.netchdf.hdf5
 
 import com.sunya.cdm.api.*
+import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.iosp.OpenFileState
 import com.sunya.cdm.layout.Chunker
 import com.sunya.cdm.layout.IndexSpace
 import com.sunya.cdm.layout.transferMissingNelems
 import java.nio.ByteBuffer
 
-internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSection : Section) : AbstractIterator<ArraySection>() {
+internal class H5chunkIterator<T>(val h5 : H5builder, val v2: Variable<T>, val wantSection : Section) : AbstractIterator<ArraySection<T>>() {
     private val debugChunking = false
 
     val vinfo : DataContainerVariable
     val h5type : H5TypeInfo
     val elemSize : Int
-    val datatype : Datatype
+    val datatype : Datatype<*>
     val tiledData : H5TiledData
     val filters : H5filters
     val state : OpenFileState
@@ -46,7 +47,7 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
         }
     }
 
-    private fun getaPair(dataChunk : BTree1.DataChunkEntry) : ArraySection {
+    private fun getaPair(dataChunk : BTree1.DataChunkEntry) : ArraySection<T> {
         val dataSpace = IndexSpace(v2.rank, dataChunk.key.offsets, vinfo.storageDims)
 
         // TODO we need to intersect the dataChunk with the wanted section.
@@ -85,7 +86,6 @@ internal class H5chunkIterator(val h5 : H5builder, val v2: Variable, val wantSec
             h5.processDataIntoArray(bb, datatype, intersectSpace.shape.toIntArray(), h5type, elemSize)
         }
 
-
-        return ArraySection(array, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
+        return ArraySection(array as ArrayTyped<T>, intersectSpace.section(v2.shape)) // LOOK use space instead of Section ??
     }
 }

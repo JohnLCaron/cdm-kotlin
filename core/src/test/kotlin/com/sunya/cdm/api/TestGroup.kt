@@ -3,15 +3,15 @@ package com.sunya.cdm.api
 import org.junit.jupiter.api.Test
 import kotlin.test.*
 
-/** Test [dev.ucdm.core.api.Group]  */
+/** Test [com.sunya.cdm.api.Group]  */
 class TestGroup {
     
     @Test
     fun testBuilder() {
-        val att = Attribute("attName", "value")
+        val att = Attribute.from("attName", "value")
         val dim = Dimension("dimName", 42)
         val nested: Group.Builder = Group.Builder("child")
-        val vb: Variable.Builder = Variable.Builder("varName").setDatatype(Datatype.STRING)
+        val vb = Variable.Builder("varName", Datatype.STRING)
         val group = Group.Builder("name").addAttribute(att).addDimension(dim).addGroup(nested).addVariable(vb).build(null)
         assertEquals(group.name, "name")
         assertTrue(group.attributes.isNotEmpty())
@@ -58,7 +58,7 @@ class TestGroup {
 
     @Test
     fun testDuplicateVariable() {
-        val vb  = Variable.Builder("varName")
+        val vb  = Variable.Builder("varName", Datatype.ULONG)
         val groupb: Group.Builder = Group.Builder("name").addVariable(vb)
         groupb.addVariable(vb)
         assertEquals(1, groupb.variables.size)
@@ -66,8 +66,8 @@ class TestGroup {
 
     @Test
     fun testAttributes() {
-        val att1 = Attribute("attName", "value")
-        val att2 = Attribute("attName2", "value2")
+        val att1 = Attribute.from("attName", "value")
+        val att2 = Attribute.from("attName2", "value2")
         val groupb = Group.Builder("name").addAttribute(att1).addAttribute(att2)
         assertEquals(2, groupb.attributes.size)
         assertEquals(att1, groupb.attributes.find { it.name == "attName" })
@@ -198,10 +198,10 @@ class TestGroup {
         val parentg: Group.Builder = Group.Builder("parent").addDimension(low)
         val grampsb: Group.Builder = Group.Builder("gramps").addGroup(parentg).addDimension(mid)
         val uncleb: Group.Builder = Group.Builder("uncle")
-        val vb: Variable.Builder = Variable.Builder("v").setDatatype(Datatype.STRING)
+        val vb = Variable.Builder("v", Datatype.STRING)
         vb.dimNames = listOf("low")
-        val vattb: Variable.Builder = Variable.Builder("vatt").setDatatype(Datatype.STRING)
-            .addAttribute(Attribute("findme", "findmevalue"))
+        val vattb = Variable.Builder("vatt", Datatype.STRING)
+            .addAttribute(Attribute.from("findme", "findmevalue"))
         vattb.dimNames = listOf("mid")
 
         parentg.addVariable(vb)
@@ -233,10 +233,10 @@ class TestGroup {
         val parentg: Group.Builder = Group.Builder("parent").addDimension(low)
         val grampsb: Group.Builder = Group.Builder("gramps").addGroup(parentg).addDimension(mid)
         val uncleb: Group.Builder = Group.Builder("uncle")
-        val vb: Variable.Builder = Variable.Builder("v").setDatatype(Datatype.STRING)
+        val vb = Variable.Builder("v", Datatype.STRING)
         vb.dimNames = listOf("low")
-        val vattb: Variable.Builder = Variable.Builder("vatt").setDatatype(Datatype.STRING)
-            .addAttribute(Attribute("findme", "findmevalue"))
+        val vattb = Variable.Builder("vatt", Datatype.STRING)
+            .addAttribute(Attribute.from("findme", "findmevalue"))
         vattb.dimNames = listOf("mid")
         parentg.addVariable(vb)
         grampsb.addVariable(vattb)
@@ -275,10 +275,10 @@ class TestGroup {
         val parentg: Group.Builder = Group.Builder("parent").addDimension(low)
         val grampsb: Group.Builder = Group.Builder("gramps").addGroup(parentg).addDimension(mid)
         val uncleb: Group.Builder = Group.Builder("uncle")
-        val vb: Variable.Builder = Variable.Builder("v").setDatatype(Datatype.STRING)
+        val vb = Variable.Builder("v", Datatype.STRING)
         vb.dimNames = listOf("low")
-        val vattb: Variable.Builder = Variable.Builder("vatt").setDatatype(Datatype.STRING)
-            .addAttribute(Attribute("findme", "findmevalue"))
+        val vattb = Variable.Builder("vatt", Datatype.STRING)
+            .addAttribute(Attribute.from("findme", "findmevalue"))
         vattb.dimNames = listOf("mid")
         parentg.addVariable(vb)
         grampsb.addVariable(vattb)

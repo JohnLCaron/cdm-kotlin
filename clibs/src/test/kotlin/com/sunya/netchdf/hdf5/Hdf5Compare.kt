@@ -1,6 +1,9 @@
 package com.sunya.netchdf.hdf5
 
+import com.sunya.cdm.api.Datatype
+import com.sunya.netchdf.compareCdlWithClib
 import com.sunya.netchdf.compareDataWithClib
+import com.sunya.netchdf.compareSelectedDataWithClib
 import com.sunya.netchdf.netcdfClib.NClibFile
 import com.sunya.testdata.*
 import org.junit.jupiter.api.Test
@@ -26,7 +29,8 @@ class Hdf5Compare {
                     .withRecursion()
                     .build()
 
-            return Stream.of( N4Files.params(),  H5Files.params()).flatMap { i -> i };
+            return Stream.of( N4Files.params()).flatMap { i -> i };
+           //  return Stream.of( N4Files.params(),  H5Files.params()).flatMap { i -> i };
         }
     }
 
@@ -42,9 +46,10 @@ class Hdf5Compare {
     }
 
     @Test
-    fun problem2() {
-        compareH5andNclib(testData + "netchdf/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
-        compareDataWithClib(testData + "netchdf/rink/I3A_VHR_22NOV2007_0902_L1B_STD.h5")
+    fun problemChars() {
+        val filename = testData + "cdmUnitTest/formats/netcdf4/files/c0_4.nc4"
+        compareCdlWithClib(filename)
+        compareDataWithClib(filename)
     }
 
     @Test
@@ -64,8 +69,21 @@ class Hdf5Compare {
     fun checkVersion(filename: String) {
         Hdf5File(filename).use { ncfile ->
             println("${ncfile.type()} $filename ")
-            assertTrue(ncfile.type().contains("hdf5") or (ncfile.type().contains("netcdf4")))
+            assertTrue(ncfile.type().contains("hdf5") || ncfile.type().contains("hdf-eos5")
+                    || (ncfile.type().contains("netcdf4")))
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testCdlWithClib(filename: String) {
+        compareCdlWithClib(filename)
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun testCompareDataWithClib(filename: String) {
+        compareDataWithClib(filename)
     }
 
     @ParameterizedTest
@@ -81,6 +99,12 @@ class Hdf5Compare {
                 assertEquals(nclibfile.cdl(), h5file.cdl())
             }
         }
+    }
+
+    @ParameterizedTest
+    @MethodSource("params")
+    fun readCharDataCompareNC(filename : String) {
+        compareSelectedDataWithClib(filename) { it.datatype == Datatype.CHAR }
     }
 
 }

@@ -2,11 +2,12 @@ package com.sunya.netchdf.hdf5
 
 import com.google.common.util.concurrent.AtomicDouble
 import com.sunya.cdm.api.Netchdf
+import com.sunya.cdm.api.SectionPartial
 import com.sunya.cdm.api.Variable
 import com.sunya.cdm.api.chunkConcurrent
 import com.sunya.cdm.array.ArrayTyped
 import com.sunya.cdm.util.Stats
-import com.sunya.netchdf.readNetchIterate
+import com.sunya.netchdf.compareNetchIterate
 import com.sunya.netchdf.readNetchdfData
 import com.sunya.testdata.H5Files
 import com.sunya.testdata.testData
@@ -48,14 +49,6 @@ class H5readTest {
         testOpenH5(testData + "cdmUnitTest/formats/hdf5/aura/MLS-Aura_L2GP-BrO_v01-52-c01_2007d029.he5")
     }
 
-    // a compound with a member thats a type thats not a seperate typedef.
-    // the obvious thing to do is to be able to add a typedef when processing the member.
-    // or look for it when building H5group
-    @Test
-    fun compoundEnumTypedef() {
-        testOpenH5(testData + "devcdm/hdf5/enumcmpnd.h5")
-    }
-
     @Test
     fun opaqueAttribute() {
         testOpenH5(testData + "devcdm/netcdf4/tst_opaque_data.nc4")
@@ -74,7 +67,7 @@ class H5readTest {
 
     @Test
     fun timeIterateProblem() {
-        readNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
+        compareNetchIterate(testData + "cdmUnitTest/formats/hdf5/xmdf/mesh_datasets.h5", "/2DMeshModule/mesh/Datasets/velocity_(64)/Mins")
     }
 
     @Test
@@ -106,7 +99,7 @@ class H5readTest {
     //@ParameterizedTest
     @MethodSource("params")
     fun testReadIterate(filename: String) {
-        readNetchIterate(filename, null)
+        compareNetchIterate(filename, null)
     }
 
     //@ParameterizedTest
@@ -152,7 +145,7 @@ class H5readTest {
         }
     }
 
-    fun testOneVarConcurrent(myFile: Netchdf, myvar: Variable) : Int {
+    fun testOneVarConcurrent(myFile: Netchdf, myvar: Variable<*>) : Int {
         val filename = myFile.location().substringAfterLast('/')
         sum = AtomicDouble()
         var countChunks = 0

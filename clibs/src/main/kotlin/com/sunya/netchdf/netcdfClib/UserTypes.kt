@@ -1,9 +1,7 @@
 package com.sunya.netchdf.netcdfClib
 
 import com.sunya.cdm.api.*
-import com.sunya.cdm.array.ArrayStructureData
-import com.sunya.cdm.array.StructureMember
-import com.sunya.cdm.array.putStringsOnHeap
+import com.sunya.cdm.array.*
 import com.sunya.cdm.iosp.*
 import com.sunya.netchdf.netcdfClib.ffm.nc_vlen_t
 import com.sunya.netchdf.netcdfClib.ffm.netcdf_h.*
@@ -74,7 +72,7 @@ internal fun NCheader.readUserTypes(session: MemorySession, grpid: Int, gb: Grou
             NC_OPAQUE() -> OpaqueTypedef(name, size.toInt())
             NC_VLEN() -> VlenTypedef(name, convertType(baseTypeId))
             NC_COMPOUND() -> {
-                val members : List<StructureMember> = readCompoundFields(session, grpid, userTypeId, nfields.toInt())
+                val members : List<StructureMember<*>> = readCompoundFields(session, grpid, userTypeId, nfields.toInt())
                 CompoundTypedef(name, members)
             }
             else -> throw RuntimeException()
@@ -109,8 +107,8 @@ private fun NCheader.readEnumTypedef(session: MemorySession, grpid: Int, xtype: 
 }
 
 @Throws(IOException::class)
-private fun NCheader.readCompoundFields(session: MemorySession, grpid: Int, typeid: Int, nfields : Int): List<StructureMember>{
-    val members = mutableListOf<StructureMember>()
+private fun NCheader.readCompoundFields(session: MemorySession, grpid: Int, typeid: Int, nfields : Int): List<StructureMember<*>>{
+    val members = mutableListOf<StructureMember<*>>()
     for (fldidx in 0 until nfields) {
         val name_p: MemorySegment = session.allocate(NC_MAX_NAME().toLong())
         val offset_p = session.allocate(C_LONG)
@@ -135,8 +133,8 @@ private fun NCheader.readCompoundFields(session: MemorySession, grpid: Int, type
 }
 
 internal fun NCheader.readUserAttributeValues(session: MemorySession, grpid: Int, varid: Int, attname: String,
-                                              datatype : Datatype, userType: UserType, nelems: Long
-): Attribute.Builder {
+                                              datatype : Datatype<*>, userType: UserType, nelems: Long
+): Attribute.Builder<*> {
     return when (userType.typedef.kind) {
         TypedefKind.Compound  -> readCompoundAttValues(session, grpid, varid, attname, nelems, datatype, userType)
         TypedefKind.Enum -> readEnumAttValues(session, grpid, varid, attname, nelems, datatype, userType)
@@ -149,28 +147,29 @@ internal fun NCheader.readUserAttributeValues(session: MemorySession, grpid: Int
 // Just flatten, attributes only support 1D arrays. Note need to do all array types
 @Throws(IOException::class)
 internal fun NCheader.readVlenAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
-                                        datatype : Datatype, userType: UserType
-): Attribute.Builder {
+                                        datatype : Datatype<*>, userType: UserType
+): Attribute.Builder<*> {
     val basetype = convertType(userType.baseTypeid)
-    val attb = Attribute.Builder().setName(attname).setDatatype(datatype)
+    val attb = Attribute.Builder(attname, datatype)
 
     // fetch nelems of nc_vlen_t struct
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val vlen_p = nc_vlen_t.allocateArray(nelems.toInt(), session)
     checkErr("nc_get_att", nc_get_att(grpid, varid, attname_p, vlen_p))
 
-    attb.values = readVlenDataList(nelems, basetype, vlen_p)
+    attb.setValues(readVlenDataList(nelems, basetype, vlen_p))
     return attb
 }
 
 // factored out to use in compound
-internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : MemorySegment) : List<*> {
-    val parray = mutableListOf<Any>()
+internal fun readVlenDataList(nelems : Long, basetype : Datatype<*>, vlen_p : MemorySegment) : List<*> {
+    val attValues = mutableListOf<List<*>>()
     for (elem in 0 until nelems) {
         val count = nc_vlen_t.getLength(vlen_p, elem)
         val address: MemoryAddress = nc_vlen_t.getAddress(vlen_p, elem)
+        val vlenValues = mutableListOf<Any>()
         for (idx in 0 until count) {
-            val wtf = when (basetype) {
+            val value = when (basetype) {
                 Datatype.BYTE-> address.get(JAVA_BYTE, idx)
                 Datatype.SHORT -> address.getAtIndex(C_SHORT, idx)
                 Datatype.INT -> address.getAtIndex(C_INT, idx)
@@ -180,17 +179,18 @@ internal fun readVlenDataList(nelems : Long, basetype : Datatype, vlen_p : Memor
                 Datatype.STRING -> address.getUtf8String(0)
                 else -> throw RuntimeException("readVlenDataList unknown type = ${basetype}")
             }
-            parray.add(wtf)
+            vlenValues.add(value)
         }
+        attValues.add(vlenValues)
     }
-    return parray
+    return attValues
 }
 
 @Throws(IOException::class)
 private fun readOpaqueAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
-                                datatype : Datatype, userType: UserType
-): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDatatype(datatype)
+                                datatype : Datatype<*>, userType: UserType
+): Attribute.Builder<*> {
+    val attb = Attribute.Builder(attname, datatype)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val val_p = session.allocate(nelems * userType.size)
@@ -200,15 +200,15 @@ private fun readOpaqueAttValues(session: MemorySession, grpid: Int, varid: Int, 
     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
     val bb = ByteBuffer.wrap(raw)
 
-    attb.values = listOf(bb)
+    attb.setValue(bb)
     return attb
 }
 
 @Throws(IOException::class)
-private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
-                                       datatype : Datatype, userType: UserType
-): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDatatype(datatype)
+private fun <T> NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid: Int, attname: String, nelems: Long,
+                                       datatype : Datatype<T>, userType: UserType
+): Attribute.Builder<T> {
+    val attb = Attribute.Builder(attname, datatype)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val val_p = session.allocate(nelems)
@@ -218,28 +218,26 @@ private fun NCheader.readEnumAttValues(session: MemorySession, grpid: Int, varid
     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
     val bb = ByteBuffer.wrap(raw)
 
-    val result = mutableListOf<String>()
-    val map = (userType.typedef as EnumTypedef).values
+    val result = mutableListOf<Any>()
     for (i in 0 until nelems.toInt()) {
         val num = when (userType.enumBasePrimitiveType) {
-            Datatype.UBYTE -> bb.get(i).toUByte().toInt()
-            Datatype.USHORT -> bb.getShort(i).toUShort().toInt()
-            Datatype.UINT -> bb.getInt(i)
+            Datatype.UBYTE -> bb.get(i).toUByte()
+            Datatype.USHORT -> bb.getShort(i).toUShort()
+            Datatype.UINT -> bb.getInt(i).toUInt()
             else -> throw RuntimeException("convertEnums unknown type = ${userType.enumBasePrimitiveType}")
         }
-        val s = map[num] ?: throw RuntimeException("convertEnums unknown num = ${num}")
-        result.add(s)
+        result.add(num)
     }
-    attb.values = result
+    attb.setValues(result)
     return attb
 }
 
 // LOOK strings vs array of strings, also duplicate readCompoundAttValues
 @Throws(IOException::class)
 internal fun NCheader.readCompoundAttValues(session: MemorySession,
-                                            grpid: Int, varid: Int, attname: String, nelems: Long, datatype : Datatype, userType: UserType
-): Attribute.Builder {
-    val attb = Attribute.Builder().setName(attname).setDatatype(datatype)
+                                            grpid: Int, varid: Int, attname: String, nelems: Long, datatype : Datatype<*>, userType: UserType
+): Attribute.Builder<*> {
+    val attb = Attribute.Builder(attname, datatype)
 
     val attname_p: MemorySegment = session.allocateUtf8String(attname)
     val buffSize = nelems * userType.size
@@ -262,7 +260,7 @@ internal fun NCheader.readCompoundAttValues(session: MemorySession,
         //            String strval = p.getString(0, CDM.UTF8);
     }
 
-    attb.values = sdataArray.toList()
+    attb.setValues(sdataArray.toList())
     return attb
 }
 
@@ -282,7 +280,7 @@ class UserType(
         val typedef: Typedef,
 ) {
 
-    val enumBaseType: Datatype
+    val enumBaseType: Datatype<*>
         get() {
             // set the enum's basetype
             if (baseTypeid in 1..NC_MAX_ATOMIC_TYPE()) {
@@ -297,7 +295,7 @@ class UserType(
             throw RuntimeException("enumBaseType illegal = $baseTypeid")
         }
 
-    val enumBasePrimitiveType: Datatype
+    val enumBasePrimitiveType: Datatype<*>
         get() {
             // set the enum's basetype
             if (baseTypeid in 1..NC_MAX_ATOMIC_TYPE()) {

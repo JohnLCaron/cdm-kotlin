@@ -39,6 +39,13 @@ class IndexND(val section : IndexSpace, val datashape : LongArray) : Iterable<Lo
         return total
     }
 
+    /** Get the 1D element from the specified nD index. Does not change current. */
+    fun element(index : LongArray) : Long {
+        var total = 0L
+        for (idx in 0 until rank) { total += strider[idx] * index[idx] }
+        return total
+    }
+
     /** Set the nD index from the 1D element. Return current index. */
     fun set(element: Long) : LongArray {
         var total = element

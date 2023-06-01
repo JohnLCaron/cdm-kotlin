@@ -222,7 +222,7 @@ class DatatypeEnum(
     nums: List<Int>
 ) : DatatypeMessage(address, Datatype5.Enumerated, elemSize, endian) {
     val valuesMap : Map<Int, String>
-    val datatype : Datatype
+    val datatype : Datatype<*>
 
     init {
         require(names.size == nums.size)

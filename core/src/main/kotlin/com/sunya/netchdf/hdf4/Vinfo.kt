@@ -16,7 +16,7 @@ import com.sunya.netchdf.netcdf4.Netcdf4.NC_FILL_UINT64
 import java.nio.ByteOrder
 
 internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
-    var vb: Variable.Builder? = null
+    var vb: Variable.Builder<*>? = null
     val tags = mutableListOf<Tag>()
 
     // info about reading the data
@@ -49,7 +49,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
     // LOOK "always big-endian on disk"
     var endian = ByteOrder.BIG_ENDIAN // LOOK TABLE 2H Little-Endian Format Data Type Definitions
 
-    fun setVariable(v: Variable.Builder) {
+    fun setVariable(v: Variable.Builder<*>) {
         vb = v
         v.spObject = this
     }
@@ -64,7 +64,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
         hasNoData = (data == null) || (data.offset < 0)
     }
 
-    fun setFillValue(att: Attribute) {
+    fun setFillValue(att: Attribute<*>) {
         fillValue = att.values[0]
     }
 
@@ -127,7 +127,7 @@ internal class Vinfo(val refno: Int) : Comparable<Vinfo?> {
 }
 
 // the netcdf default fill values
-internal fun getNcDefaultFillValue(datatype: Datatype): Any {
+internal fun getNcDefaultFillValue(datatype: Datatype<*>): Any {
     return when (datatype) {
         Datatype.BYTE -> NC_FILL_BYTE
         Datatype.UBYTE -> NC_FILL_UBYTE
@@ -151,7 +151,7 @@ internal fun getNcDefaultFillValue(datatype: Datatype): Any {
 //#define FILL_LONG    ((long)-2147483647)
 
 // the Hdf4 SD default fill values, uses different values for the unsigned types.
-internal fun getSDefaultFillValue(datatype: Datatype): Any {
+internal fun getSDefaultFillValue(datatype: Datatype<*>): Any {
     return when (datatype) {
         Datatype.BYTE -> NC_FILL_BYTE
         Datatype.UBYTE -> NC_FILL_BYTE.toUByte()

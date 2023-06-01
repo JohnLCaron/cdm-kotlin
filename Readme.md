@@ -1,5 +1,5 @@
 # netchdf-kotlin
-_last updated: 4/10/2023_
+_last updated: 5/31/2023_
 
 This is a rewrite in kotlin of parts of the devcdm and netcdf-java libraries. 
 
@@ -8,7 +8,7 @@ netcdf3, netcdf4, hdf4, hdf5, hdf-eos2 and hdf-eos5 data files.
 
 Please contact me if you'd like to help out. Especially needed are test datasets from all the important data archives!!
 
-#### Why this library? 
+### Why this library? 
 
 There is so much important scientific data stored in the NetCDF and HDF file formats, that those formats will 
 never go away. It is important that there be maintainable, independent libraries to read these files forever.
@@ -20,7 +20,7 @@ By focusing on read-only access to just these formats, the API and the code are 
 In short, a library that focuses on simplicity and clarity is a safeguard for the huge investment in these
 scientific datasets.
 
-#### Why do we need an alternative library from the standard reference libraries?
+### Why do we need an alternative to the standard reference libraries?
 
 The reference libraries are well maintained but complex. They are coded in C, which is a difficult language to master
 and keep bug free, with implication for memory safety and security. The libraries require various machine and OS dependent
@@ -45,9 +45,9 @@ The HDF5 library can be built with MPI-IO for parallel file systems. The serial 
 but does not support concurrent reading. These are serious limitations for high performance, scalable applications.
 
 Our library tries to ameliorate these problems for scientists and the interested public to access the data without
-having to become specialists in the file formats.
+having to become specialists in the file formats and legacy APIs.
 
-#### Why kotlin?
+### Why kotlin?
 
 Kotlin is a modern, statically typed, garbage-collected language suitable for large development projects. 
 It has many new features for safer (like null-safety) and more concise (like functional idioms) code, and is an important 
@@ -65,29 +65,42 @@ Its possible we can use kotlin coroutines to speed up performance bottlenecks. T
 
 ### Testing
 
-We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf C, HDF5, and HDF4 C libraries. 
+We are using the Foreign Function & Memory API (Java 19 Preview) for testing against the Netcdf, HDF5, and HDF4 C libraries. 
 With these tools we can be confident that our library gives the same results as the reference libraries.
 
-Currently (3/27/23) we have test coverage of 77.4% (5136/6632) LOC for the code classes.
-
-We have ~1500 test files:
+Currently we have this test coverage from core/test:
 
 ````
- hdf4      = 201 files
+ cdm      88% (1560/1764) LOC
+ hdf4     84% (1743/2071) LOC
+ hdf5     81% (2278/2792) LOC
+ netcdf3  77% (230/297) LOC
+ ````
+
+The core library has ~6500 LOC.
+
+More and deeper test coverage is provided in the clibs module, which compares netchdf metadata and data against
+the Netcdf, HDF5, and HDF4 C libraries. The clibs module is not part of the released netchdf library and is 
+only supported for test purposes.
+
+Currently we have ~1500 test files:
+
+````
+ hdf4      = 205 files
  hdf-eos2  = 267 files
- hdf5      = 144 files
- hdf-eos5  =  19 files
- netcdf3   = 663 files
- netcdf3.2 =  84 files
+ hdf5      = 113 files
+ hdf-eos5  =  18 files
+ netcdf3   = 664 files
+ netcdf3.2 =  81 files
  netcdf3.5 =   1 files
- netcdf4   =  99 files
+ netcdf4   = 121 files
  ````
 
 We need to get representative samples of recent files for improved testing and code coverage.
 
 ### Scope
 
-We have the goal to give read access to all the content in Netcdf, HDF5, HDF4 and HDF-EOS files. 
+We have the goal to give read access to all the content in NetCDF, HDF5, HDF4 and HDF-EOS files. 
 
 The library will be thread-safe for reading multiple files concurrently.
 
@@ -97,17 +110,71 @@ We do not plan to provide write capabilities.
 
 ### Data Model notes
 
-(Work in progress)
+#### Type Safety and Generics
 
-#### Differ from Netcdf4 and CDM data models
-* Added netcdf4 style typedefs, aka "User defined types": Compound, Enum, Opaque, Vlen.
-* Use non-shared dimensions for anonymous dimensions. nclib makes these shared by adding dimensions named "phony_dim_XXX".
-* Datatype.REFERENCE is added
-* Opaque, Vlen typedefs ??
+Datatype\<T\>, Attribute\<T\>, Variable\<T\>, StructureMember\<T\>, Array\<T\> and ArraySection\<T\> are all generics, 
+with T indicating the data type returned when read, eg:
 
-#### Differ from HDF5 data model
+````
+    fun <T> readArrayData(v2: Variable<T>, section: SectionPartial? = null) : ArrayTyped<T>
+````
+
+#### Datatype
+* __Datatype.ENUM__ returns an array of the corresponding UBYTE/USHORT/UINT. Call _data.convertEnums()_ to turn this into
+  an ArrayString of corresponding enum names.
+* __Datatype.CHAR__: All Attributes of type CHAR are assumed to be Strings. All Variables of type CHAR return data as
+  ArrayUByte. Call _data.makeStringsFromBytes()_ to turn this into Strings with the array rank reduced by one.
+  * _Netcdf-3_ does not have STRING or UBYTE types. In practice, CHAR is used for either. 
+  * _Netcdf-4/HDF5_ library encodes CHAR values as HDF5 string type with elemSize = 1, so we use that convention to detect 
+    legacy CHAR variables in HDF5 files. NC_CHAR should not be used in Netcdf-4, use NC_UBYTE or NC_STRING.
+  * _HDF4_ does not have a STRING type, but does have signed and unsigned CHAR, and signed and unsigned BYTE. 
+    We map both signed and unsigned to Datatype.CHAR and handle it as above (Attributes are Strings, Variables are UBytes).
+* __Datatype.STRING__ is variable length, whether the file storage is variable or fixed length.
+
+#### Typedef
+Unlike Netcdf-Java, we follow Netcdf-4 "user defined types" and add typedefs for Compound, Enum, Opaque, and Vlen.
+* __Datatype.ENUM__ typedef has a map from integer to name (same as Netcdf-Java)
+* __Datatype.COMPOUND__ typedef contains a description of the members of the Compound (aka Structure).
+* __Datatype.OPAQUE__ typedef may contain the byte length of OPAQUE data.
+* __Datatype.VLEN__ typedef has the base type. An array of VLEN may have different lengths for each object.
+
+#### Dimension
+* Unlike Netcdf-3 and Netcdf-4, dimensions may be "anonymous", in which case they have a length but not a name, and are 
+local to the variable they are referenced by.
+* There are no UNLIMITED dimensions. These are unneeded since we do not support writing.
+
+#### Compare with HDF5 data model
 * Creation order is ignored
 * Not including symbolic links in a group, as these point to an existing dataset (variable)
 * Opaque: hdf5 makes arrays of Opaque all the same size, which gives up some of its usefulness. If theres a need,
   we will allow Opaque(*) indicating that the sizes can vary.
 * Attributes can be of type REFERENCE, with value the full path name of the referenced dataset.
+
+#### Compare with HDF4 data model
+* All data access is unified under the netchdf API
+
+#### Compare with HDF-EOS data model
+* The _StructMetadata_ ODL is gathered and applied to the file header metadata as well as possible. 
+  Contact us with example files if you see something we are missing.
+
+##
+An independent implementation of HDF4/HDF5/HDF-EOS in kotlin.
+
+I am working on an independent library implementation of HDF4/HDF5/HDF-EOS in kotlin 
+[here](https://github.com/JohnLCaron/cdm-kotlin). 
+This will be complementary to the important work of maintaining the primary HDF libraries.
+The goal is to give read access to all the content in NetCDF, HDF5, HDF4 and HDF-EOS files.
+
+The core library is pure Kotlin. 
+Kotlin currently runs on JVM's as far back as Java 8. However, I am targeting the latest LTS
+(long term support) Java version, and will not be explicitly supporting older versions.
+
+A separate library tests the core against the C libraries.
+The key to this working reliably is if members of the HDF community contribute test files to make sure
+the libraries agree. I have a large cache of test files from my work on netcdf-java, but these
+are mostly 10-20 years old.
+
+Currently the code is in alpha, and you must build it yourself with gradle. 
+When it hits beta, I will start releasing compiled versions to Maven Central.
+
+I welcome any feedback, questions and concerns. Thanks!
