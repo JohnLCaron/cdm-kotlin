@@ -71,10 +71,10 @@ With these tools we can be confident that our library gives the same results as 
 Currently we have this test coverage from core/test:
 
 ````
- cdm      88% (1528/1727) LOC
- hdf4     78% (1639/2077) LOC
- hdf5     81% (2273/2800) LOC
- netcdf3  77% (229/297) LOC
+ cdm      88% (1560/1764) LOC
+ hdf4     84% (1743/2071) LOC
+ hdf5     81% (2278/2792) LOC
+ netcdf3  77% (230/297) LOC
  ````
 
 The core library has ~6500 LOC.

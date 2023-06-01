@@ -181,7 +181,7 @@ class NClibFile(val filename: String) : Netchdf {
                         nc_get_vars_text(vinfo.g4.grpid, vinfo.varid, origin_p, shape_p, stride_p, val_p))
                     val raw = val_p.toArray(ValueLayout.JAVA_BYTE)
                     val values = ByteBuffer.wrap(raw)
-                    return ArrayUByte(shape, values) as ArrayTyped<T>
+                    return ArrayUByte(shape, Datatype.CHAR, values) as ArrayTyped<T>
                 }
 
                 Datatype.DOUBLE -> {

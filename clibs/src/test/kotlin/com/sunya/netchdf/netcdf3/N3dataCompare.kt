@@ -50,7 +50,7 @@ class N3dataCompare {
 
     @Test
     fun problem() {
-        compareDataWithClib(testData + "devcdm/netcdf3/tst_ncml.nc", null)
+        compareDataWithClib(testData + "devcdm/netcdf3/tst_small_classic.nc", null)
     }
 
     @ParameterizedTest
